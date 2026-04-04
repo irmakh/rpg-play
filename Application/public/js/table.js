@@ -1059,10 +1059,14 @@ function renderInitiativeTracker(showBadge) {
            style="width:36px;background:var(--bg3);border:1px solid var(--a55);color:var(--ac);border-radius:3px;padding:2px 3px;font-size:11px;font-weight:bold;text-align:center"
            onchange="updateInitRoll(this)" onclick="event.stopPropagation()">`
       : `<span class="init-row-roll">${e.roll}</span>`;
+    const delHtml = isDM()
+      ? `<button class="btn sm danger" style="padding:1px 5px;font-size:11px;line-height:1.2;margin-left:4px" onclick="removeInitEntry('${e.id}')" title="Remove from initiative">✕</button>`
+      : '';
     return `<div class="init-row${isCur ? ' init-cur' : ''}">
       <span class="init-cur-marker">${isCur ? '▶' : ''}</span>
       <span class="init-row-name">${nameHtml}</span>
       ${rollHtml}
+      ${delHtml}
     </div>`;
   }).join('');
   if (showBadge && !initPanelOpen) {
@@ -1140,6 +1144,20 @@ async function updateInitRoll(input) {
       body: JSON.stringify({ roll })
     });
     if (!res.ok) { showToast('Failed to update initiative.', true); input.value = input.defaultValue; }
+  } catch { showToast('Connection error.', true); }
+}
+
+async function removeInitEntry(id) {
+  const entry = initData.entries?.find(e => e.id === id);
+  if (!entry || !isDM()) return;
+  if (!confirm(`Remove "${entry.name}" from initiative?`)) return;
+  try {
+    const res = await fetch(`/api/initiative/${id}`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json', 'X-Master-Password': masterPw },
+      body: JSON.stringify({})
+    });
+    if (!res.ok) showToast('Failed to remove entry.', true);
   } catch { showToast('Connection error.', true); }
 }
 
