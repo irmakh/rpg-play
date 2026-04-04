@@ -1,0 +1,53 @@
+# Dependencies
+node_modules/
+npm-debug.log
+package-lock.json
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment
+.env
+.env.local
+
+# Databases (will be mounted as volumes)
+*.db
+*.db-shm
+*.db-wal
+
+# Temporary files
+.tmp/
+*.tmp
+*.temp
+
+# Framework directories (not needed in container)
+memory/
+data/
+goals/
+tools/
+args/
+context/
+hardprompts/
+
+# Documentation
+README.md
+CLAUDE.md
+*.md
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Python
+__pycache__/
+*.pyc
+venv/
+env/

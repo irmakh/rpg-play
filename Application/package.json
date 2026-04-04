@@ -1,0 +1,17 @@
+{
+  "name": "dnd-sheet",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "migrate": "node migrate.js"
+  },
+  "dependencies": {
+    "@instantdb/admin": "^0.22.169",
+    "better-sqlite3": "^12.8.0",
+    "dotenv": "^16.0.0",
+    "express": "^4.19.0",
+    "ws": "^8.0.0"
+  }
+}

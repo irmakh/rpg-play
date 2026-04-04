@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Monsters — DM Panel</title>
+<link rel="stylesheet" href="/css/monsters.css">
+</head>
+<body>
+
+<!-- Password gate -->
+<div class="gate" id="gate">
+  <div class="gate-box">
+    <div style="font-size:36px;margin-bottom:10px">🐉</div>
+    <h2>Monsters</h2>
+    <p>Enter master password to manage monsters.</p>
+    <input type="password" id="gate-pw" placeholder="Master password…" autocomplete="off"
+           onkeydown="if(event.key==='Enter')authenticate()">
+    <div id="gate-err"></div>
+    <button class="btn primary" style="width:100%" onclick="authenticate()">Unlock</button>
+  </div>
+</div>
+
+<!-- Main content -->
+<div class="sheet" id="main-content" style="display:none">
+
+  <div class="hdr">
+    <div class="hdr-left">
+      <button class="btn" onclick="location.href='/dm.html'" title="Back to DM Panel">← DM</button>
+      <h1>🐉 Monsters</h1>
+      <select id="theme-sel" onchange="applyTheme(this.value)" title="Theme">
+        <option value="dark-gold">🌙</option>
+        <option value="parchment">📜</option>
+        <option value="midnight">🌌</option>
+      </select>
+    </div>
+    <div class="hdr-right">
+      <button class="btn" onclick="loadMonsters()">↻ Refresh</button>
+      <button class="btn primary" onclick="openAddMonsterModal()">+ Add Monster</button>
+    </div>
+  </div>
+
+  <div id="status-msg"></div>
+
+  <!-- Import card -->
+  <div class="card">
+    <div class="ct">Import Monsters (JSON)</div>
+    <div class="cb">
+      <div class="field">
+        <label class="lbl">Paste monster JSON — single object <code style="font-size:10px;opacity:.7">{...}</code> or array <code style="font-size:10px;opacity:.7">[{...},{...}]</code> or 5etools format <code style="font-size:10px;opacity:.7">{"monster":[...]}</code></label>
+        <textarea id="import-text" style="min-height:120px;font-family:monospace;font-size:11px" placeholder='{"name":"Goblin","cr":"1/4","dex":14,...}'></textarea>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <button class="btn primary" onclick="importMonsters()">Import</button>
+        <button class="btn" onclick="document.getElementById('import-text').value=''">Clear</button>
+        <span id="import-status" style="font-size:11px;color:var(--ok)"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Monster list card -->
+  <div class="card">
+    <div class="ct">Monster List</div>
+    <div class="cb">
+      <div class="search-bar">
+        <input type="text" id="search-input" placeholder="Search by name or type…" oninput="renderTable()">
+      </div>
+      <div id="monster-table-wrap">
+        <div style="text-align:center;color:var(--txd);padding:20px">Loading…</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Monster info modal -->
+<div class="modal-overlay" id="info-modal" style="display:none">
+  <div class="modal-box" style="max-width:700px;width:96%">
+    <div class="ct" id="info-modal-title">Monster Info</div>
+    <div class="modal-body" id="info-modal-body" style="max-height:82vh;overflow-y:auto;padding:14px 16px"></div>
+    <div class="modal-btns">
+      <button class="btn" onclick="closeInfoModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit monster modal -->
+<div class="modal-overlay" id="edit-modal" style="display:none">
+  <div class="modal-box" style="max-width:780px;width:96%">
+    <div class="ct" id="edit-modal-title">Edit Monster</div>
+    <div class="modal-body" style="max-height:84vh;overflow-y:auto">
+
+      <div class="ef-sec" style="border-top:none;margin-top:0;padding-top:0">Basic Info</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div class="field" style="grid-column:span 2"><label class="lbl">Name *</label><input type="text" id="ef-name"></div>
+        <div class="field"><label class="lbl">CR</label><input type="text" id="ef-cr" placeholder="21, 1/2, 0…"></div>
+        <div class="field"><label class="lbl">Size</label><select id="ef-size"><option value="T">Tiny</option><option value="S">Small</option><option value="M">Medium</option><option value="L">Large</option><option value="H">Huge</option><option value="G">Gargantuan</option></select></div>
+        <div class="field"><label class="lbl">Type (e.g. dragon (chromatic))</label><input type="text" id="ef-type" placeholder="dragon (chromatic)"></div>
+        <div class="field"><label class="lbl">Alignment</label><input type="text" id="ef-alignment" placeholder="Chaotic Evil"></div>
+        <div class="field" style="grid-column:span 2"><label class="lbl">Source</label><input type="text" id="ef-source" placeholder="XMM, PHB…"></div>
+      </div>
+
+      <div class="ef-sec">Portrait</div>
+      <div style="display:flex;align-items:center;gap:12px;padding:4px 0 8px">
+        <img id="ef-portrait-preview" style="width:64px;height:64px;object-fit:cover;border-radius:50%;border:2px solid var(--a44);display:none" alt="Portrait">
+        <div id="ef-portrait-none" style="font-size:11px;color:var(--txd)">No portrait set</div>
+        <button class="btn sm" onclick="efPickPortrait()">Upload Portrait</button>
+        <button class="btn sm danger" id="ef-portrait-clear" onclick="efClearPortrait()" style="display:none">Remove</button>
+        <input type="file" id="ef-portrait-input" accept="image/*" style="display:none" onchange="efPortraitChosen(this)">
+      </div>
+
+      <div class="ef-sec">Combat</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+        <div class="field"><label class="lbl">AC</label><input type="number" id="ef-ac" min="0" max="99"></div>
+        <div class="field"><label class="lbl">HP Average</label><input type="number" id="ef-hp-avg" min="0"></div>
+        <div class="field"><label class="lbl">HP Formula</label><input type="text" id="ef-hp-formula" placeholder="21d20 + 147"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px">
+        <div class="field"><label class="lbl">Walk ft.</label><input type="number" id="ef-speed-walk" min="0"></div>
+        <div class="field"><label class="lbl">Fly ft.</label><input type="number" id="ef-speed-fly" min="0"></div>
+        <div class="field"><label class="lbl">Swim ft.</label><input type="number" id="ef-speed-swim" min="0"></div>
+        <div class="field"><label class="lbl">Climb ft.</label><input type="number" id="ef-speed-climb" min="0"></div>
+        <div class="field"><label class="lbl">Burrow ft.</label><input type="number" id="ef-speed-burrow" min="0"></div>
+      </div>
+
+      <div class="ef-sec">Ability Scores</div>
+      <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px">
+        <div class="field"><label class="lbl">STR</label><input type="number" id="ef-str" min="1" max="30"></div>
+        <div class="field"><label class="lbl">DEX</label><input type="number" id="ef-dex" min="1" max="30"></div>
+        <div class="field"><label class="lbl">CON</label><input type="number" id="ef-con" min="1" max="30"></div>
+        <div class="field"><label class="lbl">INT</label><input type="number" id="ef-int" min="1" max="30"></div>
+        <div class="field"><label class="lbl">WIS</label><input type="number" id="ef-wis" min="1" max="30"></div>
+        <div class="field"><label class="lbl">CHA</label><input type="number" id="ef-cha" min="1" max="30"></div>
+      </div>
+
+      <div class="ef-sec">Proficiencies &amp; Stats</div>
+      <div class="field"><label class="lbl">Saving Throws (e.g. Dex +9, Wis +9)</label><input type="text" id="ef-saves"></div>
+      <div class="field"><label class="lbl">Skills (e.g. Perception +16, Stealth +9)</label><input type="text" id="ef-skills"></div>
+      <div class="field"><label class="lbl">Damage Immunities (comma-separated)</label><input type="text" id="ef-immune" placeholder="acid, fire…"></div>
+      <div class="field"><label class="lbl">Resistances (comma-separated)</label><input type="text" id="ef-resist" placeholder="bludgeoning, piercing…"></div>
+      <div class="field"><label class="lbl">Condition Immunities (comma-separated)</label><input type="text" id="ef-condimm" placeholder="frightened, paralyzed…"></div>
+      <div style="display:grid;grid-template-columns:1fr 90px;gap:8px">
+        <div class="field"><label class="lbl">Senses (comma-separated)</label><input type="text" id="ef-senses" placeholder="Darkvision 120 ft."></div>
+        <div class="field"><label class="lbl">Passive Perc.</label><input type="number" id="ef-passive" min="1" max="40"></div>
+      </div>
+      <div class="field"><label class="lbl">Languages (comma-separated)</label><input type="text" id="ef-languages"></div>
+
+      <div class="ef-sec">Traits <button class="btn sm" onclick="addEditRow('ef-traits')">+ Add</button></div>
+      <div id="ef-traits"></div>
+
+      <div class="ef-sec">Actions <button class="btn sm" onclick="addEditRow('ef-actions')">+ Add</button></div>
+      <div id="ef-actions"></div>
+
+      <div class="ef-sec">Bonus Actions <button class="btn sm" onclick="addEditRow('ef-bonus')">+ Add</button></div>
+      <div id="ef-bonus"></div>
+
+      <div class="ef-sec">Reactions <button class="btn sm" onclick="addEditRow('ef-reactions')">+ Add</button></div>
+      <div id="ef-reactions"></div>
+
+      <div class="ef-sec">Legendary Actions <button class="btn sm" onclick="addEditRow('ef-legendary')">+ Add</button></div>
+      <div id="ef-legendary"></div>
+
+      <div id="edit-err" style="color:var(--err);font-size:11px;min-height:14px;margin-top:8px"></div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn" onclick="closeEditMonsterModal()">Cancel</button>
+      <button class="btn primary" onclick="submitEditMonster()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add to initiative confirm modal -->
+<div class="modal-overlay" id="init-modal" style="display:none">
+  <div class="modal-box">
+    <div class="ct" id="init-modal-title">Add to Initiative</div>
+    <div class="modal-body">
+      <div style="margin-bottom:10px;font-size:12px;color:var(--txd)" id="init-modal-desc"></div>
+      <div class="field">
+        <label class="lbl">Name (optional override)</label>
+        <input type="text" id="init-name-override" placeholder="">
+      </div>
+      <div class="field">
+        <label class="lbl">Initiative Bonus</label>
+        <input type="number" id="init-bonus-val" min="-10" max="30">
+      </div>
+      <div id="init-modal-err" style="color:var(--err);font-size:11px;min-height:14px"></div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn" onclick="closeInitModal()">Cancel</button>
+      <button class="btn primary" onclick="submitAddToInit()">Roll & Add</button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/monsters.js"></script>
+</body>
+</html>

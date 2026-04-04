@@ -1,0 +1,62 @@
+# Environment and credentials
+.env
+.env.local
+credentials.json
+token.json
+*.key
+
+# Temporary files
+.tmp/
+*.tmp
+*.temp
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+*.egg-info/
+.pytest_cache/
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Claude Code local settings
+.claude/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+logs/
+*.log.*
+
+# Data directory (databases, activity logs)
+data/
+
+# Memory session logs (ephemeral, session-specific)
+memory/logs/
+
+# Node modules (if using any JS tools)
+node_modules/
+
+# Build outputs
+dist/
+build/
+*.egg

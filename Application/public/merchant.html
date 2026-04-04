@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Merchant — DM Shop Manager</title>
+<link rel="stylesheet" href="/css/merchant.css">
+</head>
+<body>
+
+<!-- Password gate -->
+<div class="gate" id="gate">
+  <div class="gate-box">
+    <div style="font-size:36px;margin-bottom:10px">🏪</div>
+    <h2>Merchant Manager</h2>
+    <p>Enter master password to access the shop.</p>
+    <input type="password" id="gate-pw" placeholder="Master password…" autocomplete="off"
+           onkeydown="if(event.key==='Enter')authenticate()">
+    <div id="gate-err"></div>
+    <button class="btn primary" style="width:100%" onclick="authenticate()">Unlock</button>
+  </div>
+</div>
+
+<!-- Main content (hidden until auth) -->
+<div class="sheet" id="main-content" style="display:none">
+
+  <div class="hdr">
+    <div class="hdr-left">
+      <button class="btn" onclick="location.href='/dm.html'" title="Back to DM Panel">← DM</button>
+      <h1>🏪 Merchant</h1>
+      <select id="theme-sel" onchange="applyTheme(this.value)" title="Theme">
+        <option value="dark-gold">🌙</option>
+        <option value="parchment">📜</option>
+        <option value="midnight">🌌</option>
+      </select>
+    </div>
+    <div class="hdr-right">
+      <button class="btn" id="shop-status-btn" onclick="toggleShopStatus()" style="min-width:130px">Loading…</button>
+      <button class="btn" onclick="refreshAll()" title="Refresh data">↻ Refresh</button>
+      <button class="btn primary" onclick="openItemModal(null)">+ Add Item</button>
+    </div>
+  </div>
+
+  <div id="status-msg"></div>
+
+  <div class="tabs">
+    <div class="tab active" id="tab-btn-items" onclick="showMerchantTab('items',this)">Shop Items</div>
+    <div class="tab" id="tab-btn-logs" onclick="showMerchantTab('logs',this)">📋 Purchase Logs</div>
+  </div>
+  <div class="tab-wrap">
+
+    <!-- Shop Items tab -->
+    <div class="tab-panel active" id="tab-items">
+      <div id="shop-loading" style="padding:12px;font-size:11px;color:var(--txd)">Loading…</div>
+      <div id="table-wrap" style="overflow-x:auto;display:none">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Type</th>
+              <th>Price</th>
+              <th>Qty</th>
+              <th>Bonuses</th>
+              <th>Notes</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="items-tbody"></tbody>
+        </table>
+      </div>
+      <div id="empty-msg" style="padding:12px;font-size:11px;color:var(--txd);display:none">No items in the shop yet. Click "+ Add Item" to add one.</div>
+    </div>
+
+    <!-- Purchase Logs tab -->
+    <div class="tab-panel" id="tab-logs">
+      <div id="logs-loading" style="padding:12px;font-size:11px;color:var(--txd);display:none">Loading…</div>
+      <div id="logs-table-wrap" style="overflow-x:auto">
+        <table>
+          <thead>
+            <tr>
+              <th>Date &amp; Time</th>
+              <th>Character</th>
+              <th>Item</th>
+              <th>Qty</th>
+              <th>Amount</th>
+            </tr>
+          </thead>
+          <tbody id="logs-tbody"><tr><td colspan="5" style="color:var(--txd);padding:12px;font-size:11px">No purchases yet.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- Item add/edit modal -->
+<div class="modal-overlay" id="item-modal" style="display:none">
+  <div class="modal-box">
+    <div class="ct" id="modal-title">Add Item</div>
+    <div class="modal-body">
+
+      <div class="field">
+        <label class="lbl">Item Name *</label>
+        <input type="text" id="f-name" placeholder="e.g. Potion of Healing">
+      </div>
+
+      <div class="g2">
+        <div class="field">
+          <label class="lbl">Type</label>
+          <select id="f-type" onchange="onTypeChange()">
+            <option value="wondrous">Wondrous / Magic</option>
+            <option value="weapon">Weapon</option>
+            <option value="armor">Armor</option>
+            <option value="shield">Shield</option>
+            <option value="other">Other / Consumable</option>
+          </select>
+        </div>
+        <div class="field">
+          <label class="lbl">Quantity</label>
+          <input type="number" id="f-qty" value="1" min="1">
+        </div>
+      </div>
+
+      <div id="armor-fields">
+        <div class="g2">
+          <div class="field">
+            <label class="lbl">Armor Category</label>
+            <select id="f-armor-type">
+              <option value="light">Light</option>
+              <option value="medium">Medium</option>
+              <option value="heavy">Heavy</option>
+            </select>
+          </div>
+          <div class="field">
+            <label class="lbl">Base AC</label>
+            <input type="number" id="f-ac-base" value="10" min="0">
+          </div>
+        </div>
+      </div>
+
+      <div id="weapon-fields">
+        <div class="g2">
+          <div class="field">
+            <label class="lbl">Magic Bonus <span style="text-transform:none;letter-spacing:0;font-weight:normal">(ATK &amp; DMG)</span></label>
+            <input type="number" id="f-weapon-atk" value="0" min="0" placeholder="0 = none, 1 = +1 sword">
+          </div>
+          <div class="field">
+            <label class="lbl">Damage <span style="text-transform:none;letter-spacing:0;font-weight:normal">(dice + type)</span></label>
+            <input type="text" id="f-weapon-dmg" placeholder="e.g. 1d8 slashing">
+          </div>
+        </div>
+        <div class="field" style="margin-top:6px">
+          <label class="lbl">Properties <span style="text-transform:none;letter-spacing:0;font-weight:normal">(max 3)</span></label>
+          <div id="props-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;margin-top:6px"></div>
+          <div id="f-props-err" style="font-size:10px;color:var(--err);min-height:12px;margin-top:2px"></div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="lbl">Price</label>
+        <div class="price-row">
+          <div>
+            <label class="lbl" style="margin-bottom:2px">PP</label>
+            <input type="number" id="f-pp" value="0" min="0" oninput="updatePricePreview()">
+          </div>
+          <div>
+            <label class="lbl" style="margin-bottom:2px">GP</label>
+            <input type="number" id="f-gp" value="0" min="0" oninput="updatePricePreview()">
+          </div>
+          <div>
+            <label class="lbl" style="margin-bottom:2px">EP</label>
+            <input type="number" id="f-ep" value="0" min="0" oninput="updatePricePreview()">
+          </div>
+          <div>
+            <label class="lbl" style="margin-bottom:2px">SP</label>
+            <input type="number" id="f-sp" value="0" min="0" oninput="updatePricePreview()">
+          </div>
+          <div>
+            <label class="lbl" style="margin-bottom:2px">CP</label>
+            <input type="number" id="f-cp" value="0" min="0" oninput="updatePricePreview()">
+          </div>
+        </div>
+        <div class="price-preview" id="price-preview"></div>
+      </div>
+
+      <div class="field">
+        <label class="lbl">Requires Attunement</label>
+        <select id="f-attune">
+          <option value="0">No</option>
+          <option value="1">Yes</option>
+        </select>
+      </div>
+
+      <div class="g3">
+        <div class="field">
+          <label class="lbl">AC Bonus</label>
+          <input type="number" id="f-ac-bonus" value="0">
+        </div>
+        <div class="field">
+          <label class="lbl">Initiative Bonus</label>
+          <input type="number" id="f-init-bonus" value="0">
+        </div>
+        <div class="field">
+          <label class="lbl">Speed Bonus (ft)</label>
+          <input type="number" id="f-speed-bonus" value="0">
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="lbl">Notes / Description</label>
+        <textarea id="f-notes" placeholder="Item description, effects, flavour text…"></textarea>
+      </div>
+
+      <div id="item-err"></div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn" onclick="closeItemModal()">Cancel</button>
+      <button class="btn primary" onclick="saveItemModal()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/merchant.js"></script>
+</body>
+</html>

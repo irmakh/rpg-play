@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<character>
+  <info>
+    <name>Gaston &quot;Kalyon&quot; Flou</name>
+    <class>Wizard</class>
+    <subclass>Illusionist</subclass>
+    <level>6</level>
+    <background>Criminal</background>
+    <species>Human</species>
+    <xp>0</xp>
+    <alignment>Neutral Evil</alignment>
+    <languages>Common, Elvish, Dwarvish</languages>
+    <profbonus>3</profbonus>
+  </info>
+  <abilities>
+    <str>8</str>
+    <dex>15</dex>
+    <con>14</con>
+    <int>17</int>
+    <wis>13</wis>
+    <cha>12</cha>
+  </abilities>
+  <saving_throws>
+    <save name="str" proficient="false">-1</save>
+    <save name="dex" proficient="false">+2</save>
+    <save name="con" proficient="false">+2</save>
+    <save name="int" proficient="true">+6</save>
+    <save name="wis" proficient="true">+4</save>
+    <save name="cha" proficient="false">+1</save>
+  </saving_throws>
+  <skills>
+    <skill id="0" proficient="false" expertise="false">+2</skill>
+    <skill id="1" proficient="false" expertise="false">+1</skill>
+    <skill id="2" proficient="true" expertise="false">+6</skill>
+    <skill id="3" proficient="false" expertise="false">-1</skill>
+    <skill id="4" proficient="false" expertise="false">+1</skill>
+    <skill id="5" proficient="false" expertise="false">+3</skill>
+    <skill id="6" proficient="true" expertise="false">+4</skill>
+    <skill id="7" proficient="false" expertise="false">+1</skill>
+    <skill id="8" proficient="true" expertise="true">+9</skill>
+    <skill id="9" proficient="false" expertise="false">+1</skill>
+    <skill id="10" proficient="false" expertise="false">+3</skill>
+    <skill id="11" proficient="false" expertise="false">+1</skill>
+    <skill id="12" proficient="false" expertise="false">+1</skill>
+    <skill id="13" proficient="false" expertise="false">+1</skill>
+    <skill id="14" proficient="false" expertise="false">+3</skill>
+    <skill id="15" proficient="true" expertise="false">+5</skill>
+    <skill id="16" proficient="true" expertise="false">+5</skill>
+    <skill id="17" proficient="false" expertise="false">+1</skill>
+  </skills>
+  <combat>
+    <ac>12</ac>
+    <initiative>+2</initiative>
+    <speed>30 ft</speed>
+    <hp_current>38</hp_current>
+    <hp_max>38</hp_max>
+    <hp_temp>0</hp_temp>
+    <hit_dice>6d6</hit_dice>
+    <hit_dice_spent>0</hit_dice_spent>
+    <passive_perception>11</passive_perception>
+    <inspiration>false</inspiration>
+    <death_saves successes="0,0,0" failures="0,0,0"/>
+  </combat>
+  <weapons>
+    <weapon><name>Dagger</name><attack>+5</attack><damage>1d4+2 piercing</damage><notes>Finesse, light, thrown 20/60</notes></weapon>
+  </weapons>
+  <spellcasting>
+    <ability>Intelligence</ability>
+    <spell_save_dc>14</spell_save_dc>
+    <spell_attack_bonus>+6</spell_attack_bonus>
+    <spell_modifier>+3</spell_modifier>
+    <spell_slots>
+      <slot level="1" total="4" used="0"/>
+      <slot level="2" total="3" used="0"/>
+      <slot level="3" total="3" used="0"/>
+      <slot level="4" total="0" used="0"/>
+      <slot level="5" total="0" used="0"/>
+      <slot level="6" total="0" used="0"/>
+    </spell_slots>
+    <spells>
+      <spell level="0" conc="false" ritual="false" prepared="false" school="Trans" v="true" s="true" m="false">
+        <name>Prestidigitation</name><time>Action</time><range>10 ft</range><notes></notes>
+      </spell>
+      <spell level="0" conc="false" ritual="false" prepared="false" school="Conj" v="true" s="true" m="false">
+        <name>Mage Hand</name><time>Action</time><range>30 ft</range><notes></notes>
+      </spell>
+      <spell level="0" conc="false" ritual="false" prepared="false" school="Illu" v="false" s="true" m="true">
+        <name>Minor Illusion</name><time>Action</time><range>30 ft</range><notes></notes><material>a bit of fleece</material>
+      </spell>
+      <spell level="0" conc="false" ritual="false" prepared="false" school="Ench" v="true" s="false" m="false">
+        <name>Mind Sliver</name><time>Action</time><range>60 ft</range><notes></notes>
+      </spell>
+      <spell level="1" conc="false" ritual="false" prepared="true" school="Abj" v="true" s="true" m="false">
+        <name>Shield</name><time>Reaction</time><range>Self</range><notes>+5 AC until start of next turn</notes>
+      </spell>
+      <spell level="1" conc="false" ritual="false" prepared="true" school="Evoc" v="true" s="true" m="false">
+        <name>Magic Missile</name><time>Action</time><range>120 ft</range><notes></notes>
+      </spell>
+      <spell level="1" conc="false" ritual="false" prepared="true" school="Illu" v="true" s="true" m="false">
+        <name>Disguise Self</name><time>Action</time><range>Self</range><notes></notes>
+      </spell>
+      <spell level="1" conc="true" ritual="false" prepared="true" school="Illu" v="true" s="true" m="true">
+        <name>Silent Image</name><time>Action</time><range>60 ft</range><notes></notes><material>a bit of fleece</material>
+      </spell>
+      <spell level="1" conc="false" ritual="true" prepared="true" school="Div" v="true" s="true" m="true">
+        <name>Comprehend Languages</name><time>Action</time><range>Self</range><notes></notes><material>soot and salt</material>
+      </spell>
+      <spell level="1" conc="false" ritual="false" prepared="true" school="Trans" v="true" s="false" m="true">
+        <name>Feather Fall</name><time>Reaction</time><range>60 ft</range><notes></notes><material>a small feather or piece of down</material>
+      </spell>
+      <spell level="1" conc="false" ritual="false" prepared="true" school="Necro" v="true" s="true" m="false">
+        <name>Ray of Sickness</name><time>Action</time><range>60 ft</range><notes></notes>
+      </spell>
+      <spell level="1" conc="false" ritual="false" prepared="true" school="Abj" v="true" s="true" m="true">
+        <name>Mage Armor</name><time>Action</time><range>Touch</range><notes>AC = 13 + DEX mod</notes><material>a piece of cured leather</material>
+      </spell>
+      <spell level="2" conc="false" ritual="false" prepared="true" school="Conj" v="true" s="false" m="false">
+        <name>Misty Step</name><time>Bonus Action</time><range>Self</range><notes></notes>
+      </spell>
+      <spell level="2" conc="true" ritual="false" prepared="true" school="Illu" v="true" s="true" m="true">
+        <name>Phantasmal Force</name><time>Action</time><range>60 ft</range><notes></notes><material>a bit of fleece</material>
+      </spell>
+      <spell level="2" conc="false" ritual="false" prepared="true" school="Illu" v="true" s="true" m="false">
+        <name>Mirror Image</name><time>Action</time><range>Self</range><notes></notes>
+      </spell>
+      <spell level="2" conc="true" ritual="false" prepared="true" school="Div" v="true" s="true" m="true">
+        <name>Detect Thoughts</name><time>Action</time><range>Self</range><notes></notes><material>a copper piece</material>
+      </spell>
+      <spell level="3" conc="false" ritual="false" prepared="true" school="" v="true" s="true" m="false">
+        <name>Sylune's Viper</name><time>Action</time><range>60 ft</range><notes></notes>
+      </spell>
+      <spell level="3" conc="true" ritual="false" prepared="true" school="Illu" v="true" s="true" m="true">
+        <name>Major Image</name><time>Action</time><range>120 ft</range><notes></notes><material>a bit of fleece</material>
+      </spell>
+      <spell level="3" conc="false" ritual="false" prepared="true" school="Abj" v="false" s="true" m="false">
+        <name>Counterspell</name><time>Reaction</time><range>60 ft</range><notes></notes>
+      </spell>
+      <spell level="3" conc="false" ritual="true" prepared="true" school="Evoc" v="true" s="true" m="true">
+        <name>Leomund's Tiny Hut</name><time>1 minute</time><range>Self (10 ft)</range><notes></notes><material>a small crystal bead</material>
+      </spell>
+    </spells>
+  </spellcasting>
+  <class_features><![CDATA[Arcane Recovery (recover up to 3 spell slot levels on short rest)
+Illusory Weave (advantage on saves against spells)
+Malleable Illusions (change illusions as action)
+Illusory Self (reaction to impose disadvantage on one attack)]]></class_features>
+  <feats><![CDATA[Magic Initiate
+Alert
+Shadow-Touched]]></feats>
+  <species_traits><![CDATA[]]></species_traits>
+  <proficiencies>
+    <armor></armor>
+    <weapons_prof>Daggers, Darts, Slings, Quarterstaffs, Light Crossbows</weapons_prof>
+    <tools>Thieves' Tools</tools>
+    <equipment><![CDATA[Arcane Focus (Quarterstaff), Robe, Spellbook, Scholar's Pack, 2 Daggers, Thieves' Tools, Crowbar, 2 Pouches, Traveler's Clothes]]></equipment>
+  </proficiencies>
+  <coins cp="0" sp="0" ep="0" gp="21" pp="0"/>
+  <attunement>
+    <slot1></slot1><slot2></slot2><slot3></slot3>
+  </attunement>
+  <items>
+  </items>
+  <itemIdCounter>0</itemIdCounter>
+  <loots>
+  </loots>
+  <notes>
+    <backstory><![CDATA[]]></backstory>
+    <appearance><![CDATA[]]></appearance>
+    <session><![CDATA[]]></session>
+    <conditions><![CDATA[]]></conditions>
+  </notes>
+</character>

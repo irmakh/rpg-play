@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Map Prep — DM</title>
+<link rel="stylesheet" href="/css/dm.css">
+<style>
+  html,body{height:100%;width:100%;overflow:hidden;margin:0;padding:0}
+  .sheet{display:flex;flex-direction:column;height:100%;width:100%;max-width:none;margin:0;padding:0}
+  .hdr{flex-shrink:0;margin-bottom:0}
+
+  /* ── Full-screen editor layout ── */
+  #pm-body{display:flex;flex:1;overflow:hidden;min-height:0}
+
+  /* Sidebar */
+  #pm-sidebar{width:240px;flex-shrink:0;display:flex;flex-direction:column;border-right:1px solid var(--a44);background:var(--bg2);overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--a44) transparent}
+  #pm-sidebar-hdr{flex-shrink:0;padding:8px 10px;border-bottom:1px solid var(--a44);display:flex;gap:6px;align-items:center}
+
+  /* Sidebar sections */
+  .sb-section{border-bottom:1px solid var(--a44);flex-shrink:0}
+  .sb-section-hdr{font-size:10px;color:var(--ac);text-transform:uppercase;letter-spacing:.5px;font-weight:bold;cursor:pointer;display:flex;justify-content:space-between;align-items:center;padding:7px 10px;background:var(--a22);user-select:none}
+  .sb-section-hdr:hover{background:var(--a44)}
+  .sb-section-body{padding:6px 10px}
+
+  /* Map list */
+  #map-list{overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--a44) transparent}
+  .map-list-row{padding:7px 10px;border-bottom:1px solid var(--sep);font-size:12px;cursor:pointer}
+  .map-list-row:hover{background:var(--a22)}
+  .map-list-row.selected{background:var(--a22);border-left:3px solid var(--ac);padding-left:7px}
+  .map-list-name{font-weight:bold;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .map-list-meta{font-size:10px;color:var(--txd);margin-top:2px}
+  .no-map-msg{font-size:12px;color:var(--txd);padding:16px 10px;text-align:center}
+
+  /* Fog list */
+  .fog-row{display:flex;align-items:center;gap:5px;padding:2px 0;font-size:11px}
+
+  /* Editor main area */
+  #pm-editor{flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden}
+  #pm-toolbar{flex-shrink:0;display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:6px 10px;background:var(--bg2);border-bottom:1px solid var(--a44)}
+  #pm-canvas-area{flex:1;overflow:hidden;position:relative;background:#0a0a14;cursor:default;display:flex;align-items:flex-start;justify-content:flex-start}
+  #pm-controls{flex-shrink:0;display:flex;gap:12px;align-items:flex-start;padding:8px 10px;background:var(--bg2);border-top:1px solid var(--a44);flex-wrap:wrap}
+
+  /* Canvas layers */
+  #editor-wrap{position:relative;display:inline-block}
+  #editor-wrap img,#editor-wrap canvas{position:absolute;top:0;left:0}
+  #prep-map-img{pointer-events:none}
+  #prep-grid-canvas{pointer-events:none}
+  #prep-fog-canvas{pointer-events:none;z-index:2}
+  #prep-draw-canvas{z-index:3;pointer-events:none}
+
+  /* Placeholder */
+  #editor-placeholder{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--txd);font-size:14px;pointer-events:none}
+
+  /* Controls section groups */
+  .ctrl-group{display:flex;flex-direction:column;gap:4px;min-width:120px}
+  .ctrl-group label.lbl{font-size:9px;color:var(--ac);text-transform:uppercase;letter-spacing:.5px}
+</style>
+</head>
+<body>
+
+<!-- Password gate -->
+<div class="gate" id="gate">
+  <div class="gate-box">
+    <div style="font-size:36px;margin-bottom:10px">🗺</div>
+    <h2>Map Prep</h2>
+    <p>Enter master password to prepare maps.</p>
+    <input type="password" id="gate-pw" placeholder="Master password…" autocomplete="off"
+           onkeydown="if(event.key==='Enter')authenticate()">
+    <div id="gate-err"></div>
+    <button class="btn primary" style="width:100%" onclick="authenticate()">Unlock</button>
+  </div>
+</div>
+
+<!-- Main content -->
+<div class="sheet" id="main-content" style="display:none">
+
+  <!-- Top header bar -->
+  <div class="hdr">
+    <div class="hdr-left">
+      <button class="btn" onclick="location.href='/dm.html'">← DM</button>
+      <h1>🗺 Map Prep</h1>
+      <select id="theme-sel" onchange="applyTheme(this.value)" title="Theme">
+        <option value="dark-gold">🌙</option>
+        <option value="parchment">📜</option>
+        <option value="midnight">🌌</option>
+      </select>
+    </div>
+    <div class="hdr-right">
+      <span id="status-msg" style="font-size:11px"></span>
+      <button class="btn" id="btn-controls-toggle" onclick="togglePmControls()" title="Toggle grid controls">Grid ▲</button>
+      <button class="btn" id="btn-sidebar-toggle" onclick="togglePmSidebar()" title="Toggle panel">▶ Panel</button>
+    </div>
+  </div>
+
+  <!-- Body: sidebar (hidden by default) + editor -->
+  <div id="pm-body">
+
+    <!-- Sidebar -->
+    <div id="pm-sidebar" style="display:none">
+
+      <!-- New map button -->
+      <div id="pm-sidebar-hdr">
+        <button class="btn primary" style="flex:1;font-size:11px;padding:3px 8px" onclick="newMap()">+ New Map</button>
+        <button class="btn" style="font-size:11px;padding:3px 8px" onclick="importMap()" title="Import map from file">⬆ Import</button>
+        <input type="file" id="map-import-input" accept=".json,application/json" style="display:none" onchange="handleImportFile(this)">
+      </div>
+
+      <!-- Maps section -->
+      <div class="sb-section">
+        <div class="sb-section-hdr" onclick="toggleSbSection('maps')">
+          <span>Maps</span><span id="sb-sec-maps-arrow">▼</span>
+        </div>
+        <div id="sb-sec-maps">
+          <div id="map-list"><div class="no-map-msg">No maps yet.</div></div>
+        </div>
+      </div>
+
+      <!-- Fog Regions section -->
+      <div class="sb-section">
+        <div class="sb-section-hdr" onclick="toggleSbSection('fog')">
+          <span>Fog Regions</span><span id="sb-sec-fog-arrow">▶</span>
+        </div>
+        <div id="sb-sec-fog" style="display:none" class="sb-section-body">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+            <button class="btn" id="btn-draw-fog" onclick="toggleDrawMode()" style="font-size:11px;padding:2px 10px">✏ Draw Fog</button>
+            <span id="draw-hint" style="font-size:10px;color:var(--txd);display:none">drag to add region</span>
+          </div>
+          <div id="fog-region-list" style="max-height:220px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--a44) transparent"></div>
+        </div>
+      </div>
+
+      <!-- Hidden Items section -->
+      <div class="sb-section">
+        <div class="sb-section-hdr" onclick="toggleSbSection('items')">
+          <span>Hidden Items</span><span id="sb-sec-items-arrow">▶</span>
+        </div>
+        <div id="sb-sec-items" style="display:none" class="sb-section-body">
+          <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin-bottom:6px">
+            <select id="item-type-sel" style="padding:2px 5px;font-size:11px;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px">
+              <option value="trap">🪤 Trap</option>
+              <option value="chest">📦 Chest</option>
+              <option value="door">🚪 Door</option>
+              <option value="note">📝 Note</option>
+              <option value="other">📍 Other</option>
+            </select>
+            <button class="btn" id="btn-place-item" onclick="togglePlaceItemMode()" style="font-size:11px;padding:2px 10px">📍 Place</button>
+            <span id="place-hint" style="font-size:10px;color:var(--txd);display:none">drag to place</span>
+          </div>
+          <div id="item-list" style="max-height:220px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--a44) transparent"></div>
+        </div>
+      </div>
+
+    </div><!-- /pm-sidebar -->
+
+    <!-- Editor area -->
+    <div id="pm-editor">
+
+      <!-- Editor toolbar (shown when a map is selected) -->
+      <div id="pm-toolbar" style="display:none">
+        <input type="text" id="map-name" placeholder="Map name…" oninput="debounceSave()"
+          style="width:180px;padding:3px 7px;font-size:12px;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px">
+        <button class="btn" onclick="exportMap()" title="Export this map to a file">⬇ Export</button>
+        <button class="btn" onclick="document.getElementById('map-img-input').click()">📷 Image</button>
+        <input type="file" id="map-img-input" accept="image/*" style="display:none" onchange="handleImageUpload(this)">
+        <span id="img-status" style="font-size:11px;color:var(--txd)"></span>
+        <div style="flex:1"></div>
+        <button class="btn primary" onclick="saveMap()">💾 Save</button>
+        <button class="btn" onclick="loadToTable()">📂 Load to Table</button>
+        <button class="btn danger" onclick="deleteMap()" title="Delete this map">🗑</button>
+      </div>
+
+      <!-- Canvas area -->
+      <div id="pm-canvas-area">
+        <div id="editor-placeholder">← Open the panel to select or create a map</div>
+        <div id="editor-wrap">
+          <img id="prep-map-img" alt="" style="display:none;pointer-events:none">
+          <canvas id="prep-grid-canvas" style="pointer-events:none"></canvas>
+          <canvas id="prep-fog-canvas" style="pointer-events:none;z-index:2"></canvas>
+          <canvas id="prep-draw-canvas" style="z-index:3;pointer-events:none"></canvas>
+        </div>
+      </div>
+
+      <!-- Bottom grid controls -->
+      <div id="pm-controls" style="display:none">
+        <div class="ctrl-group">
+          <label class="lbl">Cell Size</label>
+          <div style="display:flex;align-items:center;gap:4px">
+            <input type="range" id="prep-cell-size" min="20" max="150" value="50"
+              style="width:100px;cursor:pointer" oninput="onGridChange()">
+            <span id="prep-cell-val" style="font-size:11px;color:var(--ac);min-width:36px">50 px</span>
+          </div>
+        </div>
+        <div class="ctrl-group" style="min-width:80px">
+          <label class="lbl">Offset X</label>
+          <input type="number" id="prep-offset-x" value="0" oninput="onGridChange()"
+            style="width:70px;padding:3px 5px;font-size:11px;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px">
+        </div>
+        <div class="ctrl-group" style="min-width:80px">
+          <label class="lbl">Offset Y</label>
+          <input type="number" id="prep-offset-y" value="0" oninput="onGridChange()"
+            style="width:70px;padding:3px 5px;font-size:11px;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px">
+        </div>
+      </div>
+
+    </div><!-- /pm-editor -->
+
+  </div><!-- /pm-body -->
+</div><!-- /main-content -->
+
+<script src="/js/prepare-map.js"></script>
+</body>
+</html>

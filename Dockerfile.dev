@@ -1,0 +1,26 @@
+# Development Dockerfile for D&D Character Sheet App
+FROM node:20-alpine
+
+# Install dependencies for better-sqlite3 native compilation
+RUN apk add --no-cache python3 make g++
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files first (for layer caching)
+COPY Application/package*.json ./
+
+# Install dependencies (will be compiled for Alpine Linux)
+RUN npm install
+
+# Copy only application files (not node_modules)
+COPY Application/*.js ./
+COPY Application/*.xml ./
+COPY Application/db ./db
+COPY Application/public ./public
+
+# Expose port (configurable via environment)
+EXPOSE 3000
+
+# Start the application
+CMD ["npm", "start"]

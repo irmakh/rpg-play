@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: char_sheet_dev
+    ports:
+      - "${HOST_PORT:-3000}:${PORT:-3000}"
+    environment:
+      - NODE_ENV=development
+      - PORT=${PORT:-3000}
+      - DB_PROVIDER=${DB_PROVIDER:-localdb}
+      - INSTANT_APP_ID=${INSTANT_APP_ID}
+      - INSTANT_ADMIN_TOKEN=${INSTANT_ADMIN_TOKEN}
+      - MASTER_PASSWORD=${MASTER_PASSWORD:-15243}
+      - WS_URL=${WS_URL}
+    volumes:
+      # Mount application code for hot reload (exclude node_modules)
+      - ./Application:/app:delegated
+      # Use named volume for node_modules to preserve Linux-compiled binaries
+      - /app/node_modules
+      # Persist SQLite databases
+      - ./Application/characters.db:/app/characters.db
+      - ./Application/media.db:/app/media.db
+      - ./Application/localdb.db:/app/localdb.db
+    restart: unless-stopped
+    stdin_open: true
+    tty: true
+
+volumes:
+  node_modules:

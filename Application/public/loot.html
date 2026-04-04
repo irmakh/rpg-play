@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Loot Manager — DM Panel</title>
+<link rel="stylesheet" href="/css/loot.css">
+</head>
+<body>
+
+<!-- Password gate -->
+<div class="gate" id="gate">
+  <div class="gate-box">
+    <div style="font-size:36px;margin-bottom:10px">⚔️</div>
+    <h2>Loot Manager</h2>
+    <p>Enter master password to manage dungeon loot.</p>
+    <input type="password" id="gate-pw" placeholder="Master password…" autocomplete="off"
+           onkeydown="if(event.key==='Enter')authenticate()">
+    <div id="gate-err"></div>
+    <button class="btn primary" style="width:100%" onclick="authenticate()">Unlock</button>
+  </div>
+</div>
+
+<!-- Main content -->
+<div class="sheet" id="main-content" style="display:none">
+
+  <div class="hdr">
+    <div class="hdr-left">
+      <button class="btn" onclick="location.href='/dm.html'" title="Back to DM Panel">← DM</button>
+      <h1>⚔️ Loot Manager</h1>
+      <select id="theme-sel" onchange="applyTheme(this.value)" title="Theme">
+        <option value="dark-gold">🌙</option>
+        <option value="parchment">📜</option>
+        <option value="midnight">🌌</option>
+      </select>
+    </div>
+    <div class="hdr-right">
+      <button class="btn" onclick="refreshAll()" title="Refresh">↻ Refresh</button>
+      <button class="btn primary" onclick="openItemModal(null)">+ Add Item</button>
+    </div>
+  </div>
+
+  <div id="status-msg"></div>
+
+  <!-- Bulk Actions Bar -->
+  <div class="bulk-bar" id="bulk-bar">
+    <span class="bulk-bar-label" id="bulk-count">0 items selected</span>
+    <input type="text" id="bulk-tag" placeholder="Tag…" list="tag-datalist-bulk">
+    <datalist id="tag-datalist-bulk"></datalist>
+    <button class="btn" onclick="applyBulkTag()">Apply Tag</button>
+    <button class="btn danger" onclick="bulkDeleteSelected()">Delete Selected</button>
+    <button class="btn" onclick="clearSelection()">Clear Selection</button>
+  </div>
+
+  <!-- Bulk Import -->
+  <div class="card">
+    <div class="ct">Bulk Import</div>
+    <div class="cb">
+      <div class="field">
+        <label class="lbl">Paste loot items — one item per block, blank line between items. First line = name, remaining lines = description.</label>
+        <textarea id="import-text" style="min-height:120px;font-family:monospace" placeholder="Gold Coins&#10;A handful of gold coins found in the chest.&#10;&#10;Rusty Sword&#10;An old blade, still somewhat sharp.&#10;&#10;Ancient Scroll&#10;Written in Elvish. Contains an unknown spell."></textarea>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <input type="text" id="import-tag" placeholder="Tag (optional)" style="width:160px;flex:0 0 auto">
+        <button class="btn primary" onclick="importItems()">Import</button>
+        <span id="import-status" style="font-size:11px;color:var(--ok)"></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" id="tab-btn-items" onclick="showLootTab('items',this)">Loot Items</div>
+    <div class="tab" id="tab-btn-logs" onclick="showLootTab('logs',this)">📋 Claim Logs</div>
+  </div>
+  <div class="tab-wrap">
+
+    <!-- Loot Items tab -->
+    <div class="tab-panel active" id="tab-items">
+      <div id="loot-loading" style="padding:12px;font-size:11px;color:var(--txd)">Loading…</div>
+      <div id="table-wrap" style="display:none"></div>
+      <div id="empty-msg" style="padding:12px;font-size:11px;color:var(--txd);display:none">No loot items yet. Use the import tool or click "+ Add Item".</div>
+    </div>
+
+    <!-- Claim Logs tab -->
+    <div class="tab-panel" id="tab-logs">
+      <div id="logs-loading" style="padding:12px;font-size:11px;color:var(--txd);display:none">Loading…</div>
+      <div id="logs-table-wrap" style="overflow-x:auto">
+        <table>
+          <thead>
+            <tr>
+              <th>Date &amp; Time</th>
+              <th>Character</th>
+              <th>Item</th>
+            </tr>
+          </thead>
+          <tbody id="logs-tbody"><tr><td colspan="3" style="color:var(--txd);padding:12px;font-size:11px">No claims yet.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- Add/Edit modal -->
+<div class="modal-overlay" id="item-modal" style="display:none">
+  <div class="modal-box">
+    <div class="ct" id="modal-title">Add Loot Item</div>
+    <div class="modal-body">
+      <div class="field">
+        <label class="lbl">Name *</label>
+        <input type="text" id="f-name" placeholder="Item name">
+      </div>
+      <div class="field">
+        <label class="lbl">Tag</label>
+        <input type="text" id="f-tag" placeholder="e.g. Weapons, Chest Room, Quest Items…" list="tag-datalist">
+        <datalist id="tag-datalist"></datalist>
+      </div>
+      <div class="field">
+        <label class="lbl">Description</label>
+        <textarea id="f-desc" style="min-height:80px" placeholder="Item description…"></textarea>
+      </div>
+      <div class="field">
+        <label class="lbl">Visible to players</label>
+        <select id="f-visible">
+          <option value="0">Hidden</option>
+          <option value="1">Visible</option>
+        </select>
+      </div>
+      <div class="field">
+        <label class="lbl">Description visible to players</label>
+        <select id="f-desc-visible">
+          <option value="0">Hidden (DM only)</option>
+          <option value="1">Visible</option>
+        </select>
+      </div>
+      <div id="item-err"></div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn" onclick="closeItemModal()">Cancel</button>
+      <button class="btn primary" onclick="saveItemModal()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/loot.js"></script>
+</body>
+</html>
