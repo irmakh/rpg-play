@@ -85,6 +85,9 @@ db.exec(`
     mapHeight INTEGER DEFAULT 0, fogRegions TEXT DEFAULT '[]',
     createdAt TEXT DEFAULT (datetime('now'))
   );
+  CREATE TABLE IF NOT EXISTS events_state (
+    id TEXT PRIMARY KEY, dataJson TEXT DEFAULT '{}'
+  );
 `);
 
 // One-time migrations
@@ -98,11 +101,13 @@ try { db.exec(`ALTER TABLE table_state ADD COLUMN hiddenItems TEXT DEFAULT '[]'`
 const SHOP_CONFIG_ID = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
 const INIT_STATE_ID  = 'c8a04a12-4372-4c78-9abc-def012345601';
 const TABLE_STATE_ID = 'c8a04a12-4372-4c78-9abc-def012345601';
+const EVENTS_ID      = 'events-global';
 
 // Ensure singleton rows exist
 db.prepare("INSERT OR IGNORE INTO shop_config (id, isOpen) VALUES (?, 1)").run(SHOP_CONFIG_ID);
 db.prepare("INSERT OR IGNORE INTO initiative_state (id, currentId) VALUES (?, '')").run(INIT_STATE_ID);
 db.prepare("INSERT OR IGNORE INTO table_state (id) VALUES (?)").run(TABLE_STATE_ID);
+db.prepare("INSERT OR IGNORE INTO events_state (id, dataJson) VALUES (?, '{}')").run(EVENTS_ID);
 
 // ── Characters ────────────────────────────────────────────────────────────────
 export function listCharacters() {
@@ -463,6 +468,15 @@ export function updatePreparedMap(id, fields) {
 }
 export function deletePreparedMap(id) {
   db.prepare('DELETE FROM prepared_maps WHERE id = ?').run(id);
+}
+
+// ── Events ────────────────────────────────────────────────────────────────────
+export function getEventsData() {
+  const r = db.prepare('SELECT dataJson FROM events_state WHERE id = ?').get(EVENTS_ID);
+  try { return JSON.parse(r?.dataJson || '{}'); } catch { return {}; }
+}
+export function saveEventsData(data) {
+  db.prepare('INSERT OR REPLACE INTO events_state (id, dataJson) VALUES (?, ?)').run(EVENTS_ID, JSON.stringify(data));
 }
 
 // ── Full export (for backup) ──────────────────────────────────────────────────

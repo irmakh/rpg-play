@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Events — DM</title>
+<link rel="stylesheet" href="/css/dm.css">
+<style>
+  html,body{height:100%;overflow:hidden;margin:0;padding:0}
+  .sheet{display:flex;flex-direction:column;height:100%;max-width:none;margin:0;padding:0}
+  .hdr{flex-shrink:0;margin-bottom:0}
+
+  #ev-body{display:flex;flex:1;overflow:hidden;min-height:0;gap:0}
+
+  /* Left column */
+  #ev-left{width:380px;flex-shrink:0;display:flex;flex-direction:column;border-right:1px solid var(--a44);overflow:hidden}
+  #ev-challenges{flex:1;display:flex;flex-direction:column;min-height:0;border-bottom:1px solid var(--a44)}
+  #ev-results{flex:1;display:flex;flex-direction:column;min-height:0}
+
+  /* Right column */
+  #ev-right{flex:1;display:flex;flex-direction:column;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--a44) transparent}
+
+  /* Section headers */
+  .ev-sec-hdr{flex-shrink:0;padding:8px 12px;background:var(--a22);border-bottom:1px solid var(--a44);display:flex;align-items:center;justify-content:space-between}
+  .ev-sec-title{font-size:11px;color:var(--ac);text-transform:uppercase;letter-spacing:.6px;font-weight:bold}
+  .ev-sec-body{flex:1;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--a44) transparent;padding:8px}
+
+  /* Challenge rows */
+  .ch-row{display:flex;align-items:flex-start;gap:6px;margin-bottom:6px;background:var(--bg3);border:1px solid var(--a44);border-radius:4px;padding:6px}
+  .ch-row textarea{flex:1;background:transparent;border:none;color:var(--tx);font-size:12px;resize:none;outline:none;line-height:1.4;padding:0;font-family:inherit}
+  .ch-status{flex-shrink:0;font-size:10px;padding:2px 7px;border-radius:10px;cursor:pointer;border:1px solid transparent;font-weight:bold;white-space:nowrap}
+  .ch-status.pending{background:var(--a44);color:var(--txd)}
+  .ch-status.completed{background:rgba(80,200,80,0.2);color:#6c6;border-color:#6c6}
+  .ch-status.failed{background:rgba(200,80,80,0.2);color:#c66;border-color:#c66}
+
+  /* Result rows */
+  .res-row{display:flex;align-items:flex-start;gap:6px;margin-bottom:6px;background:var(--bg3);border:1px solid var(--a44);border-radius:4px;padding:6px}
+  .res-row textarea{flex:1;background:transparent;border:none;color:var(--tx);font-size:12px;resize:none;outline:none;line-height:1.4;padding:0;font-family:inherit}
+
+  /* Travel */
+  #ev-travel{padding:12px 14px}
+  .trav-pace{display:flex;gap:6px;margin-bottom:14px}
+  .pace-btn{flex:1;padding:6px;font-size:12px;font-weight:bold;border-radius:4px;cursor:pointer;border:1px solid var(--a55);background:var(--bg3);color:var(--txd);transition:all .15s}
+  .pace-btn.active{border-color:var(--ac);background:rgba(200,160,74,0.15);color:var(--ac)}
+  .trav-speeds{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+  .speed-field{display:flex;flex-direction:column;gap:3px;flex:1;min-width:80px}
+  .speed-field label{font-size:9px;color:var(--ac);text-transform:uppercase;letter-spacing:.5px}
+  .speed-field input{padding:4px 7px;font-size:12px;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px;width:100%;box-sizing:border-box}
+  .dist-row{display:flex;gap:6px;align-items:center;margin-bottom:6px}
+  .dist-row input{flex:1;padding:4px 7px;font-size:12px;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px}
+  .dist-row input.dist-val{width:100px;flex:none}
+</style>
+</head>
+<body>
+
+<!-- Password gate -->
+<div class="gate" id="gate">
+  <div class="gate-box">
+    <div style="font-size:36px;margin-bottom:10px">📅</div>
+    <h2>Events</h2>
+    <p>Enter master password to access the events log.</p>
+    <input type="password" id="gate-pw" placeholder="Master password…" autocomplete="off"
+           onkeydown="if(event.key==='Enter')authenticate()">
+    <div id="gate-err"></div>
+    <button class="btn primary" style="width:100%" onclick="authenticate()">Unlock</button>
+  </div>
+</div>
+
+<!-- Main content -->
+<div class="sheet" id="main-content" style="display:none">
+
+  <div class="hdr">
+    <div class="hdr-left">
+      <button class="btn" onclick="location.href='/dm.html'">← DM</button>
+      <h1>📅 Events</h1>
+      <select id="theme-sel" onchange="applyTheme(this.value)" title="Theme">
+        <option value="dark-gold">🌙</option>
+        <option value="parchment">📜</option>
+        <option value="midnight">🌌</option>
+      </select>
+    </div>
+    <div class="hdr-right">
+      <span id="save-status" style="font-size:11px;color:var(--txd)"></span>
+      <button class="btn" onclick="loadEvents()" title="Reload data from server">↺ Reload</button>
+      <button class="btn primary" onclick="saveEvents()" title="Save now">💾 Save</button>
+    </div>
+  </div>
+
+  <div id="ev-body">
+
+    <!-- Left: Challenges + Results -->
+    <div id="ev-left">
+
+      <!-- Challenges -->
+      <div id="ev-challenges">
+        <div class="ev-sec-hdr">
+          <span class="ev-sec-title">⚔ Challenges</span>
+          <button class="btn sm" onclick="addChallenge()">+ Add</button>
+        </div>
+        <div class="ev-sec-body" id="challenge-list"></div>
+      </div>
+
+      <!-- Results -->
+      <div id="ev-results">
+        <div class="ev-sec-hdr">
+          <span class="ev-sec-title">📜 Results</span>
+          <button class="btn sm" onclick="addResult()">+ Add</button>
+        </div>
+        <div class="ev-sec-body" id="result-list"></div>
+      </div>
+
+    </div>
+
+    <!-- Right: Travel -->
+    <div id="ev-right">
+      <div class="ev-sec-hdr" style="flex-shrink:0">
+        <span class="ev-sec-title">🧭 Travel</span>
+      </div>
+      <div id="ev-travel">
+
+        <!-- Pace -->
+        <div style="font-size:11px;color:var(--txd);margin-bottom:6px">Pace</div>
+        <div class="trav-pace">
+          <button class="pace-btn" id="pace-slow"   onclick="setPace('slow')">🐢 Slow</button>
+          <button class="pace-btn" id="pace-normal" onclick="setPace('normal')">🚶 Normal</button>
+          <button class="pace-btn" id="pace-fast"   onclick="setPace('fast')">🏃 Fast</button>
+        </div>
+
+        <!-- Speeds -->
+        <div style="font-size:11px;color:var(--txd);margin-bottom:6px">Speed <span style="font-size:10px">(auto-calculated · editable)</span></div>
+        <div class="trav-speeds">
+          <div class="speed-field">
+            <label>Per Minute</label>
+            <input type="text" id="speed-min" oninput="updateSpeed('speedPerMin',this.value)" onchange="debounceSave()">
+          </div>
+          <div class="speed-field">
+            <label>Per Hour</label>
+            <input type="text" id="speed-hour" oninput="updateSpeed('speedPerHour',this.value)" onchange="debounceSave()">
+          </div>
+          <div class="speed-field">
+            <label>Per Day</label>
+            <input type="text" id="speed-day" oninput="updateSpeed('speedPerDay',this.value)" onchange="debounceSave()">
+          </div>
+        </div>
+
+        <!-- Distances -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;margin-top:4px">
+          <div style="font-size:11px;color:var(--txd)">Distances</div>
+          <button class="btn sm" onclick="addDistance()">+ Add</button>
+        </div>
+        <div id="distance-list"></div>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="/js/events.js"></script>
+</body>
+</html>

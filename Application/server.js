@@ -1440,6 +1440,27 @@ app.delete('/api/monsters/:id', async (req, res) => {
   } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
 });
 
+// ── Events data (campaign log) ────────────────────────────────────────────────
+// NOTE: /api/events is taken by the SSE broadcast endpoint — using /api/events-data
+app.get('/api/events-data', async (req, res) => {
+  try {
+    if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
+    const data = DB_PROVIDER === 'localdb' ? ldb.getEventsData() : {};
+    res.set('Cache-Control', 'no-store');
+    res.json(data);
+  } catch (err) { console.error('GET /api/events-data:', err); res.status(500).json({ error: 'Server error' }); }
+});
+
+app.put('/api/events-data', async (req, res) => {
+  try {
+    if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
+    const data = req.body;
+    if (!data || typeof data !== 'object') return res.status(400).json({ error: 'Invalid body' });
+    if (DB_PROVIDER === 'localdb') ldb.saveEventsData(data);
+    res.json({ ok: true });
+  } catch (err) { console.error('PUT /api/events-data:', err); res.status(500).json({ error: 'Server error' }); }
+});
+
 // ── Database Backup ───────────────────────────────────────────────────────────
 app.get('/api/admin/backup', async (req, res) => {
   try {
