@@ -6,28 +6,19 @@
 <title>Events — DM</title>
 <link rel="stylesheet" href="/css/dm.css">
 <style>
-  html,body{height:100%;overflow:hidden;margin:0;padding:0}
-  .sheet{display:flex;flex-direction:column;height:100%;max-width:none;margin:0;padding:0}
-  .hdr{flex-shrink:0;margin-bottom:0}
+  /* Two-column body */
+  #ev-body{display:flex;gap:14px;align-items:flex-start}
+  #ev-left{flex:1;display:flex;flex-direction:column;gap:14px;min-width:0}
+  #ev-right{width:340px;flex-shrink:0}
 
-  #ev-body{display:flex;flex:1;overflow:hidden;min-height:0;gap:0}
-
-  /* Left column */
-  #ev-left{width:380px;flex-shrink:0;display:flex;flex-direction:column;border-right:1px solid var(--a44);overflow:hidden}
-  #ev-challenges{flex:1;display:flex;flex-direction:column;min-height:0;border-bottom:1px solid var(--a44)}
-  #ev-results{flex:1;display:flex;flex-direction:column;min-height:0}
-
-  /* Right column */
-  #ev-right{flex:1;display:flex;flex-direction:column;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--a44) transparent}
-
-  /* Section headers */
-  .ev-sec-hdr{flex-shrink:0;padding:8px 12px;background:var(--a22);border-bottom:1px solid var(--a44);display:flex;align-items:center;justify-content:space-between}
+  /* Section card header */
+  .ev-sec-hdr{padding:8px 12px;background:var(--a22);border-bottom:1px solid var(--a44);display:flex;align-items:center;justify-content:space-between}
   .ev-sec-title{font-size:11px;color:var(--ac);text-transform:uppercase;letter-spacing:.6px;font-weight:bold}
-  .ev-sec-body{flex:1;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--a44) transparent;padding:8px}
+  .ev-sec-body{padding:10px}
 
   /* Challenge rows */
   .ch-row{display:flex;align-items:flex-start;gap:6px;margin-bottom:6px;background:var(--bg3);border:1px solid var(--a44);border-radius:4px;padding:6px}
-  .ch-row textarea{flex:1;background:transparent;border:none;color:var(--tx);font-size:12px;resize:none;outline:none;line-height:1.4;padding:0;font-family:inherit}
+  .ch-row textarea{flex:1;background:transparent;border:none;color:var(--tx);font-size:12px;resize:vertical;outline:none;line-height:1.4;padding:0;font-family:inherit}
   .ch-status{flex-shrink:0;font-size:10px;padding:2px 7px;border-radius:10px;cursor:pointer;border:1px solid transparent;font-weight:bold;white-space:nowrap}
   .ch-status.pending{background:var(--a44);color:var(--txd)}
   .ch-status.completed{background:rgba(80,200,80,0.2);color:#6c6;border-color:#6c6}
@@ -35,20 +26,19 @@
 
   /* Result rows */
   .res-row{display:flex;align-items:flex-start;gap:6px;margin-bottom:6px;background:var(--bg3);border:1px solid var(--a44);border-radius:4px;padding:6px}
-  .res-row textarea{flex:1;background:transparent;border:none;color:var(--tx);font-size:12px;resize:none;outline:none;line-height:1.4;padding:0;font-family:inherit}
+  .res-row textarea{flex:1;background:transparent;border:none;color:var(--tx);font-size:12px;resize:vertical;outline:none;line-height:1.4;padding:0;font-family:inherit}
 
   /* Travel */
-  #ev-travel{padding:12px 14px}
   .trav-pace{display:flex;gap:6px;margin-bottom:14px}
   .pace-btn{flex:1;padding:6px;font-size:12px;font-weight:bold;border-radius:4px;cursor:pointer;border:1px solid var(--a55);background:var(--bg3);color:var(--txd);transition:all .15s}
   .pace-btn.active{border-color:var(--ac);background:rgba(200,160,74,0.15);color:var(--ac)}
   .trav-speeds{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap}
-  .speed-field{display:flex;flex-direction:column;gap:3px;flex:1;min-width:80px}
+  .speed-field{display:flex;flex-direction:column;gap:3px;flex:1;min-width:70px}
   .speed-field label{font-size:9px;color:var(--ac);text-transform:uppercase;letter-spacing:.5px}
   .speed-field input{padding:4px 7px;font-size:12px;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px;width:100%;box-sizing:border-box}
   .dist-row{display:flex;gap:6px;align-items:center;margin-bottom:6px}
   .dist-row input{flex:1;padding:4px 7px;font-size:12px;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px}
-  .dist-row input.dist-val{width:100px;flex:none}
+  .dist-row input.dist-val{width:90px;flex:none}
 </style>
 </head>
 <body>
