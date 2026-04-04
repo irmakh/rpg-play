@@ -53,6 +53,10 @@ data/
 # Memory session logs (ephemeral, session-specific)
 memory/logs/
 
+# Uploaded media files (stored on disk, not committed)
+# Subdirectories are created automatically by the server on first upload
+Application/public/uploads/
+
 # Node modules (if using any JS tools)
 node_modules/
 

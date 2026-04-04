@@ -2,6 +2,7 @@ import 'dotenv/config';
 import express from 'express';
 import crypto from 'crypto';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { createServer } from 'http';
 import { WebSocketServer } from 'ws';
@@ -29,6 +30,22 @@ if (DB_PROVIDER === 'localdb') {
 
 function genId() {
   return DB_PROVIDER === 'localdb' ? crypto.randomUUID() : _idbGenId();
+}
+
+// ── File-based upload storage ────────────────────────────────────────────────
+const UPLOADS_DIR = path.join(__dirname, 'public', 'uploads');
+const MIME_TO_EXT = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/gif': 'gif', 'image/webp': 'webp', 'image/svg+xml': 'svg' };
+function mimeToExt(mimeType) { return MIME_TO_EXT[mimeType] || mimeType.split('/')[1] || 'bin'; }
+function saveUploadFile(subdir, id, mimeType, b64) {
+  const filename = `${id}.${mimeToExt(mimeType)}`;
+  const dir = path.join(UPLOADS_DIR, subdir);
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, filename), Buffer.from(b64, 'base64'));
+  return `/uploads/${subdir}/${filename}`;
+}
+function deleteUploadFile(fileUrl) {
+  if (!fileUrl || !fileUrl.startsWith('/uploads/')) return;
+  try { fs.unlinkSync(path.join(__dirname, 'public', fileUrl)); } catch {}
 }
 
 // ── SQLite: shared media (both modes) ────────────────────────────────────────
@@ -399,9 +416,18 @@ app.post('/api/characters/:id/media', async (req, res) => {
     const safeName = path.basename(originalName).replace(/[^\w.\-]/g, '_').slice(0, 200) || 'file';
     const newId = genId();
 
+    // Save file to disk; store URL path instead of base64 blob in DB
+    const fileUrl = saveUploadFile('characters', newId, mimeType, mimeMatch[2]);
+
     if (DB_PROVIDER === 'localdb') {
-      if (isPortrait) ldb.setPortrait(charId, ''); // clear existing portrait flags
-      ldb.createMedia(newId, { charId, originalName: safeName, mimeType, dataUrl, isPortrait: !!isPortrait, createdAt: new Date().toISOString() });
+      if (isPortrait) {
+        // Delete old portrait file from disk
+        const oldRows = ldb.listMedia(charId);
+        const oldPortrait = oldRows.find(r => r.isPortrait);
+        if (oldPortrait) deleteUploadFile(oldPortrait.dataUrl);
+        ldb.setPortrait(charId, '');
+      }
+      ldb.createMedia(newId, { charId, originalName: safeName, mimeType, dataUrl: fileUrl, isPortrait: !!isPortrait, createdAt: new Date().toISOString() });
       if (isPortrait) ldb.setPortrait(charId, newId);
     } else {
       const txns = [];
@@ -409,7 +435,7 @@ app.post('/api/characters/:id/media', async (req, res) => {
         const existing = await idb.query({ media: { $: { where: { charId } } } });
         for (const m of existing.media || []) if (m.isPortrait) txns.push(idb.tx.media[m.id].update({ isPortrait: false }));
       }
-      txns.push(idb.tx.media[newId].update({ charId, originalName: safeName, mimeType, dataUrl, isPortrait: !!isPortrait, createdAt: new Date().toISOString() }));
+      txns.push(idb.tx.media[newId].update({ charId, originalName: safeName, mimeType, dataUrl: fileUrl, isPortrait: !!isPortrait, createdAt: new Date().toISOString() }));
       await idb.transact(txns);
     }
     res.json({ id: newId, name: safeName, mimeType, isPortrait: !!isPortrait });
@@ -468,10 +494,13 @@ app.delete('/api/characters/:id/media/:mid', async (req, res) => {
     if (DB_PROVIDER === 'localdb') {
       const m = ldb.getMediaById(mediaId);
       if (!m || m.charId !== charId) return res.status(404).json({ error: 'Media not found' });
+      deleteUploadFile(m.dataUrl);
       ldb.deleteMedia(mediaId);
     } else {
       const result = await idb.query({ media: { $: { where: { charId } } } });
-      if (!result.media?.find(m => m.id === mediaId)) return res.status(404).json({ error: 'Media not found' });
+      const m = result.media?.find(m => m.id === mediaId);
+      if (!m) return res.status(404).json({ error: 'Media not found' });
+      deleteUploadFile(m.dataUrl);
       await idb.transact([idb.tx.media[mediaId].delete()]);
     }
     res.json({ ok: true });
@@ -1191,7 +1220,8 @@ app.post('/api/chat/media', async (req, res) => {
     const b64 = mimeMatch[2];
     if (Math.ceil(b64.length * 0.75) > MAX_MEDIA_BYTES) return res.status(413).json({ error: 'File too large (max 25 MB)' });
     const mediaId = genId();
-    insertSharedMedia(mediaId, mimeType, Buffer.from(b64, 'base64'));
+    const chatFileUrl = saveUploadFile('media', mediaId, mimeType, b64);
+    insertSharedMedia(mediaId, mimeType, Buffer.from('FILE:' + chatFileUrl));
     const entry = {
       id: genId(), sender: 'DM', type: 'media', mediaId, mimeType,
       caption: caption ? String(caption).slice(0, 120) : null,
@@ -1211,6 +1241,8 @@ app.post('/api/chat/media', async (req, res) => {
 app.get('/api/shared-media/:id', (req, res) => {
   const item = _mediaGet.get(req.params.id);
   if (!item) return res.status(404).send('Not found');
+  const dataStr = item.data.toString();
+  if (dataStr.startsWith('FILE:')) return res.redirect(dataStr.slice(5));
   res.set('Content-Type', item.mime_type);
   res.set('Cache-Control', 'public, max-age=3600');
   res.send(item.data);
@@ -1351,7 +1383,16 @@ app.post('/api/monsters/:id/portrait', async (req, res) => {
     if (!r) return res.status(404).json({ error: 'Not found' });
     let data = {};
     try { data = JSON.parse(r.dataJson || '{}'); } catch {}
-    if (dataUrl === '') { delete data.portrait; } else { data.portrait = dataUrl; }
+    if (dataUrl === '') {
+      deleteUploadFile(data.portrait);
+      delete data.portrait;
+    } else {
+      // Save image to disk; store URL path instead of base64 in DB
+      const mimeMatch = dataUrl.match(/^data:(image\/[^;]+);base64,(.+)$/s);
+      if (!mimeMatch) return res.status(400).json({ error: 'Invalid image format' });
+      deleteUploadFile(data.portrait); // remove old file if any
+      data.portrait = saveUploadFile('monsters', req.params.id, mimeMatch[1], mimeMatch[2]);
+    }
     const dataJson = JSON.stringify(data);
     if (DB_PROVIDER === 'localdb') {
       ldb.updateMonster(req.params.id, { dataJson });
@@ -1359,7 +1400,7 @@ app.post('/api/monsters/:id/portrait', async (req, res) => {
       await idb.transact([idb.tx.monsters[req.params.id].update({ dataJson })]);
     }
     // Sync portrait to all table tokens linked to this monster
-    const newPortrait = dataUrl === '' ? null : dataUrl;
+    const newPortrait = data.portrait || null;
     if (DB_PROVIDER === 'localdb') {
       const linked = ldb.getLinkedTokens(req.params.id).filter(t => t.type === 'monster');
       for (const tok of linked) {
@@ -1387,6 +1428,8 @@ app.delete('/api/monsters/:id', async (req, res) => {
     if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
     const existing = DB_PROVIDER === 'localdb' ? ldb.getMonster(req.params.id) : (await idb.query({ monsters: { $: { where: { id: req.params.id } } } })).monsters?.[0];
     if (!existing) return res.status(404).json({ error: 'Not found' });
+    // Delete portrait file if any
+    try { const d = JSON.parse(existing.dataJson || '{}'); deleteUploadFile(d.portrait); } catch {}
     if (DB_PROVIDER === 'localdb') {
       ldb.deleteMonster(req.params.id);
     } else {
@@ -1539,6 +1582,8 @@ const TABLE_MAP_MEDIA_ID = 'table-map';
 app.get('/api/table/map', (req, res) => {
   const item = _mediaGet.get(TABLE_MAP_MEDIA_ID);
   if (!item) return res.status(404).send('No map uploaded');
+  const dataStr = item.data.toString();
+  if (dataStr.startsWith('FILE:')) return res.redirect(dataStr.slice(5));
   res.set('Content-Type', item.mime_type);
   res.set('Cache-Control', 'no-cache, no-store');
   res.send(item.data);
@@ -1554,7 +1599,11 @@ app.post('/api/table/map', async (req, res) => {
     const mimeType = mimeMatch[1];
     const b64 = mimeMatch[2];
     if (Math.ceil(b64.length * 0.75) > 30_000_000) return res.status(413).json({ error: 'Image too large (max ~30 MB)' });
-    _mapUpsert.run(TABLE_MAP_MEDIA_ID, mimeType, Buffer.from(b64, 'base64'), Date.now());
+    // Delete old table-map file if any
+    const oldMap = _mediaGet.get(TABLE_MAP_MEDIA_ID);
+    if (oldMap) { const s = oldMap.data.toString(); if (s.startsWith('FILE:')) deleteUploadFile(s.slice(5)); }
+    const mapFileUrl = saveUploadFile('maps', TABLE_MAP_MEDIA_ID, mimeType, b64);
+    _mapUpsert.run(TABLE_MAP_MEDIA_ID, mimeType, Buffer.from('FILE:' + mapFileUrl), Date.now());
     const stateUpdate = { hasMap: true, mapWidth: parseInt(mapWidth) || 0, mapHeight: parseInt(mapHeight) || 0 };
     if (DB_PROVIDER === 'localdb') {
       ldb.updateTableState(stateUpdate);
@@ -1569,6 +1618,8 @@ app.post('/api/table/map', async (req, res) => {
 app.delete('/api/table/map', async (req, res) => {
   try {
     if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
+    const oldMapDel = _mediaGet.get(TABLE_MAP_MEDIA_ID);
+    if (oldMapDel) { const s = oldMapDel.data.toString(); if (s.startsWith('FILE:')) deleteUploadFile(s.slice(5)); }
     mediaDb.prepare('DELETE FROM shared_media WHERE id = ?').run(TABLE_MAP_MEDIA_ID);
     const stateUpdate = { hasMap: false, mapWidth: 0, mapHeight: 0 };
     if (DB_PROVIDER === 'localdb') {
@@ -1753,7 +1804,10 @@ app.delete('/api/prepared-maps/:id', async (req, res) => {
     } else {
       await idb.transact([idb.tx.preparedMaps[id].delete()]);
     }
-    mediaDb.prepare('DELETE FROM shared_media WHERE id = ?').run('prep-map-' + id);
+    const prepDelId = 'prep-map-' + id;
+    const prepDelItem = _mediaGet.get(prepDelId);
+    if (prepDelItem) { const s = prepDelItem.data.toString(); if (s.startsWith('FILE:')) deleteUploadFile(s.slice(5)); }
+    mediaDb.prepare('DELETE FROM shared_media WHERE id = ?').run(prepDelId);
     res.json({ ok: true });
   } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
 });
@@ -1761,6 +1815,8 @@ app.delete('/api/prepared-maps/:id', async (req, res) => {
 app.get('/api/prepared-maps/:id/image', (req, res) => {
   const item = _mediaGet.get('prep-map-' + req.params.id);
   if (!item) return res.status(404).send('No image uploaded');
+  const dataStr = item.data.toString();
+  if (dataStr.startsWith('FILE:')) return res.redirect(dataStr.slice(5));
   res.set('Content-Type', item.mime_type);
   res.set('Cache-Control', 'no-cache, no-store');
   res.send(item.data);
@@ -1776,7 +1832,12 @@ app.post('/api/prepared-maps/:id/image', express.json({ limit: '34mb' }), async 
     const mimeType = mimeMatch[1];
     const b64 = mimeMatch[2];
     if (Math.ceil(b64.length * 0.75) > 30_000_000) return res.status(413).json({ error: 'Image too large (max ~30 MB)' });
-    _mapUpsert.run('prep-map-' + req.params.id, mimeType, Buffer.from(b64, 'base64'), Date.now());
+    // Delete old prepared-map file if any
+    const prepMapId = 'prep-map-' + req.params.id;
+    const oldPrepMap = _mediaGet.get(prepMapId);
+    if (oldPrepMap) { const s = oldPrepMap.data.toString(); if (s.startsWith('FILE:')) deleteUploadFile(s.slice(5)); }
+    const prepFileUrl = saveUploadFile('maps', prepMapId, mimeType, b64);
+    _mapUpsert.run(prepMapId, mimeType, Buffer.from('FILE:' + prepFileUrl), Date.now());
     const sizeFields = { mapWidth: parseInt(mapWidth) || 0, mapHeight: parseInt(mapHeight) || 0 };
     if (DB_PROVIDER === 'localdb') {
       ldb.updatePreparedMap(req.params.id, sizeFields);
@@ -1798,11 +1859,25 @@ app.post('/api/prepared-maps/:id/load-to-table', async (req, res) => {
       map = r.preparedMaps?.[0];
     }
     if (!map) return res.status(404).json({ error: 'Prepared map not found' });
-    // Copy image blob from prep-map-{id} to table-map
+    // Copy image from prep-map-{id} to table-map
     const srcId = 'prep-map-' + req.params.id;
     const imgRow = _mediaGet.get(srcId);
     if (imgRow) {
-      _mapUpsert.run(TABLE_MAP_MEDIA_ID, imgRow.mime_type, imgRow.data, Date.now());
+      const srcDataStr = imgRow.data.toString();
+      if (srcDataStr.startsWith('FILE:')) {
+        // Copy file to a dedicated table-map file so deleting the prep map won't break the table
+        const srcFilePath = path.join(__dirname, 'public', srcDataStr.slice(5));
+        const ext = path.extname(srcFilePath);
+        const destFileUrl = `/uploads/maps/${TABLE_MAP_MEDIA_ID}${ext}`;
+        const destFilePath = path.join(__dirname, 'public', destFileUrl);
+        // Delete old table-map file if different from source
+        const oldTableMap = _mediaGet.get(TABLE_MAP_MEDIA_ID);
+        if (oldTableMap) { const s = oldTableMap.data.toString(); if (s.startsWith('FILE:') && s.slice(5) !== destFileUrl) deleteUploadFile(s.slice(5)); }
+        try { fs.mkdirSync(path.dirname(destFilePath), { recursive: true }); fs.copyFileSync(srcFilePath, destFilePath); } catch {}
+        _mapUpsert.run(TABLE_MAP_MEDIA_ID, imgRow.mime_type, Buffer.from('FILE:' + destFileUrl), Date.now());
+      } else {
+        _mapUpsert.run(TABLE_MAP_MEDIA_ID, imgRow.mime_type, imgRow.data, Date.now());
+      }
     }
     const fogRegions = (() => { try { return JSON.parse(map.fogRegions || '[]'); } catch { return []; } })();
     const hiddenItems = (() => { try { return JSON.parse(map.hiddenItems || '[]'); } catch { return []; } })();
@@ -1916,7 +1991,7 @@ app.post('/api/table/tokens', async (req, res) => {
       hpMax: parseInt(hpMax) || 0, hpTemp: Math.max(0, parseInt(hpTemp) || 0), speed: parseInt(speed) || 30,
       initiativeId: resolvedInitId, movedFt: 0, visible: true,
       tokenSize: Math.max(1, Math.min(4, parseInt(tokenSize) || 1)),
-      portrait: typeof portrait === 'string' && portrait.startsWith('data:image/') ? portrait : null,
+      portrait: typeof portrait === 'string' && (portrait.startsWith('data:image/') || portrait.startsWith('/uploads/')) ? portrait : null,
       createdAt: new Date().toISOString()
     };
     if (DB_PROVIDER === 'localdb') {
