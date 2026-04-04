@@ -1035,14 +1035,15 @@ app.post('/api/initiative/add', async (req, res) => {
     if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
     const { name, roll, monsterId } = req.body || {};
     if (!name || roll === undefined) return res.status(400).json({ error: 'name and roll required' });
+    const newInitId = genId();
     const fields = { name: String(name), roll: parseInt(roll), charId: '', monsterId: monsterId || '', createdAt: new Date().toISOString() };
     if (DB_PROVIDER === 'localdb') {
-      ldb.createInitEntry(genId(), fields);
+      ldb.createInitEntry(newInitId, fields);
     } else {
-      await idb.transact([idb.tx.initiativeEntries[genId()].update(fields)]);
+      await idb.transact([idb.tx.initiativeEntries[newInitId].update(fields)]);
     }
     broadcast('initiative', { action: 'add' });
-    res.json({ ok: true });
+    res.json({ ok: true, id: newInitId });
   } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
 });
 

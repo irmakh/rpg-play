@@ -1806,12 +1806,67 @@ function _refreshHpPanel(tok) {
       visRow.style.display = 'none';
     }
   }
+  // Roll Initiative — DM only, all token types
+  const initRow = document.getElementById('hp-init-row');
+  const initBtn = document.getElementById('hp-init-btn');
+  if (initRow && initBtn) {
+    if (isDM()) {
+      initRow.style.display = '';
+      const hasEntry = !!initData.entries.find(e => e.id === tok.initiativeId);
+      initBtn.textContent = hasEntry ? '🎲 Reroll Initiative' : '🎲 Roll Initiative';
+    } else {
+      initRow.style.display = 'none';
+    }
+  }
 }
 
 async function toggleTokenVisibility() {
   const tok = tokens.find(t => t.id === selectedTokenId);
   if (!tok || !isDM()) return;
   await _putHp({ visible: tok.visible === false });
+}
+
+async function rollTokenInitiative() {
+  const tok = tokens.find(t => t.id === selectedTokenId);
+  if (!tok || !isDM()) return;
+  // DEX modifier from monster data (works for any token type; defaults to 0)
+  let dexMod = 0;
+  if (tok.linkedId) {
+    const mon = _monsterList.find(m => m.id === tok.linkedId);
+    if (mon?.data?.dex) dexMod = Math.floor((parseInt(mon.data.dex) - 10) / 2);
+  }
+  const d20 = Math.ceil(Math.random() * 20);
+  const roll = d20 + dexMod;
+  const modStr = dexMod >= 0 ? `+${dexMod}` : `${dexMod}`;
+  const existingEntry = initData.entries.find(e => e.id === tok.initiativeId);
+  try {
+    if (existingEntry) {
+      const res = await fetch(`/api/initiative/${tok.initiativeId}/roll`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'X-Master-Password': masterPw },
+        body: JSON.stringify({ roll })
+      });
+      if (!res.ok) return showToast('Failed to update initiative.', true);
+    } else {
+      const res = await fetch('/api/initiative/add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Master-Password': masterPw },
+        body: JSON.stringify({ name: tok.name, roll, monsterId: tok.linkedId || '' })
+      });
+      if (!res.ok) return showToast('Failed to add initiative entry.', true);
+      const data = await res.json();
+      if (data.id) {
+        await fetch(`/api/table/tokens/${tok.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', 'X-Master-Password': masterPw },
+          body: JSON.stringify({ initiativeId: data.id })
+        });
+        patchToken(tok.id, { initiativeId: data.id });
+      }
+    }
+    showToast(`${tok.name}: d20(${d20})${dexMod !== 0 ? modStr : ''} = ${roll}`);
+    _refreshHpPanel({ ...tok, initiativeId: tok.initiativeId || '' });
+  } catch { showToast('Connection error.', true); }
 }
 function updateHpPanel(tok) {
   if (selectedTokenId !== tok.id) return;
