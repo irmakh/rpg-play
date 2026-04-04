@@ -7,6 +7,7 @@ let prepState = { name: '', cellSize: 50, offsetX: 0, offsetY: 0, mapWidth: 0, m
 let drawMode = false;
 let drawState = null;
 let placeItemMode = false;
+let _pendingClone = null; // item data waiting for user to draw its position
 let saveTimer = null;
 let viewScale = 1;
 
@@ -324,6 +325,7 @@ function renderItemList() {
         <span style="font-size:12px">${ITEM_TYPE_ICONS[item.type] || '?'}</span>
         <input type="text" value="${esc(item.label)}" onchange="updateItemLabel(${i}, this.value)"
           style="flex:1;padding:2px 5px;font-size:11px;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px">
+        <button class="btn sm" onclick="cloneItem(${i})" title="Clone item">⎘</button>
         <button class="btn danger sm" onclick="deleteItem(${i})">✕</button>
       </div>
       <textarea placeholder="DM description (players never see this)…" rows="2" onchange="updateItemDesc(${i}, this.value)"
@@ -340,6 +342,16 @@ function updateItemLabel(i, val) {
 function updateItemDesc(i, val) {
   prepState.hiddenItems[i].description = val;
   debounceSave();
+}
+
+function cloneItem(i) {
+  const src = prepState.hiddenItems[i];
+  _pendingClone = { type: src.type, label: src.label + ' (copy)', description: src.description || '' };
+  // Enter place mode if not already active
+  if (!placeItemMode) togglePlaceItemMode();
+  // Update hint to indicate clone placement
+  const hint = document.getElementById('place-hint');
+  if (hint) hint.textContent = `drag to place copy of "${src.label}"`;
 }
 
 function deleteItem(i) {
@@ -397,6 +409,8 @@ function togglePlaceItemMode() {
     btn.style.background = '';
     btn.style.color = '';
     hint.style.display = 'none';
+    hint.textContent = 'drag to place';
+    _pendingClone = null; // cancel any pending clone
   }
 }
 
@@ -453,13 +467,20 @@ drawCvs.addEventListener('pointerup', e => {
   drawState = null;
   dCtx.clearRect(0, 0, drawCvs.width, drawCvs.height);
   if (placeItemMode) {
-    const type = document.getElementById('item-type-sel')?.value || 'other';
-    const typeLabels = { trap: 'Trap', chest: 'Chest', door: 'Door', note: 'Note', other: 'Item' };
-    prepState.hiddenItems.push({
-      id: genId(),
-      label: (typeLabels[type] || 'Item') + ' ' + (prepState.hiddenItems.length + 1),
-      type, x: minX, y: minY, w, h, description: '', visible: false
-    });
+    if (_pendingClone) {
+      // Place the cloned item at the drawn position
+      prepState.hiddenItems.push({ id: genId(), ..._pendingClone, x: minX, y: minY, w, h, visible: false });
+      _pendingClone = null;
+      togglePlaceItemMode(); // exit place mode after placing clone
+    } else {
+      const type = document.getElementById('item-type-sel')?.value || 'other';
+      const typeLabels = { trap: 'Trap', chest: 'Chest', door: 'Door', note: 'Note', other: 'Item' };
+      prepState.hiddenItems.push({
+        id: genId(),
+        label: (typeLabels[type] || 'Item') + ' ' + (prepState.hiddenItems.length + 1),
+        type, x: minX, y: minY, w, h, description: '', visible: false
+      });
+    }
     renderPrepFog();
     renderItemList();
   } else {
@@ -472,6 +493,13 @@ drawCvs.addEventListener('pointerup', e => {
     renderFogList();
   }
   debounceSave();
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && placeItemMode && _pendingClone) {
+    _pendingClone = null;
+    togglePlaceItemMode(); // exits place mode and resets hint
+  }
 });
 
 // ── Grid controls ──

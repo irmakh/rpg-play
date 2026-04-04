@@ -55,6 +55,11 @@
   /* Controls section groups */
   .ctrl-group{display:flex;flex-direction:column;gap:4px;min-width:120px}
   .ctrl-group label.lbl{font-size:9px;color:var(--ac);text-transform:uppercase;letter-spacing:.5px}
+
+  /* Hidden items section fills remaining sidebar height */
+  #sb-items-section{flex:1;display:flex;flex-direction:column;min-height:0}
+  #sb-sec-items{flex:1;display:flex;flex-direction:column;min-height:0;overflow:hidden}
+  #item-list{flex:1;overflow-y:auto;min-height:0}
 </style>
 </head>
 <body>
@@ -131,12 +136,12 @@
       </div>
 
       <!-- Hidden Items section -->
-      <div class="sb-section">
+      <div class="sb-section" id="sb-items-section" style="flex:1;display:flex;flex-direction:column;min-height:0">
         <div class="sb-section-hdr" onclick="toggleSbSection('items')">
           <span>Hidden Items</span><span id="sb-sec-items-arrow">▶</span>
         </div>
         <div id="sb-sec-items" style="display:none" class="sb-section-body">
-          <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin-bottom:6px">
+          <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin-bottom:6px;flex-shrink:0">
             <select id="item-type-sel" style="padding:2px 5px;font-size:11px;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px">
               <option value="trap">🪤 Trap</option>
               <option value="chest">📦 Chest</option>
@@ -147,7 +152,7 @@
             <button class="btn" id="btn-place-item" onclick="togglePlaceItemMode()" style="font-size:11px;padding:2px 10px">📍 Place</button>
             <span id="place-hint" style="font-size:10px;color:var(--txd);display:none">drag to place</span>
           </div>
-          <div id="item-list" style="max-height:220px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--a44) transparent"></div>
+          <div id="item-list" style="flex:1;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--a44) transparent"></div>
         </div>
       </div>
 
