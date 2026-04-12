@@ -58,9 +58,11 @@ input:focus,select:focus{outline:none;border-color:var(--ac)}
 /* ── Initiative tracker ── */
 .init-panel-btns{display:flex;gap:4px;padding:8px;border-bottom:1px solid var(--a44);flex-wrap:wrap}
 #init-tracker-list{padding:4px 0;max-height:200px;overflow-y:auto}
-.init-row{display:flex;align-items:center;gap:6px;padding:4px 10px;border-bottom:1px solid var(--sep);font-size:12px}
+.init-row{display:flex;align-items:center;gap:6px;padding:4px 10px;border-bottom:1px solid var(--sep);font-size:12px;cursor:pointer}
+.init-row:hover{background:var(--a11)}
 .init-row:last-child{border-bottom:none}
 .init-row.init-cur{background:var(--a22)}
+.init-row.init-viewing{background:rgba(200,160,74,.18);border-left:2px solid var(--ac)}
 .init-cur-marker{color:var(--ac);font-size:10px;width:10px;flex-shrink:0;text-align:center}
 .init-row-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .init-row-roll{font-weight:bold;font-size:13px;color:var(--ac);min-width:28px;text-align:right;flex-shrink:0}

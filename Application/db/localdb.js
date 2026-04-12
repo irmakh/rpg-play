@@ -267,7 +267,7 @@ export function deleteMonster(id) {
 
 // ── Initiative ────────────────────────────────────────────────────────────────
 export function listInitEntries() {
-  return db.prepare('SELECT * FROM initiative_entries ORDER BY roll DESC').all();
+  return db.prepare('SELECT * FROM initiative_entries ORDER BY roll DESC, createdAt ASC').all();
 }
 export function getInitEntry(id) {
   return db.prepare('SELECT * FROM initiative_entries WHERE id = ?').get(id) || null;

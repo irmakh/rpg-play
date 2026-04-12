@@ -13,6 +13,9 @@ let placementState = null; // { payload } — click-to-place mode
 let qrollCharName = '';
 let qrollData = null;
 let _sideQrollTokenId = null; // cache: skip reload if same token is still active
+let _sideViewInitId = null;    // initiative entry the user clicked to preview in side panel
+let _sidePrevTokenId = null;   // last token actually rendered in side panel (for section reset detection)
+const _sideOpenSections = new Set(); // tracks which qroll sections the user has expanded
 let chatUnread = 0;
 let fogRegions = [];   // [{ id, label, x, y, w, h, visible }]
 let hiddenItems = [];  // [{ id, label, type, x, y, description, visible }]
@@ -564,12 +567,11 @@ function renderTokens() {
 // ── Token selection ───────────────────────────────────────────────────────────
 function selectToken(id) {
   selectedTokenId = id;
+  _sideViewInitId = null; // clicking a token on the map clears initiative-row preview
+  _sideQrollTokenId = null;
   renderTokens();
-  if (!initData.currentId) {
-    _sideQrollTokenId = null;
-    renderSidePanel();
-    loadSideQroll();
-  }
+  renderSidePanel();
+  loadSideQroll();
 }
 
 async function moveSelectedToken(key) {
@@ -940,8 +942,12 @@ function startSSE() {
           renderPing(d.x, d.y, d.color); break;
       }
     },
-    initiative: async () => {
+    initiative: async (d) => {
       await fetchInitiative();
+      // On turn advance or initiative start/end/clear, release manual view selection
+      if (d?.action === 'next' || d?.action === 'start' || d?.action === 'end' || d?.action === 'clear') {
+        _sideViewInitId = null;
+      }
       _sideQrollTokenId = null; // force reload when turn changes
       renderInitiativeTracker();
       updateInitiativeButton();
@@ -1050,8 +1056,10 @@ function renderInitiativeTracker(showBadge) {
   }
   list.innerHTML = sorted.map(e => {
     const isCur = e.id === initData.currentId;
+    const isViewing = e.id === _sideViewInitId;
+    const canView = isDM() || !e.monsterId; // players can't click monsters
     const nameHtml = (e.monsterId && isDM())
-      ? `<a href="/monsters.html" target="_blank" style="color:inherit;text-decoration:underline dotted;cursor:pointer" title="Open monsters page">${esc(e.name)}</a>`
+      ? `<a href="/monsters.html" target="_blank" style="color:inherit;text-decoration:underline dotted;cursor:pointer" title="Open monsters page" onclick="event.stopPropagation()">${esc(e.name)}</a>`
       : esc(e.name);
     const canEdit = isDM() || !e.monsterId; // DM edits all; players edit non-monster entries
     const rollHtml = canEdit
@@ -1060,9 +1068,10 @@ function renderInitiativeTracker(showBadge) {
            onchange="updateInitRoll(this)" onclick="event.stopPropagation()">`
       : `<span class="init-row-roll">${e.roll}</span>`;
     const delHtml = isDM()
-      ? `<button class="btn sm danger" style="padding:1px 5px;font-size:11px;line-height:1.2;margin-left:4px" onclick="removeInitEntry('${e.id}')" title="Remove from initiative">✕</button>`
+      ? `<button class="btn sm danger" style="padding:1px 5px;font-size:11px;line-height:1.2;margin-left:4px" onclick="event.stopPropagation();removeInitEntry('${e.id}')" title="Remove from initiative">✕</button>`
       : '';
-    return `<div class="init-row${isCur ? ' init-cur' : ''}">
+    const clickAttr = canView ? `onclick="viewInitEntry('${e.id}')"` : '';
+    return `<div class="init-row${isCur ? ' init-cur' : ''}${isViewing ? ' init-viewing' : ''}" ${clickAttr}>
       <span class="init-cur-marker">${isCur ? '▶' : ''}</span>
       <span class="init-row-name">${nameHtml}</span>
       ${rollHtml}
@@ -1151,6 +1160,7 @@ async function removeInitEntry(id) {
   const entry = initData.entries?.find(e => e.id === id);
   if (!entry || !isDM()) return;
   if (!confirm(`Remove "${entry.name}" from initiative?`)) return;
+  if (_sideViewInitId === id) { _sideViewInitId = null; }
   try {
     const res = await fetch(`/api/initiative/${id}`, {
       method: 'DELETE',
@@ -1159,6 +1169,18 @@ async function removeInitEntry(id) {
     });
     if (!res.ok) showToast('Failed to remove entry.', true);
   } catch { showToast('Connection error.', true); }
+}
+
+function viewInitEntry(id) {
+  const entry = initData.entries?.find(e => e.id === id);
+  if (!entry) return;
+  // Players cannot view monster entries
+  if (!isDM() && entry.monsterId) return;
+  // Toggle: clicking the same entry again returns to active-turn view
+  _sideViewInitId = (_sideViewInitId === id) ? null : id;
+  _sideQrollTokenId = null; // force reload
+  loadSideQroll();
+  renderInitiativeTracker(); // refresh highlight
 }
 
 // ── Chat panel ────────────────────────────────────────────────────────────────
@@ -1520,9 +1542,9 @@ function renderMonsterFullStats(data, tok) {
   return `<div class="qroll-section">
     <div class="qroll-section-hdr" onclick="toggleSideSection('monster')">
       <span style="color:#ff9999">${esc(data.name||'Monster')}</span>
-      <span id="side-sec-monster-arrow">▶</span>
+      <span id="side-sec-monster-arrow">${_sideSecArrow('monster')}</span>
     </div>
-    <div id="side-sec-monster" class="qroll-rows" style="display:none">${html}</div>
+    <div id="side-sec-monster" class="qroll-rows" style="${_sideSecStyle('monster')}">${html}</div>
   </div>`;
 }
 
@@ -1535,7 +1557,15 @@ function toggleSideSection(name) {
     const hidden = el.style.display === 'none';
     el.style.display = hidden ? '' : 'none';
     if (arrow) arrow.textContent = hidden ? '▼' : '▶';
+    if (hidden) _sideOpenSections.add(name); else _sideOpenSections.delete(name);
   }
+}
+
+function _sideSecStyle(name) {
+  return _sideOpenSections.has(name) ? '' : 'display:none';
+}
+function _sideSecArrow(name) {
+  return _sideOpenSections.has(name) ? '▼' : '▶';
 }
 
 function renderSideCharacter() {
@@ -1580,16 +1610,16 @@ function renderSideCharacter() {
     <button class="btn sm" onclick="rollInitiativeFromPanel()" title="Roll Initiative (d20${initBonusStr})" style="font-size:10px;padding:2px 6px">🎲 Init ${esc(initBonusStr)}</button>
   </div>
     <div class="qroll-section">
-      <div class="qroll-section-hdr" onclick="toggleSideSection('skills')">Skills <span id="side-sec-skills-arrow">▶</span></div>
-      <div id="side-sec-skills" class="qroll-rows" style="display:none">${skillRows}</div>
+      <div class="qroll-section-hdr" onclick="toggleSideSection('skills')">Skills <span id="side-sec-skills-arrow">${_sideSecArrow('skills')}</span></div>
+      <div id="side-sec-skills" class="qroll-rows" style="${_sideSecStyle('skills')}">${skillRows}</div>
     </div>
     <div class="qroll-section">
-      <div class="qroll-section-hdr" onclick="toggleSideSection('saves')">Saves <span id="side-sec-saves-arrow">▶</span></div>
-      <div id="side-sec-saves" class="qroll-rows" style="display:none">${saveRows}</div>
+      <div class="qroll-section-hdr" onclick="toggleSideSection('saves')">Saves <span id="side-sec-saves-arrow">${_sideSecArrow('saves')}</span></div>
+      <div id="side-sec-saves" class="qroll-rows" style="${_sideSecStyle('saves')}">${saveRows}</div>
     </div>
     <div class="qroll-section">
-      <div class="qroll-section-hdr" onclick="toggleSideSection('attacks')">Attacks <span id="side-sec-attacks-arrow">▶</span></div>
-      <div id="side-sec-attacks" class="qroll-rows" style="display:none">${atkSection}</div>
+      <div class="qroll-section-hdr" onclick="toggleSideSection('attacks')">Attacks <span id="side-sec-attacks-arrow">${_sideSecArrow('attacks')}</span></div>
+      <div id="side-sec-attacks" class="qroll-rows" style="${_sideSecStyle('attacks')}">${atkSection}</div>
     </div>`;
 }
 
@@ -1597,10 +1627,26 @@ function renderSideCharacter() {
 async function loadSideQroll() {
   const content = document.getElementById('side-qroll-content');
   if (!content) return;
-  const activeTokId = getActiveTurnTokenId();
-  // When initiative is not running, show the selected token instead
-  const targetId = activeTokId || (!initData.currentId ? selectedTokenId : null);
-  if (targetId === _sideQrollTokenId) return; // already rendered
+
+  // Priority: selected token on map → initiative row click → active turn token
+  let targetId = selectedTokenId || null;
+  if (!targetId && _sideViewInitId) {
+    const viewEntry = initData.entries?.find(e => e.id === _sideViewInitId);
+    if (viewEntry) {
+      const viewTok = tokens.find(t => t.initiativeId === _sideViewInitId);
+      targetId = viewTok?.id || null;
+    } else {
+      _sideViewInitId = null; // entry no longer exists
+    }
+  }
+  if (!targetId) {
+    targetId = getActiveTurnTokenId() || null;
+  }
+
+  if (targetId === _sideQrollTokenId) return; // already rendered (data unchanged)
+  // Only reset section state when switching to a genuinely different token
+  if (targetId !== _sidePrevTokenId) _sideOpenSections.clear();
+  _sidePrevTokenId = targetId;
   _sideQrollTokenId = targetId;
 
   const activeTok = targetId ? tokens.find(t => t.id === targetId) : null;
@@ -1620,7 +1666,7 @@ async function loadSideQroll() {
       const mon = _monsterList.find(m => m.id === activeTok.linkedId);
       if (mon) {
         content.innerHTML = renderMonsterFullStats(mon.data || {}, activeTok);
-        content.querySelectorAll('.qroll-rows').forEach(el => { el.style.display = 'none'; });
+        // section open/collapsed state is preserved via _sideOpenSections
         return;
       }
     }
@@ -1644,7 +1690,7 @@ async function loadSideQroll() {
         qrollCharName = char.name || activeTok.name;
         qrollData = char.data || {};
         content.innerHTML = renderSideCharacter();
-        content.querySelectorAll('.qroll-rows').forEach(el => { el.style.display = 'none'; });
+        // section open/collapsed state is preserved via _sideOpenSections
         return;
       }
     } catch {}

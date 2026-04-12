@@ -1083,9 +1083,33 @@ app.delete('/api/initiative/:id', async (req, res) => {
       if (!entry || entry.charId !== charId) return res.status(403).json({ error: 'Forbidden' });
     }
     if (DB_PROVIDER === 'localdb') {
+      // Check if deleting the current turn entry — if so, advance first
+      const state = ldb.getInitState();
+      const wasCurrentTurn = state.currentId === req.params.id;
+      let nextId = null;
+      if (wasCurrentTurn) {
+        const entries = ldb.listInitEntries(); // sorted roll DESC, createdAt ASC
+        const idx = entries.findIndex(e => e.id === req.params.id);
+        const remaining = entries.filter(e => e.id !== req.params.id);
+        if (remaining.length > 0) {
+          nextId = remaining[idx % remaining.length]?.id || remaining[0].id;
+        }
+      }
       ldb.deleteInitEntry(req.params.id);
+      if (wasCurrentTurn) ldb.setInitState(nextId || '');
     } else {
+      const result = await idb.query({ initiativeEntries: {}, initiativeState: {} });
+      const entries = (result.initiativeEntries || []).sort((a, b) => (b.roll || 0) - (a.roll || 0) || (a.createdAt || '').localeCompare(b.createdAt || ''));
+      const state = result.initiativeState?.[0];
+      const stateId = state?.id || genId();
+      const wasCurrentTurn = state?.currentId === req.params.id;
       await idb.transact([idb.tx.initiativeEntries[req.params.id].delete()]);
+      if (wasCurrentTurn) {
+        const idx = entries.findIndex(e => e.id === req.params.id);
+        const remaining = entries.filter(e => e.id !== req.params.id);
+        const nextId = remaining.length > 0 ? (remaining[idx % remaining.length]?.id || remaining[0].id) : '';
+        await idb.transact([idb.tx.initiativeState[stateId].update({ currentId: nextId })]);
+      }
     }
     broadcast('initiative', { action: 'delete' });
     res.json({ ok: true });
