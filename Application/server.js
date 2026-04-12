@@ -4,7 +4,8 @@ import crypto from 'crypto';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
-import { createServer } from 'http';
+import { createServer } from 'https';
+import { createServer as createHttpServer } from 'http';
 import { WebSocketServer } from 'ws';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -2308,8 +2309,12 @@ app.post('/api/table/clear', async (req, res) => {
   } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
 });
 
-// ── HTTP + WebSocket server ───────────────────────────────────────────────────
-const httpServer = createServer(app);
+// ── HTTPS + WebSocket server ──────────────────────────────────────────────────
+const sslOptions = {
+  key:  fs.readFileSync(process.env.SSL_KEY  || '/etc/letsencrypt/live/dnd.kimse.me/privkey.pem'),
+  cert: fs.readFileSync(process.env.SSL_CERT || '/etc/letsencrypt/live/dnd.kimse.me/fullchain.pem'),
+};
+const httpServer = createServer(sslOptions, app);
 
 if (DB_PROVIDER === 'localdb') {
   const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
@@ -2320,5 +2325,14 @@ if (DB_PROVIDER === 'localdb') {
   });
 }
 
-const PORT = process.env.PORT || 80;
-httpServer.listen(PORT, () => console.log(`Server listening on port ${PORT} [${DB_PROVIDER}]`));
+const PORT      = process.env.PORT      || 443;
+const HTTP_PORT = process.env.HTTP_PORT || 80;
+
+httpServer.listen(PORT, () => console.log(`HTTPS server listening on port ${PORT} [${DB_PROVIDER}]`));
+
+// ── HTTP → HTTPS redirect ─────────────────────────────────────────────────────
+const redirectServer = createHttpServer((req, res) => {
+  res.writeHead(301, { Location: `https://${req.headers.host}${req.url}` });
+  res.end();
+});
+redirectServer.listen(HTTP_PORT, () => console.log(`HTTP redirect listening on port ${HTTP_PORT}`));

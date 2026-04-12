@@ -7,10 +7,10 @@ services:
       dockerfile: Dockerfile.dev
     container_name: char_sheet_dev
     ports:
-      - "${HOST_PORT:-3000}:${PORT:-3000}"
+      - "${HOST_PORT:-443}:${PORT:-443}"
     environment:
       - NODE_ENV=development
-      - PORT=${PORT:-3000}
+      - PORT=${PORT:-443}
       - DB_PROVIDER=${DB_PROVIDER:-localdb}
       - INSTANT_APP_ID=${INSTANT_APP_ID}
       - INSTANT_ADMIN_TOKEN=${INSTANT_ADMIN_TOKEN}
@@ -25,6 +25,8 @@ services:
       - ./Application/characters.db:/app/characters.db
       - ./Application/media.db:/app/media.db
       - ./Application/localdb.db:/app/localdb.db
+      # Mount Let's Encrypt certificates (read-only)
+      - /etc/letsencrypt:/etc/letsencrypt:ro
     restart: unless-stopped
     stdin_open: true
     tty: true
