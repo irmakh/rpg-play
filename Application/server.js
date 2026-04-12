@@ -1282,6 +1282,50 @@ app.get('/api/chat', (req, res) => {
   res.json(chatLog);
 });
 
+// ── Map Drawings ──────────────────────────────────────────────────────────────
+app.get('/api/drawings', (_req, res) => {
+  try {
+    const drawings = DB_PROVIDER === 'localdb' ? ldb.listDrawings() : [];
+    res.json(drawings);
+  } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
+});
+
+app.post('/api/drawings', (req, res) => {
+  try {
+    const { id, type, x1, y1, x2, y2, color, thickness } = req.body || {};
+    if (!id || !type) return res.status(400).json({ error: 'id and type required' });
+    const shape = { id: String(id), type: String(type), x1: +x1||0, y1: +y1||0, x2: +x2||0, y2: +y2||0, color: String(color||'#ff4444').slice(0,20), thickness: Math.max(1, Math.min(20, +thickness||2)) };
+    if (DB_PROVIDER === 'localdb') ldb.addDrawing(shape.id, shape);
+    broadcast('drawing', { action: 'add', shape });
+    res.json({ ok: true });
+  } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
+});
+
+app.post('/api/drawings/preview', (req, res) => {
+  // Broadcast live preview (not persisted)
+  try {
+    const { shape } = req.body || {};
+    if (shape) broadcast('drawing', { action: 'preview', shape });
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ error: 'Server error' }); }
+});
+
+app.delete('/api/drawings', (_req, res) => {
+  try {
+    if (DB_PROVIDER === 'localdb') ldb.clearDrawings();
+    broadcast('drawing', { action: 'clear' });
+    res.json({ ok: true });
+  } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
+});
+
+app.delete('/api/drawings/:id', (req, res) => {
+  try {
+    if (DB_PROVIDER === 'localdb') ldb.deleteDrawing(req.params.id);
+    broadcast('drawing', { action: 'remove', id: req.params.id });
+    res.json({ ok: true });
+  } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
+});
+
 app.post('/api/dice/broadcast', (req, res) => {
   const { rollId, sides, dieResults, modifier, total, label, duration, sender } = req.body || {};
   if (!sides || !Array.isArray(dieResults) || dieResults.length === 0)

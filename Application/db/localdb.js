@@ -88,6 +88,12 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS events_state (
     id TEXT PRIMARY KEY, dataJson TEXT DEFAULT '{}'
   );
+  CREATE TABLE IF NOT EXISTS map_drawings (
+    id TEXT PRIMARY KEY, type TEXT NOT NULL DEFAULT 'line',
+    x1 REAL DEFAULT 0, y1 REAL DEFAULT 0, x2 REAL DEFAULT 0, y2 REAL DEFAULT 0,
+    color TEXT DEFAULT '#ff4444', thickness INTEGER DEFAULT 2,
+    createdAt TEXT DEFAULT (datetime('now'))
+  );
 `);
 
 // One-time migrations
@@ -292,6 +298,21 @@ export function getInitState() {
 }
 export function setInitState(currentId) {
   db.prepare('UPDATE initiative_state SET currentId = ? WHERE id = ?').run(currentId || '', INIT_STATE_ID);
+}
+
+// ── Map Drawings ──────────────────────────────────────────────────────────────
+export function listDrawings() {
+  return db.prepare('SELECT * FROM map_drawings ORDER BY createdAt ASC').all();
+}
+export function addDrawing(id, fields) {
+  db.prepare('INSERT INTO map_drawings (id, type, x1, y1, x2, y2, color, thickness) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+    .run(id, fields.type || 'line', fields.x1 || 0, fields.y1 || 0, fields.x2 || 0, fields.y2 || 0, fields.color || '#ff4444', fields.thickness || 2);
+}
+export function deleteDrawing(id) {
+  db.prepare('DELETE FROM map_drawings WHERE id = ?').run(id);
+}
+export function clearDrawings() {
+  db.prepare('DELETE FROM map_drawings').run();
 }
 
 // ── Table State ───────────────────────────────────────────────────────────────

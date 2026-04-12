@@ -11,6 +11,10 @@ html,body{height:100%;overflow:hidden;font-family:'Segoe UI',sans-serif;backgrou
 /* ── Layout ── */
 body{display:flex;flex-direction:column}
 #toolbar{flex-shrink:0;display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:6px 10px;background:var(--bg2);border-bottom:1px solid var(--a44)}
+#draw-toolbar{flex-shrink:0;display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:4px 10px;background:var(--bg3);border-bottom:1px solid var(--a44)}
+.draw-tb-label{font-size:11px;color:var(--txd)}
+#draw-color{width:30px;height:22px;border:1px solid var(--a55);border-radius:3px;background:none;cursor:pointer;padding:1px 2px}
+.draw-shape-btn.active,.draw-thick-btn.active{background:var(--ac);color:var(--bg);border-color:var(--ac)}
 #table-wrap{display:flex;flex:1;overflow:hidden}
 #canvas-area{flex:1;overflow:auto;position:relative;background:#0a0a14;cursor:crosshair}
 #side-panel{width:200px;flex-shrink:0;background:var(--bg2);border-left:1px solid var(--a44);overflow-y:scroll;scrollbar-width:thin;scrollbar-color:var(--a44) transparent;padding:10px;font-size:12px}

@@ -14,6 +14,10 @@ let qrollCharName = '';
 let qrollData = null;
 let _sideQrollTokenId = null; // cache: skip reload if same token is still active
 let _sideViewInitId = null;    // initiative entry the user clicked to preview in side panel
+let drawings = [];             // committed shapes [{id,type,x1,y1,x2,y2,color,thickness}]
+let drawMode = { type: 'circle', color: '#ff4444', thickness: 2 };
+let drawingState = null;       // { x1, y1 } while dragging in draw mode
+let _drawPreviewTimer = null;  // throttle for live preview broadcast
 let _sidePrevTokenId = null;   // last token actually rendered in side panel (for section reset detection)
 const _sideOpenSections = new Set(); // tracks which qroll sections the user has expanded
 let chatUnread = 0;
@@ -164,6 +168,7 @@ const canvasWrap    = document.getElementById('canvas-content-wrap');
 const gridCanvas    = document.getElementById('grid-canvas');
 const fogCanvas     = document.getElementById('fog-canvas');
 const overlayCanvas = document.getElementById('overlay-canvas');
+const drawingCanvas = document.getElementById('drawing-canvas');
 const tokenLayer    = document.getElementById('token-layer');
 const tokenLayerBg  = document.getElementById('token-layer-bg');
 const mapImg        = document.getElementById('map-img');
@@ -172,6 +177,7 @@ const fCtx = fogCanvas.getContext('2d');
 const itemsCanvas = document.getElementById('items-canvas');
 const iCtx = itemsCanvas ? itemsCanvas.getContext('2d') : null;
 const oCtx = overlayCanvas.getContext('2d');
+const dCtx = drawingCanvas.getContext('2d');
 
 function resizeCanvases(w, h) {
   const W = Math.max(w, 600);
@@ -179,6 +185,7 @@ function resizeCanvases(w, h) {
   gridCanvas.width = W; gridCanvas.height = H;
   fogCanvas.width = W; fogCanvas.height = H;
   if (itemsCanvas) { itemsCanvas.width = W; itemsCanvas.height = H; }
+  drawingCanvas.width = W; drawingCanvas.height = H;
   overlayCanvas.width = W; overlayCanvas.height = H;
   tokenLayer.style.width = W + 'px';
   tokenLayer.style.height = H + 'px';
@@ -717,11 +724,101 @@ function setTool(name) {
   document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
   const btn = document.getElementById('btn-tool-' + name);
   if (btn) btn.classList.add('active');
-  overlayCanvas.style.cursor = name === 'ruler' ? 'crosshair' : name === 'ping' ? 'cell' : name === 'pan' ? 'grab' : 'default';
+  overlayCanvas.style.cursor = name === 'ruler' || name === 'draw' ? 'crosshair' : name === 'ping' ? 'cell' : name === 'pan' ? 'grab' : 'default';
   // Select and move modes: overlay transparent so token divs receive pointer events
   overlayCanvas.style.pointerEvents = (name === 'select' || name === 'move') ? 'none' : 'all';
   if (name !== 'ruler') { rulerState = null; oCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height); }
   if (name !== 'pan') { panState = null; }
+  if (name !== 'draw') { drawingState = null; }
+  document.getElementById('draw-toolbar').style.display = name === 'draw' ? 'flex' : 'none';
+}
+
+// ── Draw tool ─────────────────────────────────────────────────────────────────
+function setDrawShape(type) {
+  drawMode.type = type;
+  document.querySelectorAll('.draw-shape-btn').forEach(b => b.classList.remove('active'));
+  const btn = document.getElementById('draw-shape-' + type);
+  if (btn) btn.classList.add('active');
+}
+
+function setDrawColor(color) {
+  drawMode.color = color;
+}
+
+function setDrawThickness(n) {
+  drawMode.thickness = n;
+  document.querySelectorAll('.draw-thick-btn').forEach(b => b.classList.remove('active'));
+  const btn = document.getElementById('draw-thick-' + n);
+  if (btn) btn.classList.add('active');
+}
+
+function renderShape(ctx, s, alpha = 1) {
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.strokeStyle = s.color || '#ff4444';
+  ctx.lineWidth = s.thickness || 2;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  if (s.type === 'line') {
+    ctx.beginPath();
+    ctx.moveTo(s.x1, s.y1);
+    ctx.lineTo(s.x2, s.y2);
+    ctx.stroke();
+  } else if (s.type === 'circle') {
+    const r = Math.sqrt((s.x2 - s.x1) ** 2 + (s.y2 - s.y1) ** 2);
+    ctx.beginPath();
+    ctx.arc(s.x1, s.y1, r, 0, Math.PI * 2);
+    ctx.fillStyle = s.color || '#ff4444';
+    ctx.globalAlpha = alpha * 0.18;
+    ctx.fill();
+    ctx.globalAlpha = alpha;
+    ctx.stroke();
+  } else if (s.type === 'rect') {
+    const x = Math.min(s.x1, s.x2), y = Math.min(s.y1, s.y2);
+    const w = Math.abs(s.x2 - s.x1), h = Math.abs(s.y2 - s.y1);
+    ctx.fillStyle = s.color || '#ff4444';
+    ctx.globalAlpha = alpha * 0.18;
+    ctx.fillRect(x, y, w, h);
+    ctx.globalAlpha = alpha;
+    ctx.strokeRect(x, y, w, h);
+  }
+  ctx.restore();
+}
+
+function renderDrawings() {
+  dCtx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
+  for (const s of drawings) renderShape(dCtx, s);
+}
+
+function renderDrawPreview(shape) {
+  oCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+  if (shape) renderShape(oCtx, shape, 0.7);
+}
+
+async function saveDrawing(shape) {
+  drawings.push(shape);
+  renderDrawings();
+  oCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+  try {
+    await fetch('/api/drawings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(shape)
+    });
+  } catch {}
+}
+
+async function clearDrawings() {
+  drawings = [];
+  renderDrawings();
+  try { await fetch('/api/drawings', { method: 'DELETE' }); } catch {}
+}
+
+async function fetchDrawings() {
+  try {
+    const r = await fetch('/api/drawings');
+    if (r.ok) { drawings = await r.json(); renderDrawings(); }
+  } catch {}
 }
 
 // ── Ruler tool ────────────────────────────────────────────────────────────────
@@ -796,6 +893,8 @@ overlayCanvas.addEventListener('mousedown', e => {
   } else if (currentTool === 'ping') {
     const grid = canvasToGrid(pos.x, pos.y);
     sendPing(grid.x, grid.y);
+  } else if (currentTool === 'draw') {
+    drawingState = { x1: pos.x, y1: pos.y };
   }
 });
 
@@ -827,6 +926,20 @@ overlayCanvas.addEventListener('mousemove', e => {
   }
   if (currentTool === 'ruler' && rulerState) {
     renderRuler(rulerState.x1, rulerState.y1, pos.x, pos.y);
+  } else if (currentTool === 'draw' && drawingState) {
+    const preview = { ...drawMode, x1: drawingState.x1, y1: drawingState.y1, x2: pos.x, y2: pos.y };
+    renderDrawPreview(preview);
+    // Throttled live broadcast to other clients
+    if (!_drawPreviewTimer) {
+      _drawPreviewTimer = setTimeout(() => {
+        _drawPreviewTimer = null;
+        fetch('/api/drawings/preview', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ shape: preview })
+        }).catch(() => {});
+      }, 50);
+    }
   }
 });
 
@@ -872,6 +985,17 @@ overlayCanvas.addEventListener('mouseup', e => {
   if (currentTool === 'ruler') {
     rulerState = null;
     oCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+  } else if (currentTool === 'draw' && drawingState) {
+    const pos = getCanvasPos(e);
+    const dx = pos.x - drawingState.x1, dy = pos.y - drawingState.y1;
+    // Ignore tiny accidental clicks (< 4px)
+    if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
+      const shape = { id: Math.random().toString(36).slice(2), ...drawMode, x1: drawingState.x1, y1: drawingState.y1, x2: pos.x, y2: pos.y };
+      saveDrawing(shape);
+    } else {
+      oCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+    }
+    drawingState = null;
   }
 });
 
@@ -980,6 +1104,21 @@ function startSSE() {
     'chat-clear': () => {
       document.getElementById('chat-log').innerHTML = '';
     },
+    drawing: (d) => {
+      if (d.action === 'add') {
+        if (!drawings.find(s => s.id === d.shape.id)) drawings.push(d.shape);
+        renderDrawings();
+      } else if (d.action === 'preview') {
+        // Show another client's in-progress shape on the overlay canvas
+        if (currentTool !== 'draw') renderDrawPreview(d.shape);
+      } else if (d.action === 'remove') {
+        drawings = drawings.filter(s => s.id !== d.id);
+        renderDrawings();
+      } else if (d.action === 'clear') {
+        drawings = [];
+        renderDrawings();
+      }
+    },
     'dice-roll': (d) => {
       if (_selfRollIds.has(d.rollId)) { _selfRollIds.delete(d.rollId); return; }
       showDiceAnimation(d.sides, d.dieResults || [d.dieResult], d.modifier, d.total, d.label, d.duration, d.usedIdx ?? -1);
@@ -1029,6 +1168,7 @@ async function fetchAll() {
     renderGrid();
     renderFog();
     renderItems();
+    renderDrawings();
     renderTokens();
     renderSidePanel();
     renderHpTable();
@@ -1801,6 +1941,7 @@ async function confirmRoll(type) {
 
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && placementState) { exitPlacementMode(); return; }
+  if (e.key === 'Escape' && currentTool === 'draw') { drawingState = null; oCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height); setTool('select'); return; }
   if (document.getElementById('adv-modal').style.display === 'flex') {
     if      (e.key === 'a' || e.key === 'A') { e.preventDefault(); confirmRoll('adv'); }
     else if (e.key === 'n' || e.key === 'N') { e.preventDefault(); confirmRoll('norm'); }
@@ -2333,5 +2474,6 @@ window.addEventListener('load', async () => {
     }
   } catch {}
 
+  fetchDrawings();
   startSSE();
 });
