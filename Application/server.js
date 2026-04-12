@@ -1159,12 +1159,23 @@ app.post('/api/initiative/start', async (req, res) => {
     if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
     let entries, state, stateId;
     if (DB_PROVIDER === 'localdb') {
+      // Prune orphaned entries (no matching token on the table)
+      const allTokens = ldb.listTableTokens();
+      const tokenInitIds = new Set(allTokens.map(t => t.initiativeId).filter(Boolean));
+      const allEntries = ldb.listInitEntries();
+      for (const e of allEntries) {
+        // Keep player-rolled entries (no monsterId) and entries with a live token
+        if (e.monsterId && !tokenInitIds.has(e.id)) ldb.deleteInitEntry(e.id);
+      }
       entries = ldb.listInitEntries();
       state   = ldb.getInitState();
       stateId = state.id;
     } else {
-      const result = await idb.query({ initiativeEntries: {}, initiativeState: {} });
-      entries = (result.initiativeEntries || []).sort((a, b) => (b.roll || 0) - (a.roll || 0));
+      const result = await idb.query({ initiativeEntries: {}, initiativeState: {}, tableTokens: {} });
+      const tokenInitIds = new Set((result.tableTokens || []).map(t => t.initiativeId).filter(Boolean));
+      const orphans = (result.initiativeEntries || []).filter(e => e.monsterId && !tokenInitIds.has(e.id));
+      if (orphans.length > 0) await idb.transact(orphans.map(e => idb.tx.initiativeEntries[e.id].delete()));
+      entries = (result.initiativeEntries || []).filter(e => !orphans.find(o => o.id === e.id)).sort((a, b) => (b.roll || 0) - (a.roll || 0));
       state   = result.initiativeState?.[0];
       stateId = state?.id || genId();
     }
@@ -2222,9 +2233,45 @@ app.delete('/api/table/tokens/:id', async (req, res) => {
     if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
     const tok = DB_PROVIDER === 'localdb' ? ldb.getTableToken(req.params.id) : (await idb.query({ tableTokens: { $: { where: { id: req.params.id } } } })).tableTokens?.[0];
     if (!tok) return res.status(404).json({ error: 'Not found' });
+
+    // Also remove the token's initiative entry so it doesn't orphan in the cycle
+    let initiativeBroadcastNeeded = false;
+    if (tok.initiativeId) {
+      if (DB_PROVIDER === 'localdb') {
+        const state = ldb.getInitState();
+        const wasCurrentTurn = state.currentId === tok.initiativeId;
+        if (wasCurrentTurn) {
+          const entries = ldb.listInitEntries();
+          const idx = entries.findIndex(e => e.id === tok.initiativeId);
+          const remaining = entries.filter(e => e.id !== tok.initiativeId);
+          const nextId = remaining.length > 0 ? (remaining[idx % remaining.length]?.id || remaining[0].id) : '';
+          ldb.deleteInitEntry(tok.initiativeId);
+          ldb.setInitState(nextId);
+        } else {
+          ldb.deleteInitEntry(tok.initiativeId);
+        }
+      } else {
+        const result = await idb.query({ initiativeEntries: { $: { where: { id: tok.initiativeId } } }, initiativeState: {} });
+        const state = result.initiativeState?.[0];
+        if (state?.currentId === tok.initiativeId) {
+          const allEntries = (await idb.query({ initiativeEntries: {} })).initiativeEntries || [];
+          const sorted = allEntries.sort((a, b) => (b.roll || 0) - (a.roll || 0));
+          const idx = sorted.findIndex(e => e.id === tok.initiativeId);
+          const remaining = sorted.filter(e => e.id !== tok.initiativeId);
+          const nextId = remaining.length > 0 ? (remaining[idx % remaining.length]?.id || remaining[0].id) : '';
+          await idb.transact([idb.tx.initiativeEntries[tok.initiativeId].delete(), idb.tx.initiativeState[state.id].update({ currentId: nextId })]);
+        } else {
+          await idb.transact([idb.tx.initiativeEntries[tok.initiativeId].delete()]);
+        }
+      }
+      initiativeBroadcastNeeded = true;
+    }
+
     if (DB_PROVIDER === 'localdb') { ldb.deleteTableToken(req.params.id); }
     else { await idb.transact([idb.tx.tableTokens[req.params.id].delete()]); }
+
     broadcast('table', { action: 'token-removed', id: req.params.id });
+    if (initiativeBroadcastNeeded) broadcast('initiative', { action: 'delete' });
     res.json({ ok: true });
   } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
 });
