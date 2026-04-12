@@ -2029,7 +2029,7 @@ app.post('/api/table/tokens', async (req, res) => {
     if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
     const { name, type = 'custom', linkedId = '', x = 0, y = 0, color = '#888888',
             hpCurrent = 0, hpMax = 0, hpTemp = 0, speed = 30, initiativeId = '',
-            tokenSize = 1, portrait = null } = req.body || {};
+            tokenSize = 1, portrait = null, label = '' } = req.body || {};
     if (!name || !String(name).trim()) return res.status(400).json({ error: 'Name required' });
     if (!['character','monster','npc','custom'].includes(type)) return res.status(400).json({ error: 'Invalid type' });
 
@@ -2093,6 +2093,7 @@ app.post('/api/table/tokens', async (req, res) => {
       initiativeId: resolvedInitId, movedFt: 0, visible: true,
       tokenSize: Math.max(1, Math.min(4, parseInt(tokenSize) || 1)),
       portrait: typeof portrait === 'string' && (portrait.startsWith('data:image/') || portrait.startsWith('/uploads/')) ? portrait : null,
+      label: String(label || '').slice(0, 20),
       createdAt: new Date().toISOString()
     };
     if (DB_PROVIDER === 'localdb') {

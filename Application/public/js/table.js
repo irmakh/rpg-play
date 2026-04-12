@@ -81,6 +81,17 @@ function isDM() { return !!masterPw; }
 function initials(name) {
   return String(name||'?').split(' ').map(w=>w[0]||'').join('').slice(0,2).toUpperCase() || '?';
 }
+// Returns what a given user should see as the token's name.
+// Players see only the identifier for monsters (e.g. "A3"), DM sees full name.
+function tokDisplayName(tok) {
+  if (!isDM() && tok.type === 'monster') {
+    if (tok.label) return tok.label;
+    // Fallback for older tokens without label: show last word (the identifier)
+    const parts = String(tok.name || '').trim().split(' ');
+    return parts[parts.length - 1] || tok.name;
+  }
+  return tok.name;
+}
 function tokenRingColor(type) {
   if (type === 'character') return '#c8a04a';
   if (type === 'monster') return '#ff4444';
@@ -547,8 +558,10 @@ function renderTokens() {
       isSelected ? `box-shadow:0 0 0 3px #fff,0 0 10px 4px rgba(255,255,255,0.7)` : '',
       tok.visible === false ? 'opacity:0.5' : ''
     ].filter(Boolean).join(';');
-    if (!tok.portrait) div.textContent = initials(tok.name);
-    div.title = `${tok.name} | HP: ${tok.hpCurrent||0}/${tok.hpMax||0} | Speed: ${tok.speed||30}ft${tok.id === activeTokId ? ' | YOUR TURN' : ''}`;
+    const dn = tokDisplayName(tok);
+    if (!tok.portrait) div.textContent = (!isDM() && tok.type === 'monster') ? dn : initials(tok.name);
+    const hpStr = (!isDM() && tok.type === 'monster') ? '' : ` | HP: ${tok.hpCurrent||0}/${tok.hpMax||0} | Speed: ${tok.speed||30}ft`;
+    div.title = `${dn}${hpStr}${tok.id === activeTokId ? ' | YOUR TURN' : ''}`;
 
     // HP bar
     const hpPct = (tok.hpMax || 0) > 0 ? Math.max(0, Math.min(1, (tok.hpCurrent || 0) / tok.hpMax)) : 0;
@@ -560,7 +573,7 @@ function renderTokens() {
     // Name label
     const label = document.createElement('div');
     label.className = 'token-name';
-    label.textContent = tok.name.length > 10 ? tok.name.slice(0,9)+'…' : tok.name;
+    label.textContent = dn.length > 10 ? dn.slice(0,9)+'…' : dn;
     div.appendChild(label);
 
     attachTokenEvents(div, tok);
@@ -1198,9 +1211,14 @@ function renderInitiativeTracker(showBadge) {
     const isCur = e.id === initData.currentId;
     const isViewing = e.id === _sideViewInitId;
     const canView = isDM() || !e.monsterId; // players can't click monsters
+    // Resolve the display name: DM sees full name, players see identifier only
+    const eTok = e.monsterId ? tokens.find(t => t.initiativeId === e.id) : null;
+    const eDisplayName = (!isDM() && e.monsterId)
+      ? (eTok ? tokDisplayName(eTok) : (() => { const p = e.name.trim().split(' '); return p[p.length-1]; })())
+      : e.name;
     const nameHtml = (e.monsterId && isDM())
       ? `<a href="/monsters.html" target="_blank" style="color:inherit;text-decoration:underline dotted;cursor:pointer" title="Open monsters page" onclick="event.stopPropagation()">${esc(e.name)}</a>`
-      : esc(e.name);
+      : esc(eDisplayName);
     const canEdit = isDM() || !e.monsterId; // DM edits all; players edit non-monster entries
     const rollHtml = canEdit
       ? `<input type="number" class="init-roll-input" value="${e.roll}" data-id="${e.id}" data-monster="${e.monsterId ? '1' : ''}"
@@ -1793,7 +1811,7 @@ async function loadSideQroll() {
   if (!activeTok) { content.innerHTML = ''; qrollCharName = ''; qrollData = null; return; }
 
   if (activeTok.type === 'monster') {
-    qrollCharName = activeTok.name;
+    qrollCharName = tokDisplayName(activeTok);
     qrollData = null;
     if (isDM() && activeTok.linkedId) {
       // DM: load and show full stat block
@@ -1810,8 +1828,8 @@ async function loadSideQroll() {
         return;
       }
     }
-    // Players (or monster with no linkedId): show name only — no HP
-    content.innerHTML = `<div style="font-size:13px;color:#ff9999;font-weight:bold;margin-bottom:6px">${esc(activeTok.name)}</div>`;
+    // Players (or monster with no linkedId): show identifier only — no HP, no real name
+    content.innerHTML = `<div style="font-size:13px;color:#ff9999;font-weight:bold;margin-bottom:6px">${esc(tokDisplayName(activeTok))}</div>`;
     return;
   }
 
@@ -1984,7 +2002,7 @@ function closeHpPanel() {
 }
 function _refreshHpPanel(tok) {
   const hpPct = (tok.hpMax || 0) > 0 ? Math.max(0, Math.min(1, (tok.hpCurrent || 0) / tok.hpMax)) : 0;
-  document.getElementById('hp-panel-name').textContent = tok.name;
+  document.getElementById('hp-panel-name').textContent = tokDisplayName(tok);
   const delBtn = document.getElementById('hp-del-btn');
   if (delBtn) delBtn.style.display = isDM() ? '' : 'none';
   const curEl = document.getElementById('hp-cur-display');
@@ -2163,7 +2181,7 @@ function renderHpTable() {
     const clickAttr = canEdit ? `onclick="openHpPanel(tokens.find(t=>t.id==='${tok.id}'))"` : '';
     return `<div style="${rowStyle}" ${clickAttr}>
       <div style="flex:1;min-width:0">
-        <div style="font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap${isCur ? ';color:var(--ac);font-weight:bold' : ''}">${isCur ? '▶ ' : ''}${esc(tok.name)}</div>
+        <div style="font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap${isCur ? ';color:var(--ac);font-weight:bold' : ''}">${isCur ? '▶ ' : ''}${esc(tokDisplayName(tok))}</div>
         <div style="display:flex;align-items:center;gap:3px;margin-top:2px">
           <div style="flex:1;background:var(--bg3);border-radius:2px;overflow:hidden;height:4px">
             <div style="width:${hpPct*100}%;height:100%;background:${col};transition:width .3s"></div>
@@ -2185,11 +2203,11 @@ function renderSidePanel() {
   if (!initData.currentId) {
     if (movEl) movEl.textContent = '∞ (free)';
     const selTok = selectedTokenId ? tokens.find(t => t.id === selectedTokenId) : null;
-    if (infoEl) infoEl.innerHTML = selTok ? `<strong>${esc(selTok.name)}</strong>` : 'No initiative';
+    if (infoEl) infoEl.innerHTML = selTok ? `<strong>${esc(tokDisplayName(selTok))}</strong>` : 'No initiative';
   } else if (activeTok) {
     const remaining = (activeTok.speed || 30) - (activeTok.movedFt || 0);
     if (movEl) movEl.textContent = `${remaining} / ${activeTok.speed || 30} ft`;
-    if (infoEl) infoEl.innerHTML = `<strong>${esc(activeTok.name)}</strong>`;
+    if (infoEl) infoEl.innerHTML = `<strong>${esc(tokDisplayName(activeTok))}</strong>`;
   } else {
     if (movEl) movEl.textContent = '— ft';
     if (infoEl) infoEl.textContent = 'None';
@@ -2394,6 +2412,7 @@ async function submitAddToken() {
       color: '#cc3333',
       initiativeId: '', // always empty → server creates a new entry per monster using the identifier name
       portrait: mon?.data?.portrait || null,
+      label: identifier, // shown to players instead of the full monster name
       tokenSize, x: centerX, y: centerY
     };
   } else {
