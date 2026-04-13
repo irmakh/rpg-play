@@ -1774,7 +1774,7 @@ document.getElementById('wpn-tbl').addEventListener('input', renderWeaponsSummar
 
 initRollClickHandlers();
 loadCharacterList(true);
-loadInitiativeTracker();
+// Initiative data loaded on first panel open — panel starts collapsed so no need to fetch upfront
 
 // ── Media ──
 
@@ -2337,11 +2337,14 @@ function getDmPw() {
 }
 function clearDmPw() { sessionStorage.removeItem('initDmPw'); }
 
+let _initDataLoaded = false;
+
 async function loadInitiativeTracker() {
   try {
     const res = await fetch('/api/initiative');
     if (!res.ok) return;
     initData = await res.json();
+    _initDataLoaded = true;
     renderInitiativeTracker(false);
   } catch {}
 }
@@ -2356,7 +2359,12 @@ function initTogglePanel() {
     // close chat if open
     if (chatOpen) chatToggle();
     document.getElementById('init-badge').style.display = 'none';
-    renderInitiativeTracker(false);
+    if (!_initDataLoaded) {
+      _initDataLoaded = true;
+      loadInitiativeTracker();
+    } else {
+      renderInitiativeTracker(false);
+    }
   }
 }
 
@@ -2725,7 +2733,7 @@ function appendChatEntry(e) {
     const capAttr = e.caption ? e.caption.replace(/\\/g,'\\\\').replace(/'/g,"\\'") : '';
     let mediaEl = '';
     if (e.mimeType.startsWith('image/')) {
-      mediaEl = `<img src="${url}" style="max-width:100%;max-height:220px;width:auto;object-fit:contain;border-radius:4px;margin-top:4px;cursor:zoom-in;display:block" onclick="openMediaModal('${url}','${e.mimeType}','${capAttr}')" title="Click to view full size">`;
+      mediaEl = `<img loading="lazy" src="${url}" style="max-width:100%;max-height:220px;width:auto;object-fit:contain;border-radius:4px;margin-top:4px;cursor:zoom-in;display:block" onclick="openMediaModal('${url}','${e.mimeType}','${capAttr}')" title="Click to view full size">`;
     } else if (e.mimeType.startsWith('video/')) {
       mediaEl = `<video src="${url}" controls style="max-width:100%;max-height:220px;border-radius:4px;margin-top:4px;display:block"></video><div style="font-size:10px;color:var(--txd);margin-top:2px;cursor:pointer" onclick="openMediaModal('${url}','${e.mimeType}','${capAttr}')">⛶ Open in viewer</div>`;
     } else {

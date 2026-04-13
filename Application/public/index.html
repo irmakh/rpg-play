@@ -37,7 +37,7 @@
 
   <div id="char-header" style="display:flex;align-items:center;gap:14px;margin-bottom:4px;min-height:68px">
     <div id="portrait-wrap" style="display:none;flex-shrink:0">
-      <img id="portrait-img" style="width:68px;height:88px;object-fit:cover;border-radius:5px;border:2px solid var(--ac);cursor:pointer;display:block" onclick="showTabByName('media')" title="Click to manage media" alt="Portrait">
+      <img id="portrait-img" loading="lazy" style="width:68px;height:88px;object-fit:cover;border-radius:5px;border:2px solid var(--ac);cursor:pointer;display:block" onclick="showTabByName('media')" title="Click to manage media" alt="Portrait">
     </div>
     <h1 id="char-title-h1" style="flex:1;font-size:26px;letter-spacing:1px;color:var(--ac);text-transform:uppercase;text-align:left;margin:0"><span id="char-title">Character Sheet</span></h1>
   </div>
@@ -307,7 +307,7 @@
       <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap">
         <div style="flex-shrink:0">
           <div id="portrait-placeholder" style="width:120px;height:160px;border:2px dashed var(--a44);border-radius:6px;display:flex;align-items:center;justify-content:center;color:var(--txd);font-size:11px;text-align:center">No<br>portrait</div>
-          <img id="portrait-preview" style="width:120px;height:160px;object-fit:cover;border-radius:6px;border:2px solid var(--ac);display:none" alt="Portrait">
+          <img id="portrait-preview" loading="lazy" style="width:120px;height:160px;object-fit:cover;border-radius:6px;border:2px solid var(--ac);display:none" alt="Portrait">
         </div>
         <div style="flex:1;min-width:140px">
           <p style="font-size:11px;color:var(--txd);margin-bottom:10px">Upload an image to use as your character's portrait. It will appear beside the sheet title.</p>
@@ -680,7 +680,7 @@
   <div class="loading-label" id="loading-label">Loading…</div>
 </div>
 
-<script src="/js/index.js"></script>
+<script src="/js/index.js" defer></script>
 
 <!-- Floating Panel Stack: initiative on top, chat below, both bottom-right -->
 <div class="panel-stack">

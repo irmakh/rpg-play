@@ -5,6 +5,7 @@ let tokens = [];
 let initData = { entries: [], currentId: null };
 let currentTool = 'move';
 let dragState = null;   // { tokenId, origX, origY, origPxX, origPxY, remainingFt, ghostEl }
+let _dragPendingTimer = null; // setTimeout handle — drag starts 500ms after mousedown
 let rulerState = null;  // { x1, y1 }
 let panState = null;    // { startX, startY, startScrollLeft, startScrollTop }
 let selectedTokenId = null;
@@ -640,7 +641,7 @@ function attachTokenEvents(div, tok) {
     if (!canMove) return;
     e.preventDefault();
     e.stopPropagation();
-    startDrag(tok, e);
+    _dragPendingTimer = setTimeout(() => { _dragPendingTimer = null; startDrag(tok, e); }, 500);
   });
 
   div.addEventListener('click', e => {
@@ -662,13 +663,17 @@ function startDrag(tok, e) {
 
 async function finishDrag(e) {
   if (!dragState) return;
-  const { tokenId, origX, origY, origMovedFt, freeMove } = dragState;
-  const pos = getCanvasPos(e);
-  const grid = canvasToGrid(pos.x, pos.y);
-  const tok = tokens.find(t => t.id === tokenId);
+  const { tokenId, origX, origY, origMovedFt, freeMove, didMove } = dragState;
   dragState = null;
 
   oCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+
+  // No actual drag to a new cell — treat as a plain click, don't move anything
+  if (!didMove) { renderGrid(); renderTokens(); return; }
+
+  const pos = getCanvasPos(e);
+  const grid = canvasToGrid(pos.x, pos.y);
+  const tok = tokens.find(t => t.id === tokenId);
 
   if (!tok || (grid.x === origX && grid.y === origY)) {
     renderGrid(); renderTokens(); return;
@@ -966,6 +971,7 @@ document.addEventListener('mousemove', e => {
   if (!dragState) return;
   const pos = getCanvasPos(e);
   const grid = canvasToGrid(pos.x, pos.y);
+  if (grid.x !== dragState.origX || grid.y !== dragState.origY) dragState.didMove = true;
   const cs = tableState.cellSize || 50;
   const ox = tableState.offsetX || 0, oy = tableState.offsetY || 0;
   const dragTok = tokens.find(t => t.id === dragState.tokenId);
@@ -1013,6 +1019,7 @@ overlayCanvas.addEventListener('mouseup', e => {
 });
 
 document.addEventListener('mouseup', e => {
+  if (_dragPendingTimer) { clearTimeout(_dragPendingTimer); _dragPendingTimer = null; }
   if (panState) {
     panState = null;
     overlayCanvas.style.cursor = 'grab';
@@ -1381,7 +1388,7 @@ function appendChatEntry(e) {
     const url = `/api/shared-media/${e.mediaId}`;
     let mediaEl = '';
     if (e.mimeType && e.mimeType.startsWith('image/')) {
-      mediaEl = `<img src="${url}" style="max-width:100%;max-height:200px;width:auto;object-fit:contain;border-radius:4px;margin-top:4px;display:block">`;
+      mediaEl = `<img loading="lazy" src="${url}" style="max-width:100%;max-height:200px;width:auto;object-fit:contain;border-radius:4px;margin-top:4px;display:block">`;
     } else if (e.mimeType && e.mimeType.startsWith('video/')) {
       mediaEl = `<video src="${url}" controls style="max-width:100%;max-height:200px;border-radius:4px;margin-top:4px;display:block"></video>`;
     } else {
@@ -2265,7 +2272,7 @@ async function populateAddTokenModal(chars) {
           ? _monsterList.map(m => {
               const portrait = m.data?.portrait;
               const thumb = portrait
-                ? `<img src="${portrait}" style="width:30px;height:30px;border-radius:50%;object-fit:cover;border:1px solid var(--a55);flex-shrink:0">`
+                ? `<img loading="lazy" src="${portrait}" style="width:30px;height:30px;border-radius:50%;object-fit:cover;border:1px solid var(--a55);flex-shrink:0">`
                 : `<div style="width:30px;height:30px;border-radius:50%;background:var(--bg3);border:1px solid var(--a55);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--txd)">?</div>`;
               return `<div class="qroll-row" onclick="selectTokenMonster('${esc(m.id)}','${esc(m.name)}')"
                    style="padding:5px 10px;border-bottom:1px solid var(--sep);display:flex;align-items:center;gap:8px">
@@ -2485,16 +2492,12 @@ window.addEventListener('load', async () => {
   renderSidePanel();
   loadSideQroll();
 
-  // Load chat history
-  try {
-    const chatRes = await fetch('/api/chat');
-    if (chatRes.ok) {
-      const entries = await chatRes.json();
-      entries.forEach(appendChatEntry);
-      scrollChatLog();
-    }
-  } catch {}
-
   fetchDrawings();
   startSSE();
+
+  // Load chat history in background — non-blocking so map and SSE start immediately
+  fetch('/api/chat')
+    .then(r => r.ok ? r.json() : [])
+    .then(entries => { entries.forEach(appendChatEntry); scrollChatLog(); })
+    .catch(() => {});
 });

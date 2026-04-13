@@ -45,7 +45,8 @@ async function authenticate() {
     sessionStorage.setItem('dmMasterPw', pw);
     document.getElementById('gate').style.display = 'none';
     document.getElementById('main-content').style.display = '';
-    await Promise.all([loadInitiative(), loadDmMonsters()]);
+    await loadInitiative();
+    loadDmMonsters(); // non-blocking — loads in background while page is already interactive
   } catch { errEl.textContent = 'Connection error.'; }
 }
 
@@ -422,7 +423,7 @@ function appendChatEntry(e) {
     const url = `/api/shared-media/${e.mediaId}`;
     let mediaEl = '';
     if (e.mimeType.startsWith('image/')) {
-      mediaEl = `<img class="chat-media-img" src="${url}" style="max-height:220px;object-fit:contain" onclick="window.open(this.src,'_blank')" title="Click to open full size">`;
+      mediaEl = `<img class="chat-media-img" loading="lazy" src="${url}" style="max-height:220px;object-fit:contain" onclick="window.open(this.src,'_blank')" title="Click to open full size">`;
     } else if (e.mimeType.startsWith('video/')) {
       mediaEl = `<video class="chat-media-video" src="${url}" controls style="max-height:220px"></video>`;
     } else {

@@ -102,7 +102,7 @@
 
       <div class="ef-sec">Portrait</div>
       <div style="display:flex;align-items:center;gap:12px;padding:4px 0 8px">
-        <img id="ef-portrait-preview" style="width:64px;height:64px;object-fit:cover;border-radius:50%;border:2px solid var(--a44);display:none" alt="Portrait">
+        <img id="ef-portrait-preview" loading="lazy" style="width:64px;height:64px;object-fit:cover;border-radius:50%;border:2px solid var(--a44);display:none" alt="Portrait">
         <div id="ef-portrait-none" style="font-size:11px;color:var(--txd)">No portrait set</div>
         <button class="btn sm" onclick="efPickPortrait()">Upload Portrait</button>
         <button class="btn sm danger" id="ef-portrait-clear" onclick="efClearPortrait()" style="display:none">Remove</button>
@@ -192,6 +192,6 @@
   </div>
 </div>
 
-<script src="/js/monsters.js"></script>
+<script src="/js/monsters.js" defer></script>
 </body>
 </html>
