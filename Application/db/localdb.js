@@ -33,7 +33,7 @@ db.exec(`
     quantity INTEGER DEFAULT 1, acBonus INTEGER DEFAULT 0, initBonus INTEGER DEFAULT 0,
     speedBonus INTEGER DEFAULT 0, requiresAttunement INTEGER DEFAULT 0, notes TEXT DEFAULT '',
     weaponAtk TEXT DEFAULT '', weaponDmg TEXT DEFAULT '', weaponPropertiesJson TEXT DEFAULT '[]',
-    createdAt TEXT DEFAULT (datetime('now'))
+    tag TEXT DEFAULT '', createdAt TEXT DEFAULT (datetime('now'))
   );
   CREATE TABLE IF NOT EXISTS purchase_logs (
     id TEXT PRIMARY KEY, charId TEXT NOT NULL DEFAULT '', charName TEXT DEFAULT '',
@@ -103,6 +103,7 @@ try { db.exec(`ALTER TABLE table_tokens ADD COLUMN portrait TEXT`); } catch {}
 try { db.exec(`ALTER TABLE prepared_maps ADD COLUMN hiddenItems TEXT DEFAULT '[]'`); } catch {}
 try { db.exec(`ALTER TABLE table_state ADD COLUMN hiddenItems TEXT DEFAULT '[]'`); } catch {}
 try { db.exec(`ALTER TABLE table_tokens ADD COLUMN label TEXT DEFAULT ''`); } catch {}
+try { db.exec(`ALTER TABLE shop_items ADD COLUMN tag TEXT DEFAULT ''`); } catch {}
 
 // Singleton IDs (match server.js constants)
 const SHOP_CONFIG_ID = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
@@ -179,8 +180,12 @@ export function getShopItem(id) {
   return r ? { ...r, requiresAttunement: !!r.requiresAttunement } : null;
 }
 export function createShopItem(id, fields) {
-  db.prepare('INSERT INTO shop_items (id, name, itemType, armorType, acBase, valueCp, quantity, acBonus, initBonus, speedBonus, requiresAttunement, notes, weaponAtk, weaponDmg, weaponPropertiesJson, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
-    .run(id, fields.name || '', fields.itemType || 'wondrous', fields.armorType || 'light', fields.acBase ?? 10, fields.valueCp ?? 0, fields.quantity ?? 1, fields.acBonus ?? 0, fields.initBonus ?? 0, fields.speedBonus ?? 0, fields.requiresAttunement ? 1 : 0, fields.notes || '', fields.weaponAtk || '', fields.weaponDmg || '', fields.weaponPropertiesJson || '[]', fields.createdAt || new Date().toISOString());
+  db.prepare('INSERT INTO shop_items (id, name, itemType, armorType, acBase, valueCp, quantity, acBonus, initBonus, speedBonus, requiresAttunement, notes, weaponAtk, weaponDmg, weaponPropertiesJson, tag, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+    .run(id, fields.name || '', fields.itemType || 'wondrous', fields.armorType || 'light', fields.acBase ?? 10, fields.valueCp ?? 0, fields.quantity ?? 1, fields.acBonus ?? 0, fields.initBonus ?? 0, fields.speedBonus ?? 0, fields.requiresAttunement ? 1 : 0, fields.notes || '', fields.weaponAtk || '', fields.weaponDmg || '', fields.weaponPropertiesJson || '[]', fields.tag || '', fields.createdAt || new Date().toISOString());
+}
+export function bulkUpdateShopTag(ids, tag) {
+  const stmt = db.prepare('UPDATE shop_items SET tag = ? WHERE id = ?');
+  for (const id of ids) stmt.run(tag, id);
 }
 export function updateShopItem(id, fields) {
   if (!fields || Object.keys(fields).length === 0) return;

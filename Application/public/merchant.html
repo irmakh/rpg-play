@@ -5,6 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Merchant — DM Shop Manager</title>
 <link rel="stylesheet" href="/css/merchant.css">
+<style>
+  .tag-group { margin-bottom: 2px; }
+  .tag-hdr { display:flex; align-items:center; padding:6px 10px; background:var(--bg2); border-radius:4px; cursor:pointer; user-select:none; font-size:12px; font-weight:bold; color:var(--ac); }
+  .tag-hdr:hover { background:var(--bg3); }
+  .tag-body { display:none; }
+  .tag-body.open { display:block; }
+  .bulk-bar { display:none; align-items:center; gap:8px; padding:7px 10px; background:var(--bg2); border-radius:4px; margin-bottom:8px; flex-wrap:wrap; }
+  .bulk-bar.visible { display:flex; }
+  .bulk-bar-label { font-size:11px; color:var(--txd); white-space:nowrap; }
+</style>
 </head>
 <body>
 
@@ -52,22 +62,15 @@
     <!-- Shop Items tab -->
     <div class="tab-panel active" id="tab-items">
       <div id="shop-loading" style="padding:12px;font-size:11px;color:var(--txd)">Loading…</div>
-      <div id="table-wrap" style="overflow-x:auto;display:none">
-        <table>
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Type</th>
-              <th>Price</th>
-              <th>Qty</th>
-              <th>Bonuses</th>
-              <th>Notes</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody id="items-tbody"></tbody>
-        </table>
+      <div class="bulk-bar" id="bulk-bar">
+        <span class="bulk-bar-label" id="bulk-count">0 selected</span>
+        <input type="text" id="bulk-tag" placeholder="Tag…" list="tag-datalist-bulk" style="flex:1;min-width:100px">
+        <datalist id="tag-datalist-bulk"></datalist>
+        <button class="btn" onclick="applyBulkTag()">Apply Tag</button>
+        <button class="btn danger" onclick="bulkDeleteSelected()">Delete Selected</button>
+        <button class="btn" onclick="clearSelection()">Clear</button>
       </div>
+      <div id="shop-groups"></div>
       <div id="empty-msg" style="padding:12px;font-size:11px;color:var(--txd);display:none">No items in the shop yet. Click "+ Add Item" to add one.</div>
     </div>
 
@@ -210,6 +213,12 @@
       <div class="field">
         <label class="lbl">Notes / Description</label>
         <textarea id="f-notes" placeholder="Item description, effects, flavour text…"></textarea>
+      </div>
+
+      <div class="field">
+        <label class="lbl">Tag</label>
+        <input type="text" id="f-tag" placeholder="e.g. Weapons, Potions, Quest Items…" list="tag-datalist">
+        <datalist id="tag-datalist"></datalist>
       </div>
 
       <div id="item-err"></div>

@@ -3,6 +3,61 @@ let masterPw = '';
 let shopItems = [];
 let editingShopId = null;
 let shopIsOpen = true;
+let selectedItems = new Set();
+let tagKeysList = [];
+let expandedTags = new Set(JSON.parse(localStorage.getItem('shop-expanded-tags') || '[]'));
+
+function saveExpandedTags() { localStorage.setItem('shop-expanded-tags', JSON.stringify([...expandedTags])); }
+function toggleTag(tag) {
+  if (expandedTags.has(tag)) expandedTags.delete(tag); else expandedTags.add(tag);
+  saveExpandedTags(); renderTable();
+}
+function toggleItemSelection(id) {
+  if (selectedItems.has(id)) selectedItems.delete(id); else selectedItems.add(id);
+  updateBulkBar(); renderTable();
+}
+function toggleGroupSelection(tag) {
+  const group = shopItems.filter(i => (i.tag || '') === tag);
+  const allSel = group.every(i => selectedItems.has(i.id));
+  group.forEach(i => allSel ? selectedItems.delete(i.id) : selectedItems.add(i.id));
+  updateBulkBar(); renderTable();
+}
+function clearSelection() { selectedItems.clear(); updateBulkBar(); renderTable(); }
+function updateBulkBar() {
+  const bar = document.getElementById('bulk-bar');
+  const cnt = document.getElementById('bulk-count');
+  if (!bar) return;
+  bar.classList.toggle('visible', selectedItems.size > 0);
+  if (cnt) cnt.textContent = `${selectedItems.size} selected`;
+}
+async function applyBulkTag() {
+  const tag = document.getElementById('bulk-tag').value.trim();
+  const ids = [...selectedItems];
+  if (ids.length === 0) { showStatus('No items selected.', true); return; }
+  try {
+    const res = await fetch('/api/shop/bulk-update-tag', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Master-Password': masterPw },
+      body: JSON.stringify({ ids, tag })
+    });
+    if (res.status === 401) { handleUnauth(); return; }
+    if (!res.ok) { showStatus('Failed to apply tag.', true); return; }
+    showStatus(`Tag applied to ${ids.length} item${ids.length !== 1 ? 's' : ''}.`, false);
+    clearSelection();
+    await loadShopItems();
+  } catch { showStatus('Network error.', true); }
+}
+async function bulkDeleteSelected() {
+  const ids = [...selectedItems];
+  if (ids.length === 0) { showStatus('No items selected.', true); return; }
+  if (!confirm(`Delete ${ids.length} item${ids.length !== 1 ? 's' : ''}?`)) return;
+  try {
+    await Promise.all(ids.map(id => fetch(`/api/shop/${id}`, { method: 'DELETE', headers: { 'X-Master-Password': masterPw } })));
+    showStatus(`${ids.length} item${ids.length !== 1 ? 's' : ''} deleted.`, false);
+    clearSelection();
+    await loadShopItems();
+  } catch { showStatus('Network error.', true); }
+}
 
 function esc(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -194,31 +249,78 @@ function bonusSummary(item) {
 }
 
 function renderTable() {
-  const tbody = document.getElementById('items-tbody');
-  const tableWrap = document.getElementById('table-wrap');
+  const container = document.getElementById('shop-groups');
   const emptyMsg = document.getElementById('empty-msg');
   if (shopItems.length === 0) {
-    tableWrap.style.display = 'none';
+    container.innerHTML = '';
     emptyMsg.style.display = '';
     return;
   }
-  tableWrap.style.display = '';
   emptyMsg.style.display = 'none';
-  tbody.innerHTML = shopItems.map(item => {
-    const qtyText = item.quantity === -1 ? '∞' : item.quantity;
-    const qtyStyle = item.quantity === 0 ? 'color:var(--err)' : '';
-    return `<tr>
-      <td><strong>${esc(item.name)}</strong></td>
-      <td style="color:var(--txd)">${esc(item.itemType)}</td>
-      <td style="color:var(--exp)">${cpToGp(item.valueCp)}</td>
-      <td style="${qtyStyle}">${qtyText}</td>
-      <td style="color:var(--txd);font-size:11px">${esc(bonusSummary(item))}</td>
-      <td style="color:var(--txd);font-size:11px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(item.notes)}">${esc(item.notes) || '—'}</td>
-      <td style="white-space:nowrap">
-        <button class="btn sm" onclick="openItemModal('${item.id}')" style="margin-right:4px">Edit</button>
-        <button class="btn sm danger" onclick="deleteItem('${item.id}')">Delete</button>
-      </td>
-    </tr>`;
+
+  // Group by tag
+  const groups = {};
+  for (const item of shopItems) {
+    const tag = item.tag || '';
+    if (!groups[tag]) groups[tag] = [];
+    groups[tag].push(item);
+  }
+
+  // Sort: named tags alphabetically, untagged last
+  tagKeysList = Object.keys(groups).sort((a, b) => {
+    if (!a && b) return 1; if (a && !b) return -1; return a.localeCompare(b);
+  });
+
+  // Populate tag autocomplete datalists
+  const tagOpts = tagKeysList.filter(t => t).map(t => `<option value="${esc(t)}">`).join('');
+  const dl = document.getElementById('tag-datalist');
+  if (dl) dl.innerHTML = tagOpts;
+  const dlBulk = document.getElementById('tag-datalist-bulk');
+  if (dlBulk) dlBulk.innerHTML = tagOpts;
+
+  container.innerHTML = tagKeysList.map(tag => {
+    const items = groups[tag];
+    const label = tag || 'Untagged';
+    const isOpen = expandedTags.has(tag);
+    const allSel = items.every(i => selectedItems.has(i.id));
+    const tagAttr = esc(JSON.stringify(tag));
+
+    const rows = items.map(item => {
+      const qtyText = item.quantity === -1 ? '∞' : item.quantity;
+      const qtyStyle = item.quantity === 0 ? 'color:var(--err)' : '';
+      const checked = selectedItems.has(item.id) ? 'checked' : '';
+      return `<tr>
+        <td style="width:28px"><input type="checkbox" ${checked} onchange="toggleItemSelection('${item.id}')" style="accent-color:var(--ac)"></td>
+        <td><strong>${esc(item.name)}</strong></td>
+        <td style="color:var(--txd)">${esc(item.itemType)}</td>
+        <td style="color:var(--exp)">${cpToGp(item.valueCp)}</td>
+        <td style="${qtyStyle}">${qtyText}</td>
+        <td style="color:var(--txd);font-size:11px">${esc(bonusSummary(item))}</td>
+        <td style="color:var(--txd);font-size:11px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(item.notes)}">${esc(item.notes) || '—'}</td>
+        <td style="white-space:nowrap">
+          <button class="btn sm" onclick="openItemModal('${item.id}')" style="margin-right:4px">Edit</button>
+          <button class="btn sm danger" onclick="deleteItem('${item.id}')">Delete</button>
+        </td>
+      </tr>`;
+    }).join('');
+
+    return `<div class="tag-group">
+      <div class="tag-hdr" onclick="toggleTag(${tagAttr})">
+        <span style="margin-right:6px">${isOpen ? '▼' : '▶'}</span>
+        <input type="checkbox" ${allSel ? 'checked' : ''} onclick="event.stopPropagation();toggleGroupSelection(${tagAttr})" style="accent-color:var(--ac);margin-right:8px" title="Select all in group">
+        <span>${esc(label)}</span>
+        <span style="margin-left:8px;font-size:11px;color:var(--txd);font-weight:normal">${items.length} item${items.length !== 1 ? 's' : ''}</span>
+      </div>
+      <div class="tag-body${isOpen ? ' open' : ''}">
+        <table style="width:100%">
+          <thead><tr>
+            <th style="width:28px"></th><th>Name</th><th>Type</th><th>Price</th>
+            <th>Qty</th><th>Bonuses</th><th>Notes</th><th></th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </div>`;
   }).join('');
 }
 
@@ -303,6 +405,7 @@ function openItemModal(id) {
     document.getElementById('f-weapon-dmg').value = item.weaponDmg || '';
     initPropsGrid(); setSelectedProps(item.weaponProperties || []);
     document.getElementById('f-notes').value = item.notes;
+    document.getElementById('f-tag').value = item.tag || '';
   } else {
     document.getElementById('f-name').value = '';
     document.getElementById('f-type').value = 'wondrous';
@@ -322,6 +425,7 @@ function openItemModal(id) {
     document.getElementById('f-weapon-dmg').value = '';
     initPropsGrid(); setSelectedProps([]);
     document.getElementById('f-notes').value = '';
+    document.getElementById('f-tag').value = '';
   }
   updatePricePreview();
   onTypeChange();
@@ -354,7 +458,8 @@ async function saveItemModal() {
     weaponAtk: document.getElementById('f-weapon-atk').value.trim(),
     weaponDmg: document.getElementById('f-weapon-dmg').value.trim(),
     weaponProperties: getSelectedProps(),
-    notes: document.getElementById('f-notes').value.trim()
+    notes: document.getElementById('f-notes').value.trim(),
+    tag: document.getElementById('f-tag').value.trim()
   };
   try {
     const url = editingShopId ? `/api/shop/${editingShopId}` : '/api/shop';

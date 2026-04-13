@@ -154,6 +154,7 @@ function shopObjFromRecord(r) {
     acBonus: r.acBonus ?? 0, initBonus: r.initBonus ?? 0, speedBonus: r.speedBonus ?? 0,
     requiresAttunement: !!r.requiresAttunement, notes: r.notes || '',
     weaponAtk: r.weaponAtk || '', weaponDmg: r.weaponDmg || '', weaponProperties,
+    tag: r.tag || '',
   };
 }
 
@@ -567,7 +568,7 @@ app.post('/api/shop', async (req, res) => {
     const {
       name, itemType = 'wondrous', armorType = 'light', acBase = 10,
       valueCp = 0, quantity = 1, acBonus = 0, initBonus = 0, speedBonus = 0,
-      requiresAttunement = false, notes = '', weaponAtk = '', weaponDmg = '', weaponProperties = []
+      requiresAttunement = false, notes = '', weaponAtk = '', weaponDmg = '', weaponProperties = [], tag = ''
     } = req.body || {};
     if (!name || !String(name).trim()) return res.status(400).json({ error: 'Name required' });
     const newId = genId();
@@ -578,6 +579,7 @@ app.post('/api/shop', async (req, res) => {
       requiresAttunement: !!requiresAttunement, notes: String(notes),
       weaponAtk: String(weaponAtk), weaponDmg: String(weaponDmg),
       weaponPropertiesJson: JSON.stringify(Array.isArray(weaponProperties) ? weaponProperties.slice(0, 3) : []),
+      tag: String(tag).trim().slice(0, 40),
       createdAt: new Date().toISOString()
     };
     if (DB_PROVIDER === 'localdb') {
@@ -595,7 +597,7 @@ app.put('/api/shop/:id', async (req, res) => {
     if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
     const existing = DB_PROVIDER === 'localdb' ? ldb.getShopItem(req.params.id) : (await idb.query({ shopItems: { $: { where: { id: req.params.id } } } })).shopItems?.[0];
     if (!existing) return res.status(404).json({ error: 'Not found' });
-    const { name, itemType, armorType, acBase, valueCp, quantity, acBonus, initBonus, speedBonus, requiresAttunement, notes, weaponAtk, weaponDmg, weaponProperties } = req.body || {};
+    const { name, itemType, armorType, acBase, valueCp, quantity, acBonus, initBonus, speedBonus, requiresAttunement, notes, weaponAtk, weaponDmg, weaponProperties, tag } = req.body || {};
     const update = {};
     if (name !== undefined)               update.name = String(name).trim();
     if (itemType !== undefined)           update.itemType = itemType;
@@ -611,6 +613,7 @@ app.put('/api/shop/:id', async (req, res) => {
     if (weaponAtk !== undefined)          update.weaponAtk = String(weaponAtk);
     if (weaponDmg !== undefined)          update.weaponDmg = String(weaponDmg);
     if (weaponProperties !== undefined)   update.weaponPropertiesJson = JSON.stringify(Array.isArray(weaponProperties) ? weaponProperties.slice(0, 3) : []);
+    if (tag !== undefined)                update.tag = String(tag).trim().slice(0, 40);
     if (Object.keys(update).length === 0) return res.status(400).json({ error: 'Nothing to update' });
     if (DB_PROVIDER === 'localdb') {
       ldb.updateShopItem(req.params.id, update);
@@ -634,6 +637,22 @@ app.delete('/api/shop/:id', async (req, res) => {
     }
     broadcast('shop', { action: 'deleted', id: req.params.id });
     res.json({ ok: true });
+  } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
+});
+
+app.post('/api/shop/bulk-update-tag', async (req, res) => {
+  try {
+    if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
+    const { ids, tag } = req.body || {};
+    if (!Array.isArray(ids) || ids.length === 0) return res.status(400).json({ error: 'ids array required' });
+    const tagStr = tag !== undefined ? String(tag).trim().slice(0, 40) : '';
+    if (DB_PROVIDER === 'localdb') {
+      ldb.bulkUpdateShopTag(ids, tagStr);
+    } else {
+      for (const id of ids) await idb.transact([idb.tx.shopItems[id].update({ tag: tagStr })]);
+    }
+    broadcast('shop', { action: 'bulk-updated' });
+    res.json({ ok: true, count: ids.length });
   } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
 });
 
