@@ -1160,23 +1160,12 @@ app.post('/api/initiative/start', async (req, res) => {
     if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
     let entries, state, stateId;
     if (DB_PROVIDER === 'localdb') {
-      // Prune orphaned entries (no matching token on the table)
-      const allTokens = ldb.listTableTokens();
-      const tokenInitIds = new Set(allTokens.map(t => t.initiativeId).filter(Boolean));
-      const allEntries = ldb.listInitEntries();
-      for (const e of allEntries) {
-        // Keep player-rolled entries (no monsterId) and entries with a live token
-        if (e.monsterId && !tokenInitIds.has(e.id)) ldb.deleteInitEntry(e.id);
-      }
       entries = ldb.listInitEntries();
       state   = ldb.getInitState();
       stateId = state.id;
     } else {
-      const result = await idb.query({ initiativeEntries: {}, initiativeState: {}, tableTokens: {} });
-      const tokenInitIds = new Set((result.tableTokens || []).map(t => t.initiativeId).filter(Boolean));
-      const orphans = (result.initiativeEntries || []).filter(e => e.monsterId && !tokenInitIds.has(e.id));
-      if (orphans.length > 0) await idb.transact(orphans.map(e => idb.tx.initiativeEntries[e.id].delete()));
-      entries = (result.initiativeEntries || []).filter(e => !orphans.find(o => o.id === e.id)).sort((a, b) => (b.roll || 0) - (a.roll || 0));
+      const result = await idb.query({ initiativeEntries: {}, initiativeState: {} });
+      entries = (result.initiativeEntries || []).sort((a, b) => (b.roll || 0) - (a.roll || 0));
       state   = result.initiativeState?.[0];
       stateId = state?.id || genId();
     }
@@ -1187,17 +1176,6 @@ app.post('/api/initiative/start', async (req, res) => {
     } else {
       await idb.transact([idb.tx.initiativeState[stateId].update({ currentId: firstId })]);
     }
-    try {
-      const tokList = DB_PROVIDER === 'localdb' ? ldb.getTableTokensByInitId(firstId) : (await idb.query({ tableTokens: { $: { where: { initiativeId: firstId } } } })).tableTokens || [];
-      if (tokList.length > 0) {
-        if (DB_PROVIDER === 'localdb') {
-          for (const t of tokList) { ldb.updateTableToken(t.id, { movedFt: 0 }); broadcast('table', { action: 'token-updated', token: { ...t, movedFt: 0 } }); }
-        } else {
-          await idb.transact(tokList.map(t => idb.tx.tableTokens[t.id].update({ movedFt: 0 })));
-          for (const t of tokList) broadcast('table', { action: 'token-updated', token: { ...t, movedFt: 0 } });
-        }
-      }
-    } catch {}
     broadcast('initiative', { action: 'start' });
     res.json({ ok: true });
   } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
@@ -1208,17 +1186,10 @@ app.post('/api/initiative/end', async (req, res) => {
     if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
     if (DB_PROVIDER === 'localdb') {
       ldb.setInitState('');
-      const moved = ldb.getMovedTableTokens();
-      for (const t of moved) { ldb.updateTableToken(t.id, { movedFt: 0 }); broadcast('table', { action: 'token-updated', token: { ...t, movedFt: 0 } }); }
     } else {
-      const result = await idb.query({ initiativeState: {}, tableTokens: {} });
+      const result = await idb.query({ initiativeState: {} });
       const state  = result.initiativeState?.[0];
       if (state?.id) await idb.transact([idb.tx.initiativeState[state.id].update({ currentId: '' })]);
-      const moved  = (result.tableTokens || []).filter(t => (t.movedFt || 0) > 0);
-      if (moved.length > 0) {
-        await idb.transact(moved.map(t => idb.tx.tableTokens[t.id].update({ movedFt: 0 })));
-        for (const t of moved) broadcast('table', { action: 'token-updated', token: { ...t, movedFt: 0 } });
-      }
     }
     broadcast('initiative', { action: 'end' });
     res.json({ ok: true });
@@ -1241,6 +1212,27 @@ app.post('/api/initiative/clear', async (req, res) => {
     }
     broadcast('initiative', { action: 'clear' });
     res.json({ ok: true });
+  } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
+});
+
+app.post('/api/initiative/cleanup', async (req, res) => {
+  try {
+    if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
+    let removed = 0;
+    if (DB_PROVIDER === 'localdb') {
+      const tokenInitIds = new Set(ldb.listTableTokens().map(t => t.initiativeId).filter(Boolean));
+      for (const e of ldb.listInitEntries()) {
+        if (e.monsterId && !tokenInitIds.has(e.id)) { ldb.deleteInitEntry(e.id); removed++; }
+      }
+    } else {
+      const result = await idb.query({ initiativeEntries: {}, tableTokens: {} });
+      const tokenInitIds = new Set((result.tableTokens || []).map(t => t.initiativeId).filter(Boolean));
+      const orphans = (result.initiativeEntries || []).filter(e => e.monsterId && !tokenInitIds.has(e.id));
+      if (orphans.length > 0) await idb.transact(orphans.map(e => idb.tx.initiativeEntries[e.id].delete()));
+      removed = orphans.length;
+    }
+    broadcast('initiative', { action: 'reload' });
+    res.json({ ok: true, removed });
   } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
 });
 

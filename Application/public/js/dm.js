@@ -202,6 +202,19 @@ async function clearInitiative() {
   } catch { showStatus('Network error.', true); }
 }
 
+async function cleanupInitiative() {
+  try {
+    const res = await fetch('/api/initiative/cleanup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Master-Password': masterPw }
+    });
+    if (res.status === 401) { handleUnauth(); return; }
+    if (!res.ok) { showStatus('Failed to clean up initiative.', true); return; }
+    const data = await res.json();
+    showStatus(`Cleaned up ${data.removed} orphaned initiative record${data.removed !== 1 ? 's' : ''}.`, false);
+  } catch { showStatus('Network error.', true); }
+}
+
 // ── Edit entry ────────────────────────────────────────────────────────────────
 function openEditModal(id) {
   const e = initDataMap[id];

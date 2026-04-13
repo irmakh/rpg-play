@@ -1080,12 +1080,14 @@ function startSSE() {
       }
     },
     initiative: async (d) => {
+      const prevCurrentId = initData.currentId;
       await fetchInitiative();
       // On turn advance or initiative start/end/clear, release manual view selection
       if (d?.action === 'next' || d?.action === 'start' || d?.action === 'end' || d?.action === 'clear') {
         _sideViewInitId = null;
       }
-      _sideQrollTokenId = null; // force reload when turn changes
+      // Only invalidate the side panel cache if the active turn actually changed
+      if (initData.currentId !== prevCurrentId) _sideQrollTokenId = null;
       renderInitiativeTracker();
       updateInitiativeButton();
       renderTokens();
