@@ -88,29 +88,67 @@ async function refreshAll() {
   showStatus('Refreshed.', false);
 }
 
-async function downloadBackup() {
-  try {
-    showStatus('Creating backup...', false);
-    const res = await fetch('/api/admin/backup', {
-      headers: { 'x-master-password': masterPw }
-    });
-    if (!res.ok) {
-      if (res.status === 401) throw new Error('Unauthorized');
-      throw new Error('Backup failed');
+function openBackupModal() {
+  document.getElementById('backup-status').textContent = '';
+  document.getElementById('backup-dl-btn').disabled = false;
+  document.getElementById('backup-modal').style.display = 'flex';
+}
+function closeBackupModal() {
+  document.getElementById('backup-modal').style.display = 'none';
+}
+
+let _backupInFlight = false;
+async function runSelectiveBackup() {
+  if (_backupInFlight) return;
+  const parts = ['characters', 'monsters', 'shop', 'loot', 'maps'].filter(p =>
+    document.getElementById('bk-' + p)?.checked
+  );
+  if (parts.length === 0) {
+    document.getElementById('backup-status').textContent = 'Select at least one section.';
+    return;
+  }
+  _backupInFlight = true;
+  const btn = document.getElementById('backup-dl-btn');
+  const statusEl = document.getElementById('backup-status');
+  btn.disabled = true;
+  const date = new Date().toISOString().split('T')[0];
+  let failed = [];
+  for (const part of parts) {
+    statusEl.textContent = `Downloading ${part}…`;
+    try {
+      const res = await fetch(`/api/admin/backup?part=${part}`, {
+        headers: { 'x-master-password': masterPw }
+      });
+      if (res.status === 401) { showStatus('Unauthorized.', true); break; }
+      if (res.status === 409) { failed.push(part + ' (server busy)'); continue; }
+      if (!res.ok) {
+        let msg = part;
+        try { msg += ': ' + (await res.json()).error; } catch {}
+        failed.push(msg); continue;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `dnd-backup-${part}-${date}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      await new Promise(r => setTimeout(r, 400));
+    } catch (err) {
+      console.error(err);
+      failed.push(part + ': ' + err.message);
     }
-    const blob = await res.blob();
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `dnd-backup-${new Date().toISOString().split('T')[0]}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
-    showStatus('Backup downloaded successfully', false);
-  } catch (err) {
-    console.error(err);
-    showStatus('Backup failed: ' + err.message, true);
+  }
+  _backupInFlight = false;
+  btn.disabled = false;
+  if (failed.length) {
+    statusEl.style.color = 'var(--err)';
+    statusEl.textContent = 'Failed: ' + failed.join(', ');
+  } else {
+    statusEl.style.color = 'var(--ok)';
+    statusEl.textContent = `${parts.length} file${parts.length !== 1 ? 's' : ''} downloaded successfully.`;
   }
 }
 
@@ -120,29 +158,48 @@ function triggerImport() {
 }
 
 async function doImport(input) {
-  const file = input.files[0];
-  if (!file) return;
-  if (!confirm(`Restore from "${file.name}"?\n\nThis will OVERWRITE all current data. This cannot be undone.`)) return;
-  try {
-    showStatus('Importing...', false);
-    const text = await file.text();
+  const files = Array.from(input.files);
+  if (!files.length) return;
+
+  // Parse all files first so we can show a meaningful confirm
+  const parsed = [];
+  for (const file of files) {
     let backup;
-    try { backup = JSON.parse(text); } catch { showStatus('Import failed: invalid JSON file.', true); return; }
-    if (!backup.version) { showStatus('Import failed: not a valid backup file.', true); return; }
-    const res = await fetch('/api/admin/restore', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-master-password': masterPw },
-      body: text,
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.error || res.statusText);
+    try { backup = JSON.parse(await file.text()); } catch {
+      showStatus(`Import failed: "${file.name}" is not valid JSON.`, true); return;
     }
-    showStatus('Import successful — reloading...', false);
+    if (!backup.version) { showStatus(`Import failed: "${file.name}" is not a valid backup file.`, true); return; }
+    parsed.push({ file, backup });
+  }
+
+  const labels = parsed.map(({ file, backup }) => backup.type ? `${backup.type} (${file.name})` : `full backup (${file.name})`);
+  if (!confirm(`Import the following sections?\n\n${labels.join('\n')}\n\nExisting records with the same ID will be renamed to "_old …" and kept. New records will be added alongside them.`)) return;
+
+  let succeeded = 0, failed = [];
+  for (const { file, backup } of parsed) {
+    showStatus(`Importing ${backup.type || 'full backup'} from "${file.name}"…`, false);
+    try {
+      const res = await fetch('/api/admin/restore', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-master-password': masterPw },
+        body: JSON.stringify(backup),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || res.statusText);
+      }
+      succeeded++;
+    } catch (err) {
+      console.error(err);
+      failed.push(`${backup.type || file.name}: ${err.message}`);
+    }
+  }
+
+  if (failed.length) {
+    showStatus(`${succeeded} restored, ${failed.length} failed: ${failed.join('; ')}`, true);
+  } else {
+    showStatus(`${succeeded} file${succeeded !== 1 ? 's' : ''} restored — reloading…`, false);
     setTimeout(() => location.reload(), 1200);
-  } catch (err) {
-    console.error(err);
-    showStatus('Import failed: ' + err.message, true);
   }
 }
 
@@ -272,6 +329,7 @@ document.addEventListener('keydown', e => {
     if (document.getElementById('npc-modal').style.display !== 'none') closeAddNpcModal();
     if (document.getElementById('edit-modal').style.display !== 'none') closeEditModal();
     if (document.getElementById('monster-info-modal').style.display !== 'none') closeMonsterInfoModal();
+    if (document.getElementById('backup-modal').style.display !== 'none') closeBackupModal();
   }
 });
 

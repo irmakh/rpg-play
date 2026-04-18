@@ -34,9 +34,9 @@
       </select>
     </div>
     <div class="hdr-right">
-      <button class="btn success" onclick="downloadBackup()" title="Download database backup">💾 Backup</button>
+      <button class="btn success" onclick="openBackupModal()" title="Download database backup">💾 Backup</button>
       <button class="btn" onclick="triggerImport()" title="Restore from backup file">📥 Import</button>
-      <input type="file" id="import-file-input" accept=".json" style="display:none" onchange="doImport(this)">
+      <input type="file" id="import-file-input" accept=".json" multiple style="display:none" onchange="doImport(this)">
       <button class="btn" onclick="refreshAll()" title="Refresh">↻ Refresh</button>
     </div>
   </div>
@@ -229,6 +229,43 @@
     <div class="modal-btns">
       <button class="btn" onclick="closeEditModal()">Cancel</button>
       <button class="btn primary" onclick="submitEdit()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Backup selection modal -->
+<div class="modal-overlay" id="backup-modal" style="display:none">
+  <div class="modal-box" style="max-width:360px">
+    <div class="ct">💾 Select Backup Files</div>
+    <div class="modal-body">
+      <p style="font-size:12px;color:var(--txd);margin:0 0 14px">Each selected section downloads as a separate JSON file.</p>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px">
+          <input type="checkbox" id="bk-characters" checked style="width:15px;height:15px;accent-color:var(--ac)">
+          <span><strong>Characters</strong> — sheets, portraits &amp; media</span>
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px">
+          <input type="checkbox" id="bk-monsters" checked style="width:15px;height:15px;accent-color:var(--ac)">
+          <span><strong>Monsters</strong> — library &amp; portraits</span>
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px">
+          <input type="checkbox" id="bk-shop" checked style="width:15px;height:15px;accent-color:var(--ac)">
+          <span><strong>Shop</strong> — items &amp; purchase logs</span>
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px">
+          <input type="checkbox" id="bk-loot" checked style="width:15px;height:15px;accent-color:var(--ac)">
+          <span><strong>Loot</strong> — items &amp; claim logs</span>
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px">
+          <input type="checkbox" id="bk-maps" checked style="width:15px;height:15px;accent-color:var(--ac)">
+          <span><strong>Maps</strong> — prepared maps &amp; chat media</span>
+        </label>
+      </div>
+      <div id="backup-status" style="margin-top:12px;font-size:12px;min-height:18px;color:var(--txd)"></div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn" onclick="closeBackupModal()">Cancel</button>
+      <button class="btn success" id="backup-dl-btn" onclick="runSelectiveBackup()">Download Selected</button>
     </div>
   </div>
 </div>

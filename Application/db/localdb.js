@@ -477,6 +477,83 @@ export function importAll(data) {
   })();
 }
 
+// ── Selective imports (merge — no deletes, duplicate IDs get _old prefix) ─────
+function _oldName(name) { return name.startsWith('_old ') ? name : '_old ' + name; }
+
+export function importCharacters(characters, media) {
+  const getChar  = db.prepare('SELECT name FROM characters WHERE id = ?');
+  const rekeyChar = db.prepare('UPDATE characters SET id = ?, name = ? WHERE id = ?');
+  const insChar  = db.prepare('INSERT OR IGNORE INTO characters (id, name, dataJson, charType, passwordHash, createdAt) VALUES (?, ?, ?, ?, ?, ?)');
+  const insMedia = db.prepare('INSERT OR IGNORE INTO char_media (id, charId, originalName, mimeType, dataUrl, isPortrait, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?)');
+  db.transaction(() => {
+    for (const r of (characters || [])) {
+      const ex = getChar.get(r.id);
+      if (ex) rekeyChar.run(crypto.randomUUID(), _oldName(ex.name), r.id);
+      insChar.run(r.id, r.name || '', r.dataJson || '{}', r.charType || 'pc', r.passwordHash || '', r.createdAt || new Date().toISOString());
+    }
+    for (const r of (media || [])) insMedia.run(r.id, r.charId || '', r.originalName || r.name || '', r.mimeType || '', r.dataUrl || '', r.isPortrait ? 1 : 0, r.createdAt || new Date().toISOString());
+  })();
+}
+
+export function importMonsters(monsters) {
+  const getMon  = db.prepare('SELECT name FROM monsters WHERE id = ?');
+  const rekeyMon = db.prepare('UPDATE monsters SET id = ?, name = ? WHERE id = ?');
+  const ins     = db.prepare('INSERT OR IGNORE INTO monsters (id, name, cr, dataJson, createdAt) VALUES (?, ?, ?, ?, ?)');
+  db.transaction(() => {
+    for (const r of (monsters || [])) {
+      const ex = getMon.get(r.id);
+      if (ex) rekeyMon.run(crypto.randomUUID(), _oldName(ex.name), r.id);
+      ins.run(r.id, r.name || '', r.cr || '?', r.dataJson || '{}', r.createdAt || new Date().toISOString());
+    }
+  })();
+}
+
+export function importShop(shopConfig, shopItems, purchaseLogs) {
+  const getItem  = db.prepare('SELECT name FROM shop_items WHERE id = ?');
+  const rekeyItem = db.prepare('UPDATE shop_items SET id = ?, name = ? WHERE id = ?');
+  const insShop  = db.prepare('INSERT OR IGNORE INTO shop_items (id, name, itemType, armorType, acBase, valueCp, quantity, acBonus, initBonus, speedBonus, requiresAttunement, notes, weaponAtk, weaponDmg, weaponPropertiesJson, tag, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+  const insPurch = db.prepare('INSERT OR IGNORE INTO purchase_logs (id, charId, charName, itemName, qty, totalCp, purchasedAt) VALUES (?, ?, ?, ?, ?, ?, ?)');
+  db.transaction(() => {
+    if (shopConfig && shopConfig.length > 0) db.prepare('UPDATE shop_config SET isOpen = ? WHERE id = ?').run(shopConfig[0].isOpen ? 1 : 0, SHOP_CONFIG_ID);
+    for (const r of (shopItems || [])) {
+      const ex = getItem.get(r.id);
+      if (ex) rekeyItem.run(crypto.randomUUID(), _oldName(ex.name), r.id);
+      insShop.run(r.id, r.name || '', r.itemType || 'wondrous', r.armorType || 'light', r.acBase ?? 10, r.valueCp ?? 0, r.quantity ?? 1, r.acBonus ?? 0, r.initBonus ?? 0, r.speedBonus ?? 0, r.requiresAttunement ? 1 : 0, r.notes || '', r.weaponAtk || '', r.weaponDmg || '', r.weaponPropertiesJson || '[]', r.tag || '', r.createdAt || new Date().toISOString());
+    }
+    for (const r of (purchaseLogs || [])) insPurch.run(r.id, r.charId || '', r.charName || '', r.itemName || '', r.qty || 1, r.totalCp || 0, r.purchasedAt || r.createdAt || new Date().toISOString());
+  })();
+}
+
+export function importLoot(lootItems, lootLogs) {
+  const getItem  = db.prepare('SELECT name FROM loot_items WHERE id = ?');
+  const rekeyItem = db.prepare('UPDATE loot_items SET id = ?, name = ? WHERE id = ?');
+  const insLoot  = db.prepare('INSERT OR IGNORE INTO loot_items (id, name, description, visible, descVisible, tag, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?)');
+  const insLog   = db.prepare('INSERT OR IGNORE INTO loot_logs (id, charId, charName, itemName, claimedAt) VALUES (?, ?, ?, ?, ?)');
+  db.transaction(() => {
+    for (const r of (lootItems || [])) {
+      const ex = getItem.get(r.id);
+      if (ex) rekeyItem.run(crypto.randomUUID(), _oldName(ex.name), r.id);
+      insLoot.run(r.id, r.name || '', r.description || '', r.visible ? 1 : 0, r.descVisible ? 1 : 0, r.tag || '', r.createdAt || new Date().toISOString());
+    }
+    for (const r of (lootLogs || [])) insLog.run(r.id, r.charId || '', r.charName || '', r.itemName || '', r.claimedAt || r.createdAt || new Date().toISOString());
+  })();
+}
+
+export function importMaps(preparedMaps) {
+  const getMap  = db.prepare('SELECT name FROM prepared_maps WHERE id = ?');
+  const rekeyMap = db.prepare('UPDATE prepared_maps SET id = ?, name = ? WHERE id = ?');
+  const ins     = db.prepare('INSERT OR IGNORE INTO prepared_maps (id, name, cellSize, offsetX, offsetY, mapWidth, mapHeight, fogRegions, hiddenItems, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+  db.transaction(() => {
+    for (const r of (preparedMaps || [])) {
+      const ex = getMap.get(r.id);
+      if (ex) rekeyMap.run(crypto.randomUUID(), _oldName(ex.name), r.id);
+      const fr = Array.isArray(r.fogRegions) ? JSON.stringify(r.fogRegions) : (r.fogRegions || '[]');
+      const hi = Array.isArray(r.hiddenItems) ? JSON.stringify(r.hiddenItems) : (r.hiddenItems || '[]');
+      ins.run(r.id, r.name || '', r.cellSize || 50, r.offsetX || 0, r.offsetY || 0, r.mapWidth || 0, r.mapHeight || 0, fr, hi, r.createdAt || new Date().toISOString());
+    }
+  })();
+}
+
 // ── Prepared Maps ─────────────────────────────────────────────────────────────
 export function listPreparedMaps() {
   return db.prepare('SELECT * FROM prepared_maps ORDER BY createdAt DESC').all();

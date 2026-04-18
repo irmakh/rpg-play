@@ -4,7 +4,7 @@ import crypto from 'crypto';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
-import { createServer } from 'https';
+import { createServer as createHttpsServer } from 'https';
 import { createServer as createHttpServer } from 'http';
 import { WebSocketServer } from 'ws';
 
@@ -35,6 +35,10 @@ function genId() {
 
 // ── File-based upload storage ────────────────────────────────────────────────
 const UPLOADS_DIR = path.join(__dirname, 'public', 'uploads');
+function readUploadAsBase64(fileUrl) {
+  if (!fileUrl || !fileUrl.startsWith('/uploads/')) return null;
+  try { return fs.readFileSync(path.join(__dirname, 'public', fileUrl)).toString('base64'); } catch { return null; }
+}
 const MIME_TO_EXT = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/gif': 'gif', 'image/webp': 'webp', 'image/svg+xml': 'svg' };
 function mimeToExt(mimeType) { return MIME_TO_EXT[mimeType] || mimeType.split('/')[1] || 'bin'; }
 function saveUploadFile(subdir, id, mimeType, b64) {
@@ -1552,34 +1556,88 @@ app.put('/api/events-data', async (req, res) => {
   } catch (err) { console.error('PUT /api/events-data:', err); res.status(500).json({ error: 'Server error' }); }
 });
 
-// ── Database Backup ───────────────────────────────────────────────────────────
-app.get('/api/admin/backup', async (req, res) => {
-  try {
-    if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
-    const sharedMediaRows = mediaDb.prepare('SELECT id, mime_type, data, created_at FROM shared_media').all()
-      .map(r => ({ id: r.id, mime_type: r.mime_type, data: Buffer.from(r.data).toString('base64'), created_at: r.created_at }));
+// ── Selective Backup ──────────────────────────────────────────────────────────
+const BACKUP_PARTS = ['characters', 'monsters', 'shop', 'loot', 'maps'];
 
-    let dbData;
-    if (DB_PROVIDER === 'localdb') {
-      dbData = ldb.exportAll();
-    } else {
-      const [charactersData, mediaData, shopConfigData, shopItemsData, purchaseLogsData, lootItemsData, lootLogsData, monstersData] = await Promise.all([
-        idb.query({ characters: {} }), idb.query({ media: {} }), idb.query({ shopConfig: {} }), idb.query({ shopItems: {} }),
-        idb.query({ purchaseLogs: {} }), idb.query({ lootItems: {} }), idb.query({ lootLogs: {} }), idb.query({ monsters: {} })
-      ]);
-      dbData = {
-        characters: charactersData.characters || [], media: mediaData.media || [],
-        shopConfig: shopConfigData.shopConfig || [], shopItems: shopItemsData.shopItems || [],
-        purchaseLogs: purchaseLogsData.purchaseLogs || [], lootItems: lootItemsData.lootItems || [],
-        lootLogs: lootLogsData.lootLogs || [], monsters: monstersData.monsters || []
+function _sharedMediaWithData(rows) {
+  return rows.map(r => {
+    const s = r.data.toString();
+    const dataB64 = s.startsWith('FILE:') ? readUploadAsBase64(s.slice(5)) : Buffer.from(r.data).toString('base64');
+    return { id: r.id, mime_type: r.mime_type, dataB64, created_at: r.created_at };
+  });
+}
+
+async function buildBackupPart(partName) {
+  const timestamp = new Date().toISOString();
+  const base = { version: '1.0', type: partName, timestamp, dbProvider: DB_PROVIDER };
+  switch (partName) {
+    case 'characters': {
+      if (DB_PROVIDER === 'localdb') {
+        const { characters, media } = ldb.exportAll();
+        return { ...base, characters, media: media.map(r => ({ ...r, dataB64: readUploadAsBase64(r.dataUrl) })) };
+      }
+      const [cr, mr] = await Promise.all([idb.query({ characters: {} }), idb.query({ media: {} })]);
+      return { ...base, characters: cr.characters || [], media: mr.media || [] };
+    }
+    case 'monsters': {
+      if (DB_PROVIDER === 'localdb') {
+        const monsters = ldb.listMonsters().map(m => {
+          let d = {}; try { d = JSON.parse(m.dataJson || '{}'); } catch {}
+          return { ...m, portraitB64: readUploadAsBase64(d.portrait) };
+        });
+        return { ...base, monsters };
+      }
+      const mr = await idb.query({ monsters: {} });
+      return { ...base, monsters: mr.monsters || [] };
+    }
+    case 'shop': {
+      if (DB_PROVIDER === 'localdb') {
+        return { ...base, shopConfig: [ldb.getShopConfig()], shopItems: ldb.listShopItems(), purchaseLogs: ldb.listPurchaseLogs() };
+      }
+      const [cr, ir, lr] = await Promise.all([idb.query({ shopConfig: {} }), idb.query({ shopItems: {} }), idb.query({ purchaseLogs: {} })]);
+      return { ...base, shopConfig: cr.shopConfig || [], shopItems: ir.shopItems || [], purchaseLogs: lr.purchaseLogs || [] };
+    }
+    case 'loot': {
+      if (DB_PROVIDER === 'localdb') {
+        return { ...base, lootItems: ldb.listLootItems(), lootLogs: ldb.listLootLogs() };
+      }
+      const [ir, lr] = await Promise.all([idb.query({ lootItems: {} }), idb.query({ lootLogs: {} })]);
+      return { ...base, lootItems: ir.lootItems || [], lootLogs: lr.lootLogs || [] };
+    }
+    case 'maps': {
+      const preparedMaps = DB_PROVIDER === 'localdb' ? ldb.listPreparedMaps() : [];
+      const mapMediaIds = new Set(preparedMaps.map(m => 'prep-map-' + m.id));
+      const allShared = mediaDb.prepare('SELECT id, mime_type, data, created_at FROM shared_media').all();
+      return {
+        ...base,
+        preparedMaps,
+        mapImages: _sharedMediaWithData(allShared.filter(r => mapMediaIds.has(r.id))),
+        chatMedia: _sharedMediaWithData(allShared.filter(r => !mapMediaIds.has(r.id))),
       };
     }
+    default: throw new Error('Unknown backup part: ' + partName);
+  }
+}
 
-    const backup = { timestamp: new Date().toISOString(), version: '1.0', dbProvider: DB_PROVIDER, [DB_PROVIDER]: dbData, sqlite: { shared_media: sharedMediaRows } };
+let _backupRunning = false;
+app.get('/api/admin/backup', async (req, res) => {
+  if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
+  const part = (req.query.part || '').trim();
+  if (!BACKUP_PARTS.includes(part)) return res.status(400).json({ error: `Invalid part. Choose one of: ${BACKUP_PARTS.join(', ')}` });
+  if (_backupRunning) return res.status(409).json({ error: 'Backup already in progress — please wait.' });
+  _backupRunning = true;
+  try {
+    const data = await buildBackupPart(part);
+    const date = new Date().toISOString().split('T')[0];
     res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Content-Disposition', `attachment; filename="dnd-backup-${new Date().toISOString().split('T')[0]}.json"`);
-    res.json(backup);
-  } catch (err) { console.error('Backup error:', err); res.status(500).json({ error: 'Backup failed' }); }
+    res.setHeader('Content-Disposition', `attachment; filename="dnd-backup-${part}-${date}.json"`);
+    res.json(data);
+  } catch (err) {
+    console.error('Backup error:', err);
+    if (!res.headersSent) res.status(500).json({ error: 'Backup failed: ' + err.message });
+  } finally {
+    _backupRunning = false;
+  }
 });
 
 app.post('/api/admin/restore', express.json({ limit: '200mb' }), async (req, res) => {
@@ -1588,62 +1646,136 @@ app.post('/api/admin/restore', express.json({ limit: '200mb' }), async (req, res
     const backup = req.body;
     if (!backup || !backup.version) return res.status(400).json({ error: 'Invalid backup file' });
 
-    // Extract data — accept backup from either provider
+    function writeUploadFile(fileUrl, dataB64) {
+      if (!fileUrl || !dataB64 || !fileUrl.startsWith('/uploads/')) return;
+      const absPath = path.join(__dirname, 'public', fileUrl);
+      fs.mkdirSync(path.dirname(absPath), { recursive: true });
+      fs.writeFileSync(absPath, Buffer.from(dataB64, 'base64'));
+    }
+
+    // ── New selective backup (has 'type' field) ────────────────────────────────
+    if (backup.type && BACKUP_PARTS.includes(backup.type)) {
+      if (DB_PROVIDER === 'localdb') {
+        switch (backup.type) {
+          case 'characters': {
+            for (const r of (backup.media || [])) writeUploadFile(r.dataUrl, r.dataB64);
+            ldb.importCharacters(backup.characters, backup.media);
+            broadcast('characters', { action: 'reload' });
+            break;
+          }
+          case 'monsters': {
+            for (const m of (backup.monsters || [])) {
+              if (m.portraitB64) {
+                let d = {}; try { d = JSON.parse(m.dataJson || '{}'); } catch {}
+                writeUploadFile(d.portrait, m.portraitB64);
+              }
+            }
+            ldb.importMonsters(backup.monsters);
+            broadcast('monsters', { action: 'reload' });
+            break;
+          }
+          case 'shop': {
+            ldb.importShop(backup.shopConfig, backup.shopItems, backup.purchaseLogs);
+            broadcast('shop', { action: 'reload' });
+            break;
+          }
+          case 'loot': {
+            ldb.importLoot(backup.lootItems, backup.lootLogs);
+            broadcast('loot', { action: 'reload' });
+            break;
+          }
+          case 'maps': {
+            ldb.importMaps(backup.preparedMaps);
+            const checkMedia = mediaDb.prepare('SELECT id FROM shared_media WHERE id = ?');
+            const insMedia   = mediaDb.prepare('INSERT OR IGNORE INTO shared_media (id, mime_type, data, created_at) VALUES (?, ?, ?, ?)');
+            for (const r of [...(backup.mapImages || []), ...(backup.chatMedia || [])]) {
+              if (r.id && r.mime_type && r.dataB64 && !checkMedia.get(r.id)) {
+                const subdir = r.id.startsWith('prep-map-') ? 'maps' : 'media';
+                const fileUrl = saveUploadFile(subdir, r.id, r.mime_type, r.dataB64);
+                insMedia.run(r.id, r.mime_type, Buffer.from('FILE:' + fileUrl), r.created_at || Date.now());
+              }
+            }
+            broadcast('table', { action: 'map-updated' });
+            break;
+          }
+        }
+      } else {
+        // InstantDB selective restore — DB records only (no file system)
+        const ops = [];
+        if (backup.type === 'characters') {
+          const [exC, exM] = await Promise.all([idb.query({ characters: {} }), idb.query({ media: {} })]);
+          ops.push(...(exC.characters || []).map(r => idb.tx.characters[r.id].delete()));
+          ops.push(...(exM.media || []).map(r => idb.tx.media[r.id].delete()));
+          ops.push(...(backup.characters || []).map(r => idb.tx.characters[r.id].update({ name: r.name || '', dataJson: r.dataJson || '{}', charType: r.charType || 'pc', passwordHash: r.passwordHash || '', createdAt: r.createdAt })));
+          ops.push(...(backup.media || []).map(r => idb.tx.media[r.id].update({ charId: r.charId || '', name: r.originalName || '', mimeType: r.mimeType || '', dataJson: r.dataUrl || '', createdAt: r.createdAt })));
+          broadcast('characters', { action: 'reload' });
+        } else if (backup.type === 'monsters') {
+          const exM = await idb.query({ monsters: {} });
+          ops.push(...(exM.monsters || []).map(r => idb.tx.monsters[r.id].delete()));
+          ops.push(...(backup.monsters || []).map(r => idb.tx.monsters[r.id].update({ name: r.name || '', cr: r.cr || '?', dataJson: r.dataJson || '{}', createdAt: r.createdAt })));
+          broadcast('monsters', { action: 'reload' });
+        } else if (backup.type === 'shop') {
+          const [exI, exL] = await Promise.all([idb.query({ shopItems: {} }), idb.query({ purchaseLogs: {} })]);
+          ops.push(...(exI.shopItems || []).map(r => idb.tx.shopItems[r.id].delete()));
+          ops.push(...(exL.purchaseLogs || []).map(r => idb.tx.purchaseLogs[r.id].delete()));
+          ops.push(...(backup.shopConfig || []).map(r => idb.tx.shopConfig[r.id].update({ isOpen: !!r.isOpen })));
+          ops.push(...(backup.shopItems || []).map(r => idb.tx.shopItems[r.id].update({ name: r.name || '', itemType: r.itemType || 'wondrous', armorType: r.armorType || 'light', acBase: r.acBase ?? 10, valueCp: r.valueCp ?? 0, quantity: r.quantity ?? 1, acBonus: r.acBonus ?? 0, initBonus: r.initBonus ?? 0, speedBonus: r.speedBonus ?? 0, requiresAttunement: !!r.requiresAttunement, notes: r.notes || '', weaponAtk: r.weaponAtk || '', weaponDmg: r.weaponDmg || '', weaponPropertiesJson: r.weaponPropertiesJson || '[]', tag: r.tag || '', createdAt: r.createdAt })));
+          ops.push(...(backup.purchaseLogs || []).map(r => idb.tx.purchaseLogs[r.id].update({ charId: r.charId || '', charName: r.charName || '', itemName: r.itemName || '', qty: r.qty || 1, totalCp: r.totalCp || 0, purchasedAt: r.purchasedAt || r.createdAt })));
+          broadcast('shop', { action: 'reload' });
+        } else if (backup.type === 'loot') {
+          const [exI, exL] = await Promise.all([idb.query({ lootItems: {} }), idb.query({ lootLogs: {} })]);
+          ops.push(...(exI.lootItems || []).map(r => idb.tx.lootItems[r.id].delete()));
+          ops.push(...(exL.lootLogs || []).map(r => idb.tx.lootLogs[r.id].delete()));
+          ops.push(...(backup.lootItems || []).map(r => idb.tx.lootItems[r.id].update({ name: r.name || '', description: r.description || '', visible: !!r.visible, descVisible: !!r.descVisible, tag: r.tag || '', createdAt: r.createdAt })));
+          ops.push(...(backup.lootLogs || []).map(r => idb.tx.lootLogs[r.id].update({ charId: r.charId || '', charName: r.charName || '', itemName: r.itemName || '', claimedAt: r.claimedAt || r.createdAt })));
+          broadcast('loot', { action: 'reload' });
+        }
+        for (let i = 0; i < ops.length; i += 100) await idb.transact(ops.slice(i, i + 100));
+      }
+      return res.json({ ok: true, type: backup.type });
+    }
+
+    // ── Legacy full backup ─────────────────────────────────────────────────────
     const rawData = backup[backup.dbProvider] || backup.localdb || backup.instantdb;
     if (!rawData) return res.status(400).json({ error: 'No data found in backup' });
-
-    // Normalize media field names (instantdb uses name/dataJson; localdb uses originalName/dataUrl)
     const data = { ...rawData };
-    if (data.media) {
-      data.media = data.media.map(m => ({
-        ...m,
-        originalName: m.originalName || m.name || '',
-        dataUrl: m.dataUrl || m.dataJson || '',
-      }));
-    }
+    if (data.media) data.media = data.media.map(m => ({ ...m, originalName: m.originalName || m.name || '', dataUrl: m.dataUrl || m.dataJson || '' }));
 
     if (DB_PROVIDER === 'localdb') {
       ldb.importAll(data);
     } else {
-      // InstantDB: delete all existing records, then insert from backup
       const [exChars, exMedia, exShopItems, exPurchLogs, exLootItems, exLootLogs, exMonsters] = await Promise.all([
         idb.query({ characters: {} }), idb.query({ media: {} }), idb.query({ shopItems: {} }),
-        idb.query({ purchaseLogs: {} }), idb.query({ lootItems: {} }), idb.query({ lootLogs: {} }),
-        idb.query({ monsters: {} }),
+        idb.query({ purchaseLogs: {} }), idb.query({ lootItems: {} }), idb.query({ lootLogs: {} }), idb.query({ monsters: {} }),
       ]);
       const delOps = [
-        ...(exChars.characters    || []).map(r => idb.tx.characters[r.id].delete()),
-        ...(exMedia.media         || []).map(r => idb.tx.media[r.id].delete()),
+        ...(exChars.characters || []).map(r => idb.tx.characters[r.id].delete()),
+        ...(exMedia.media || []).map(r => idb.tx.media[r.id].delete()),
         ...(exShopItems.shopItems || []).map(r => idb.tx.shopItems[r.id].delete()),
         ...(exPurchLogs.purchaseLogs || []).map(r => idb.tx.purchaseLogs[r.id].delete()),
         ...(exLootItems.lootItems || []).map(r => idb.tx.lootItems[r.id].delete()),
-        ...(exLootLogs.lootLogs   || []).map(r => idb.tx.lootLogs[r.id].delete()),
-        ...(exMonsters.monsters   || []).map(r => idb.tx.monsters[r.id].delete()),
+        ...(exLootLogs.lootLogs || []).map(r => idb.tx.lootLogs[r.id].delete()),
+        ...(exMonsters.monsters || []).map(r => idb.tx.monsters[r.id].delete()),
       ];
       const insOps = [
-        ...(data.characters  || []).map(r => idb.tx.characters[r.id].update({ name: r.name || '', dataJson: r.dataJson || '{}', charType: r.charType || 'pc', passwordHash: r.passwordHash || '', createdAt: r.createdAt })),
-        ...(data.media       || []).map(r => idb.tx.media[r.id].update({ charId: r.charId || '', name: r.originalName || '', mimeType: r.mimeType || '', dataJson: r.dataUrl || '', createdAt: r.createdAt })),
-        ...(data.shopConfig  || []).map(r => idb.tx.shopConfig[r.id].update({ isOpen: !!r.isOpen })),
-        ...(data.shopItems   || []).map(r => idb.tx.shopItems[r.id].update({ name: r.name || '', itemType: r.itemType || 'wondrous', armorType: r.armorType || 'light', acBase: r.acBase ?? 10, valueCp: r.valueCp ?? 0, quantity: r.quantity ?? 1, acBonus: r.acBonus ?? 0, initBonus: r.initBonus ?? 0, speedBonus: r.speedBonus ?? 0, requiresAttunement: !!r.requiresAttunement, notes: r.notes || '', weaponAtk: r.weaponAtk || '', weaponDmg: r.weaponDmg || '', weaponPropertiesJson: r.weaponPropertiesJson || '[]', createdAt: r.createdAt })),
+        ...(data.characters || []).map(r => idb.tx.characters[r.id].update({ name: r.name || '', dataJson: r.dataJson || '{}', charType: r.charType || 'pc', passwordHash: r.passwordHash || '', createdAt: r.createdAt })),
+        ...(data.media || []).map(r => idb.tx.media[r.id].update({ charId: r.charId || '', name: r.originalName || '', mimeType: r.mimeType || '', dataJson: r.dataUrl || '', createdAt: r.createdAt })),
+        ...(data.shopConfig || []).map(r => idb.tx.shopConfig[r.id].update({ isOpen: !!r.isOpen })),
+        ...(data.shopItems || []).map(r => idb.tx.shopItems[r.id].update({ name: r.name || '', itemType: r.itemType || 'wondrous', armorType: r.armorType || 'light', acBase: r.acBase ?? 10, valueCp: r.valueCp ?? 0, quantity: r.quantity ?? 1, acBonus: r.acBonus ?? 0, initBonus: r.initBonus ?? 0, speedBonus: r.speedBonus ?? 0, requiresAttunement: !!r.requiresAttunement, notes: r.notes || '', weaponAtk: r.weaponAtk || '', weaponDmg: r.weaponDmg || '', weaponPropertiesJson: r.weaponPropertiesJson || '[]', createdAt: r.createdAt })),
         ...(data.purchaseLogs || []).map(r => idb.tx.purchaseLogs[r.id].update({ charId: r.charId || '', charName: r.charName || '', itemName: r.itemName || '', qty: r.qty || 1, totalCp: r.totalCp || 0, purchasedAt: r.purchasedAt || r.createdAt })),
-        ...(data.lootItems   || []).map(r => idb.tx.lootItems[r.id].update({ name: r.name || '', description: r.description || '', visible: !!r.visible, descVisible: !!r.descVisible, tag: r.tag || '', createdAt: r.createdAt })),
-        ...(data.lootLogs    || []).map(r => idb.tx.lootLogs[r.id].update({ charId: r.charId || '', charName: r.charName || '', itemName: r.itemName || '', claimedAt: r.claimedAt || r.createdAt })),
-        ...(data.monsters    || []).map(r => idb.tx.monsters[r.id].update({ name: r.name || '', cr: r.cr || '?', dataJson: r.dataJson || '{}', createdAt: r.createdAt })),
+        ...(data.lootItems || []).map(r => idb.tx.lootItems[r.id].update({ name: r.name || '', description: r.description || '', visible: !!r.visible, descVisible: !!r.descVisible, tag: r.tag || '', createdAt: r.createdAt })),
+        ...(data.lootLogs || []).map(r => idb.tx.lootLogs[r.id].update({ charId: r.charId || '', charName: r.charName || '', itemName: r.itemName || '', claimedAt: r.claimedAt || r.createdAt })),
+        ...(data.monsters || []).map(r => idb.tx.monsters[r.id].update({ name: r.name || '', cr: r.cr || '?', dataJson: r.dataJson || '{}', createdAt: r.createdAt })),
       ];
       const allOps = [...delOps, ...insOps];
-      for (let i = 0; i < allOps.length; i += 100) {
-        await idb.transact(allOps.slice(i, i + 100));
-      }
+      for (let i = 0; i < allOps.length; i += 100) await idb.transact(allOps.slice(i, i + 100));
     }
 
-    // Restore shared media (map images, chat images)
     if (backup.sqlite && Array.isArray(backup.sqlite.shared_media)) {
       mediaDb.prepare('DELETE FROM shared_media').run();
       const insMedia = mediaDb.prepare('INSERT OR REPLACE INTO shared_media (id, mime_type, data, created_at) VALUES (?, ?, ?, ?)');
       for (const r of backup.sqlite.shared_media) {
-        if (r.id && r.mime_type && r.data) {
-          insMedia.run(r.id, r.mime_type, Buffer.from(r.data, 'base64'), r.created_at || Date.now());
-        }
+        if (r.id && r.mime_type && r.data) insMedia.run(r.id, r.mime_type, Buffer.from(r.data, 'base64'), r.created_at || Date.now());
       }
     }
 
@@ -2320,12 +2452,21 @@ app.post('/api/table/clear', async (req, res) => {
   } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
 });
 
-// ── HTTPS + WebSocket server ──────────────────────────────────────────────────
-const sslOptions = {
-  key:  fs.readFileSync(process.env.SSL_KEY  || '/etc/letsencrypt/live/dnd.kimse.me/privkey.pem'),
-  cert: fs.readFileSync(process.env.SSL_CERT || '/etc/letsencrypt/live/dnd.kimse.me/fullchain.pem'),
-};
-const httpServer = createServer(sslOptions, app);
+// ── Server startup: HTTPS in production, plain HTTP for local dev ─────────────
+const SSL_KEY  = process.env.SSL_KEY;
+const SSL_CERT = process.env.SSL_CERT;
+const useSSL   = !!(SSL_KEY && SSL_CERT);
+
+const PORT      = parseInt(process.env.PORT)      || (useSSL ? 443 : 3000);
+const HTTP_PORT = parseInt(process.env.HTTP_PORT) || 80;
+
+let httpServer;
+if (useSSL) {
+  const sslOptions = { key: fs.readFileSync(SSL_KEY), cert: fs.readFileSync(SSL_CERT) };
+  httpServer = createHttpsServer(sslOptions, app);
+} else {
+  httpServer = createHttpServer(app);
+}
 
 if (DB_PROVIDER === 'localdb') {
   const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
@@ -2336,14 +2477,16 @@ if (DB_PROVIDER === 'localdb') {
   });
 }
 
-const PORT      = process.env.PORT      || 443;
-const HTTP_PORT = process.env.HTTP_PORT || 80;
-
-httpServer.listen(PORT, () => console.log(`HTTPS server listening on port ${PORT} [${DB_PROVIDER}]`));
-
-// ── HTTP → HTTPS redirect ─────────────────────────────────────────────────────
-const redirectServer = createHttpServer((req, res) => {
-  res.writeHead(301, { Location: `https://${req.headers.host}${req.url}` });
-  res.end();
+httpServer.listen(PORT, () => {
+  const proto = useSSL ? 'HTTPS' : 'HTTP';
+  console.log(`${proto} server listening on port ${PORT} [${DB_PROVIDER}]`);
 });
-redirectServer.listen(HTTP_PORT, () => console.log(`HTTP redirect listening on port ${HTTP_PORT}`));
+
+// HTTP → HTTPS redirect (production only — skipped in local dev)
+if (useSSL) {
+  const redirectServer = createHttpServer((req, res) => {
+    res.writeHead(301, { Location: `https://${req.headers.host}${req.url}` });
+    res.end();
+  });
+  redirectServer.listen(HTTP_PORT, () => console.log(`HTTP redirect listening on port ${HTTP_PORT}`));
+}
