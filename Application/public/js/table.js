@@ -36,6 +36,10 @@ let _charList = [];
 let _monsterList = [];
 let _addTokenBusy = false; // true while in placement mode or while placement POST is in flight
 
+// Serialises all token-mutating network requests so they never interleave.
+// Optimistic UI updates happen immediately outside the queue; only fetch() calls go in.
+const _tokQ = { _p: Promise.resolve(), run(fn) { this._p = this._p.then(() => fn(), () => fn()); } };
+
 const SKILL_NAMES = ['Acrobatics','Animal Handling','Arcana','Athletics','Deception','History',
   'Insight','Intimidation','Investigation','Medicine','Nature','Perception',
   'Performance','Persuasion','Religion','Sleight of Hand','Stealth','Survival'];
@@ -596,7 +600,7 @@ function selectToken(id) {
   loadSideQroll();
 }
 
-async function moveSelectedToken(key) {
+function moveSelectedToken(key) {
   const tok = tokens.find(t => t.id === selectedTokenId);
   if (!tok) return;
   const canMove = isDM() || !initData.currentId || (tok.id === getActiveTurnTokenId());
@@ -604,19 +608,25 @@ async function moveSelectedToken(key) {
   const dx = key === 'ArrowLeft' ? -1 : key === 'ArrowRight' ? 1 : 0;
   const dy = key === 'ArrowUp'   ? -1 : key === 'ArrowDown'  ? 1 : 0;
   const nx = (tok.x || 0) + dx, ny = (tok.y || 0) + dy;
+  // Optimistic update — immediate
   patchToken(selectedTokenId, { x: nx, y: ny });
   renderTokens();
-  try {
-    const headers = { 'Content-Type': 'application/json' };
-    if (isDM()) headers['X-Master-Password'] = masterPw;
-    await fetch(`/api/table/tokens/${selectedTokenId}`, {
-      method: 'PUT', headers, body: JSON.stringify({ x: nx, y: ny })
-    });
-  } catch {
-    patchToken(selectedTokenId, { x: tok.x, y: tok.y });
-    renderTokens();
-    showToast('Network error.', true);
-  }
+  // Network — queued
+  const id = selectedTokenId;
+  const origX = tok.x, origY = tok.y;
+  _tokQ.run(async () => {
+    try {
+      const headers = { 'Content-Type': 'application/json' };
+      if (isDM()) headers['X-Master-Password'] = masterPw;
+      await fetch(`/api/table/tokens/${id}`, {
+        method: 'PUT', headers, body: JSON.stringify({ x: nx, y: ny })
+      });
+    } catch {
+      patchToken(id, { x: origX, y: origY });
+      renderTokens();
+      showToast('Network error.', true);
+    }
+  });
 }
 
 async function deleteSelectedToken() {
@@ -624,14 +634,18 @@ async function deleteSelectedToken() {
   const tok = tokens.find(t => t.id === selectedTokenId);
   if (!tok) return;
   if (!await showConfirm(`Remove "${tok.name}" from the map?`)) return;
+  // UI cleanup — immediate
   const id = selectedTokenId;
   selectedTokenId = null;
   renderSidePanel();
-  try {
-    await fetch(`/api/table/tokens/${id}`, {
-      method: 'DELETE', headers: { 'X-Master-Password': masterPw }
-    });
-  } catch { showToast('Failed to delete token.', true); }
+  // Network — queued
+  _tokQ.run(async () => {
+    try {
+      await fetch(`/api/table/tokens/${id}`, {
+        method: 'DELETE', headers: { 'X-Master-Password': masterPw }
+      });
+    } catch { showToast('Failed to delete token.', true); }
+  });
 }
 
 // ── Token drag & move ─────────────────────────────────────────────────────────
@@ -662,7 +676,7 @@ function startDrag(tok, e) {
   renderGrid(); // no highlight — movement is unlimited
 }
 
-async function finishDrag(e) {
+function finishDrag(e) {
   if (!dragState) return;
   const { tokenId, origX, origY, origMovedFt, freeMove, didMove } = dragState;
   dragState = null;
@@ -680,25 +694,28 @@ async function finishDrag(e) {
     renderGrid(); renderTokens(); return;
   }
 
-  // Optimistic update — show move immediately
+  // Optimistic update — immediate
   const dx = Math.abs(grid.x - origX), dy = Math.abs(grid.y - origY);
   const dist = Math.max(dx, dy) * 5;
   const optimisticMovedFt = freeMove ? origMovedFt : origMovedFt + dist;
   patchToken(tokenId, { x: grid.x, y: grid.y, movedFt: optimisticMovedFt });
   renderGrid(); renderTokens(); renderSidePanel(); renderHpTable();
 
-  try {
-    const headers = { 'Content-Type': 'application/json' };
-    if (isDM()) headers['X-Master-Password'] = masterPw;
-    await fetch(`/api/table/tokens/${tokenId}`, {
-      method: 'PUT', headers,
-      body: JSON.stringify({ x: grid.x, y: grid.y })
-    });
-  } catch {
-    patchToken(tokenId, { x: origX, y: origY, movedFt: origMovedFt });
-    renderGrid(); renderTokens(); renderSidePanel();
-    showToast('Network error.', true);
-  }
+  // Network — queued
+  _tokQ.run(async () => {
+    try {
+      const headers = { 'Content-Type': 'application/json' };
+      if (isDM()) headers['X-Master-Password'] = masterPw;
+      await fetch(`/api/table/tokens/${tokenId}`, {
+        method: 'PUT', headers,
+        body: JSON.stringify({ x: grid.x, y: grid.y })
+      });
+    } catch {
+      patchToken(tokenId, { x: origX, y: origY, movedFt: origMovedFt });
+      renderGrid(); renderTokens(); renderSidePanel();
+      showToast('Network error.', true);
+    }
+  });
 }
 
 function showOutOfRange() {
@@ -733,18 +750,20 @@ function exitPlacementMode() {
   setTool(currentTool);
 }
 
-async function commitPlacement(gridX, gridY) {
+function commitPlacement(gridX, gridY) {
   const payload = { ...placementState.payload, x: gridX, y: gridY };
-  exitPlacementMode();         // clears busy + placement UI
-  _setAddTokenBusy(true);      // re-lock for the POST flight
-  try {
-    await fetch('/api/table/tokens', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Master-Password': masterPw },
-      body: JSON.stringify(payload)
-    });
-  } catch { showToast('Failed to add token.', true); }
-  finally { _setAddTokenBusy(false); }
+  exitPlacementMode();
+  _setAddTokenBusy(true);
+  _tokQ.run(async () => {
+    try {
+      await fetch('/api/table/tokens', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Master-Password': masterPw },
+        body: JSON.stringify(payload)
+      });
+    } catch { showToast('Failed to add token.', true); }
+    finally { _setAddTokenBusy(false); }
+  });
 }
 
 // ── Tool system ───────────────────────────────────────────────────────────────
@@ -2124,8 +2143,8 @@ function updateHpPanel(tok) {
   _refreshHpPanel(tok);
 }
 
-async function _putHp(fields) {
-  // Optimistic update — reflect immediately on this client
+function _putHp(fields) {
+  // Optimistic update — immediate
   const tok = tokens.find(t => t.id === selectedTokenId);
   if (tok) {
     patchToken(selectedTokenId, fields);
@@ -2133,13 +2152,17 @@ async function _putHp(fields) {
     renderHpTable();
     renderSidePanel();
   }
-  try {
-    await fetch(`/api/table/tokens/${selectedTokenId}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json', 'X-Master-Password': masterPw },
-      body: JSON.stringify(fields)
-    });
-  } catch {}
+  // Network — queued (capture id now; selectedTokenId may change before queue runs)
+  const id = selectedTokenId;
+  _tokQ.run(async () => {
+    try {
+      await fetch(`/api/table/tokens/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'X-Master-Password': masterPw },
+        body: JSON.stringify(fields)
+      });
+    } catch {}
+  });
 }
 
 function applyHpChange(mode) {
