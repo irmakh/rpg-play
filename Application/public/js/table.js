@@ -572,16 +572,16 @@ function renderTokens() {
       `width:${size}px`, `height:${size}px`,
       `left:${tokLeft}px`, `top:${tokTop}px`,
       `background:${tok.color || '#555'}`,
-      tok.portrait ? `background-image:url('${tok.portrait}')` : '',
-      tok.portrait ? `background-size:cover` : '',
-      tok.portrait ? `background-position:center` : '',
+      (tok.portraitThumb || tok.portrait) ? `background-image:url('${tok.portraitThumb || tok.portrait}')` : '',
+      (tok.portraitThumb || tok.portrait) ? `background-size:cover` : '',
+      (tok.portraitThumb || tok.portrait) ? `background-position:center` : '',
       `border:3px solid ${tokenRingColor(tok.type || 'custom')}`,
       `font-size:${Math.round(Math.max(11, size * 0.28))}px`,
       isSelected ? `box-shadow:0 0 0 3px #fff,0 0 10px 4px rgba(255,255,255,0.7)` : '',
       tok.visible === false ? 'opacity:0.5' : ''
     ].filter(Boolean).join(';');
     const dn = tokDisplayName(tok);
-    if (!tok.portrait) div.textContent = (!isDM() && tok.type === 'monster') ? dn : initials(tok.name);
+    if (!tok.portraitThumb && !tok.portrait) div.textContent = (!isDM() && tok.type === 'monster') ? dn : initials(tok.name);
     const hpStr = (!isDM() && tok.type === 'monster') ? '' : ` | HP: ${tok.hpCurrent||0}/${tok.hpMax||0} | Speed: ${tok.speed||30}ft`;
     div.title = `${dn}${hpStr}${tok.id === activeTokId ? ' | YOUR TURN' : ''}`;
 
@@ -1214,7 +1214,7 @@ function startSSE() {
       if (d.action === 'portrait-updated') {
         // Update local cache so the modal thumbnail is correct immediately
         const mon = _monsterList.find(m => m.id === d.id);
-        if (mon) { if (!mon.data) mon.data = {}; mon.data.portrait = d.portrait; }
+        if (mon) { if (!mon.data) mon.data = {}; mon.data.portrait = d.portrait; mon.data.portraitThumb = d.portraitThumb || null; }
         // If the add-token modal is open, refresh its monster tab
         const modal = document.getElementById('add-token-modal');
         if (modal && modal.style.display !== 'none') populateAddTokenModal(_charList);
@@ -2394,7 +2394,7 @@ async function populateAddTokenModal(chars) {
         _monsterList = await mRes.json();
         monTab.innerHTML = _monsterList.length > 0
           ? _monsterList.map(m => {
-              const portrait = m.data?.portrait;
+              const portrait = m.data?.portraitThumb || m.data?.portrait;
               const thumb = portrait
                 ? `<img loading="lazy" src="${portrait}" style="width:30px;height:30px;border-radius:50%;object-fit:cover;border:1px solid var(--a55);flex-shrink:0">`
                 : `<div style="width:30px;height:30px;border-radius:50%;background:var(--bg3);border:1px solid var(--a55);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--txd)">?</div>`;
@@ -2507,13 +2507,13 @@ async function submitAddToken() {
       }
     } catch {}
     // Fetch portrait (DM only — non-DMs won't have masterPw but portrait is stored on token anyway)
-    let portrait = null;
+    let portrait = null, portraitThumb = null;
     if (masterPw) {
       try {
         const pRes = await fetch(`/api/characters/${_pendingTokenLinkedId}/portrait`, {
           headers: { 'X-Master-Password': masterPw }
         });
-        if (pRes.ok) { const pd = await pRes.json(); portrait = pd.portrait || null; }
+        if (pRes.ok) { const pd = await pRes.json(); portrait = pd.portrait || null; portraitThumb = pd.portraitThumb || null; }
       } catch {}
     }
     const initEntry = initData.entries.find(e => e.charId === _pendingTokenLinkedId);
@@ -2522,7 +2522,7 @@ async function submitAddToken() {
       hpCurrent: hpCur, hpMax, hpTemp, speed,
       color: _pendingTokenType === 'npc' ? '#7ec8e3' : '#c8a04a',
       initiativeId: initEntry?.id || '',
-      portrait,
+      portrait, portraitThumb,
       tokenSize, x: centerX, y: centerY
     };
   } else if (tab === 'monsters' && _pendingTokenLinkedId) {
@@ -2545,6 +2545,7 @@ async function submitAddToken() {
       color: '#cc3333',
       initiativeId: '', // always empty → server creates a new entry per monster using the identifier name
       portrait: mon?.data?.portrait || null,
+      portraitThumb: mon?.data?.portraitThumb || null,
       label: identifier, // shown to players instead of the full monster name
       tokenSize, x: centerX, y: centerY
     };

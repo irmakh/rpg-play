@@ -490,7 +490,8 @@ function appendChatEntry(e) {
     const url = `/api/shared-media/${e.mediaId}`;
     let mediaEl = '';
     if (e.mimeType.startsWith('image/')) {
-      mediaEl = `<img class="chat-media-img" loading="lazy" src="${url}" style="max-height:220px;object-fit:contain" onclick="window.open(this.src,'_blank')" title="Click to open full size">`;
+      const inlineUrl = (e.mediumUrl && e.mimeType.startsWith('image/')) ? e.mediumUrl : url;
+      mediaEl = `<img class="chat-media-img" loading="lazy" src="${inlineUrl}" style="max-height:220px;object-fit:contain" onclick="window.open('${url}','_blank')" title="Click to open full size">`;
     } else if (e.mimeType.startsWith('video/')) {
       mediaEl = `<video class="chat-media-video" src="${url}" controls style="max-height:220px"></video>`;
     } else {

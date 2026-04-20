@@ -1808,8 +1808,9 @@ function updatePortraitHeader() {
   const prev = document.getElementById('portrait-preview');
   const ph   = document.getElementById('portrait-placeholder');
   if (portrait) {
-    if (img)  { img.src = portrait.dataUrl;  wrap.style.display = ''; }
-    if (prev) { prev.src = portrait.dataUrl; prev.style.display = 'block'; }
+    const displayUrl = portrait.mediumUrl || portrait.dataUrl;
+    if (img)  { img.src = displayUrl;  wrap.style.display = ''; }
+    if (prev) { prev.src = displayUrl; prev.style.display = 'block'; }
     if (ph)   ph.style.display = 'none';
   } else {
     if (wrap) wrap.style.display = 'none';
@@ -1830,8 +1831,9 @@ function renderMedia() {
   gallery.innerHTML = mediaList.map(m => {
     const isImg = m.mimeType.startsWith('image/');
     const badge = m.isPortrait ? '<div class="portrait-badge">Portrait</div>' : '';
+    const cardSrc = (isImg && m.mediumUrl) ? m.mediumUrl : m.dataUrl;
     const media = isImg
-      ? `<img src="${esc(m.dataUrl)}" alt="${esc(m.name)}" loading="lazy" onclick="lightboxOpen('${m.id}')">`
+      ? `<img src="${esc(cardSrc)}" alt="${esc(m.name)}" loading="lazy" onclick="lightboxOpen('${m.id}')">`
       : `<video src="${esc(m.dataUrl)}" controls preload="metadata"></video>`;
     const setPortBtn = isImg && !m.isPortrait
       ? `<button class="char-btn" style="padding:2px 7px;font-size:10px" onclick="setPortrait('${m.id}')">Set Portrait</button>`
@@ -2733,7 +2735,8 @@ function appendChatEntry(e) {
     const capAttr = e.caption ? e.caption.replace(/\\/g,'\\\\').replace(/'/g,"\\'") : '';
     let mediaEl = '';
     if (e.mimeType.startsWith('image/')) {
-      mediaEl = `<img loading="lazy" src="${url}" style="max-width:100%;max-height:220px;width:auto;object-fit:contain;border-radius:4px;margin-top:4px;cursor:zoom-in;display:block" onclick="openMediaModal('${url}','${e.mimeType}','${capAttr}')" title="Click to view full size">`;
+      const inlineUrl = (e.mediumUrl && e.mimeType.startsWith('image/')) ? e.mediumUrl : url;
+      mediaEl = `<img loading="lazy" src="${inlineUrl}" style="max-width:100%;max-height:220px;width:auto;object-fit:contain;border-radius:4px;margin-top:4px;cursor:zoom-in;display:block" onclick="openMediaModal('${url}','${e.mimeType}','${capAttr}')" title="Click to view full size">`;
     } else if (e.mimeType.startsWith('video/')) {
       mediaEl = `<video src="${url}" controls style="max-width:100%;max-height:220px;border-radius:4px;margin-top:4px;display:block"></video><div style="font-size:10px;color:var(--txd);margin-top:2px;cursor:pointer" onclick="openMediaModal('${url}','${e.mimeType}','${capAttr}')">⛶ Open in viewer</div>`;
     } else {

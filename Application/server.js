@@ -4,6 +4,7 @@ import crypto from 'crypto';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
+import sharp from 'sharp';
 import { createServer as createHttpsServer } from 'https';
 import { createServer as createHttpServer } from 'http';
 import { WebSocketServer } from 'ws';
@@ -53,6 +54,29 @@ function deleteUploadFile(fileUrl) {
   try { fs.unlinkSync(path.join(__dirname, 'public', fileUrl)); } catch {}
 }
 
+const IMAGE_MIME = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp']);
+const EXT_TO_MIME = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', gif: 'image/gif', webp: 'image/webp' };
+function extToMime(fileUrl) {
+  return EXT_TO_MIME[path.extname(fileUrl || '').slice(1).toLowerCase()] || 'image/jpeg';
+}
+
+async function processImageSizes(mimeType, buffer, subdir, baseId) {
+  const dir = path.join(UPLOADS_DIR, subdir);
+  fs.mkdirSync(dir, { recursive: true });
+  const origExt  = mimeToExt(mimeType);
+  const origFile = `${baseId}.${origExt}`;
+  fs.writeFileSync(path.join(dir, origFile), buffer);
+  const thumbFile  = `${baseId}_thumb.webp`;
+  const mediumFile = `${baseId}_medium.webp`;
+  await sharp(buffer).resize(80, 80, { fit: 'cover', position: 'center' }).webp({ quality: 80 }).toFile(path.join(dir, thumbFile));
+  await sharp(buffer).resize(500, 500, { fit: 'inside', withoutEnlargement: true }).webp({ quality: 85 }).toFile(path.join(dir, mediumFile));
+  return {
+    original: `/uploads/${subdir}/${origFile}`,
+    thumb:    `/uploads/${subdir}/${thumbFile}`,
+    medium:   `/uploads/${subdir}/${mediumFile}`,
+  };
+}
+
 // ── SQLite: shared media (both modes) ────────────────────────────────────────
 import Database from 'better-sqlite3';
 
@@ -66,6 +90,8 @@ mediaDb.exec(`
     created_at INTEGER NOT NULL
   )
 `);
+try { mediaDb.exec(`ALTER TABLE shared_media ADD COLUMN thumb_data  TEXT DEFAULT ''`); } catch {}
+try { mediaDb.exec(`ALTER TABLE shared_media ADD COLUMN medium_data TEXT DEFAULT ''`); } catch {}
 const SHARED_MEDIA_MAX = 50;
 const _mediaInsert = mediaDb.prepare('INSERT INTO shared_media (id, mime_type, data, created_at) VALUES (?, ?, ?, ?)');
 const _mediaUpsert = mediaDb.prepare('INSERT OR REPLACE INTO shared_media (id, mime_type, data, created_at) VALUES (?, ?, ?, ?)');
@@ -184,6 +210,9 @@ const MAX_MEDIA_BYTES = 25 * 1024 * 1024;
 // ── Express app ───────────────────────────────────────────────────────────────
 const app = express();
 app.use(express.json({ limit: '200mb' }));
+app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads'), {
+  maxAge: '5m', etag: true, lastModified: true,
+}));
 app.use(express.static(path.join(__dirname, 'public')));
 app.get('/gaston.xml', (req, res) => res.sendFile(path.join(__dirname, 'gaston.xml')));
 
@@ -398,7 +427,7 @@ app.get('/api/characters/:id/media', async (req, res) => {
       const result = await idb.query({ media: { $: { where: { charId } } } });
       mediaRows = (result.media || []).sort((a, b) => (a.createdAt || '').localeCompare(b.createdAt || ''));
     }
-    res.json(mediaRows.map(r => ({ id: r.id, name: r.originalName, mimeType: r.mimeType, dataUrl: r.dataUrl, isPortrait: !!r.isPortrait, createdAt: r.createdAt })));
+    res.json(mediaRows.map(r => ({ id: r.id, name: r.originalName, mimeType: r.mimeType, dataUrl: r.dataUrl, thumbUrl: r.thumbUrl || '', mediumUrl: r.mediumUrl || '', isPortrait: !!r.isPortrait, createdAt: r.createdAt })));
   } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
 });
 
@@ -422,18 +451,28 @@ app.post('/api/characters/:id/media', async (req, res) => {
     const safeName = path.basename(originalName).replace(/[^\w.\-]/g, '_').slice(0, 200) || 'file';
     const newId = genId();
 
-    // Save file to disk; store URL path instead of base64 blob in DB
-    const fileUrl = saveUploadFile('characters', newId, mimeType, mimeMatch[2]);
+    let fileUrl, thumbUrl = '', mediumUrl = '';
+    if (IMAGE_MIME.has(mimeType)) {
+      const buffer = Buffer.from(mimeMatch[2], 'base64');
+      const urls = await processImageSizes(mimeType, buffer, 'characters', newId);
+      fileUrl = urls.original; thumbUrl = urls.thumb; mediumUrl = urls.medium;
+    } else {
+      fileUrl = saveUploadFile('characters', newId, mimeType, mimeMatch[2]);
+    }
 
     if (DB_PROVIDER === 'localdb') {
       if (isPortrait) {
-        // Delete old portrait file from disk
+        // Delete old portrait file from disk (including size variants)
         const oldRows = ldb.listMedia(charId);
         const oldPortrait = oldRows.find(r => r.isPortrait);
-        if (oldPortrait) deleteUploadFile(oldPortrait.dataUrl);
+        if (oldPortrait) {
+          deleteUploadFile(oldPortrait.dataUrl);
+          deleteUploadFile(oldPortrait.thumbUrl);
+          deleteUploadFile(oldPortrait.mediumUrl);
+        }
         ldb.setPortrait(charId, '');
       }
-      ldb.createMedia(newId, { charId, originalName: safeName, mimeType, dataUrl: fileUrl, isPortrait: !!isPortrait, createdAt: new Date().toISOString() });
+      ldb.createMedia(newId, { charId, originalName: safeName, mimeType, dataUrl: fileUrl, thumbUrl, mediumUrl, isPortrait: !!isPortrait, createdAt: new Date().toISOString() });
       if (isPortrait) ldb.setPortrait(charId, newId);
     } else {
       const txns = [];
@@ -441,10 +480,10 @@ app.post('/api/characters/:id/media', async (req, res) => {
         const existing = await idb.query({ media: { $: { where: { charId } } } });
         for (const m of existing.media || []) if (m.isPortrait) txns.push(idb.tx.media[m.id].update({ isPortrait: false }));
       }
-      txns.push(idb.tx.media[newId].update({ charId, originalName: safeName, mimeType, dataUrl: fileUrl, isPortrait: !!isPortrait, createdAt: new Date().toISOString() }));
+      txns.push(idb.tx.media[newId].update({ charId, originalName: safeName, mimeType, dataUrl: fileUrl, thumbUrl, mediumUrl, isPortrait: !!isPortrait, createdAt: new Date().toISOString() }));
       await idb.transact(txns);
     }
-    res.json({ id: newId, name: safeName, mimeType, isPortrait: !!isPortrait });
+    res.json({ id: newId, name: safeName, mimeType, isPortrait: !!isPortrait, thumbUrl, mediumUrl });
   } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
 });
 
@@ -452,16 +491,16 @@ app.post('/api/characters/:id/media', async (req, res) => {
 app.get('/api/characters/:id/portrait', async (req, res) => {
   try {
     if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
-    let portrait = null;
+    let portrait = null, portraitThumb = null;
     if (DB_PROVIDER === 'localdb') {
       const rows = ldb.listMedia(req.params.id);
       const p = rows.find(r => r.isPortrait);
-      if (p) portrait = p.dataUrl;
+      if (p) { portrait = p.dataUrl; portraitThumb = p.thumbUrl || null; }
     } else {
       const result = await idb.query({ media: { $: { where: { charId: req.params.id, isPortrait: true } } } });
-      if (result.media?.[0]) portrait = result.media[0].dataUrl;
+      if (result.media?.[0]) { portrait = result.media[0].dataUrl; portraitThumb = result.media[0].thumbUrl || null; }
     }
-    res.json({ portrait });
+    res.json({ portrait, portraitThumb });
   } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
 });
 
@@ -501,12 +540,16 @@ app.delete('/api/characters/:id/media/:mid', async (req, res) => {
       const m = ldb.getMediaById(mediaId);
       if (!m || m.charId !== charId) return res.status(404).json({ error: 'Media not found' });
       deleteUploadFile(m.dataUrl);
+      deleteUploadFile(m.thumbUrl);
+      deleteUploadFile(m.mediumUrl);
       ldb.deleteMedia(mediaId);
     } else {
       const result = await idb.query({ media: { $: { where: { charId } } } });
       const m = result.media?.find(m => m.id === mediaId);
       if (!m) return res.status(404).json({ error: 'Media not found' });
       deleteUploadFile(m.dataUrl);
+      deleteUploadFile(m.thumbUrl);
+      deleteUploadFile(m.mediumUrl);
       await idb.transact([idb.tx.media[mediaId].delete()]);
     }
     res.json({ ok: true });
@@ -1281,10 +1324,8 @@ app.post('/api/initiative/cleanup', async (req, res) => {
     if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
     let removed = 0;
     if (DB_PROVIDER === 'localdb') {
-      const tokenInitIds = new Set(ldb.listTableTokens().map(t => t.initiativeId).filter(Boolean));
-      for (const e of ldb.listInitEntries()) {
-        if (e.monsterId && !tokenInitIds.has(e.id)) { ldb.deleteInitEntry(e.id); removed++; }
-      }
+      const orphans = ldb.listOrphanMonsterInitEntries();
+      for (const e of orphans) { ldb.deleteInitEntry(e.id); removed++; }
     } else {
       const result = await idb.query({ initiativeEntries: {}, tableTokens: {} });
       const tokenInitIds = new Set((result.tableTokens || []).map(t => t.initiativeId).filter(Boolean));
@@ -1310,10 +1351,19 @@ app.post('/api/chat/media', async (req, res) => {
     const b64 = mimeMatch[2];
     if (Math.ceil(b64.length * 0.75) > MAX_MEDIA_BYTES) return res.status(413).json({ error: 'File too large (max 25 MB)' });
     const mediaId = genId();
-    const chatFileUrl = saveUploadFile('media', mediaId, mimeType, b64);
+    let chatFileUrl, chatMediumUrl = null;
+    if (IMAGE_MIME.has(mimeType)) {
+      const buffer = Buffer.from(b64, 'base64');
+      const urls = await processImageSizes(mimeType, buffer, 'media', mediaId);
+      chatFileUrl = urls.original;
+      chatMediumUrl = urls.medium;
+    } else {
+      chatFileUrl = saveUploadFile('media', mediaId, mimeType, b64);
+    }
     insertSharedMedia(mediaId, mimeType, Buffer.from('FILE:' + chatFileUrl));
     const entry = {
       id: genId(), sender: 'DM', type: 'media', mediaId, mimeType,
+      mediumUrl: chatMediumUrl,
       caption: caption ? String(caption).slice(0, 120) : null,
       timestamp: new Date().toISOString()
     };
@@ -1519,13 +1569,22 @@ app.post('/api/monsters/:id/portrait', async (req, res) => {
     try { data = JSON.parse(r.dataJson || '{}'); } catch {}
     if (dataUrl === '') {
       deleteUploadFile(data.portrait);
+      deleteUploadFile(data.portraitThumb);
+      deleteUploadFile(data.portraitMedium);
       delete data.portrait;
+      delete data.portraitThumb;
+      delete data.portraitMedium;
     } else {
-      // Save image to disk; store URL path instead of base64 in DB
       const mimeMatch = dataUrl.match(/^data:(image\/[^;]+);base64,(.+)$/s);
       if (!mimeMatch) return res.status(400).json({ error: 'Invalid image format' });
-      deleteUploadFile(data.portrait); // remove old file if any
-      data.portrait = saveUploadFile('monsters', req.params.id, mimeMatch[1], mimeMatch[2]);
+      deleteUploadFile(data.portrait);
+      deleteUploadFile(data.portraitThumb);
+      deleteUploadFile(data.portraitMedium);
+      const buffer = Buffer.from(mimeMatch[2], 'base64');
+      const urls = await processImageSizes(mimeMatch[1], buffer, 'monsters', req.params.id);
+      data.portrait = urls.original;
+      data.portraitThumb = urls.thumb;
+      data.portraitMedium = urls.medium;
     }
     const dataJson = JSON.stringify(data);
     if (DB_PROVIDER === 'localdb') {
@@ -1535,24 +1594,25 @@ app.post('/api/monsters/:id/portrait', async (req, res) => {
     }
     // Sync portrait to all table tokens linked to this monster
     const newPortrait = data.portrait || null;
+    const newPortraitThumb = data.portraitThumb || null;
     if (DB_PROVIDER === 'localdb') {
       const linked = ldb.getLinkedTokens(req.params.id).filter(t => t.type === 'monster');
       for (const tok of linked) {
-        ldb.updateTableToken(tok.id, { portrait: newPortrait });
-        broadcast('table', { action: 'token-updated', token: { ...tok, portrait: newPortrait } });
+        ldb.updateTableToken(tok.id, { portrait: newPortrait, portraitThumb: newPortraitThumb });
+        broadcast('table', { action: 'token-updated', token: { ...tok, portrait: newPortrait, portraitThumb: newPortraitThumb } });
       }
     } else {
       const tokRes = await idb.query({ tableTokens: { $: { where: { linkedId: req.params.id } } } });
       const linked = (tokRes.tableTokens || []).filter(t => t.type === 'monster');
       if (linked.length) {
-        await idb.transact(linked.map(t => idb.tx.tableTokens[t.id].update({ portrait: newPortrait })));
+        await idb.transact(linked.map(t => idb.tx.tableTokens[t.id].update({ portrait: newPortrait, portraitThumb: newPortraitThumb })));
         for (const tok of linked) {
-          broadcast('table', { action: 'token-updated', token: { ...tok, portrait: newPortrait } });
+          broadcast('table', { action: 'token-updated', token: { ...tok, portrait: newPortrait, portraitThumb: newPortraitThumb } });
         }
       }
     }
     // Notify table screen to update monster list cache
-    broadcast('monsters', { action: 'portrait-updated', id: req.params.id, portrait: newPortrait });
+    broadcast('monsters', { action: 'portrait-updated', id: req.params.id, portrait: newPortrait, portraitThumb: newPortraitThumb });
     res.json({ ok: true });
   } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
 });
@@ -1562,8 +1622,8 @@ app.delete('/api/monsters/:id', async (req, res) => {
     if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
     const existing = DB_PROVIDER === 'localdb' ? ldb.getMonster(req.params.id) : (await idb.query({ monsters: { $: { where: { id: req.params.id } } } })).monsters?.[0];
     if (!existing) return res.status(404).json({ error: 'Not found' });
-    // Delete portrait file if any
-    try { const d = JSON.parse(existing.dataJson || '{}'); deleteUploadFile(d.portrait); } catch {}
+    // Delete portrait files if any
+    try { const d = JSON.parse(existing.dataJson || '{}'); deleteUploadFile(d.portrait); deleteUploadFile(d.portraitThumb); deleteUploadFile(d.portraitMedium); } catch {}
     if (DB_PROVIDER === 'localdb') {
       ldb.deleteMonster(req.params.id);
     } else {
@@ -1612,17 +1672,24 @@ async function buildBackupPart(partName) {
     case 'characters': {
       if (DB_PROVIDER === 'localdb') {
         const { characters, media } = ldb.exportAll();
-        return { ...base, characters, media: media.map(r => ({ ...r, dataB64: readUploadAsBase64(r.dataUrl) })) };
+        return { ...base, characters, media: media.map(r => ({
+          id: r.id, charId: r.charId, originalName: r.originalName,
+          mimeType: r.mimeType, dataUrl: r.dataUrl,
+          isPortrait: r.isPortrait, createdAt: r.createdAt,
+          dataB64: readUploadAsBase64(r.dataUrl),
+        })) };
       }
       const [cr, mr] = await Promise.all([idb.query({ characters: {} }), idb.query({ media: {} })]);
       return { ...base, characters: cr.characters || [], media: mr.media || [] };
     }
     case 'monsters': {
       if (DB_PROVIDER === 'localdb') {
-        const monsters = ldb.listMonsters().map(m => {
+        const monsterRows = ldb.listMonsters();
+        const monsters = await Promise.all(monsterRows.map(async m => {
           let d = {}; try { d = JSON.parse(m.dataJson || '{}'); } catch {}
-          return { ...m, portraitB64: readUploadAsBase64(d.portrait) };
-        });
+          const { portraitThumb, portraitMedium, ...dWithoutThumbs } = d;
+          return { ...m, dataJson: JSON.stringify(dWithoutThumbs), portraitB64: readUploadAsBase64(d.portrait) };
+        }));
         return { ...base, monsters };
       }
       const mr = await idb.query({ monsters: {} });
@@ -1645,12 +1712,20 @@ async function buildBackupPart(partName) {
     case 'maps': {
       const preparedMaps = DB_PROVIDER === 'localdb' ? ldb.listPreparedMaps() : [];
       const mapMediaIds = new Set(preparedMaps.map(m => 'prep-map-' + m.id));
-      const allShared = mediaDb.prepare('SELECT id, mime_type, data, created_at FROM shared_media').all();
+      const mapIds = [...mapMediaIds];
+      let mapRows = [], chatRows = [];
+      if (mapIds.length > 0) {
+        const ph = mapIds.map(() => '?').join(',');
+        mapRows  = mediaDb.prepare(`SELECT id, mime_type, data, created_at FROM shared_media WHERE id IN (${ph})`).all(...mapIds);
+        chatRows = mediaDb.prepare(`SELECT id, mime_type, data, created_at FROM shared_media WHERE id NOT IN (${ph})`).all(...mapIds);
+      } else {
+        chatRows = mediaDb.prepare('SELECT id, mime_type, data, created_at FROM shared_media').all();
+      }
       return {
         ...base,
         preparedMaps,
-        mapImages: _sharedMediaWithData(allShared.filter(r => mapMediaIds.has(r.id))),
-        chatMedia: _sharedMediaWithData(allShared.filter(r => !mapMediaIds.has(r.id))),
+        mapImages: _sharedMediaWithData(mapRows),
+        chatMedia: _sharedMediaWithData(chatRows),
       };
     }
     default: throw new Error('Unknown backup part: ' + partName);
@@ -1696,19 +1771,41 @@ app.post('/api/admin/restore', express.json({ limit: '200mb' }), async (req, res
       if (DB_PROVIDER === 'localdb') {
         switch (backup.type) {
           case 'characters': {
-            for (const r of (backup.media || [])) writeUploadFile(r.dataUrl, r.dataB64);
-            ldb.importCharacters(backup.characters, backup.media);
+            const restoredMedia = [];
+            for (const r of (backup.media || [])) {
+              writeUploadFile(r.dataUrl, r.dataB64);
+              let thumbUrl = '', mediumUrl = '';
+              if (IMAGE_MIME.has(r.mimeType) && r.dataB64) {
+                try {
+                  const buf = Buffer.from(r.dataB64, 'base64');
+                  const baseId = path.basename(r.dataUrl, path.extname(r.dataUrl));
+                  const urls = await processImageSizes(r.mimeType, buf, 'characters', baseId);
+                  thumbUrl = urls.thumb; mediumUrl = urls.medium;
+                } catch {}
+              }
+              restoredMedia.push({ ...r, thumbUrl, mediumUrl });
+            }
+            ldb.importCharacters(backup.characters, restoredMedia);
             broadcast('characters', { action: 'reload' });
             break;
           }
           case 'monsters': {
+            const restoredMonsters = [];
             for (const m of (backup.monsters || [])) {
-              if (m.portraitB64) {
-                let d = {}; try { d = JSON.parse(m.dataJson || '{}'); } catch {}
+              let d = {}; try { d = JSON.parse(m.dataJson || '{}'); } catch {}
+              if (m.portraitB64 && d.portrait) {
                 writeUploadFile(d.portrait, m.portraitB64);
+                try {
+                  const buf = Buffer.from(m.portraitB64, 'base64');
+                  const baseId = path.basename(d.portrait, path.extname(d.portrait));
+                  const urls = await processImageSizes(extToMime(d.portrait), buf, 'monsters', baseId);
+                  d.portraitThumb = urls.thumb;
+                  d.portraitMedium = urls.medium;
+                } catch {}
               }
+              restoredMonsters.push({ ...m, dataJson: JSON.stringify(d) });
             }
-            ldb.importMonsters(backup.monsters);
+            ldb.importMonsters(restoredMonsters);
             broadcast('monsters', { action: 'reload' });
             break;
           }
@@ -1867,8 +1964,11 @@ app.get('/api/table/map', (req, res) => {
   if (!item) return res.status(404).send('No map uploaded');
   const dataStr = item.data.toString();
   if (dataStr.startsWith('FILE:')) return res.redirect(dataStr.slice(5));
+  const etag = `"${crypto.createHash('md5').update(item.data).digest('hex')}"`;
+  if (req.headers['if-none-match'] === etag) return res.status(304).end();
   res.set('Content-Type', item.mime_type);
-  res.set('Cache-Control', 'no-cache, no-store');
+  res.set('Cache-Control', 'public, max-age=300');
+  res.set('ETag', etag);
   res.send(item.data);
 });
 
@@ -2100,8 +2200,11 @@ app.get('/api/prepared-maps/:id/image', (req, res) => {
   if (!item) return res.status(404).send('No image uploaded');
   const dataStr = item.data.toString();
   if (dataStr.startsWith('FILE:')) return res.redirect(dataStr.slice(5));
+  const etag = `"${crypto.createHash('md5').update(item.data).digest('hex')}"`;
+  if (req.headers['if-none-match'] === etag) return res.status(304).end();
   res.set('Content-Type', item.mime_type);
-  res.set('Cache-Control', 'no-cache, no-store');
+  res.set('Cache-Control', 'public, max-age=300');
+  res.set('ETag', etag);
   res.send(item.data);
 });
 
@@ -2211,7 +2314,7 @@ app.post('/api/table/tokens', async (req, res) => {
     if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
     const { name, type = 'custom', linkedId = '', x = 0, y = 0, color = '#888888',
             hpCurrent = 0, hpMax = 0, hpTemp = 0, speed = 30, initiativeId = '',
-            tokenSize = 1, portrait = null, label = '', conditions = '[]' } = req.body || {};
+            tokenSize = 1, portrait = null, portraitThumb = null, label = '', conditions = '[]' } = req.body || {};
     if (!name || !String(name).trim()) return res.status(400).json({ error: 'Name required' });
     if (!['character','monster','npc','custom'].includes(type)) return res.status(400).json({ error: 'Invalid type' });
 
@@ -2275,6 +2378,7 @@ app.post('/api/table/tokens', async (req, res) => {
       initiativeId: resolvedInitId, movedFt: 0, visible: true,
       tokenSize: Math.max(1, Math.min(4, parseInt(tokenSize) || 1)),
       portrait: typeof portrait === 'string' && (portrait.startsWith('data:image/') || portrait.startsWith('/uploads/')) ? portrait : null,
+      portraitThumb: typeof portraitThumb === 'string' && portraitThumb.startsWith('/uploads/') ? portraitThumb : null,
       label: String(label || '').slice(0, 20),
       conditions: Array.isArray(conditions) ? JSON.stringify(conditions) : String(conditions || '[]'),
       createdAt: new Date().toISOString()
