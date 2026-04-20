@@ -34,6 +34,7 @@ let _pendingTokenType = null;
 let _pendingTokenData = {};
 let _charList = [];
 let _monsterList = [];
+let _addTokenBusy = false; // true while in placement mode or while placement POST is in flight
 
 const SKILL_NAMES = ['Acrobatics','Animal Handling','Arcana','Athletics','Deception','History',
   'Insight','Intimidation','Investigation','Medicine','Nature','Perception',
@@ -709,7 +710,14 @@ function showOutOfRange() {
 }
 
 // ── Placement mode ────────────────────────────────────────────────────────────
+function _setAddTokenBusy(val) {
+  _addTokenBusy = val;
+  const btn = document.getElementById('btn-add-token');
+  if (btn) btn.disabled = val;
+}
+
 function enterPlacementMode(payload) {
+  _setAddTokenBusy(true);
   placementState = { payload };
   overlayCanvas.style.pointerEvents = 'all';
   overlayCanvas.style.cursor = 'cell';
@@ -717,6 +725,7 @@ function enterPlacementMode(payload) {
 }
 
 function exitPlacementMode() {
+  _setAddTokenBusy(false);
   placementState = null;
   document.getElementById('placement-hint').style.display = 'none';
   oCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
@@ -726,7 +735,8 @@ function exitPlacementMode() {
 
 async function commitPlacement(gridX, gridY) {
   const payload = { ...placementState.payload, x: gridX, y: gridY };
-  exitPlacementMode();
+  exitPlacementMode();         // clears busy + placement UI
+  _setAddTokenBusy(true);      // re-lock for the POST flight
   try {
     await fetch('/api/table/tokens', {
       method: 'POST',
@@ -734,6 +744,7 @@ async function commitPlacement(gridX, gridY) {
       body: JSON.stringify(payload)
     });
   } catch { showToast('Failed to add token.', true); }
+  finally { _setAddTokenBusy(false); }
 }
 
 // ── Tool system ───────────────────────────────────────────────────────────────
@@ -2233,6 +2244,7 @@ function renderSidePanel() {
 
 // ── Add Token Modal ───────────────────────────────────────────────────────────
 function openAddTokenModal() {
+  if (_addTokenBusy) return;
   _pendingTokenLinkedId = null;
   _pendingTokenType = null;
   switchTokenTab('chars');
