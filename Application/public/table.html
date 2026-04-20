@@ -29,6 +29,7 @@
     <button class="btn primary" onclick="loadPrepMapToTable()">📂 Load</button>
     <button class="btn primary" id="btn-add-token" onclick="openAddTokenModal()">+ Token</button>
     <button class="btn danger" onclick="clearAllTokens()">Clear</button>
+    <button class="btn" id="btn-prev-turn" onclick="dmPrevTurn()">⏮ Prev Turn</button>
     <button class="btn" id="btn-next-turn" onclick="dmNextTurn()">⏭ Next Turn</button>
     <button class="btn" id="btn-init-toggle" onclick="toggleInitiative()">▶ Start Initiative</button>
     <button class="btn" onclick="exitDM()" style="margin-left:4px">🚪 Exit DM</button>
@@ -112,6 +113,7 @@
     <div class="panel-body" id="init-body-wrap">
       <div class="init-panel-btns">
         <button class="dice-btn" onclick="rollMyInitiative()">🎲 Roll Init</button>
+        <button class="dice-btn" id="btn-init-prev" onclick="dmPrevTurn()">⏮ Prev</button>
         <button class="dice-btn" id="btn-init-next" onclick="initSkipTurn()">⏭ Next</button>
       </div>
       <div id="init-tracker-list"><div class="init-empty-msg">No combatants yet.</div></div>

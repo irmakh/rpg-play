@@ -236,13 +236,22 @@ async function submitAddNpc() {
   } catch { errEl.textContent = 'Network error.'; }
 }
 
-// ── Next turn ─────────────────────────────────────────────────────────────────
+// ── Next / Prev turn ──────────────────────────────────────────────────────────
 async function nextTurn() {
   try {
     const res = await fetch('/api/initiative/next', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }
     });
     if (!res.ok) showStatus('Failed to advance turn.', true);
+  } catch { showStatus('Network error.', true); }
+}
+
+async function prevTurn() {
+  try {
+    const res = await fetch('/api/initiative/prev', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }
+    });
+    if (!res.ok) showStatus('Failed to go to previous turn.', true);
   } catch { showStatus('Network error.', true); }
 }
 

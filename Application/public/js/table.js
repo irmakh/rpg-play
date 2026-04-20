@@ -1290,6 +1290,14 @@ async function dmNextTurn() {
   await initSkipTurn();
 }
 
+async function dmPrevTurn() {
+  try {
+    const headers = {};
+    if (isDM()) headers['X-Master-Password'] = masterPw;
+    await fetch('/api/initiative/prev', { method: 'POST', headers });
+  } catch {}
+}
+
 async function toggleInitiative() {
   if (!isDM()) return;
   const running = !!initData.currentId;

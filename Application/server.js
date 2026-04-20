@@ -1178,6 +1178,44 @@ app.post('/api/initiative/next', async (req, res) => {
   } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
 });
 
+app.post('/api/initiative/prev', async (req, res) => {
+  try {
+    let entries, state, stateId;
+    if (DB_PROVIDER === 'localdb') {
+      entries = ldb.listInitEntries();
+      state   = ldb.getInitState();
+      stateId = state.id;
+    } else {
+      const result = await idb.query({ initiativeEntries: {}, initiativeState: {} });
+      entries = (result.initiativeEntries || []).sort((a, b) => (b.roll || 0) - (a.roll || 0));
+      state   = result.initiativeState?.[0];
+      stateId = state?.id || genId();
+    }
+    if (entries.length === 0) return res.json({ ok: true });
+    const idx    = state?.currentId ? entries.findIndex(e => e.id === state.currentId) : 0;
+    const prevId = entries[(idx - 1 + entries.length) % entries.length].id;
+    if (DB_PROVIDER === 'localdb') {
+      ldb.setInitState(prevId);
+    } else {
+      await idb.transact([idb.tx.initiativeState[stateId].update({ currentId: prevId })]);
+    }
+    // Reset movedFt for newly active token
+    try {
+      const tokList = DB_PROVIDER === 'localdb' ? ldb.getTableTokensByInitId(prevId) : (await idb.query({ tableTokens: { $: { where: { initiativeId: prevId } } } })).tableTokens || [];
+      if (tokList.length > 0) {
+        if (DB_PROVIDER === 'localdb') {
+          for (const t of tokList) { ldb.updateTableToken(t.id, { movedFt: 0 }); broadcast('table', { action: 'token-updated', token: { ...t, movedFt: 0 } }); }
+        } else {
+          await idb.transact(tokList.map(t => idb.tx.tableTokens[t.id].update({ movedFt: 0 })));
+          for (const t of tokList) broadcast('table', { action: 'token-updated', token: { ...t, movedFt: 0 } });
+        }
+      }
+    } catch {}
+    broadcast('initiative', { action: 'prev' });
+    res.json({ ok: true });
+  } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
+});
+
 app.post('/api/initiative/start', async (req, res) => {
   try {
     if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
