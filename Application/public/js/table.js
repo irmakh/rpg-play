@@ -1105,8 +1105,16 @@ function startSSE() {
           if (d.token.id === getActiveTurnTokenId()) { _sideQrollTokenId = null; loadSideQroll(); }
           break;
         case 'token-removed':
+          if (_dragPendingTimer && dragState?.tokenId === d.id) {
+            clearTimeout(_dragPendingTimer); _dragPendingTimer = null;
+          }
+          if (dragState?.tokenId === d.id) {
+            dragState = null; oCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+          }
           tokens = tokens.filter(t => t.id !== d.id); renderTokens(); renderHpTable(); break;
         case 'tokens-cleared':
+          if (_dragPendingTimer) { clearTimeout(_dragPendingTimer); _dragPendingTimer = null; }
+          dragState = null; oCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
           tokens = []; renderTokens(); renderHpTable(); break;
         case 'fog-updated':
           applyFogRegions(d.fogRegions); break;
