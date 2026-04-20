@@ -103,6 +103,7 @@ try { db.exec(`ALTER TABLE table_tokens ADD COLUMN portrait TEXT`); } catch {}
 try { db.exec(`ALTER TABLE prepared_maps ADD COLUMN hiddenItems TEXT DEFAULT '[]'`); } catch {}
 try { db.exec(`ALTER TABLE table_state ADD COLUMN hiddenItems TEXT DEFAULT '[]'`); } catch {}
 try { db.exec(`ALTER TABLE table_tokens ADD COLUMN label TEXT DEFAULT ''`); } catch {}
+try { db.exec(`ALTER TABLE table_tokens ADD COLUMN conditions TEXT DEFAULT '[]'`); } catch {}
 try { db.exec(`ALTER TABLE shop_items ADD COLUMN tag TEXT DEFAULT ''`); } catch {}
 
 // Singleton IDs (match server.js constants)
@@ -351,8 +352,8 @@ export function getMovedTableTokens() {
   return db.prepare('SELECT * FROM table_tokens WHERE movedFt > 0').all().map(normalizeToken);
 }
 export function createTableToken(id, fields) {
-  db.prepare('INSERT INTO table_tokens (id, name, type, linkedId, x, y, color, hpCurrent, hpMax, hpTemp, speed, movedFt, initiativeId, visible, tokenSize, portrait, label, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
-    .run(id, fields.name || '', fields.type || 'custom', fields.linkedId || '', fields.x || 0, fields.y || 0, fields.color || '#888888', fields.hpCurrent || 0, fields.hpMax || 0, fields.hpTemp || 0, fields.speed || 30, fields.movedFt || 0, fields.initiativeId || '', fields.visible !== false ? 1 : 0, fields.tokenSize || 1, fields.portrait || null, fields.label || '', fields.createdAt || new Date().toISOString());
+  db.prepare('INSERT INTO table_tokens (id, name, type, linkedId, x, y, color, hpCurrent, hpMax, hpTemp, speed, movedFt, initiativeId, visible, tokenSize, portrait, label, conditions, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+    .run(id, fields.name || '', fields.type || 'custom', fields.linkedId || '', fields.x || 0, fields.y || 0, fields.color || '#888888', fields.hpCurrent || 0, fields.hpMax || 0, fields.hpTemp || 0, fields.speed || 30, fields.movedFt || 0, fields.initiativeId || '', fields.visible !== false ? 1 : 0, fields.tokenSize || 1, fields.portrait || null, fields.label || '', fields.conditions || '[]', fields.createdAt || new Date().toISOString());
 }
 export function updateTableToken(id, fields) {
   if (!fields || Object.keys(fields).length === 0) return;

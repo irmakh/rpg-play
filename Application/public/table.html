@@ -249,6 +249,10 @@
     <input type="number" id="hp-temp-input" value="0" min="0" style="width:52px;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px;padding:3px 5px;font-size:12px">
     <button class="btn sm" onclick="applyTempHp()">Set</button>
   </div>
+  <div id="hp-conditions-row" style="border-top:1px solid var(--a44);padding-top:6px;margin-top:2px">
+    <div style="font-size:10px;color:var(--txd);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Conditions</div>
+    <div id="hp-conditions-grid" style="display:flex;flex-wrap:wrap;gap:3px"></div>
+  </div>
   <div id="hp-vis-row" style="display:none;border-top:1px solid var(--a44);padding-top:6px;margin-top:2px">
     <button id="hp-vis-btn" class="btn sm" onclick="toggleTokenVisibility()" style="width:100%;font-size:12px"></button>
   </div>

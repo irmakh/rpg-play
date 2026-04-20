@@ -2211,7 +2211,7 @@ app.post('/api/table/tokens', async (req, res) => {
     if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
     const { name, type = 'custom', linkedId = '', x = 0, y = 0, color = '#888888',
             hpCurrent = 0, hpMax = 0, hpTemp = 0, speed = 30, initiativeId = '',
-            tokenSize = 1, portrait = null, label = '' } = req.body || {};
+            tokenSize = 1, portrait = null, label = '', conditions = '[]' } = req.body || {};
     if (!name || !String(name).trim()) return res.status(400).json({ error: 'Name required' });
     if (!['character','monster','npc','custom'].includes(type)) return res.status(400).json({ error: 'Invalid type' });
 
@@ -2276,6 +2276,7 @@ app.post('/api/table/tokens', async (req, res) => {
       tokenSize: Math.max(1, Math.min(4, parseInt(tokenSize) || 1)),
       portrait: typeof portrait === 'string' && (portrait.startsWith('data:image/') || portrait.startsWith('/uploads/')) ? portrait : null,
       label: String(label || '').slice(0, 20),
+      conditions: Array.isArray(conditions) ? JSON.stringify(conditions) : String(conditions || '[]'),
       createdAt: new Date().toISOString()
     };
     if (DB_PROVIDER === 'localdb') {
@@ -2320,7 +2321,7 @@ app.put('/api/table/tokens/:id', async (req, res) => {
         return res.json({ ok: true });
       }
 
-      const { name, x, y, color, hpCurrent, hpMax, hpTemp, speed, initiativeId, visible, movedFt, tokenSize } = body;
+      const { name, x, y, color, hpCurrent, hpMax, hpTemp, speed, initiativeId, visible, movedFt, tokenSize, conditions } = body;
       const update = {};
       if (name !== undefined)        update.name = String(name).trim();
       if (x !== undefined)           update.x = parseInt(x) || 0;
@@ -2334,6 +2335,7 @@ app.put('/api/table/tokens/:id', async (req, res) => {
       if (visible !== undefined)     update.visible = !!visible;
       if (movedFt !== undefined)     update.movedFt = Math.max(0, parseInt(movedFt) || 0);
       if (tokenSize !== undefined)   update.tokenSize = Math.max(1, Math.min(4, parseInt(tokenSize) || 1));
+      if (conditions !== undefined)  update.conditions = Array.isArray(conditions) ? JSON.stringify(conditions) : String(conditions);
       if (DB_PROVIDER === 'localdb') { ldb.updateTableToken(req.params.id, update); }
       else { await idb.transact([idb.tx.tableTokens[req.params.id].update(update)]); }
       const updated = { ...tok, ...update };

@@ -40,6 +40,22 @@ let _addTokenBusy = false; // true while in placement mode or while placement PO
 // Optimistic UI updates happen immediately outside the queue; only fetch() calls go in.
 const _tokQ = { _p: Promise.resolve(), run(fn) { this._p = this._p.then(() => fn(), () => fn()); } };
 
+const CONDITIONS = [
+  'Blinded','Charmed','Deafened','Exhaustion','Frightened','Grappled',
+  'Incapacitated','Invisible','Paralyzed','Petrified','Poisoned',
+  'Prone','Restrained','Stunned','Unconscious'
+];
+const COND_ABBREV = {
+  Blinded:'BL', Charmed:'CH', Deafened:'DF', Exhaustion:'EX', Frightened:'FR',
+  Grappled:'GR', Incapacitated:'IC', Invisible:'IV', Paralyzed:'PA', Petrified:'PT',
+  Poisoned:'PO', Prone:'PR', Restrained:'RS', Stunned:'ST', Unconscious:'UC'
+};
+function parseConditions(raw) {
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw;
+  try { return JSON.parse(raw); } catch { return []; }
+}
+
 const SKILL_NAMES = ['Acrobatics','Animal Handling','Arcana','Athletics','Deception','History',
   'Insight','Intimidation','Investigation','Medicine','Nature','Perception',
   'Performance','Persuasion','Religion','Sleight of Hand','Stealth','Survival'];
@@ -581,6 +597,15 @@ function renderTokens() {
     label.className = 'token-name';
     label.textContent = dn.length > 10 ? dn.slice(0,9)+'…' : dn;
     div.appendChild(label);
+
+    // Condition pills — shown above token
+    const conds = parseConditions(tok.conditions);
+    if (conds.length > 0) {
+      const condDiv = document.createElement('div');
+      condDiv.className = 'token-conditions';
+      condDiv.innerHTML = conds.map(c => `<span title="${c}">${COND_ABBREV[c] || c.slice(0,2).toUpperCase()}</span>`).join('');
+      div.appendChild(condDiv);
+    }
 
     attachTokenEvents(div, tok);
     // For players: monster tokens sit below the fog layer so fog can cover them.
@@ -2086,6 +2111,20 @@ function _refreshHpPanel(tok) {
       visRow.style.display = 'none';
     }
   }
+  // Conditions grid — all editors
+  const condGrid = document.getElementById('hp-conditions-grid');
+  if (condGrid) {
+    const active = parseConditions(tok.conditions);
+    condGrid.innerHTML = '';
+    for (const c of CONDITIONS) {
+      const btn = document.createElement('button');
+      btn.className = 'cond-btn' + (active.includes(c) ? ' active' : '');
+      btn.textContent = COND_ABBREV[c];
+      btn.title = c;
+      btn.onclick = () => toggleCondition(c);
+      condGrid.appendChild(btn);
+    }
+  }
   // Roll Initiative — DM only, all token types
   const initRow = document.getElementById('hp-init-row');
   const initBtn = document.getElementById('hp-init-btn');
@@ -2170,6 +2209,29 @@ function _putHp(fields) {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'X-Master-Password': masterPw },
         body: JSON.stringify(fields)
+      });
+    } catch {}
+  });
+}
+
+function toggleCondition(name) {
+  const tok = tokens.find(t => t.id === selectedTokenId);
+  if (!tok) return;
+  const active = parseConditions(tok.conditions);
+  const next = active.includes(name) ? active.filter(c => c !== name) : [...active, name];
+  const condStr = JSON.stringify(next);
+  // Optimistic update — immediate
+  patchToken(selectedTokenId, { conditions: condStr });
+  _refreshHpPanel({ ...tok, conditions: condStr });
+  renderTokens();
+  // Network — queued
+  const id = selectedTokenId;
+  _tokQ.run(async () => {
+    try {
+      await fetch(`/api/table/tokens/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'X-Master-Password': masterPw },
+        body: JSON.stringify({ conditions: condStr })
       });
     } catch {}
   });
