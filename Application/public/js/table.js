@@ -2302,9 +2302,18 @@ function renderHpTable() {
       ? `<span style="font-weight:bold;color:${col}">${cur}</span><span style="color:var(--txd)">/${max}</span>${temp > 0 ? `<span style="color:#aaddff;font-size:10px"> +${temp}</span>` : ''}`
       : '';
     const clickAttr = canEdit ? `onclick="openHpPanel(tokens.find(t=>t.id==='${tok.id}'))"` : '';
+    const activeConds = parseConditions(tok.conditions);
+    const condsHtml = activeConds.length > 0
+      ? `<div style="display:flex;flex-wrap:wrap;gap:2px;margin-top:2px" onclick="event.stopPropagation()">
+          ${activeConds.map(c => `<a href="https://5e.tools/conditionsdiseases.html#${encodeURIComponent(c.toLowerCase())}_xphb" target="_blank" rel="noopener"
+              style="font-size:9px;font-weight:bold;background:rgba(255,140,0,.2);border:1px solid rgba(255,140,0,.6);color:#ffa500;border-radius:2px;padding:0 3px;line-height:13px;text-decoration:none;white-space:nowrap"
+              title="${esc(c)}">${esc(COND_ABBREV[c] || c.slice(0,2).toUpperCase())}</a>`).join('')}
+        </div>`
+      : '';
     return `<div style="${rowStyle}" ${clickAttr}>
       <div style="flex:1;min-width:0">
         <div style="font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap${isCur ? ';color:var(--ac);font-weight:bold' : ''}">${isCur ? '▶ ' : ''}${esc(tokDisplayName(tok))}</div>
+        ${condsHtml}
         <div style="display:flex;align-items:center;gap:3px;margin-top:2px">
           <div style="flex:1;background:var(--bg3);border-radius:2px;overflow:hidden;height:4px">
             <div style="width:${hpPct*100}%;height:100%;background:${col};transition:width .3s"></div>
