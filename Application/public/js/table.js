@@ -2230,7 +2230,7 @@ function toggleCondition(name) {
     try {
       await fetch(`/api/table/tokens/${id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'X-Master-Password': masterPw },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ conditions: condStr })
       });
     } catch {}

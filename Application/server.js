@@ -2360,6 +2360,14 @@ app.put('/api/table/tokens/:id', async (req, res) => {
       res.json({ ok: true });
     } else {
       const body = req.body || {};
+      // Anyone can update conditions on any token
+      if (body.conditions !== undefined && Object.keys(body).length === 1) {
+        const condVal = Array.isArray(body.conditions) ? JSON.stringify(body.conditions) : String(body.conditions);
+        if (DB_PROVIDER === 'localdb') { ldb.updateTableToken(req.params.id, { conditions: condVal }); }
+        else { await idb.transact([idb.tx.tableTokens[req.params.id].update({ conditions: condVal })]); }
+        broadcast('table', { action: 'token-updated', token: { ...tok, conditions: condVal } });
+        return res.json({ ok: true });
+      }
       if ((body.hpCurrent !== undefined || body.hpTemp !== undefined) && (tok.type === 'character' || tok.type === 'npc')) {
         const update = {};
         if (body.hpCurrent !== undefined) update.hpCurrent = Math.max(0, parseInt(body.hpCurrent) || 0);
