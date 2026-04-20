@@ -1111,10 +1111,12 @@ function startSSE() {
           if (dragState?.tokenId === d.id) {
             dragState = null; oCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
           }
+          if (selectedTokenId === d.id) { selectedTokenId = null; closeHpPanel(); renderSidePanel(); }
           tokens = tokens.filter(t => t.id !== d.id); renderTokens(); renderHpTable(); break;
         case 'tokens-cleared':
           if (_dragPendingTimer) { clearTimeout(_dragPendingTimer); _dragPendingTimer = null; }
           dragState = null; oCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+          selectedTokenId = null; closeHpPanel(); renderSidePanel();
           tokens = []; renderTokens(); renderHpTable(); break;
         case 'fog-updated':
           applyFogRegions(d.fogRegions); break;
