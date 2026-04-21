@@ -2897,7 +2897,7 @@ function pcalRenderGrid() {
     evByDay[e.frDay].push(e);
   }
 
-  const TENDAY_LABELS = ['First Tenday', 'Second Tenday', 'Third Tenday'];
+  const TENDAY_LABELS = ['1st. Tenday', '2nd. Tenday', '3rd. Tenday'];
   let rows = '';
   for (let td = 0; td < 3; td++) {
     let cells = `<td class="cal-tenday-lbl">${TENDAY_LABELS[td]}</td>`;
