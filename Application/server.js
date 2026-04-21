@@ -2499,6 +2499,7 @@ app.put('/api/table/tokens/:id', async (req, res) => {
 
       const { x, y } = body;
       if (x === undefined || y === undefined) return res.status(400).json({ error: 'x and y required' });
+      if (tok.type === 'monster') return res.status(403).json({ error: 'Unauthorized' });
       let currentId = '';
       if (DB_PROVIDER === 'localdb') {
         currentId = ldb.getInitState().currentId || '';

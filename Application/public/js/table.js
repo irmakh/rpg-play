@@ -641,7 +641,7 @@ function selectToken(id) {
 function moveSelectedToken(key) {
   const tok = tokens.find(t => t.id === selectedTokenId);
   if (!tok) return;
-  const canMove = isDM() || !initData.currentId || (tok.id === getActiveTurnTokenId());
+  const canMove = isDM() || (tok.type !== 'monster' && (!initData.currentId || tok.id === getActiveTurnTokenId()));
   if (!canMove) return;
   const dx = key === 'ArrowLeft' ? -1 : key === 'ArrowRight' ? 1 : 0;
   const dy = key === 'ArrowUp'   ? -1 : key === 'ArrowDown'  ? 1 : 0;
