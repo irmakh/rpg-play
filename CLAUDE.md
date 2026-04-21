@@ -259,34 +259,98 @@ print('Memory infrastructure initialized!')
 
 ### **8. Memory Protocol**
 
-The system has persistent memory across sessions. At session start, read the memory context:
+The system has persistent memory across sessions. Use the correct tool at each stage — never edit log files or MEMORY.md directly (direct edits skip the SQLite DB layer and break search tools).
 
-**Load Memory:**
-1. Read `memory/MEMORY.md` for curated facts and preferences
-2. Read today's log: `memory/logs/YYYY-MM-DD.md`
-3. Read yesterday's log for continuity
+---
+
+**SESSION START — mandatory before any work:**
 
 ```bash
 python tools/memory/memory_read.py --format markdown
 ```
 
-**During Session:**
-- Append notable events to today's log: `python tools/memory/memory_write.py --content "event" --type event`
-- Add facts to the database: `python tools/memory/memory_write.py --content "fact" --type fact --importance 7`
-- For truly persistent facts (always loaded), update MEMORY.md: `python tools/memory/memory_write.py --update-memory --content "New preference" --section user_preferences`
+This loads MEMORY.md + today's log + yesterday's log in one call. Do not use `cat` on these files directly.
 
-**Search Memory:**
-- Keyword search: `python tools/memory/memory_db.py --action search --query "keyword"`
-- Semantic search: `python tools/memory/semantic_search.py --query "related concept"`
-- Hybrid search (best): `python tools/memory/hybrid_search.py --query "what does user prefer"`
+---
+
+**DURING SESSION — write as events happen:**
+
+```bash
+# Log a notable event (goes to daily log + SQLite DB)
+python tools/memory/memory_write.py --content "what happened" --type event --importance 6
+
+# Add a structured fact to the DB (searchable later)
+python tools/memory/memory_write.py --content "fact to remember" --type fact --importance 7
+
+# Add something that must load every session (goes to MEMORY.md)
+python tools/memory/memory_write.py --update-memory --content "New rule or constraint" --section learned_behaviors
+```
+
+---
+
+**DURING SESSION — search when you need past context:**
+
+Use search tools whenever you need to recall a past decision, constraint, or event that isn't in MEMORY.md.
+
+```bash
+# Quick keyword lookup — use when you know exact terms
+python tools/memory/memory_db.py --action search --query "keyword"
+
+# Concept search — use when you know the idea but not exact words
+python tools/memory/hybrid_search.py --query "what does user prefer for X"
+
+# Pure semantic search — fallback if hybrid is unavailable
+python tools/memory/semantic_search.py --query "related concept"
+```
+
+Prefer `hybrid_search.py` over `semantic_search.py` — it combines keyword + vector for better results.
+Semantic and hybrid search only find entries that have been embedded. Run `embed_memory.py --all` if search returns no results on entries you know exist.
+
+---
+
+**DURING SESSION — generate embeddings (enables semantic/hybrid search):**
+
+```bash
+# Embed all new entries that don't have embeddings yet (run after adding many facts)
+python tools/memory/embed_memory.py --all
+
+# Check how many entries still need embedding
+python tools/memory/embed_memory.py --stats
+```
+
+Run `embed_memory.py --all` after any session where multiple facts/insights were written to the DB. Without embeddings, `hybrid_search.py` and `semantic_search.py` return no results on those entries.
+Requires `OPENAI_API_KEY` in `.env`.
+
+---
+
+**SESSION CLOSE — mandatory sequence, in order:**
+
+```bash
+# 1. Log session summary (daily log + SQLite DB)
+python tools/memory/memory_write.py --content "summary of what was done" --type event --importance 6
+
+# 2. Persist any new facts to MEMORY.md (if applicable)
+python tools/memory/memory_write.py --update-memory --content "new persistent fact" --section key_facts
+
+# 3. Sync today's full log file into the daily_logs SQLite table
+python tools/memory/memory_write.py --sync YYYY-MM-DD
+
+# 4. Embed new entries so they are searchable next session
+python tools/memory/embed_memory.py --all
+
+# 5. Commit changed GOTCHA framework files and push to GitHub
+git add goals/ memory/MEMORY.md tools/manifest.md && git commit -m "..." && git push
+```
+
+---
 
 **Memory Types:**
-- `fact` - Objective information
-- `preference` - User preferences
-- `event` - Something that happened
-- `insight` - Learned pattern or realization
-- `task` - Something to do
-- `relationship` - Connection between entities
+- `fact` — Objective information
+- `preference` — User preferences
+- `event` — Something that happened
+- `insight` — Learned pattern or realization
+- `task` — Something to do
+- `relationship` — Connection between entities
 
 ---
 

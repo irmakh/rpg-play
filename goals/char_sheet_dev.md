@@ -19,14 +19,22 @@ Use this goal whenever the task involves modifying any file inside `Application/
 Before touching any code:
 
 ```bash
-# Load project memory
-cat memory/MEMORY.md
+# Load MEMORY.md + today's log + yesterday's log in one call
+python tools/memory/memory_read.py --format markdown
 
-# Load today's log (if exists)
-cat memory/logs/$(date +%Y-%m-%d).md 2>/dev/null
+# Log session start
+python tools/memory/memory_write.py --content "Session start: <brief task description>" --type event --importance 4
+```
 
-# Load yesterday's log for continuity
-cat memory/logs/$(date -d yesterday +%Y-%m-%d).md 2>/dev/null
+Do **not** use `cat` on log files directly — `memory_read.py` loads both markdown and DB context correctly.
+
+If you need to recall a past decision or constraint not in MEMORY.md:
+```bash
+# Keyword lookup
+python tools/memory/memory_db.py --action search --query "keyword"
+
+# Concept/meaning lookup (preferred)
+python tools/memory/hybrid_search.py --query "what was decided about X"
 ```
 
 Key things to confirm from memory:
