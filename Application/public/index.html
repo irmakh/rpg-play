@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>D&D 5e Character Sheet</title>
 <link rel="stylesheet" href="/css/index.css">
+<link rel="stylesheet" href="/css/calendar.css">
 </head>
 <body>
 <div class="sheet">
@@ -67,6 +68,7 @@
     <div class="tab" id="tab-btn-media" onclick="showTab('media',this)">📸 Media</div>
     <div class="tab" id="tab-btn-shop" onclick="showTab('shop',this)">🛒 Shop</div>
     <div class="tab" id="tab-btn-loot" onclick="showTab('loot',this)">⚔️ Loots</div>
+    <div class="tab" id="tab-btn-calendar" onclick="showTab('calendar',this)">📅 Calendar</div>
   </div>
 
   <!-- MAIN -->
@@ -384,6 +386,31 @@
 
   </div>
 
+  <!-- CALENDAR -->
+  <div id="tab-calendar" class="page">
+    <div class="cal-wrap">
+      <div class="cal-today-bar">
+        <span class="cal-today-label">Campaign Date</span>
+        <span class="cal-today-date" id="pcal-cur-date"></span>
+        <span class="cal-today-year" id="pcal-cur-year"></span>
+        <button class="btn sm" style="flex-shrink:0" onclick="pcalGoToToday()">Go to Today</button>
+      </div>
+      <div class="cal-nav">
+        <button class="cal-nav-btn" onclick="pcalNavPage(-1)">&#8592;</button>
+        <div class="cal-nav-title">
+          <span class="cal-nav-month" id="pcal-page-title">—</span>
+          <span class="cal-nav-subtitle" id="pcal-page-subtitle"></span>
+        </div>
+        <button class="cal-nav-btn" onclick="pcalNavPage(1)">&#8594;</button>
+      </div>
+      <div id="pcal-grid-area"></div>
+      <div class="cal-events-hdr">
+        <span class="cal-events-title" id="pcal-events-title">Events</span>
+      </div>
+      <div id="pcal-events-list"></div>
+    </div>
+  </div>
+
   <!-- Save / Reload bar -->
   <div class="btn-bar">
     <button class="save-btn" onclick="saveCharacter()">Save</button>
@@ -680,6 +707,7 @@
   <div class="loading-label" id="loading-label">Loading…</div>
 </div>
 
+<script src="/js/fr_calendar.js" defer></script>
 <script src="/js/index.js" defer></script>
 
 <!-- Floating Panel Stack: initiative on top, chat below, both bottom-right -->

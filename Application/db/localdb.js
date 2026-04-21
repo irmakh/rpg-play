@@ -88,6 +88,25 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS events_state (
     id TEXT PRIMARY KEY, dataJson TEXT DEFAULT '{}'
   );
+  CREATE TABLE IF NOT EXISTS calendar_events (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL DEFAULT '',
+    description TEXT DEFAULT '',
+    fr_year INTEGER NOT NULL DEFAULT 1492,
+    fr_month INTEGER,
+    fr_day INTEGER,
+    fr_festival TEXT DEFAULT '',
+    is_public INTEGER NOT NULL DEFAULT 0,
+    event_type TEXT DEFAULT 'event',
+    created_at TEXT DEFAULT (datetime('now'))
+  );
+  CREATE TABLE IF NOT EXISTS calendar_state (
+    id TEXT PRIMARY KEY,
+    fr_year INTEGER NOT NULL DEFAULT 1492,
+    fr_month INTEGER NOT NULL DEFAULT 1,
+    fr_day INTEGER NOT NULL DEFAULT 1,
+    fr_festival TEXT DEFAULT ''
+  );
   CREATE TABLE IF NOT EXISTS map_drawings (
     id TEXT PRIMARY KEY, type TEXT NOT NULL DEFAULT 'line',
     x1 REAL DEFAULT 0, y1 REAL DEFAULT 0, x2 REAL DEFAULT 0, y2 REAL DEFAULT 0,
@@ -118,16 +137,18 @@ try { db.exec(`ALTER TABLE char_media ADD COLUMN mediumUrl TEXT DEFAULT ''`); } 
 try { db.exec(`ALTER TABLE table_tokens ADD COLUMN portraitThumb TEXT`); } catch {}
 
 // Singleton IDs (match server.js constants)
-const SHOP_CONFIG_ID = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
-const INIT_STATE_ID  = 'c8a04a12-4372-4c78-9abc-def012345601';
-const TABLE_STATE_ID = 'c8a04a12-4372-4c78-9abc-def012345601';
-const EVENTS_ID      = 'events-global';
+const SHOP_CONFIG_ID  = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
+const INIT_STATE_ID   = 'c8a04a12-4372-4c78-9abc-def012345601';
+const TABLE_STATE_ID  = 'c8a04a12-4372-4c78-9abc-def012345601';
+const EVENTS_ID       = 'events-global';
+const CAL_STATE_ID    = 'calendar-global';
 
 // Ensure singleton rows exist
 db.prepare("INSERT OR IGNORE INTO shop_config (id, isOpen) VALUES (?, 1)").run(SHOP_CONFIG_ID);
 db.prepare("INSERT OR IGNORE INTO initiative_state (id, currentId) VALUES (?, '')").run(INIT_STATE_ID);
 db.prepare("INSERT OR IGNORE INTO table_state (id) VALUES (?)").run(TABLE_STATE_ID);
 db.prepare("INSERT OR IGNORE INTO events_state (id, dataJson) VALUES (?, '{}')").run(EVENTS_ID);
+db.prepare("INSERT OR IGNORE INTO calendar_state (id, fr_year, fr_month, fr_day, fr_festival) VALUES (?, 1492, 1, 1, '')").run(CAL_STATE_ID);
 
 // ── Characters ────────────────────────────────────────────────────────────────
 export function listCharacters() {
@@ -590,13 +611,55 @@ export function deletePreparedMap(id) {
   db.prepare('DELETE FROM prepared_maps WHERE id = ?').run(id);
 }
 
-// ── Events ────────────────────────────────────────────────────────────────────
+// ── Events (legacy) ───────────────────────────────────────────────────────────
 export function getEventsData() {
   const r = db.prepare('SELECT dataJson FROM events_state WHERE id = ?').get(EVENTS_ID);
   try { return JSON.parse(r?.dataJson || '{}'); } catch { return {}; }
 }
 export function saveEventsData(data) {
   db.prepare('INSERT OR REPLACE INTO events_state (id, dataJson) VALUES (?, ?)').run(EVENTS_ID, JSON.stringify(data));
+}
+
+// ── Calendar ──────────────────────────────────────────────────────────────────
+function _calRow(r) {
+  return {
+    id: r.id, title: r.title, description: r.description || '',
+    frYear: r.fr_year, frMonth: r.fr_month, frDay: r.fr_day,
+    frFestival: r.fr_festival || '', isPublic: !!r.is_public,
+    eventType: r.event_type, createdAt: r.created_at,
+  };
+}
+
+export function getCalendarState() {
+  const r = db.prepare('SELECT * FROM calendar_state WHERE id = ?').get(CAL_STATE_ID);
+  if (!r) return { frYear: 1492, frMonth: 1, frDay: 1, frFestival: '' };
+  return { frYear: r.fr_year, frMonth: r.fr_month, frDay: r.fr_day, frFestival: r.fr_festival || '' };
+}
+
+export function saveCalendarState(s) {
+  db.prepare('INSERT OR REPLACE INTO calendar_state (id, fr_year, fr_month, fr_day, fr_festival) VALUES (?,?,?,?,?)')
+    .run(CAL_STATE_ID, s.frYear, s.frMonth ?? null, s.frDay ?? null, s.frFestival || '');
+}
+
+export function listCalendarEvents(publicOnly = false) {
+  const q = publicOnly
+    ? 'SELECT * FROM calendar_events WHERE is_public = 1 ORDER BY fr_year, fr_month NULLS LAST, fr_day NULLS LAST'
+    : 'SELECT * FROM calendar_events ORDER BY fr_year, fr_month NULLS LAST, fr_day NULLS LAST';
+  return db.prepare(q).all().map(_calRow);
+}
+
+export function createCalendarEvent(ev) {
+  db.prepare('INSERT INTO calendar_events (id,title,description,fr_year,fr_month,fr_day,fr_festival,is_public,event_type) VALUES (?,?,?,?,?,?,?,?,?)')
+    .run(ev.id, ev.title, ev.description || '', ev.frYear, ev.frMonth ?? null, ev.frDay ?? null, ev.frFestival || '', ev.isPublic ? 1 : 0, ev.eventType || 'event');
+}
+
+export function updateCalendarEvent(id, ev) {
+  db.prepare('UPDATE calendar_events SET title=?,description=?,fr_year=?,fr_month=?,fr_day=?,fr_festival=?,is_public=?,event_type=? WHERE id=?')
+    .run(ev.title, ev.description || '', ev.frYear, ev.frMonth ?? null, ev.frDay ?? null, ev.frFestival || '', ev.isPublic ? 1 : 0, ev.eventType || 'event', id);
+}
+
+export function deleteCalendarEvent(id) {
+  db.prepare('DELETE FROM calendar_events WHERE id = ?').run(id);
 }
 
 // ── Full export (for backup) ──────────────────────────────────────────────────

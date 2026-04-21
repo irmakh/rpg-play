@@ -3,42 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Events — DM</title>
+<title>Calendar — DM</title>
 <link rel="stylesheet" href="/css/dm.css">
+<link rel="stylesheet" href="/css/calendar.css">
 <style>
-  /* Two-column body */
-  #ev-body{display:flex;gap:14px;align-items:flex-start}
-  #ev-left{flex:1;display:flex;flex-direction:column;gap:14px;min-width:0}
-  #ev-right{width:340px;flex-shrink:0}
-
-  /* Section card header */
-  .ev-sec-hdr{padding:8px 12px;background:var(--a22);border-bottom:1px solid var(--a44);display:flex;align-items:center;justify-content:space-between}
-  .ev-sec-title{font-size:11px;color:var(--ac);text-transform:uppercase;letter-spacing:.6px;font-weight:bold}
-  .ev-sec-body{padding:10px}
-
-  /* Challenge rows */
-  .ch-row{display:flex;align-items:flex-start;gap:6px;margin-bottom:6px;background:var(--bg3);border:1px solid var(--a44);border-radius:4px;padding:6px}
-  .ch-row textarea{flex:1;background:transparent;border:none;color:var(--tx);font-size:12px;resize:vertical;outline:none;line-height:1.4;padding:0;font-family:inherit}
-  .ch-status{flex-shrink:0;font-size:10px;padding:2px 7px;border-radius:10px;cursor:pointer;border:1px solid transparent;font-weight:bold;white-space:nowrap}
-  .ch-status.pending{background:var(--a44);color:var(--txd)}
-  .ch-status.completed{background:rgba(80,200,80,0.2);color:#6c6;border-color:#6c6}
-  .ch-status.failed{background:rgba(200,80,80,0.2);color:#c66;border-color:#c66}
-
-  /* Result rows */
-  .res-row{display:flex;align-items:flex-start;gap:6px;margin-bottom:6px;background:var(--bg3);border:1px solid var(--a44);border-radius:4px;padding:6px}
-  .res-row textarea{flex:1;background:transparent;border:none;color:var(--tx);font-size:12px;resize:vertical;outline:none;line-height:1.4;padding:0;font-family:inherit}
-
-  /* Travel */
-  .trav-pace{display:flex;gap:6px;margin-bottom:14px}
-  .pace-btn{flex:1;padding:6px;font-size:12px;font-weight:bold;border-radius:4px;cursor:pointer;border:1px solid var(--a55);background:var(--bg3);color:var(--txd);transition:all .15s}
-  .pace-btn.active{border-color:var(--ac);background:rgba(200,160,74,0.15);color:var(--ac)}
-  .trav-speeds{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap}
-  .speed-field{display:flex;flex-direction:column;gap:3px;flex:1;min-width:70px}
-  .speed-field label{font-size:9px;color:var(--ac);text-transform:uppercase;letter-spacing:.5px}
-  .speed-field input{padding:4px 7px;font-size:12px;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px;width:100%;box-sizing:border-box}
-  .dist-row{display:flex;gap:6px;align-items:center;margin-bottom:6px}
-  .dist-row input{flex:1;padding:4px 7px;font-size:12px;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px}
-  .dist-row input.dist-val{width:90px;flex:none}
+  #cal-today-bar-btns { display:flex; gap:6px; align-items:center; flex-shrink:0; }
 </style>
 </head>
 <body>
@@ -47,8 +16,8 @@
 <div class="gate" id="gate">
   <div class="gate-box">
     <div style="font-size:36px;margin-bottom:10px">📅</div>
-    <h2>Events</h2>
-    <p>Enter master password to access the events log.</p>
+    <h2>DM Calendar</h2>
+    <p>Enter master password to access the campaign calendar.</p>
     <input type="password" id="gate-pw" placeholder="Master password…" autocomplete="off"
            onkeydown="if(event.key==='Enter')authenticate()">
     <div id="gate-err"></div>
@@ -62,7 +31,7 @@
   <div class="hdr">
     <div class="hdr-left">
       <button class="btn" onclick="location.href='/dm.html'">← DM</button>
-      <h1>📅 Events</h1>
+      <h1>📅 DM Calendar</h1>
       <select id="theme-sel" onchange="applyTheme(this.value)" title="Theme">
         <option value="dark-gold">🌙</option>
         <option value="parchment">📜</option>
@@ -71,81 +40,218 @@
     </div>
     <div class="hdr-right">
       <span id="save-status" style="font-size:11px;color:var(--txd)"></span>
-      <button class="btn" onclick="loadEvents()" title="Reload data from server">↺ Reload</button>
-      <button class="btn primary" onclick="saveEvents()" title="Save now">💾 Save</button>
     </div>
   </div>
 
-  <div id="ev-body">
+  <div class="cal-wrap">
 
-    <!-- Left: Challenges + Results -->
-    <div id="ev-left">
-
-      <!-- Challenges -->
-      <div id="ev-challenges">
-        <div class="ev-sec-hdr">
-          <span class="ev-sec-title">⚔ Challenges</span>
-          <button class="btn sm" onclick="addChallenge()">+ Add</button>
-        </div>
-        <div class="ev-sec-body" id="challenge-list"></div>
-      </div>
-
-      <!-- Results -->
-      <div id="ev-results">
-        <div class="ev-sec-hdr">
-          <span class="ev-sec-title">📜 Results</span>
-          <button class="btn sm" onclick="addResult()">+ Add</button>
-        </div>
-        <div class="ev-sec-body" id="result-list"></div>
-      </div>
-
-    </div>
-
-    <!-- Right: Travel -->
-    <div id="ev-right">
-      <div class="ev-sec-hdr" style="flex-shrink:0">
-        <span class="ev-sec-title">🧭 Travel</span>
-      </div>
-      <div id="ev-travel">
-
-        <!-- Pace -->
-        <div style="font-size:11px;color:var(--txd);margin-bottom:6px">Pace</div>
-        <div class="trav-pace">
-          <button class="pace-btn" id="pace-slow"   onclick="setPace('slow')">🐢 Slow</button>
-          <button class="pace-btn" id="pace-normal" onclick="setPace('normal')">🚶 Normal</button>
-          <button class="pace-btn" id="pace-fast"   onclick="setPace('fast')">🏃 Fast</button>
-        </div>
-
-        <!-- Speeds -->
-        <div style="font-size:11px;color:var(--txd);margin-bottom:6px">Speed <span style="font-size:10px">(auto-calculated · editable)</span></div>
-        <div class="trav-speeds">
-          <div class="speed-field">
-            <label>Per Minute</label>
-            <input type="text" id="speed-min" oninput="updateSpeed('speedPerMin',this.value)" onchange="debounceSave()">
-          </div>
-          <div class="speed-field">
-            <label>Per Hour</label>
-            <input type="text" id="speed-hour" oninput="updateSpeed('speedPerHour',this.value)" onchange="debounceSave()">
-          </div>
-          <div class="speed-field">
-            <label>Per Day</label>
-            <input type="text" id="speed-day" oninput="updateSpeed('speedPerDay',this.value)" onchange="debounceSave()">
-          </div>
-        </div>
-
-        <!-- Distances -->
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;margin-top:4px">
-          <div style="font-size:11px;color:var(--txd)">Distances</div>
-          <button class="btn sm" onclick="addDistance()">+ Add</button>
-        </div>
-        <div id="distance-list"></div>
-
+    <!-- Current campaign date banner -->
+    <div class="cal-today-bar">
+      <span class="cal-today-label">Campaign Date</span>
+      <span class="cal-today-date" id="cal-cur-date-display">—</span>
+      <span class="cal-today-year" id="cal-cur-date-year"></span>
+      <div id="cal-today-bar-btns">
+        <button class="btn sm" onclick="calPrevDay()" title="Previous day">◀ Day</button>
+        <button class="btn sm" onclick="calNextDay()" title="Next day">Day ▶</button>
+        <button class="btn sm" onclick="calGoToToday()" title="Navigate to current date">Go to Today</button>
+        <button class="btn sm" onclick="calOpenJumpModal()" title="Jump to specific date">Set Date…</button>
       </div>
     </div>
+
+    <!-- Month / festival navigation -->
+    <div class="cal-nav">
+      <button class="cal-nav-btn" onclick="calNavPage(-1)">&#8592;</button>
+      <div class="cal-nav-title">
+        <span class="cal-nav-month" id="cal-page-title">—</span>
+        <span class="cal-nav-subtitle" id="cal-page-subtitle"></span>
+      </div>
+      <button class="cal-nav-btn" onclick="calNavPage(1)">&#8594;</button>
+    </div>
+
+    <!-- Calendar grid (month) or festival card -->
+    <div id="cal-grid-area"></div>
+
+    <!-- Events for current page -->
+    <div class="cal-events-hdr">
+      <span class="cal-events-title" id="cal-events-section-title">Events</span>
+      <button class="btn sm" onclick="calOpenAddEvent()">+ Add Event</button>
+    </div>
+    <div id="cal-events-list"></div>
 
   </div>
 </div>
 
+<!-- Add / Edit Event Modal -->
+<div class="cal-modal" id="cal-event-modal" style="display:none" onclick="if(event.target===this)calCloseEventModal()">
+  <div class="cal-modal-box">
+    <div class="cal-modal-title" id="cal-modal-title">Add Event</div>
+
+    <div class="cal-form-row">
+      <label>Title</label>
+      <input type="text" id="cal-ev-title" placeholder="Event title…">
+    </div>
+
+    <div class="cal-form-row">
+      <label>Description</label>
+      <textarea id="cal-ev-desc" rows="3" placeholder="Optional description…"></textarea>
+    </div>
+
+    <!-- Date selector -->
+    <div class="cal-form-row">
+      <label>Date Type</label>
+      <select id="cal-ev-date-type" onchange="calToggleDateType()">
+        <option value="day">Specific Day</option>
+        <option value="festival">Festival Day</option>
+      </select>
+    </div>
+
+    <div id="cal-ev-day-fields">
+      <div class="cal-form-inline">
+        <div class="cal-form-row">
+          <label>Year (DR)</label>
+          <input type="number" id="cal-ev-year" value="1492" min="1" max="9999">
+        </div>
+        <div class="cal-form-row">
+          <label>Month</label>
+          <select id="cal-ev-month">
+            <option value="1">Hammer</option>
+            <option value="2">Alturiak</option>
+            <option value="3">Ches</option>
+            <option value="4">Tarsakh</option>
+            <option value="5">Mirtul</option>
+            <option value="6">Kythorn</option>
+            <option value="7">Flamerule</option>
+            <option value="8">Eleasis</option>
+            <option value="9">Eleint</option>
+            <option value="10">Marpenoth</option>
+            <option value="11">Uktar</option>
+            <option value="12">Nightal</option>
+          </select>
+        </div>
+        <div class="cal-form-row">
+          <label>Day</label>
+          <input type="number" id="cal-ev-day" value="1" min="1" max="30">
+        </div>
+      </div>
+    </div>
+
+    <div id="cal-ev-festival-fields" style="display:none">
+      <div class="cal-form-inline">
+        <div class="cal-form-row">
+          <label>Year (DR)</label>
+          <input type="number" id="cal-ev-fest-year" value="1492" min="1" max="9999">
+        </div>
+        <div class="cal-form-row">
+          <label>Festival</label>
+          <select id="cal-ev-festival">
+            <option value="midwinter">Midwinter</option>
+            <option value="greengrass">Greengrass</option>
+            <option value="midsummer">Midsummer</option>
+            <option value="shieldmeet">Shieldmeet (leap years)</option>
+            <option value="highharvestide">Highharvestide</option>
+            <option value="feast_of_moon">The Feast of the Moon</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="cal-form-row">
+      <label>Event Type</label>
+      <select id="cal-ev-type">
+        <option value="event">Event</option>
+        <option value="session">Session</option>
+        <option value="milestone">Milestone</option>
+        <option value="combat">Combat</option>
+        <option value="travel">Travel</option>
+        <option value="rest">Rest</option>
+        <option value="note">Note</option>
+      </select>
+    </div>
+
+    <div class="cal-toggle-row">
+      <input type="checkbox" id="cal-ev-public">
+      <label for="cal-ev-public">Visible to players (public)</label>
+    </div>
+
+    <div class="cal-modal-btns">
+      <button class="btn danger sm" id="cal-ev-delete-btn" onclick="calDeleteEditingEvent()" style="display:none;margin-right:auto">Delete</button>
+      <button class="btn sm" onclick="calCloseEventModal()">Cancel</button>
+      <button class="btn primary sm" onclick="calSaveEvent()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Jump to Date Modal -->
+<div class="cal-modal" id="cal-jump-modal" style="display:none" onclick="if(event.target===this)calCloseJumpModal()">
+  <div class="cal-modal-box">
+    <div class="cal-modal-title">Set Campaign Date</div>
+
+    <div class="cal-form-row">
+      <label>Date Type</label>
+      <select id="cal-jump-type" onchange="calToggleJumpType()">
+        <option value="day">Specific Day</option>
+        <option value="festival">Festival Day</option>
+      </select>
+    </div>
+
+    <div id="cal-jump-day-fields">
+      <div class="cal-form-inline">
+        <div class="cal-form-row">
+          <label>Year (DR)</label>
+          <input type="number" id="cal-jump-year" value="1492" min="1" max="9999">
+        </div>
+        <div class="cal-form-row">
+          <label>Month</label>
+          <select id="cal-jump-month">
+            <option value="1">Hammer</option>
+            <option value="2">Alturiak</option>
+            <option value="3">Ches</option>
+            <option value="4">Tarsakh</option>
+            <option value="5">Mirtul</option>
+            <option value="6">Kythorn</option>
+            <option value="7">Flamerule</option>
+            <option value="8">Eleasis</option>
+            <option value="9">Eleint</option>
+            <option value="10">Marpenoth</option>
+            <option value="11">Uktar</option>
+            <option value="12">Nightal</option>
+          </select>
+        </div>
+        <div class="cal-form-row">
+          <label>Day</label>
+          <input type="number" id="cal-jump-day" value="1" min="1" max="30">
+        </div>
+      </div>
+    </div>
+
+    <div id="cal-jump-festival-fields" style="display:none">
+      <div class="cal-form-inline">
+        <div class="cal-form-row">
+          <label>Year (DR)</label>
+          <input type="number" id="cal-jump-fest-year" value="1492" min="1" max="9999">
+        </div>
+        <div class="cal-form-row">
+          <label>Festival</label>
+          <select id="cal-jump-festival">
+            <option value="midwinter">Midwinter</option>
+            <option value="greengrass">Greengrass</option>
+            <option value="midsummer">Midsummer</option>
+            <option value="shieldmeet">Shieldmeet</option>
+            <option value="highharvestide">Highharvestide</option>
+            <option value="feast_of_moon">The Feast of the Moon</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="cal-modal-btns">
+      <button class="btn sm" onclick="calCloseJumpModal()">Cancel</button>
+      <button class="btn primary sm" onclick="calSetCurrentDate()">Set Date</button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/fr_calendar.js" defer></script>
 <script src="/js/events.js" defer></script>
 </body>
 </html>

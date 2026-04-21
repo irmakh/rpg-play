@@ -64,11 +64,22 @@ A self-hosted web application for running D&D 5e sessions. Includes a full chara
 - Data restore: upload a backup JSON to restore all data
 - Multiple themes
 
-### Events Log (`/events.html`)
-- Challenges tracker: add / remove session challenges, cycle status (Pending → Completed → Failed)
-- Results log: free-text result notes per session
-- Travel tracker: set pace (Slow / Normal / Fast), input party speeds and distance covered
-- Auto-saves on input change; persists across sessions per the server database
+### DM Calendar (`/events.html`) — DM only
+- Full **Calendar of Harptos** (Forgotten Realms calendar system)
+- 12 months × 30 days, displayed as three tendays (First / Second / Third) × 10 columns per row
+- Festival days shown as distinct rows between months: Midwinter, Greengrass, Midsummer, Shieldmeet (leap years only, every 4 DR years), Highharvestide, The Feast of the Moon
+- Year names for all years in the Dale Reckoning system (e.g. 1492 DR — Year of Three Ships Sailing)
+- **Campaign date control:** DM sets the current campaign date; advance one day at a time (◀ Day / Day ▶) or jump to any specific date or festival
+- **Event creation:** add campaign events to any day or festival — title, description, event type (session / combat / travel / milestone / rest / note), and public / DM-only visibility flag
+- Public events broadcast live to all player calendars via SSE when created, edited, or deleted
+- Gold highlight marks the current campaign date on the grid; colour-coded dots show events per day
+
+### Player Calendar (tab on `/`)
+- Read-only calendar tab on the character sheet — players access it alongside their other tabs
+- Shows only events the DM has marked as public
+- Displays the current campaign date set by the DM (updates live via SSE)
+- Click any day cell to filter the events list to that specific day; click again or use the back link to return to the full month view
+- Month navigation with ← / → arrows; **Go to Today** button jumps back to the campaign date
 
 ### Merchant Shop (`/merchant.html`) — DM only
 - Add, edit, and delete shop items with full D&D item data: type, price (PP/GP/EP/SP/CP), quantity, AC bonus, initiative bonus, speed bonus, attunement, weapon properties, and notes
@@ -112,7 +123,7 @@ A self-hosted web application for running D&D 5e sessions. Includes a full chara
 | Character Sheet | `/` | Players |
 | Virtual Table | `/table.html` | Players + DM |
 | DM Dashboard | `/dm.html` | DM |
-| Events Log | `/events.html` | DM |
+| DM Calendar | `/events.html` | DM |
 | Monster Library | `/monsters.html` | DM |
 | Map Prep | `/prepare-map.html` | DM |
 | Merchant | `/merchant.html` | DM |
@@ -249,7 +260,7 @@ rpg-play/
 │       ├── index.html          # Character sheet
 │       ├── table.html          # Virtual battle table
 │       ├── dm.html             # DM dashboard
-│       ├── events.html         # Events & travel log
+│       ├── events.html         # DM Calendar (Calendar of Harptos)
 │       ├── monsters.html       # Monster library
 │       ├── prepare-map.html    # Map prep tool
 │       ├── merchant.html       # Merchant shop manager
