@@ -12,6 +12,23 @@
 - Commit author email: irmakh@gmail.com (already set in repo config — verify before committing)
 - Deploy via Docker Compose; HTTPS on port 443 with Let's Encrypt certs
 
+## App Feature Inventory
+
+> Major screens and features — know what exists before building new things.
+
+- **Character sheet** (`index.js`) — HP tracking, inventory, spells, portrait, conditions display
+- **DM Table / Map** (`table.js`) — token placement/drag, drawing tool, initiative tracker (click-to-view, auto-advance, previous turn), HP panel, conditions panel, token labels always visible
+- **DM Panel** (`dm.js`) — monster management, loot, map prep (clone + positional placement), media gallery, shop
+- **Events screen** — DM-only campaign event log/tracker
+- **Monster names** — hidden from players; players see identifier only (e.g. "Goblin #1")
+- **Token conditions** — D&D 5e status conditions (poisoned, stunned, etc.) shown on tokens + HP tracker with 5e.tools links; any player can toggle conditions on their own token
+- **Token operation queue** — all token add/move/remove network requests are serialised through an operation queue to prevent race conditions under concurrent player interaction
+- **Drawing tool** — real-time freehand drawing on the table map, synced to all clients via SSE/WebSocket
+- **Shop** — merchant items with tag system for filtering
+- **Backup/restore** — per-section (characters, monsters, media, loot, shop, etc.), non-destructive import (merges, does not wipe existing data)
+- **Image system** — uploads generate original + `_thumb.webp` (80×80) + `_medium.webp` (max 500px); maps always full quality
+- **Move tool** — 500ms delay before drag activates (prevents accidental moves)
+
 ## Key Facts — App Stack
 
 - **Backend:** Node.js ES modules, Express 4, better-sqlite3 (local) or InstantDB (cloud)
@@ -41,7 +58,7 @@
 
 - Always check `tools/manifest.md` before creating new scripts
 - Always check `goals/manifest.md` before starting a task — create a goal if none exists (ask permission first)
-- Read `memory/MEMORY.md` + run `python tools/memory/memory_read.py --format markdown` at session start
+- **Session start order (MANDATORY):** (1) read `memory/MEMORY.md`, (2) read today's log `memory/logs/YYYY-MM-DD.md`, (3) read yesterday's log, (4) run `python tools/memory/memory_read.py --format markdown`, (5) check `goals/manifest.md`, (6) check `tools/manifest.md`. Do NOT start from the auto-memory system (~/.claude/...) — that is secondary and supplemental only.
 - Log notable session events via `python tools/memory/memory_write.py --content "..." --type event`
 - Update `tools/manifest.md` immediately when a new tool/helper is created
 - Never modify or create goals without explicit user permission

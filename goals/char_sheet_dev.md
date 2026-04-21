@@ -81,6 +81,7 @@ Follow these rules during implementation:
 - Portrait/image display → prefer `thumbUrl`/`mediumUrl` for display, keep `dataUrl` for lightbox/full-screen
 - Always fall back: `tok.portraitThumb || tok.portrait`, `m.mediumUrl || m.dataUrl`
 - SSE event handlers → update all relevant cached fields, not just the primary one
+- Token network calls (add/move/remove) → must go through the operation queue in `table.js`; never fire token PUT/POST/DELETE requests directly — race conditions will occur under concurrent use
 
 **Backup/restore:**
 - New image fields (thumbUrl, mediumUrl, portraitThumb) → strip from backup (regenerate on restore)
@@ -174,6 +175,7 @@ If new server helpers or DB functions were created, add them to `tools/manifest.
 | DB migrations | `try { ALTER TABLE ... ADD COLUMN } catch {}` — idempotent, runs on every startup |
 | Token broadcasts | Always include `portraitThumb` alongside `portrait` in token-related SSE events |
 | Backward compat | New API response fields are additive; never remove or rename existing fields |
+| Backup/restore | Backup is per-section and non-destructive import (merge, not wipe) — preserve this behaviour in all restore routes |
 | Native npm packages | Full Docker rebuild required: `build --no-cache` + `down -v` + `up -d` |
 | Git author | Verify `irmakh@gmail.com` before every commit |
 
