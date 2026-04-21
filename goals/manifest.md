@@ -6,7 +6,8 @@
 ## Available Goals
 
 ### Development
-- [build_app.md](build_app.md) - Build application workflow (existing)
+- [build_app.md](build_app.md) - Greenfield app build using ATLAS (Architect → Trace → Link → Assemble → Stress-test)
+- [char_sheet_dev.md](char_sheet_dev.md) - Feature development, bug fixes, and optimization on the existing char_sheet app
 
 ---
 
