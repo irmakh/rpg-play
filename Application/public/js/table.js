@@ -202,8 +202,9 @@ const gridCanvas    = document.getElementById('grid-canvas');
 const fogCanvas     = document.getElementById('fog-canvas');
 const overlayCanvas = document.getElementById('overlay-canvas');
 const drawingCanvas = document.getElementById('drawing-canvas');
-const tokenLayer    = document.getElementById('token-layer');
-const tokenLayerBg  = document.getElementById('token-layer-bg');
+const tokenLayer      = document.getElementById('token-layer');
+const tokenLayerBg    = document.getElementById('token-layer-bg');
+const tokenLabelLayer = document.getElementById('token-label-layer');
 const mapImg        = document.getElementById('map-img');
 const gCtx = gridCanvas.getContext('2d');
 const fCtx = fogCanvas.getContext('2d');
@@ -553,6 +554,7 @@ function renderTokens() {
   // Remove old token divs from both layers
   tokenLayer.querySelectorAll('.token').forEach(el => el.remove());
   tokenLayerBg.querySelectorAll('.token').forEach(el => el.remove());
+  tokenLabelLayer.innerHTML = '';
 
   const activeTokId = getActiveTurnTokenId();
   const cs = tableState.cellSize || 50;
@@ -585,26 +587,21 @@ function renderTokens() {
     const hpStr = (!isDM() && tok.type === 'monster') ? '' : ` | HP: ${tok.hpCurrent||0}/${tok.hpMax||0} | Speed: ${tok.speed||30}ft`;
     div.title = `${dn}${hpStr}${tok.id === activeTokId ? ' | YOUR TURN' : ''}`;
 
-    // HP bar
     const hpPct = (tok.hpMax || 0) > 0 ? Math.max(0, Math.min(1, (tok.hpCurrent || 0) / tok.hpMax)) : 0;
     const bar = document.createElement('div');
     bar.className = 'token-hp-bar';
     bar.innerHTML = `<div class="token-hp-fill" style="width:${hpPct*100}%;background:${hpBarColor(hpPct)}"></div>`;
-    div.appendChild(bar);
 
-    // Name label
     const label = document.createElement('div');
     label.className = 'token-name';
     label.textContent = dn.length > 10 ? dn.slice(0,9)+'…' : dn;
-    div.appendChild(label);
 
-    // Condition pills — shown above token
     const conds = parseConditions(tok.conditions);
+    let condDiv = null;
     if (conds.length > 0) {
-      const condDiv = document.createElement('div');
+      condDiv = document.createElement('div');
       condDiv.className = 'token-conditions';
       condDiv.innerHTML = conds.map(c => `<span title="${c}">${COND_ABBREV[c] || c.slice(0,2).toUpperCase()}</span>`).join('');
-      div.appendChild(condDiv);
     }
 
     attachTokenEvents(div, tok);
@@ -612,6 +609,22 @@ function renderTokens() {
     // For DM: all tokens stay above fog (DM can see everything).
     const behindFog = !isDM() && tok.type === 'monster';
     (behindFog ? tokenLayerBg : tokenLayer).appendChild(div);
+
+    // Labels for fog-managed monster tokens stay inside the token div so fog
+    // covers them correctly. All other tokens get labels in a dedicated label
+    // layer (z-index 11) so they're never obscured when tokens overlap.
+    if (behindFog) {
+      div.appendChild(bar);
+      div.appendChild(label);
+      if (condDiv) div.appendChild(condDiv);
+    } else {
+      const labelWrap = document.createElement('div');
+      labelWrap.style.cssText = `position:absolute;left:${tokLeft}px;top:${tokTop}px;width:${size}px;height:${size}px;pointer-events:none`;
+      labelWrap.appendChild(bar);
+      labelWrap.appendChild(label);
+      if (condDiv) labelWrap.appendChild(condDiv);
+      tokenLabelLayer.appendChild(labelWrap);
+    }
   }
 }
 
