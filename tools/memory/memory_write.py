@@ -300,7 +300,7 @@ def sync_log_to_db(date: Optional[str] = None) -> Dict[str, Any]:
 
 def main():
     parser = argparse.ArgumentParser(description='Memory Writer - Write to persistent memory')
-    parser.add_argument('--content', required=True, help='Content to write')
+    parser.add_argument('--content', required=False, help='Content to write')
     parser.add_argument('--type', default='fact',
                        choices=['fact', 'preference', 'event', 'insight', 'task', 'relationship', 'note'],
                        help='Type of memory entry')
@@ -324,16 +324,20 @@ def main():
 
     result = None
 
-    # Handle sync operation
+    # Handle sync operation (does not require --content)
     if args.sync:
         result = sync_log_to_db(args.sync)
 
-    # Handle MEMORY.md update
+    # Handle MEMORY.md update (requires --content)
     elif args.update_memory:
+        if not args.content:
+            parser.error("--content is required with --update-memory")
         result = append_to_memory_file(args.content, args.section)
 
-    # Handle normal write
+    # Handle normal write (requires --content)
     else:
+        if not args.content:
+            parser.error("--content is required")
         tags = args.tags.split(',') if args.tags else None
 
         # Determine what to write to

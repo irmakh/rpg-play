@@ -104,6 +104,41 @@ def get_connection():
         )
     ''')
 
+    # Schema migration: CLAUDE.md init script creates a minimal table with 'entry_type'
+    # instead of 'type'. Detect and migrate before creating indexes.
+    cursor.execute("PRAGMA table_info(memory_entries)")
+    existing_cols = {row['name'] for row in cursor.fetchall()}
+    if existing_cols and 'type' not in existing_cols:
+        cursor.execute('''
+            CREATE TABLE memory_entries_migrated (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                type TEXT NOT NULL DEFAULT 'fact',
+                content TEXT NOT NULL,
+                content_hash TEXT UNIQUE,
+                source TEXT DEFAULT 'session',
+                confidence REAL DEFAULT 1.0,
+                importance INTEGER DEFAULT 5,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                last_accessed DATETIME,
+                access_count INTEGER DEFAULT 0,
+                embedding BLOB,
+                embedding_model TEXT,
+                tags TEXT,
+                context TEXT,
+                expires_at DATETIME,
+                is_active INTEGER DEFAULT 1
+            )
+        ''')
+        cursor.execute('''
+            INSERT INTO memory_entries_migrated (id, content, importance, created_at, type)
+            SELECT id, content, importance, created_at, COALESCE(entry_type, 'fact')
+            FROM memory_entries
+        ''')
+        cursor.execute('DROP TABLE memory_entries')
+        cursor.execute('ALTER TABLE memory_entries_migrated RENAME TO memory_entries')
+        conn.commit()
+
     # Indexes for performance
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_memory_type ON memory_entries(type)')
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_memory_source ON memory_entries(source)')

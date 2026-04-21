@@ -32,10 +32,11 @@ import argparse
 import struct
 from pathlib import Path
 from typing import Optional, List, Dict, Any
-from dotenv import load_dotenv
-
-# Load environment
-load_dotenv()
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass  # python-dotenv not installed; rely on env vars being set externally
 
 # Check for OpenAI
 try:

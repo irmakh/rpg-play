@@ -33,10 +33,11 @@ import struct
 import math
 from pathlib import Path
 from typing import Optional, List, Dict, Any, Tuple
-from dotenv import load_dotenv
-
-# Load environment
-load_dotenv()
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass  # python-dotenv not installed; rely on env vars being set externally
 
 # Import from sibling modules
 sys.path.insert(0, str(Path(__file__).parent))

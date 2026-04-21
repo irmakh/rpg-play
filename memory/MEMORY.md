@@ -59,7 +59,7 @@
 - Always check `tools/manifest.md` before creating new scripts
 - Always check `goals/manifest.md` before starting a task — create a goal if none exists (ask permission first)
 - **Session start order (MANDATORY):** (1) read `memory/MEMORY.md`, (2) read today's log `memory/logs/YYYY-MM-DD.md`, (3) read yesterday's log, (4) run `python tools/memory/memory_read.py --format markdown`, (5) check `goals/manifest.md`, (6) check `tools/manifest.md`. Do NOT start from the auto-memory system (~/.claude/...) — that is secondary and supplemental only.
-- Log notable session events via `python tools/memory/memory_write.py --content "..." --type event`
+- **Session close (MANDATORY):** always use `memory_write.py` — never edit log files or MEMORY.md directly. Direct edits miss the SQLite DB layer, breaking all search tools. Correct sequence: (1) `memory_write.py --content "..." --type event` to log, (2) `memory_write.py --update-memory --content "..." --section ...` for new persistent facts, (3) `memory_write.py --sync YYYY-MM-DD` to sync log to DB, (4) commit changed framework files and push.
 - Update `tools/manifest.md` immediately when a new tool/helper is created
 - Never modify or create goals without explicit user permission
 - Follow GOTCHA framework layers — don't collapse orchestration, tools, and goals into one place

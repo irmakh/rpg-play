@@ -322,6 +322,10 @@ def main():
         min_importance=args.min_importance
     )
 
+    # Fix UnicodeEncodeError on Windows (cp1252 can't encode chars like →)
+    if hasattr(sys.stdout, 'reconfigure'):
+        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+
     # Format output
     if args.format == 'markdown':
         output = format_as_markdown(context)

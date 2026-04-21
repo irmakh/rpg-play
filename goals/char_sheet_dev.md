@@ -146,22 +146,29 @@ Commit message format:
 
 ### 7. LOG & MANIFEST — Update Records
 
-After every session:
+After every session, **always** use `memory_write.py` — never edit log files or MEMORY.md directly.
+Direct edits update markdown only; the tool writes to both markdown AND the SQLite DB (used by search tools).
 
 ```bash
-# Append session event to today's log
+# 1. Append session summary to today's log + SQLite DB
 python tools/memory/memory_write.py \
   --content "Brief description of what was done and any gotchas" \
-  --type event
+  --type event \
+  --importance 6
 
-# If new persistent facts were learned, update MEMORY.md
+# 2. If new persistent facts were learned, append to MEMORY.md
 python tools/memory/memory_write.py \
   --update-memory \
   --content "New fact or constraint" \
   --section key_facts
+
+# 3. Sync today's full log file into the daily_logs SQLite table
+python tools/memory/memory_write.py --sync $(date +%Y-%m-%d)
 ```
 
 If new server helpers or DB functions were created, add them to `tools/manifest.md` immediately under the appropriate section.
+
+After writing logs: commit any changed GOTCHA framework files (goals/, memory/MEMORY.md, tools/manifest.md) and push to GitHub.
 
 ---
 
