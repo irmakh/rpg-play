@@ -319,7 +319,7 @@ python tools/memory/embed_memory.py --stats
 ```
 
 Run `embed_memory.py --all` after any session where multiple facts/insights were written to the DB. Without embeddings, `hybrid_search.py` and `semantic_search.py` return no results on those entries.
-Requires `OPENAI_API_KEY` in `.env`.
+Uses local `BAAI/bge-small-en-v1.5` model via fastembed (ONNX) — no API key required.
 
 ---
 

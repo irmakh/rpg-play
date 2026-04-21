@@ -15,12 +15,9 @@ Usage:
     python tools/memory/hybrid_search.py --query "API key" --keyword-only
 
 Dependencies:
-    - openai (for embeddings)
+    - fastembed (local ONNX model, no API key needed)
     - rank_bm25 (optional, falls back to simple TF-IDF)
     - sqlite3 (stdlib)
-
-Env Vars:
-    - OPENAI_API_KEY (required for semantic search)
 
 Output:
     JSON with ranked results combining both search methods

@@ -14,12 +14,8 @@ Usage:
     python tools/memory/semantic_search.py --query "learned behavior" --threshold 0.7
 
 Dependencies:
-    - openai (for query embedding)
-    - numpy (for cosine similarity)
+    - fastembed (local ONNX model, no API key needed)
     - sqlite3 (stdlib)
-
-Env Vars:
-    - OPENAI_API_KEY (required)
 
 Output:
     JSON with ranked results and similarity scores
@@ -42,7 +38,7 @@ except ImportError:
 # Import from sibling modules
 sys.path.insert(0, str(Path(__file__).parent))
 try:
-    from embed_memory import generate_embedding, bytes_to_embedding, get_openai_client
+    from embed_memory import generate_embedding, bytes_to_embedding
     from memory_db import get_connection
 except ImportError as e:
     print(f"Error importing modules: {e}", file=sys.stderr)
@@ -189,8 +185,7 @@ def semantic_search(
         "total_searched": len(entries),
         "above_threshold": len(scored_entries),
         "returned": len(results),
-        "threshold": threshold,
-        "tokens_used": embed_result['usage']['total_tokens']
+        "threshold": threshold
     }
 
 
