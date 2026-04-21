@@ -61,10 +61,10 @@
 - Always check `goals/manifest.md` before starting a task — create a goal if none exists (ask permission first)
 - **Session start order (MANDATORY):** run `python tools/memory/memory_read.py --format markdown` — do NOT use `cat` on log files and do NOT start from the auto-memory system (~/.claude/...). Then check `goals/manifest.md` and `tools/manifest.md`.
 - **Session close (MANDATORY):** (1) `memory_write.py --content "..." --type event --importance 6`, (2) `memory_write.py --update-memory ...` if new persistent facts, (3) `memory_write.py --sync YYYY-MM-DD`, (4) `embed_memory.py --all`, (5) commit + push. Never edit log files or MEMORY.md directly — direct edits miss the SQLite DB layer.
-- **memory_db.py** — use `--action search --query "..."` during session when recalling a specific past fact or constraint by keyword.
-- **hybrid_search.py** — use when searching by concept or meaning, not exact terms. Preferred over `semantic_search.py`. Only returns results for entries that have been embedded (`embed_memory.py --all`).
-- **semantic_search.py** — fallback for concept search when `hybrid_search.py` is unavailable. Same embedding requirement.
-- **embed_memory.py** — run `--all` at session close (step 4) and any time search returns no results on entries you know exist. Requires `OPENAI_API_KEY` in `.env`.
+- **hybrid_search.py** — run BEFORE starting work when: (1) task touches a feature worked on in a session older than yesterday; (2) user references a prior decision you don't have in context; (3) you're choosing an approach and want to verify no conflicting past decision exists; (4) debugging and want to check if the same issue was seen before. Use `python tools/memory/hybrid_search.py --query "..."`.
+- **memory_db.py** — use `--action search --query "..."` when you know the exact term (function name, config key, library name). Faster and more precise than hybrid search for pinpoint recall.
+- **semantic_search.py** — fallback only if hybrid_search.py is unavailable. Same trigger conditions as hybrid_search.
+- **embed_memory.py** — run `--all` at session close (step 4) and any time search returns no results on entries you know exist. Uses local BAAI/bge-small-en-v1.5 model via fastembed — no API key required.
 - Update `tools/manifest.md` immediately when a new tool/helper is created
 - Never modify or create goals without explicit user permission
 - Follow GOTCHA framework layers — don't collapse orchestration, tools, and goals into one place
@@ -76,5 +76,5 @@
 
 ---
 
-*Last updated: 2026-04-21*
+*Last updated: 2026-04-22*
 *This file is the source of truth for persistent facts. Edit directly to update.*

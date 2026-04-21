@@ -290,14 +290,25 @@ python tools/memory/memory_write.py --update-memory --content "New rule or const
 
 **DURING SESSION — search when you need past context:**
 
-Use search tools whenever you need to recall a past decision, constraint, or event that isn't in MEMORY.md.
+**Run `hybrid_search.py` before starting work when ANY of these are true:**
+- The task touches a feature or file that was worked on in a session older than yesterday (not in the logs already loaded at session start)
+- The user references a prior decision, preference, or conversation ("remember when we...", "like we did before", "we decided...")
+- You are about to choose an implementation approach and aren't sure if a conflicting decision exists in a past session
+- You are debugging and want to check if the same issue was seen before
+
+**Run `memory_db.py --action search` instead when:**
+- You know the exact term — a function name, config key, library, or error string (faster and more precise than hybrid search)
+
+**Do NOT run search when:**
+- The relevant context is already in the session-start load (MEMORY.md + today's and yesterday's logs)
+- The task is entirely new with no prior history in this project
 
 ```bash
+# Concept/meaning search — preferred for most mid-session recall
+python tools/memory/hybrid_search.py --query "what does user prefer for X"
+
 # Quick keyword lookup — use when you know exact terms
 python tools/memory/memory_db.py --action search --query "keyword"
-
-# Concept search — use when you know the idea but not exact words
-python tools/memory/hybrid_search.py --query "what does user prefer for X"
 
 # Pure semantic search — fallback if hybrid is unavailable
 python tools/memory/semantic_search.py --query "related concept"
