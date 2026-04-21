@@ -22,10 +22,12 @@ ENV/
 *.egg-info/
 .pytest_cache/
 
-# Databases
+# Databases (track data/memory.db; ignore all others)
 *.db
 *.sqlite
 *.sqlite3
+!data/memory.db
+data/activity.db
 
 # Claude Code local settings
 .claude/
@@ -47,8 +49,7 @@ desktop.ini
 logs/
 *.log.*
 
-# Data directory (databases, activity logs)
-data/
+# Data directory (activity.db ignored above; memory.db is tracked)
 
 # Memory session logs (ephemeral, session-specific)
 memory/logs/
