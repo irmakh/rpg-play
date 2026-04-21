@@ -1,0 +1,23 @@
+# Tools layer — Python dependencies
+# Install with: pip install -r tools/requirements.txt
+#
+# Python 3.12 required.
+
+# --- Memory tools (tools/memory/) ---
+
+# Local vector embeddings (no API key needed)
+# Uses BAAI/bge-small-en-v1.5 ONNX model, downloaded on first run (~22MB)
+fastembed==0.3.6
+
+# ONNX runtime — pinned to 1.18.1
+# WARNING: 1.19+ has a DLL init failure on this Windows machine (WinError 1114)
+# Do NOT upgrade without testing first
+onnxruntime==1.18.1
+
+# Load .env files for API keys / config
+python-dotenv==1.1.0
+
+# --- Optional ---
+
+# Better BM25 for hybrid_search.py (falls back to built-in impl if absent)
+# rank-bm25
