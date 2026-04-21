@@ -299,9 +299,10 @@ python tools/memory/memory_write.py --update-memory --content "New rule or const
 **Run `memory_db.py --action search` instead when:**
 - You know the exact term — a function name, config key, library, or error string (faster and more precise than hybrid search)
 
-**Do NOT run search when:**
-- The relevant context is already in the session-start load (MEMORY.md + today's and yesterday's logs)
-- The task is entirely new with no prior history in this project
+**Run `semantic_search.py` instead of hybrid when ANY of these are true:**
+- You want to find entries *similar to a specific known entry* by ID — use `--similar-to <id>` (unique to this tool; hybrid_search cannot do this)
+- hybrid_search.py returns no useful results and you want a pure meaning-based second pass
+- Keyword terms in the query appear in many unrelated entries and are polluting hybrid results
 
 ```bash
 # Concept/meaning search — preferred for most mid-session recall
@@ -310,11 +311,16 @@ python tools/memory/hybrid_search.py --query "what does user prefer for X"
 # Quick keyword lookup — use when you know exact terms
 python tools/memory/memory_db.py --action search --query "keyword"
 
-# Pure semantic search — fallback if hybrid is unavailable
+# Pure semantic search — use for similar-to lookups or when hybrid results are noisy
 python tools/memory/semantic_search.py --query "related concept"
+python tools/memory/semantic_search.py --similar-to <entry_id>   # find entries similar to a known entry
 ```
 
-Prefer `hybrid_search.py` over `semantic_search.py` — it combines keyword + vector for better results.
+**Do NOT run search when:**
+- The relevant context is already in the session-start load (MEMORY.md + today's and yesterday's logs)
+- The task is entirely new with no prior history in this project
+
+Prefer `hybrid_search.py` over `semantic_search.py` for general recall — it combines keyword + vector for better results.
 Semantic and hybrid search only find entries that have been embedded. Run `embed_memory.py --all` if search returns no results on entries you know exist.
 
 ---

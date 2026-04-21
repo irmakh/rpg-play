@@ -63,7 +63,7 @@
 - **Session close (MANDATORY):** (1) `memory_write.py --content "..." --type event --importance 6`, (2) `memory_write.py --update-memory ...` if new persistent facts, (3) `memory_write.py --sync YYYY-MM-DD`, (4) `embed_memory.py --all`, (5) commit + push. Never edit log files or MEMORY.md directly — direct edits miss the SQLite DB layer.
 - **hybrid_search.py** — run BEFORE starting work when: (1) task touches a feature worked on in a session older than yesterday; (2) user references a prior decision you don't have in context; (3) you're choosing an approach and want to verify no conflicting past decision exists; (4) debugging and want to check if the same issue was seen before. Use `python tools/memory/hybrid_search.py --query "..."`.
 - **memory_db.py** — use `--action search --query "..."` when you know the exact term (function name, config key, library name). Faster and more precise than hybrid search for pinpoint recall.
-- **semantic_search.py** — fallback only if hybrid_search.py is unavailable. Same trigger conditions as hybrid_search.
+- **semantic_search.py** — use instead of hybrid when: (1) finding entries similar to a specific known entry by ID (`--similar-to <id>`, unique to this tool); (2) hybrid returns no useful results and you want a pure meaning-based pass; (3) keyword terms are polluting hybrid results. Use `python tools/memory/semantic_search.py --query "..."` or `--similar-to <id>`.
 - **embed_memory.py** — run `--all` at session close (step 4) and any time search returns no results on entries you know exist. Uses local BAAI/bge-small-en-v1.5 model via fastembed — no API key required.
 - Update `tools/manifest.md` immediately when a new tool/helper is created
 - Never modify or create goals without explicit user permission
