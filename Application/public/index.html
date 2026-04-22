@@ -734,31 +734,9 @@
     <div class="panel-body" id="chat-body-wrap">
       <div class="chat-log" id="chat-log"></div>
       <div class="chat-roller">
-        <div class="dice-btns">
-          <button class="dice-btn" onclick="quickRoll(4)">d4</button>
-          <button class="dice-btn" onclick="quickRoll(6)">d6</button>
-          <button class="dice-btn" onclick="quickRoll(8)">d8</button>
-          <button class="dice-btn" onclick="quickRoll(10)">d10</button>
-          <button class="dice-btn" onclick="quickRoll(12)">d12</button>
-          <button class="dice-btn" onclick="quickRoll(20)">d20</button>
-          <button class="dice-btn" onclick="quickRoll(100)">d100</button>
-        </div>
-        <div style="display:flex;gap:4px;margin-bottom:5px">
-          <input type="number" id="chat-count" value="1" min="1" max="20" style="width:42px;flex-shrink:0;text-align:center" title="Number of dice">
-          <input type="number" id="chat-mod" placeholder="±mod" style="width:54px;flex-shrink:0" title="Modifier">
-          <input type="text" id="chat-label" placeholder="Label…" style="flex:1" title="Roll label (optional)">
-        </div>
-        <div style="display:flex;gap:4px">
-          <select id="chat-sides" style="flex:1">
-            <option value="4">d4</option>
-            <option value="6">d6</option>
-            <option value="8">d8</option>
-            <option value="10">d10</option>
-            <option value="12">d12</option>
-            <option value="20" selected>d20</option>
-            <option value="100">d100</option>
-          </select>
-          <button class="dice-btn" onclick="sendCustomRoll()" style="flex:1;padding:4px 10px">Roll</button>
+        <div class="chat-input-row">
+          <input type="text" id="chat-input" class="chat-input" placeholder="Message or /r 2d6+5…" autocomplete="off" onkeydown="if(event.key==='Enter')sendChatInput()">
+          <button class="dice-btn chat-send-btn" onclick="sendChatInput()">Send</button>
         </div>
       </div>
     </div>
@@ -768,6 +746,14 @@
     </div>
   </div>
 
+</div>
+<!-- 3D Dice Overlay -->
+<div id="dice-overlay" onclick="dismissDiceOverlay()">
+  <div class="dice-type-lbl" id="dice-type-lbl">d20</div>
+  <div id="dice-row"></div>
+  <div class="dice-result-big" id="dice-result-big"></div>
+  <div class="dice-result-sub" id="dice-result-sub"></div>
+  <div class="dice-dismiss-hint show">click to dismiss</div>
 </div>
 </body>
 </html>

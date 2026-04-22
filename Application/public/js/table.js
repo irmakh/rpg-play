@@ -1470,6 +1470,17 @@ function appendChatEntry(e) {
   const time = dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   const div = document.createElement('div');
 
+  if (e.type === 'text') {
+    div.className = 'chat-entry chat-text';
+    div.innerHTML = `<div style="display:flex;justify-content:space-between;margin-bottom:2px">
+      <span class="ce-sender">${esc(e.sender || '?')}</span>
+      <span style="color:var(--txd);font-size:10px">${time}</span>
+    </div>
+    <div style="word-break:break-word">${esc(e.message || '')}</div>`;
+    log.appendChild(div);
+    return;
+  }
+
   if (e.type === 'media') {
     const url = `/api/shared-media/${e.mediaId}`;
     let mediaEl = '';
@@ -1696,6 +1707,46 @@ async function postToChat(payload) {
 
 function getChatSender() {
   return qrollCharName || 'Table';
+}
+
+function parseDiceCommand(text) {
+  const m = text.match(/^\/r(?:oll)?\s+(\d+)?d(\d+)\s*([+-]\d+)?\s*(.*)?$/i);
+  if (!m) return null;
+  return {
+    count: Math.max(1, Math.min(20, parseInt(m[1] || '1'))),
+    sides: parseInt(m[2]),
+    modifier: parseInt(m[3] || '0'),
+    label: (m[4] || '').trim() || null
+  };
+}
+
+async function sendChatInput() {
+  const input = document.getElementById('chat-input');
+  const text = (input?.value || '').trim();
+  if (!text) return;
+  input.value = '';
+  const roll = parseDiceCommand(text);
+  if (roll) {
+    const { count, sides, modifier, label } = roll;
+    const results = Array.from({ length: count }, () => Math.ceil(Math.random() * sides));
+    const total = results.reduce((s, r) => s + r, 0) + modifier;
+    const duration = 1000 + Math.random() * 2000;
+    const rollId = Math.random().toString(36).slice(2);
+    const lbl = label || `${count}d${sides}`;
+    _selfRollIds.add(rollId);
+    _broadcastDiceRoll(rollId, sides, results, modifier, total, lbl, duration);
+    await showDiceAnimation(sides, results, modifier, total, lbl, duration);
+    await postToChat({ sender: getChatSender(), dice: `${count}d${sides}`, results, modifier, total, label: lbl });
+    _pushRollToChar(getActiveCharLinkedId(), { label: lbl, type: 'norm', detail: `${count}d${sides}(${results.join(',')})${modifier !== 0 ? (modifier > 0 ? '+' : '') + modifier : ''}`, total, isCrit: false, isFail: false, isDamage: false, time: new Date().toISOString() });
+    return;
+  }
+  try {
+    await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sender: getChatSender(), type: 'text', message: text })
+    });
+  } catch {}
 }
 
 async function quickRoll(sides) {

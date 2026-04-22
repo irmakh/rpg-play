@@ -1450,19 +1450,32 @@ app.post('/api/dice/broadcast', (req, res) => {
 });
 
 app.post('/api/chat', (req, res) => {
-  const { sender, dice, results, modifier, total, label } = req.body;
-  if (!sender || !dice || !Array.isArray(results) || results.length === 0)
-    return res.status(400).json({ error: 'sender, dice, and results[] required' });
-  const entry = {
-    id: genId(),
-    sender: String(sender).slice(0, 40),
-    dice: String(dice).slice(0, 20),
-    results: results.map(Number),
-    modifier: parseInt(modifier) || 0,
-    total: parseInt(total),
-    label: label ? String(label).slice(0, 60) : null,
-    timestamp: new Date().toISOString()
-  };
+  const { sender, dice, results, modifier, total, label, type, message } = req.body;
+  let entry;
+  if (type === 'text') {
+    if (!sender || !message)
+      return res.status(400).json({ error: 'sender and message required' });
+    entry = {
+      id: genId(),
+      sender: String(sender).slice(0, 40),
+      message: String(message).slice(0, 500),
+      type: 'text',
+      timestamp: new Date().toISOString()
+    };
+  } else {
+    if (!sender || !dice || !Array.isArray(results) || results.length === 0)
+      return res.status(400).json({ error: 'sender, dice, and results[] required' });
+    entry = {
+      id: genId(),
+      sender: String(sender).slice(0, 40),
+      dice: String(dice).slice(0, 20),
+      results: results.map(Number),
+      modifier: parseInt(modifier) || 0,
+      total: parseInt(total),
+      label: label ? String(label).slice(0, 60) : null,
+      timestamp: new Date().toISOString()
+    };
+  }
   if (DB_PROVIDER === 'localdb') {
     ldb.appendChatLog(entry);
   } else {

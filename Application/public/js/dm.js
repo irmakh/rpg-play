@@ -437,24 +437,51 @@ function setMediaStatus(msg, isErr) {
 // ── Chat ──────────────────────────────────────────────────────────────────────
 function rollDie(sides) { return Math.ceil(Math.random() * sides); }
 
-async function quickRoll(sides) {
-  const count  = Math.max(1, parseInt(document.getElementById('chat-count').value) || 1);
-  const mod    = parseInt(document.getElementById('chat-mod').value) || 0;
-  const label  = document.getElementById('chat-label').value.trim();
-  const results = Array.from({ length: count }, () => rollDie(sides));
-  const total   = results.reduce((a, b) => a + b, 0) + mod;
+function parseDiceCommand(text) {
+  const m = text.match(/^\/r(?:oll)?\s+(\d+)?d(\d+)\s*([+-]\d+)?\s*(.*)?$/i);
+  if (!m) return null;
+  return {
+    count: Math.max(1, Math.min(20, parseInt(m[1] || '1'))),
+    sides: parseInt(m[2]),
+    modifier: parseInt(m[3] || '0'),
+    label: (m[4] || '').trim() || null
+  };
+}
+
+async function sendChatInput() {
+  const input = document.getElementById('chat-input');
+  const text = (input?.value || '').trim();
+  if (!text) return;
+  input.value = '';
+  const roll = parseDiceCommand(text);
+  if (roll) {
+    const { count, sides, modifier, label } = roll;
+    const results = Array.from({ length: count }, () => rollDie(sides));
+    const total = results.reduce((s, r) => s + r, 0) + modifier;
+    const lbl = label || `${count}d${sides}`;
+    const duration = 1000 + Math.random() * 2000;
+    const rollId = Math.random().toString(36).slice(2);
+    try {
+      await fetch('/api/dice/broadcast', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rollId, sides, dieResults: results, modifier, total, label: lbl, duration, sender: 'DM' })
+      });
+      await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sender: 'DM', dice: `${count}d${sides}`, results, modifier, total, label: lbl })
+      });
+    } catch { showStatus('Network error.', true); }
+    return;
+  }
   try {
     await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sender: 'DM', dice: `${count}d${sides}`, results, modifier: mod, total, label: label || null })
+      body: JSON.stringify({ sender: 'DM', type: 'text', message: text })
     });
   } catch { showStatus('Network error.', true); }
-}
-
-async function sendCustomRoll() {
-  const sides = parseInt(document.getElementById('chat-sides').value);
-  if (sides) await quickRoll(sides);
 }
 
 async function clearChat() {
@@ -482,9 +509,21 @@ async function loadChat() {
 function appendChatEntry(e) {
   const log = document.getElementById('chat-log');
   if (!log) return;
-  const dt = new Date(e.timestamp + (e.timestamp.endsWith('Z') ? '' : 'Z'));
+  const rawTs = e.timestamp || '';
+  const dt = rawTs ? new Date(rawTs + (rawTs.endsWith('Z') ? '' : 'Z')) : new Date();
   const time = dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   const div = document.createElement('div');
+
+  if (e.type === 'text') {
+    div.className = 'chat-entry chat-text';
+    div.innerHTML = `<div style="display:flex;justify-content:space-between;margin-bottom:2px">
+      <span class="ce-sender">${esc(e.sender || '?')}</span>
+      <span style="color:var(--txd);font-size:10px">${time}</span>
+    </div>
+    <div style="word-break:break-word">${esc(e.message || '')}</div>`;
+    log.appendChild(div);
+    return;
+  }
 
   if (e.type === 'media') {
     const url = `/api/shared-media/${e.mediaId}`;

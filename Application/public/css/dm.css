@@ -95,9 +95,13 @@ tr:hover td{background:var(--a22)}
 .chat-entry.nat1{border-left-color:var(--err)}
 .ce-sender{color:var(--ac);font-weight:bold}
 .ce-total{font-size:15px;font-weight:bold;margin-top:2px}
-.dice-btns{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px}
 .dice-btn{background:var(--a22);border:1px solid var(--a55);color:var(--ac);padding:4px 10px;border-radius:3px;cursor:pointer;font-size:12px;font-weight:bold}
 .dice-btn:hover{background:var(--a44)}
+.chat-input-row{display:flex;gap:4px;margin-bottom:6px}
+.chat-input{flex:1;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px;padding:5px 8px;font-size:12px;min-width:0}
+.chat-input::placeholder{color:var(--txd)}
+.chat-input:focus{outline:none;border-color:var(--ac)}
+.chat-send-btn{flex-shrink:0;padding:5px 12px}
 /* Media share */
 .media-drop{border:2px dashed var(--a55);border-radius:6px;padding:18px;text-align:center;cursor:pointer;color:var(--txd);font-size:12px;transition:border-color .15s,background .15s}
 .media-drop:hover,.media-drop.drag-over{border-color:var(--ac);background:var(--a22);color:var(--ac)}

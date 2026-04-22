@@ -130,27 +130,9 @@
     <div class="panel-body" id="chat-body-wrap">
       <div class="chat-log" id="chat-log"></div>
       <div class="chat-roller">
-        <div class="dice-btns">
-          <button class="dice-btn" onclick="quickRoll(4)">d4</button>
-          <button class="dice-btn" onclick="quickRoll(6)">d6</button>
-          <button class="dice-btn" onclick="quickRoll(8)">d8</button>
-          <button class="dice-btn" onclick="quickRoll(10)">d10</button>
-          <button class="dice-btn" onclick="quickRoll(12)">d12</button>
-          <button class="dice-btn" onclick="quickRoll(20)">d20</button>
-          <button class="dice-btn" onclick="quickRoll(100)">d100</button>
-        </div>
-        <div style="display:flex;gap:4px;margin-bottom:5px">
-          <input type="number" id="chat-count" value="1" min="1" max="20" style="width:38px;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px;padding:3px 5px;font-size:11px">
-          <input type="number" id="chat-mod" placeholder="±mod" style="width:48px;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px;padding:3px 5px;font-size:11px">
-          <input type="text" id="chat-label" placeholder="Label…" style="flex:1;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px;padding:3px 5px;font-size:11px">
-        </div>
-        <div style="display:flex;gap:4px">
-          <select id="chat-sides" style="flex:1;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px;padding:3px 5px;font-size:11px">
-            <option value="4">d4</option><option value="6">d6</option><option value="8">d8</option>
-            <option value="10">d10</option><option value="12">d12</option>
-            <option value="20" selected>d20</option><option value="100">d100</option>
-          </select>
-          <button class="dice-btn" onclick="sendCustomRoll()">Roll</button>
+        <div class="chat-input-row">
+          <input type="text" id="chat-input" class="chat-input" placeholder="Message or /r 2d6+5…" autocomplete="off" onkeydown="if(event.key==='Enter')sendChatInput()">
+          <button class="dice-btn chat-send-btn" onclick="sendChatInput()">Send</button>
         </div>
       </div>
     </div>
