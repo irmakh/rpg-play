@@ -23,7 +23,8 @@ A self-hosted web application for running D&D 5e sessions. Includes a full chara
 - Player-facing shop tab: browse available items, add to cart, purchase with in-character currency
 - Player-facing loot tab: claim dropped loot items
 - Player-facing initiative tracker panel (slide-out) with roll submission and NPC add
-- Real-time chat panel with dice roll feed
+- Real-time chat panel: type free text or use `/r NdS+M [label]` to roll dice (e.g. `/r 2d6+3`, `/r d20 Stealth`)
+- 3D dice animation overlay shown locally when rolling and for any roll broadcast from the table
 - Three themes: Dark Gold, Parchment, Midnight
 
 ### Virtual Table (`/table.html`)
@@ -47,8 +48,8 @@ A self-hosted web application for running D&D 5e sessions. Includes a full chara
 - Prepared map selector: load a map preset saved in Map Prep
 - Side panel: active character stat block, quick-roll panel auto-populated from the current initiative turn
 - Monster quick-stat popup: click any monster token to view full stat block without leaving the table
-- 3D dice animation overlay for all rolls
-- Real-time chat panel with dice roll feed, media sharing, and quick-roll buttons
+- 3D dice animation overlay for all rolls (including rolls broadcast from the character sheet)
+- Real-time chat panel: type free text or use `/r NdS+M [label]` to roll dice; media sharing also supported
 - Full initiative tracker integrated in the side panel
 - DM unlock via master password (DM controls remain hidden until unlocked)
 
@@ -59,7 +60,7 @@ A self-hosted web application for running D&D 5e sessions. Includes a full chara
 - Monster library table: search, filter, add to initiative with a single click
 - Monster info popup: full stat block view inline
 - Media sharing panel: drag-and-drop image / video upload → shared instantly to the table chat
-- DM chat panel with quick-roll dice buttons (d4 – d20), custom expression input, and chat history
+- DM chat panel: type free text or use `/r NdS+M [label]` to roll dice; roll broadcasts the 3D animation to all connected screens
 - Data backup: download a full JSON snapshot of all application data
 - Data restore: upload a backup JSON to restore all data
 - Multiple themes
