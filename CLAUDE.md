@@ -356,7 +356,7 @@ python tools/memory/memory_write.py --sync YYYY-MM-DD
 python tools/memory/embed_memory.py --all
 
 # 5. Commit changed GOTCHA framework files and push to GitHub
-git add goals/ memory/MEMORY.md tools/manifest.md && git commit -m "..." && git push
+git add goals/ memory/MEMORY.md tools/manifest.md data/memory.db && git commit -m "..." && git push
 ```
 
 ---
