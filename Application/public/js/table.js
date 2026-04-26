@@ -1776,6 +1776,56 @@ async function sendCustomRoll() {
   _pushRollToChar(getActiveCharLinkedId(), { label, type: 'norm', detail: `${count}d${sides}(${results.join(',')})${mod !== 0 ? (mod > 0 ? '+' : '') + mod : ''}`, total, isCrit: false, isFail: false, isDamage: false, time: new Date().toISOString() });
 }
 
+// ── Dice Roller Modal ─────────────────────────────────────────────────────────
+const DICE_ROLLER_TYPES = [4, 6, 8, 10, 12, 20, 100];
+
+function openDiceRollerModal() {
+  const tbody = document.getElementById('dice-roller-tbody');
+  if (tbody && !tbody.hasChildNodes()) {
+    tbody.innerHTML = DICE_ROLLER_TYPES.map(sides => {
+      const cells = [1,2,3,4,5,6].map(n =>
+        `<td style="padding:2px 3px;text-align:center"><button class="btn sm" onclick="rollDiceModal(${n},${sides})" style="min-width:28px;font-size:11px">${n}</button></td>`
+      ).join('');
+      return `<tr><td style="padding:4px 6px;color:var(--ac);font-weight:bold;white-space:nowrap">d${sides}</td>${cells}</tr>`;
+    }).join('');
+  }
+  document.getElementById('dice-roller-modal').style.display = 'flex';
+}
+
+function closeDiceRollerModal() {
+  document.getElementById('dice-roller-modal').style.display = 'none';
+}
+
+async function rollDiceModal(count, sides) {
+  const results  = Array.from({ length: count }, () => Math.ceil(Math.random() * sides));
+  const total    = results.reduce((s, r) => s + r, 0);
+  const label    = `${count}d${sides}`;
+  const duration = 1000 + Math.random() * 2000;
+  const rollId   = Math.random().toString(36).slice(2);
+  _selfRollIds.add(rollId);
+  _broadcastDiceRoll(rollId, sides, results, 0, total, label, duration);
+  await showDiceAnimation(sides, results, 0, total, label, duration);
+  await postToChat({ sender: getChatSender(), dice: label, results, modifier: 0, total, label });
+  _pushRollToChar(getActiveCharLinkedId(), { label, type: 'norm', detail: `${label}(${results.join(',')})`, total, isCrit: false, isFail: false, isDamage: false, time: new Date().toISOString() });
+}
+
+async function diceRollerD20(type) {
+  const mod   = parseInt(document.getElementById('dice-roller-mod')?.value) || 0;
+  const label = document.getElementById('dice-roller-label')?.value?.trim() || 'd20 roll';
+  const r1 = Math.ceil(Math.random() * 20);
+  const r2 = Math.ceil(Math.random() * 20);
+  const results = type === 'norm' ? [r1] : [r1, r2];
+  const picked  = type === 'adv' ? Math.max(r1, r2) : type === 'dis' ? Math.min(r1, r2) : r1;
+  const total   = picked + mod;
+  const duration = 1000 + Math.random() * 2000;
+  const rollId   = Math.random().toString(36).slice(2);
+  _selfRollIds.add(rollId);
+  _broadcastDiceRoll(rollId, 20, results, mod, total, label, duration);
+  await showDiceAnimation(20, results, mod, total, label, duration);
+  await postToChat({ sender: getChatSender(), dice: type === 'norm' ? '1d20' : '2d20', results, modifier: mod, total, label });
+  _pushRollToChar(getActiveCharLinkedId(), { label, type, detail: `d20(${results.join(',')})${mod !== 0 ? (mod > 0 ? '+' : '') + mod : ''}`, total, isCrit: picked === 20, isFail: picked === 1, isDamage: false, time: new Date().toISOString() });
+}
+
 // ── Monster stat rendering (same logic as monsters.js) ───────────────────────
 function parseEntry(s) {
   const escaped = String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -2185,6 +2235,9 @@ async function confirmRoll(type) {
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && placementState) { exitPlacementMode(); return; }
   if (e.key === 'Escape' && currentTool === 'draw') { drawingState = null; oCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height); setTool('select'); return; }
+  if (document.getElementById('dice-roller-modal').style.display === 'flex') {
+    if (e.key === 'Escape') { closeDiceRollerModal(); return; }
+  }
   if (document.getElementById('monster-info-modal').style.display === 'flex') {
     if (e.key === 'Escape') { closeMonsterInfoTableModal(); return; }
   }
