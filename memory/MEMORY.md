@@ -70,6 +70,7 @@
 - Never modify or create goals without explicit user permission
 - Follow GOTCHA framework layers — don't collapse orchestration, tools, and goals into one place
 - Read full goals before starting tasks — don't skim
+- initiative init field stores dex+items only (NOT init-bonus). init-bonus is always added on top in all roll paths (table.js, index.js, server.js token placement). /api/characters/:id/qroll now returns 'ac' field (added to EXTRA_KEYS).
 
 ## Current Projects
 
