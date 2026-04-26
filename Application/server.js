@@ -257,7 +257,7 @@ app.get('/api/characters/:id/qroll', async (req, res) => {
     try { data = JSON.parse(char.dataJson || '{}'); } catch {}
     const SKILL_KEYS = Array.from({ length: 18 }, (_, i) => `sk-${i}`);
     const SAVE_KEYS  = ['save-str','save-dex','save-con','save-int','save-wis','save-cha'];
-    const EXTRA_KEYS = ['init', 'init-bonus', 'sp-atk'];
+    const EXTRA_KEYS = ['init', 'init-bonus', 'sp-atk', 'ac'];
     const qroll = {};
     for (const k of [...SKILL_KEYS, ...SAVE_KEYS, ...EXTRA_KEYS]) if (data[k] !== undefined) qroll[k] = data[k];
     if (data['_weapons'] !== undefined) qroll['_weapons'] = data['_weapons'];
@@ -2399,7 +2399,8 @@ app.post('/api/table/tokens', async (req, res) => {
     if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
     const { name, type = 'custom', linkedId = '', x = 0, y = 0, color = '#888888',
             hpCurrent = 0, hpMax = 0, hpTemp = 0, speed = 30, initiativeId = '',
-            tokenSize = 1, portrait = null, portraitThumb = null, label = '', conditions = '[]' } = req.body || {};
+            tokenSize = 1, portrait = null, portraitThumb = null, label = '', conditions = '[]',
+            ac = null } = req.body || {};
     if (!name || !String(name).trim()) return res.status(400).json({ error: 'Name required' });
     if (!['character','monster','npc','custom'].includes(type)) return res.status(400).json({ error: 'Invalid type' });
 
@@ -2412,7 +2413,7 @@ app.post('/api/table/tokens', async (req, res) => {
           if (char) {
             let cdata = {};
             try { cdata = JSON.parse(char.dataJson || '{}'); } catch {}
-            initBonus = parseInt(cdata['init']) || 0;
+            initBonus = (parseInt(cdata['init']) || 0) + (parseInt(cdata['init-bonus']) || 0);
           }
         } else if (type === 'monster' && linkedId) {
           const mon = DB_PROVIDER === 'localdb' ? ldb.getMonster(String(linkedId)) : (await idb.query({ monsters: { $: { where: { id: String(linkedId) } } } })).monsters?.[0];
@@ -2466,6 +2467,7 @@ app.post('/api/table/tokens', async (req, res) => {
       portraitThumb: typeof portraitThumb === 'string' && portraitThumb.startsWith('/uploads/') ? portraitThumb : null,
       label: String(label || '').slice(0, 20),
       conditions: Array.isArray(conditions) ? JSON.stringify(conditions) : String(conditions || '[]'),
+      ac: ac != null ? (parseInt(ac) || null) : null,
       createdAt: new Date().toISOString()
     };
     if (DB_PROVIDER === 'localdb') {

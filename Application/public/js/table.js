@@ -2013,8 +2013,8 @@ function _sideSecArrow(name) {
 function renderSideCharacter() {
   const d = qrollData || {};
   const spAtk = d['sp-atk'] !== undefined ? d['sp-atk'] : null;
-  // 'init' is the total initiative modifier (dex mod + item bonuses + manual), same field index.js uses
-  const initMod = parseInt(d['init']) || 0;
+  // 'init' is dex mod + item bonuses; 'init-bonus' is the manual bonus — always add both
+  const initMod = (parseInt(d['init']) || 0) + (parseInt(d['init-bonus']) || 0);
   const initBonusStr = initMod >= 0 ? '+' + initMod : '' + initMod;
 
   const skillRows = SKILL_NAMES.map((name, i) => {
@@ -2095,7 +2095,7 @@ async function loadSideQroll() {
   if (!activeTok) { content.innerHTML = ''; qrollCharName = ''; qrollData = null; return; }
 
   if (activeTok.type === 'monster') {
-    qrollCharName = tokDisplayName(activeTok);
+    qrollCharName = (activeTok.label) ? activeTok.label : tokDisplayName(activeTok);
     qrollData = null;
     if (isDM() && activeTok.linkedId) {
       // DM: load and show full stat block
@@ -2187,8 +2187,8 @@ async function rollDamageStr(label, dmgStr) {
 
 function rollInitiativeFromPanel() {
   const d = qrollData || {};
-  // Use the total initiative field (dex mod + items + manual), same as index.js rollMyInitiative()
-  const modifier = parseInt(d['init']) || 0;
+  // init = dex mod + item bonuses; init-bonus = manual bonus — always add both
+  const modifier = (parseInt(d['init']) || 0) + (parseInt(d['init-bonus']) || 0);
   const activeTokId = getActiveTurnTokenId();
   const targetId = activeTokId || (!initData.currentId ? selectedTokenId : null);
   const tok = targetId ? tokens.find(t => t.id === targetId) : null;
@@ -2283,29 +2283,33 @@ document.addEventListener('keydown', e => {
 // ── HP Panel ──────────────────────────────────────────────────────────────────
 async function openHpPanel(tok) {
   selectedTokenId = tok.id;
-  _hpPanelAc = null;
+  // Monsters: use stored AC (set at token creation, doesn't change). Render immediately.
+  // Characters: render immediately with stored AC if present, then update real-time from server.
+  _hpPanelAc = tok.ac != null ? tok.ac : null;
   document.getElementById('lp-token-section').style.display = '';
   _refreshHpPanel(tok);
   // Scroll left panel so the token section is visible
   const lp = document.getElementById('left-panel');
   if (lp) lp.scrollTop = lp.scrollHeight;
-  // Fetch AC from linked character or monster
   if (tok.linkedId) {
     try {
-      if (tok.type === 'monster') {
-        const r = await fetch(`/api/monsters/${tok.linkedId}`, { headers: { 'X-Master-Password': masterPw } });
-        if (r.ok) {
-          const m = await r.json();
-          const ac = [].concat((m.data || {}).ac || [])[0];
-          _hpPanelAc = typeof ac === 'number' ? ac : (ac && ac.ac != null ? ac.ac : null);
+      if (tok.type === 'monster' && tok.ac == null) {
+        // Fallback for old monster tokens placed before AC was stored on the token (DM only)
+        if (isDM()) {
+          const r = await fetch(`/api/monsters/${tok.linkedId}`, { headers: { 'X-Master-Password': masterPw } });
+          if (r.ok) {
+            const m = await r.json();
+            const ac = [].concat((m.data || {}).ac || [])[0];
+            _hpPanelAc = typeof ac === 'number' ? ac : (ac && ac.ac != null ? ac.ac : null);
+          }
         }
-      } else {
-        const headers = isDM() ? { 'X-Character-Password': masterPw } : {};
-        const r = await fetch(`/api/characters/${tok.linkedId}`, { headers });
+      } else if (tok.type !== 'monster') {
+        // Characters/NPCs: always fetch real-time via public qroll endpoint (AC can change)
+        const r = await fetch(`/api/characters/${tok.linkedId}/qroll`);
         if (r.ok) {
           const c = await r.json();
           const ac = (c.data || {}).ac;
-          _hpPanelAc = ac != null && ac !== '' ? ac : null;
+          _hpPanelAc = ac != null && ac !== '' ? (parseInt(ac) || null) : null;
         }
       }
     } catch {}
@@ -2845,9 +2849,11 @@ async function submitAddToken() {
     const mData = mon?.data || {};
     const hp = mData.hp?.average || mData.hp || 10;
     const spd = mData.speed?.walk || (typeof mData.speed === 'string' ? parseInt(mData.speed) : null) || 30;
+    const rawAc = [].concat(mData.ac || [])[0];
+    const monAc = typeof rawAc === 'number' ? rawAc : (rawAc?.ac ?? null);
     payload = {
       name, type: 'monster', linkedId: _pendingTokenLinkedId,
-      hpCurrent: hp, hpMax: hp, speed: spd,
+      hpCurrent: hp, hpMax: hp, speed: spd, ac: monAc,
       color: '#cc3333',
       initiativeId: '', // always empty → server creates a new entry per monster using the identifier name
       portrait: mon?.data?.portrait || null,

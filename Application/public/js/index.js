@@ -81,14 +81,13 @@ function recalcAll() {
 
   recalcPreparedCount();
 
-  // ── Auto-calc Initiative: DEX mod + equipped item bonuses + manual bonus ──
+  // ── Auto-calc Initiative: DEX mod + equipped item bonuses (init-bonus is additive, stored separately) ──
   {
     const dexMod = getMod('dex');
     const itemBonus = items.filter(i => i.equipped).reduce((s, i) => s + (parseInt(i.initBonus) || 0), 0);
-    const manualBonus = parseInt(document.querySelector('[data-key="init-bonus"]')?.value) || 0;
-    const total = dexMod + itemBonus + manualBonus;
+    const base = dexMod + itemBonus;
     const initEl = document.querySelector('[data-key="init"]');
-    if (initEl) initEl.value = (total >= 0 ? '+' : '') + total;
+    if (initEl) initEl.value = (base >= 0 ? '+' : '') + base;
   }
 
   // ── Auto-calc Speed: base speed + equipped item speed bonuses ──
@@ -2403,7 +2402,7 @@ function rollMyInitiative() {
     return;
   }
   const initEl = document.querySelector('[data-key="init"]');
-  const modifier = parseInt(initEl?.value) || 0;
+  const modifier = (parseInt(initEl?.value) || 0) + (parseInt(document.querySelector('[data-key="init-bonus"]')?.value) || 0);
   const charName = document.querySelector('[data-key="name"]')?.value?.trim() || 'Unknown';
   rollPending = { label: 'Initiative', modifier, isInitiative: true, initCharName: charName };
   document.getElementById('adv-label').textContent = 'Roll: Initiative';

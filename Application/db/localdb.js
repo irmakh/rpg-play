@@ -135,6 +135,7 @@ try { db.exec(`ALTER TABLE shop_items ADD COLUMN tag TEXT DEFAULT ''`); } catch 
 try { db.exec(`ALTER TABLE char_media ADD COLUMN thumbUrl TEXT DEFAULT ''`); } catch {}
 try { db.exec(`ALTER TABLE char_media ADD COLUMN mediumUrl TEXT DEFAULT ''`); } catch {}
 try { db.exec(`ALTER TABLE table_tokens ADD COLUMN portraitThumb TEXT`); } catch {}
+try { db.exec(`ALTER TABLE table_tokens ADD COLUMN ac INTEGER`); } catch {}
 
 // Singleton IDs (match server.js constants)
 const SHOP_CONFIG_ID  = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
@@ -391,8 +392,8 @@ export function getMovedTableTokens() {
   return db.prepare('SELECT * FROM table_tokens WHERE movedFt > 0').all().map(normalizeToken);
 }
 export function createTableToken(id, fields) {
-  db.prepare('INSERT INTO table_tokens (id, name, type, linkedId, x, y, color, hpCurrent, hpMax, hpTemp, speed, movedFt, initiativeId, visible, tokenSize, portrait, portraitThumb, label, conditions, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
-    .run(id, fields.name || '', fields.type || 'custom', fields.linkedId || '', fields.x || 0, fields.y || 0, fields.color || '#888888', fields.hpCurrent || 0, fields.hpMax || 0, fields.hpTemp || 0, fields.speed || 30, fields.movedFt || 0, fields.initiativeId || '', fields.visible !== false ? 1 : 0, fields.tokenSize || 1, fields.portrait || null, fields.portraitThumb || null, fields.label || '', fields.conditions || '[]', fields.createdAt || new Date().toISOString());
+  db.prepare('INSERT INTO table_tokens (id, name, type, linkedId, x, y, color, hpCurrent, hpMax, hpTemp, speed, movedFt, initiativeId, visible, tokenSize, portrait, portraitThumb, label, conditions, ac, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+    .run(id, fields.name || '', fields.type || 'custom', fields.linkedId || '', fields.x || 0, fields.y || 0, fields.color || '#888888', fields.hpCurrent || 0, fields.hpMax || 0, fields.hpTemp || 0, fields.speed || 30, fields.movedFt || 0, fields.initiativeId || '', fields.visible !== false ? 1 : 0, fields.tokenSize || 1, fields.portrait || null, fields.portraitThumb || null, fields.label || '', fields.conditions || '[]', fields.ac ?? null, fields.createdAt || new Date().toISOString());
 }
 export function updateTableToken(id, fields) {
   if (!fields || Object.keys(fields).length === 0) return;
