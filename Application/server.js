@@ -2512,9 +2512,10 @@ app.put('/api/table/tokens/:id', async (req, res) => {
         return res.json({ ok: true });
       }
 
-      const { name, x, y, color, hpCurrent, hpMax, hpTemp, speed, initiativeId, visible, movedFt, tokenSize, conditions } = body;
+      const { name, label, x, y, color, hpCurrent, hpMax, hpTemp, speed, initiativeId, visible, movedFt, tokenSize, conditions } = body;
       const update = {};
       if (name !== undefined)        update.name = String(name).trim();
+      if (label !== undefined)       update.label = String(label).trim();
       if (x !== undefined)           update.x = parseInt(x) || 0;
       if (y !== undefined)           update.y = parseInt(y) || 0;
       if (color !== undefined)       update.color = String(color);
