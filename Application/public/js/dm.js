@@ -152,6 +152,22 @@ async function runSelectiveBackup() {
   }
 }
 
+async function exportMonster(id, name) {
+  try {
+    const res = await fetch(`/api/monsters/${id}/export`, { headers: { 'X-Master-Password': masterPw } });
+    if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || res.statusText);
+    const data = await res.json();
+    const date = new Date().toISOString().split('T')[0];
+    const slug = name.replace(/[^a-z0-9]+/gi, '-').toLowerCase();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
+    a.download = `monster-${slug}-${date}.json`;
+    a.click();
+  } catch (err) {
+    showStatus('Export failed: ' + err.message, true);
+  }
+}
+
 function triggerImport() {
   document.getElementById('import-file-input').value = '';
   document.getElementById('import-file-input').click();
@@ -173,7 +189,7 @@ async function doImport(input) {
   }
 
   const labels = parsed.map(({ file, backup }) => backup.type ? `${backup.type} (${file.name})` : `full backup (${file.name})`);
-  if (!confirm(`Import the following sections?\n\n${labels.join('\n')}\n\nExisting records with the same ID will be renamed to "_old …" and kept. New records will be added alongside them.`)) return;
+  if (!confirm(`Import the following sections?\n\n${labels.join('\n')}\n\nExisting records with the same ID will be renamed with an "_old" suffix and kept. New records will be added alongside them.`)) return;
 
   let succeeded = 0, failed = [];
   for (const { file, backup } of parsed) {
@@ -623,6 +639,7 @@ function renderDmMonsters() {
       <td style="text-align:right;white-space:nowrap">
         <button class="btn sm" onclick="showMonsterInfo('${m.id}')" title="View stat block">Info</button>
         <button class="btn sm success" onclick="openMonsterInitModal('${m.id}')" title="Add to initiative">+ Init</button>
+        <button class="btn sm" onclick="exportMonster('${m.id}','${m.name.replace(/'/g,"\\'")}')" title="Export monster to file">Export</button>
       </td>
     </tr>`;
   }).join('');

@@ -204,6 +204,7 @@ function renderTable() {
           <button class="btn sm" onclick="openInfoModal('${m.id}')" title="View stat block">Info</button>
           <button class="btn sm success" onclick="openInitModal('${m.id}')" title="Add to initiative tracker">+ Init</button>
           <button class="btn sm" onclick="openEditMonsterModal('${m.id}')" title="Edit monster JSON">Edit</button>
+          <button class="btn sm" onclick="exportMonster('${m.id}','${m.name.replace(/'/g,"\\'")}')" title="Export monster to file">Export</button>
           <button class="btn sm danger" onclick="deleteMonster('${m.id}')" title="Remove monster">✕</button>
         </td>
       </tr>`;
@@ -280,6 +281,24 @@ async function deleteMonster(monsterId) {
     renderTable();
     showStatus(`${m.name} removed.`, false);
   } catch { showStatus('Network error.', true); }
+}
+
+// ── Export single monster ─────────────────────────────────────────────────────
+async function exportMonster(id, name) {
+  try {
+    const res = await fetch(`/api/monsters/${id}/export`, { headers: { 'X-Master-Password': masterPw } });
+    if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || res.statusText);
+    const data = await res.json();
+    const date = new Date().toISOString().split('T')[0];
+    const slug = name.replace(/[^a-z0-9]+/gi, '-').toLowerCase();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
+    a.download = `monster-${slug}-${date}.json`;
+    a.click();
+  } catch (err) {
+    const statusEl = document.getElementById('import-status');
+    if (statusEl) { statusEl.style.color = 'var(--err)'; statusEl.textContent = 'Export failed: ' + err.message; }
+  }
 }
 
 // ── Import ────────────────────────────────────────────────────────────────────

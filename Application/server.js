@@ -1527,6 +1527,18 @@ app.get('/api/monsters/:id', async (req, res) => {
   } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
 });
 
+app.get('/api/monsters/:id/export', async (req, res) => {
+  try {
+    if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
+    const r = DB_PROVIDER === 'localdb' ? ldb.getMonster(req.params.id) : (await idb.query({ monsters: { $: { where: { id: req.params.id } } } })).monsters?.[0];
+    if (!r) return res.status(404).json({ error: 'Not found' });
+    let d = {}; try { d = JSON.parse(r.dataJson || '{}'); } catch {}
+    const { portraitThumb, portraitMedium, ...dWithoutThumbs } = d;
+    const monster = { ...r, dataJson: JSON.stringify(dWithoutThumbs), portraitB64: readUploadAsBase64(d.portrait) };
+    res.json({ version: '1.0', type: 'monster', timestamp: new Date().toISOString(), dbProvider: DB_PROVIDER, monsters: [monster] });
+  } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
+});
+
 app.post('/api/monsters/import', async (req, res) => {
   try {
     if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
@@ -1841,7 +1853,7 @@ app.post('/api/admin/restore', express.json({ limit: '200mb' }), async (req, res
     }
 
     // ── New selective backup (has 'type' field) ────────────────────────────────
-    if (backup.type && BACKUP_PARTS.includes(backup.type)) {
+    if (backup.type && (BACKUP_PARTS.includes(backup.type) || backup.type === 'monster')) {
       if (DB_PROVIDER === 'localdb') {
         switch (backup.type) {
           case 'characters': {
@@ -1863,6 +1875,7 @@ app.post('/api/admin/restore', express.json({ limit: '200mb' }), async (req, res
             broadcast('characters', { action: 'reload' });
             break;
           }
+          case 'monster':
           case 'monsters': {
             const restoredMonsters = [];
             for (const m of (backup.monsters || [])) {
@@ -1918,7 +1931,7 @@ app.post('/api/admin/restore', express.json({ limit: '200mb' }), async (req, res
           ops.push(...(backup.characters || []).map(r => idb.tx.characters[r.id].update({ name: r.name || '', dataJson: r.dataJson || '{}', charType: r.charType || 'pc', passwordHash: r.passwordHash || '', createdAt: r.createdAt })));
           ops.push(...(backup.media || []).map(r => idb.tx.media[r.id].update({ charId: r.charId || '', name: r.originalName || '', mimeType: r.mimeType || '', dataJson: r.dataUrl || '', createdAt: r.createdAt })));
           broadcast('characters', { action: 'reload' });
-        } else if (backup.type === 'monsters') {
+        } else if (backup.type === 'monsters' || backup.type === 'monster') {
           const exM = await idb.query({ monsters: {} });
           ops.push(...(exM.monsters || []).map(r => idb.tx.monsters[r.id].delete()));
           ops.push(...(backup.monsters || []).map(r => idb.tx.monsters[r.id].update({ name: r.name || '', cr: r.cr || '?', dataJson: r.dataJson || '{}', createdAt: r.createdAt })));

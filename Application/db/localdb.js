@@ -514,8 +514,8 @@ export function importAll(data) {
   })();
 }
 
-// ── Selective imports (merge — no deletes, duplicate IDs get _old prefix) ─────
-function _oldName(name) { return name.startsWith('_old ') ? name : '_old ' + name; }
+// ── Selective imports (merge — no deletes, duplicate IDs get _old suffix) ─────
+function _oldName(name) { return name.endsWith(' _old') ? name : name + ' _old'; }
 
 export function importCharacters(characters, media) {
   const getChar  = db.prepare('SELECT name FROM characters WHERE id = ?');
