@@ -1647,8 +1647,6 @@ app.delete('/api/monsters/:id', async (req, res) => {
     if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
     const existing = DB_PROVIDER === 'localdb' ? ldb.getMonster(req.params.id) : (await idb.query({ monsters: { $: { where: { id: req.params.id } } } })).monsters?.[0];
     if (!existing) return res.status(404).json({ error: 'Not found' });
-    // Delete portrait files if any
-    try { const d = JSON.parse(existing.dataJson || '{}'); deleteUploadFile(d.portrait); deleteUploadFile(d.portraitThumb); deleteUploadFile(d.portraitMedium); } catch {}
     if (DB_PROVIDER === 'localdb') {
       ldb.deleteMonster(req.params.id);
     } else {
