@@ -167,6 +167,14 @@ function exitDM() {
   location.reload();
 }
 
+function toggleLeftPanel() {
+  const panel = document.getElementById('left-panel');
+  const btn = document.getElementById('btn-leftpanel-toggle');
+  if (!panel) return;
+  const hidden = panel.style.display === 'none';
+  panel.style.display = hidden ? '' : 'none';
+  if (btn) btn.textContent = hidden ? '◀' : '▶';
+}
 function toggleSidePanel() {
   const panel = document.getElementById('side-panel');
   const btn = document.getElementById('btn-sidepanel-toggle');
@@ -2276,8 +2284,11 @@ document.addEventListener('keydown', e => {
 async function openHpPanel(tok) {
   selectedTokenId = tok.id;
   _hpPanelAc = null;
+  document.getElementById('lp-token-section').style.display = '';
   _refreshHpPanel(tok);
-  document.getElementById('hp-panel').style.display = '';
+  // Scroll left panel so the token section is visible
+  const lp = document.getElementById('left-panel');
+  if (lp) lp.scrollTop = lp.scrollHeight;
   // Fetch AC from linked character or monster
   if (tok.linkedId) {
     try {
@@ -2306,7 +2317,7 @@ async function openHpPanel(tok) {
   }
 }
 function closeHpPanel() {
-  document.getElementById('hp-panel').style.display = 'none';
+  document.getElementById('lp-token-section').style.display = 'none';
   _hpPanelAc = null;
   // Keep selectedTokenId — token stays selected after closing HP panel
 }

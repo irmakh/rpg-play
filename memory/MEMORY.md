@@ -29,6 +29,7 @@
 - **Image system** — uploads generate original + `_thumb.webp` (80×80) + `_medium.webp` (max 500px); maps always full quality
 - **Move tool** — 500ms delay before drag activates (prevents accidental moves)
 - - **Calendar (Calendar of Harptos)** — DM calendar at events.html (DM-only, password-gated); player calendar tab in index.html. Tenday (3×10) grid display. Festival days: Midwinter, Greengrass, Midsummer, Shieldmeet (leap years), Highharvestide, The Feast of the Moon. DM sets current campaign date (day-by-day or jump). Events have title, description, FR date, public/DM-only flag, event type. SSE broadcasts calendar-updated on changes.
+- table.html/table.css/table.js: left sidebar layout (240px #left-panel) — Initiative, Chat, Token/HP sections. No floating panels. Both sidebars have toolbar toggle buttons.
 
 ## Key Facts — App Stack
 
@@ -76,5 +77,5 @@
 
 ---
 
-*Last updated: 2026-04-22*
+*Last updated: 2026-04-26*
 *This file is the source of truth for persistent facts. Edit directly to update.*

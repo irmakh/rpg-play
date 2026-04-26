@@ -52,7 +52,8 @@
     <span id="zoom-val" style="font-size:11px;color:var(--ac);min-width:34px">100%</span>
   </div>
   <button class="btn tool-btn" onclick="openDiceRollerModal()" title="Dice Roller" style="margin-left:4px">🎲</button>
-  <button class="btn tool-btn" id="btn-sidepanel-toggle" onclick="toggleSidePanel()" title="Toggle side panel" style="margin-left:4px">▶</button>
+  <button class="btn tool-btn" id="btn-leftpanel-toggle" onclick="toggleLeftPanel()" title="Toggle left panel" style="margin-left:4px">◀</button>
+  <button class="btn tool-btn" id="btn-sidepanel-toggle" onclick="toggleSidePanel()" title="Toggle right panel" style="margin-left:2px">▶</button>
 </div>
 
 <!-- Draw sub-toolbar (shown when draw tool active) -->
@@ -72,6 +73,111 @@
 </div>
 
 <div id="table-wrap">
+
+  <!-- ── Left Panel ──────────────────────────────────────────────────────────── -->
+  <div id="left-panel">
+
+    <!-- Initiative section -->
+    <div class="lp-section">
+      <div class="lp-section-hdr" onclick="initTogglePanel()">
+        <span>⚔️ Initiative <span id="init-badge" class="chat-new-badge" style="display:none">!</span></span>
+        <span id="init-chevron">▲</span>
+      </div>
+      <div class="lp-body" id="init-body-wrap">
+        <div class="init-panel-btns">
+          <button class="dice-btn" onclick="rollMyInitiative()">🎲 Roll Init</button>
+          <button class="dice-btn" id="btn-init-prev" onclick="dmPrevTurn()">⏮ Prev</button>
+          <button class="dice-btn" id="btn-init-next" onclick="initSkipTurn()">⏭ Next</button>
+        </div>
+        <div id="init-tracker-list"><div class="init-empty-msg">No combatants yet.</div></div>
+      </div>
+    </div>
+
+    <!-- Chat section -->
+    <div class="lp-section">
+      <div class="lp-section-hdr" onclick="chatToggle()">
+        <span>💬 Chat <span id="chat-badge" class="chat-new-badge" style="display:none">0</span></span>
+        <span id="chat-chevron">▲</span>
+      </div>
+      <div class="lp-body" id="chat-body-wrap">
+        <div class="chat-log" id="chat-log"></div>
+        <div class="chat-roller">
+          <div class="chat-input-row">
+            <input type="text" id="chat-input" class="chat-input" placeholder="Message or /r 2d6+5…" autocomplete="off" onkeydown="if(event.key==='Enter')sendChatInput()">
+            <button class="dice-btn chat-send-btn" onclick="sendChatInput()">Send</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Token / HP Edit section (shown when a token is selected) -->
+    <div class="lp-section" id="lp-token-section" style="display:none">
+      <div class="lp-section-hdr lp-token-hdr">
+        <span id="hp-panel-name" style="font-weight:bold;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1"></span>
+        <div style="display:flex;gap:3px;flex-shrink:0;margin-left:6px">
+          <button id="hp-edit-label-btn" class="btn sm" onclick="openEditLabel()" style="display:none" title="Edit identifier">✏</button>
+          <button id="hp-del-btn" class="btn sm danger" onclick="deleteSelectedToken()" style="display:none" title="Delete token">🗑</button>
+          <button class="btn sm" onclick="closeHpPanel()">✕</button>
+        </div>
+      </div>
+      <div class="lp-body open" id="hp-body-wrap">
+        <!-- HP / AC display -->
+        <div style="font-size:12px;padding:6px 10px 2px;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">
+          <span>HP: <strong id="hp-cur-display" style="color:var(--ok)">0</strong>
+            <span style="color:var(--txd)"> / <span id="hp-max-display">0</span></span>
+            <span id="hp-temp-display-wrap" style="display:none"> <span style="color:#aaddff;font-size:11px">(+<span id="hp-temp-display">0</span> temp)</span></span>
+          </span>
+          <span style="color:var(--txd)">AC: <strong id="hp-ac-display" style="color:var(--tx)">—</strong></span>
+        </div>
+        <!-- Damage / Heal row -->
+        <div style="display:flex;gap:4px;padding:4px 8px;align-items:center">
+          <input type="number" id="hp-amount" value="1" min="1" style="width:52px;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px;padding:3px 5px;font-size:12px">
+          <button class="btn danger sm" onclick="applyHpChange('dmg')">⚔ Damage</button>
+          <button class="btn success sm" onclick="applyHpChange('heal')">💚 Heal</button>
+        </div>
+        <!-- Quick buttons -->
+        <div style="display:flex;gap:4px;padding:0 8px 6px;flex-wrap:wrap">
+          <button class="btn danger sm" onclick="quickDmg(1)">-1</button>
+          <button class="btn danger sm" onclick="quickDmg(5)">-5</button>
+          <button class="btn danger sm" onclick="quickDmg(10)">-10</button>
+          <button class="btn success sm" onclick="quickHeal(1)">+1</button>
+          <button class="btn success sm" onclick="quickHeal(5)">+5</button>
+          <button class="btn success sm" onclick="quickHeal(10)">+10</button>
+        </div>
+        <!-- Temp HP -->
+        <div style="display:flex;gap:4px;align-items:center;border-top:1px solid var(--a44);padding:6px 8px">
+          <span style="font-size:11px;color:var(--txd);white-space:nowrap">Temp HP:</span>
+          <input type="number" id="hp-temp-input" value="0" min="0" style="width:52px;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px;padding:3px 5px;font-size:12px">
+          <button class="btn sm" onclick="applyTempHp()">Set</button>
+        </div>
+        <!-- Conditions -->
+        <div id="hp-conditions-row" style="border-top:1px solid var(--a44);padding:6px 8px 4px">
+          <div style="font-size:10px;color:var(--txd);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Conditions</div>
+          <div id="hp-conditions-grid" style="display:flex;flex-wrap:wrap;gap:3px"></div>
+        </div>
+        <!-- Visibility toggle (DM only) -->
+        <div id="hp-vis-row" style="display:none;border-top:1px solid var(--a44);padding:6px 8px">
+          <button id="hp-vis-btn" class="btn sm" onclick="toggleTokenVisibility()" style="width:100%;font-size:12px"></button>
+        </div>
+        <!-- Initiative roll + edit label (DM only) -->
+        <div id="hp-init-row" style="display:none;border-top:1px solid var(--a44);padding:6px 8px">
+          <button id="hp-init-btn" class="btn sm" onclick="rollTokenInitiative()" style="width:100%;font-size:12px">🎲 Roll Initiative</button>
+          <button class="btn sm" onclick="openEditLabel()" style="width:100%;font-size:12px;margin-top:4px">✏ Edit Identifier</button>
+        </div>
+        <!-- Edit label inline -->
+        <div id="hp-label-row" style="display:none;border-top:1px solid var(--a44);padding:6px 8px">
+          <div style="font-size:10px;color:var(--txd);margin-bottom:4px">Identifier (shown to players)</div>
+          <div style="display:flex;gap:4px">
+            <input id="hp-label-input" type="text" style="flex:1;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px;padding:3px 6px;font-size:12px" placeholder="e.g. A3" onkeydown="if(event.key==='Enter')saveEditLabel();else if(event.key==='Escape')cancelEditLabel();">
+            <button class="btn sm success" onclick="saveEditLabel()">Save</button>
+            <button class="btn sm" onclick="cancelEditLabel()">✕</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /#left-panel -->
+
   <div id="canvas-area">
     <div id="canvas-content-wrap" style="position:relative;transform-origin:top left;display:inline-block">
       <img id="map-img" alt="" style="position:absolute;top:0;left:0;pointer-events:none;display:none">
@@ -86,6 +192,7 @@
       <div id="placement-hint" style="display:none;position:absolute;top:16px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.8);color:var(--ac);padding:8px 18px;border-radius:6px;font-size:13px;font-weight:bold;pointer-events:none;z-index:30;white-space:nowrap;border:1px solid var(--a66)">Click on map to place token &nbsp;·&nbsp; Esc to cancel</div>
     </div>
   </div>
+
   <div id="side-panel">
     <div style="font-size:10px;color:var(--ac);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Movement</div>
     <div id="movement-display" style="font-size:14px;font-weight:bold;margin-bottom:10px">— ft</div>
@@ -105,45 +212,8 @@
       <div id="items-list"></div>
     </div>
   </div>
-</div>
 
-<!-- Floating panel stack -->
-<div class="panel-stack">
-
-  <!-- Initiative panel -->
-  <div class="float-panel" id="init-panel">
-    <div class="panel-body" id="init-body-wrap">
-      <div class="init-panel-btns">
-        <button class="dice-btn" onclick="rollMyInitiative()">🎲 Roll Init</button>
-        <button class="dice-btn" id="btn-init-prev" onclick="dmPrevTurn()">⏮ Prev</button>
-        <button class="dice-btn" id="btn-init-next" onclick="initSkipTurn()">⏭ Next</button>
-      </div>
-      <div id="init-tracker-list"><div class="init-empty-msg">No combatants yet.</div></div>
-    </div>
-    <div class="panel-hdr" onclick="initTogglePanel()">
-      <span>⚔️ Initiative <span id="init-badge" class="chat-new-badge" style="display:none">!</span></span>
-      <span id="init-chevron">▲</span>
-    </div>
-  </div>
-
-  <!-- Chat panel -->
-  <div class="float-panel" id="chat-panel">
-    <div class="panel-body" id="chat-body-wrap">
-      <div class="chat-log" id="chat-log"></div>
-      <div class="chat-roller">
-        <div class="chat-input-row">
-          <input type="text" id="chat-input" class="chat-input" placeholder="Message or /r 2d6+5…" autocomplete="off" onkeydown="if(event.key==='Enter')sendChatInput()">
-          <button class="dice-btn chat-send-btn" onclick="sendChatInput()">Send</button>
-        </div>
-      </div>
-    </div>
-    <div class="panel-hdr" onclick="chatToggle()">
-      <span>💬 Chat <span id="chat-badge" class="chat-new-badge" style="display:none">0</span></span>
-      <span id="chat-chevron">▼</span>
-    </div>
-  </div>
-
-</div>
+</div><!-- /#table-wrap -->
 
 <!-- Advantage modal -->
 <div id="adv-modal" style="position:fixed;inset:0;background:var(--ov);display:none;align-items:center;justify-content:center;z-index:2500" onclick="advClose()">
@@ -201,61 +271,6 @@
   </div>
 </div>
 
-<!-- HP Edit Panel -->
-<div id="hp-panel" style="display:none;position:fixed;bottom:0;right:220px;background:var(--bg2);border:1px solid var(--ac);border-radius:6px 6px 0 0;padding:10px 14px;z-index:1000;min-width:240px">
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-    <span id="hp-panel-name" style="font-weight:bold;font-size:13px;color:var(--ac)"></span>
-    <div style="display:flex;gap:4px">
-      <button id="hp-edit-label-btn" class="btn sm" onclick="openEditLabel()" style="display:none" title="Edit identifier">✏</button>
-      <button id="hp-del-btn" class="btn sm danger" onclick="deleteSelectedToken()" style="display:none" title="Delete token">🗑</button>
-      <button class="btn sm" onclick="closeHpPanel()">✕</button>
-    </div>
-  </div>
-  <div style="font-size:12px;margin-bottom:8px;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">
-    <span>HP: <strong id="hp-cur-display" style="color:var(--ok)">0</strong>
-    <span style="color:var(--txd)"> / <span id="hp-max-display">0</span></span>
-    <span id="hp-temp-display-wrap" style="display:none"> <span style="color:#aaddff;font-size:11px">(+<span id="hp-temp-display">0</span> temp)</span></span></span>
-    <span style="color:var(--txd)">AC: <strong id="hp-ac-display" style="color:var(--tx)">—</strong></span>
-  </div>
-  <div style="display:flex;gap:4px;margin-bottom:8px;align-items:center">
-    <input type="number" id="hp-amount" value="1" min="1" style="width:52px;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px;padding:3px 5px;font-size:12px">
-    <button class="btn danger sm" onclick="applyHpChange('dmg')">⚔ Damage</button>
-    <button class="btn success sm" onclick="applyHpChange('heal')">💚 Heal</button>
-  </div>
-  <div style="display:flex;gap:4px;margin-bottom:6px;flex-wrap:wrap">
-    <button class="btn danger sm" onclick="quickDmg(1)">-1</button>
-    <button class="btn danger sm" onclick="quickDmg(5)">-5</button>
-    <button class="btn danger sm" onclick="quickDmg(10)">-10</button>
-    <button class="btn success sm" onclick="quickHeal(1)">+1</button>
-    <button class="btn success sm" onclick="quickHeal(5)">+5</button>
-    <button class="btn success sm" onclick="quickHeal(10)">+10</button>
-  </div>
-  <div style="display:flex;gap:4px;align-items:center;border-top:1px solid var(--a44);padding-top:6px">
-    <span style="font-size:11px;color:var(--txd);white-space:nowrap">Temp HP:</span>
-    <input type="number" id="hp-temp-input" value="0" min="0" style="width:52px;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px;padding:3px 5px;font-size:12px">
-    <button class="btn sm" onclick="applyTempHp()">Set</button>
-  </div>
-  <div id="hp-conditions-row" style="border-top:1px solid var(--a44);padding-top:6px;margin-top:2px">
-    <div style="font-size:10px;color:var(--txd);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Conditions</div>
-    <div id="hp-conditions-grid" style="display:flex;flex-wrap:wrap;gap:3px"></div>
-  </div>
-  <div id="hp-vis-row" style="display:none;border-top:1px solid var(--a44);padding-top:6px;margin-top:2px">
-    <button id="hp-vis-btn" class="btn sm" onclick="toggleTokenVisibility()" style="width:100%;font-size:12px"></button>
-  </div>
-  <div id="hp-init-row" style="display:none;border-top:1px solid var(--a44);padding-top:6px;margin-top:2px">
-    <button id="hp-init-btn" class="btn sm" onclick="rollTokenInitiative()" style="width:100%;font-size:12px">🎲 Roll Initiative</button>
-    <button class="btn sm" onclick="openEditLabel()" style="width:100%;font-size:12px;margin-top:4px">✏ Edit Identifier</button>
-  </div>
-  <div id="hp-label-row" style="display:none;border-top:1px solid var(--a44);padding-top:6px;margin-top:2px">
-    <div style="font-size:10px;color:var(--txd);margin-bottom:4px">Identifier (shown to players)</div>
-    <div style="display:flex;gap:4px">
-      <input id="hp-label-input" type="text" style="flex:1;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px;padding:3px 6px;font-size:12px" placeholder="e.g. A3" onkeydown="if(event.key==='Enter')saveEditLabel();else if(event.key==='Escape')cancelEditLabel();">
-      <button class="btn sm success" onclick="saveEditLabel()">Save</button>
-      <button class="btn sm" onclick="cancelEditLabel()">✕</button>
-    </div>
-  </div>
-</div>
-
 <!-- Dice Roller Modal -->
 <div id="dice-roller-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:2000;align-items:center;justify-content:center">
   <div style="background:var(--bg2);border:1px solid var(--ac);border-radius:8px;width:380px;max-height:90vh;display:flex;flex-direction:column">
@@ -278,7 +293,6 @@
         </thead>
         <tbody id="dice-roller-tbody"></tbody>
       </table>
-
       <div style="border-top:1px solid var(--a44);margin-top:10px;padding-top:10px">
         <div style="color:var(--ac);font-weight:bold;font-size:13px;margin-bottom:8px">Adv. Roller</div>
         <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
@@ -311,10 +325,7 @@
 <!-- 3D Dice Overlay -->
 <div id="dice-overlay" onclick="dismissDiceOverlay()">
   <div class="dice-type-lbl" id="dice-type-lbl">d20</div>
-
-  <!-- Dice spawned here dynamically -->
   <div id="dice-row"></div>
-
   <div class="dice-result-big" id="dice-result-big"></div>
   <div class="dice-result-sub" id="dice-result-sub"></div>
   <div class="dice-dismiss-hint show">click to dismiss</div>
