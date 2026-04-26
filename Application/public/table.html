@@ -211,10 +211,11 @@
       <button class="btn sm" onclick="closeHpPanel()">✕</button>
     </div>
   </div>
-  <div style="font-size:12px;margin-bottom:8px">
-    HP: <strong id="hp-cur-display" style="color:var(--ok)">0</strong>
+  <div style="font-size:12px;margin-bottom:8px;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">
+    <span>HP: <strong id="hp-cur-display" style="color:var(--ok)">0</strong>
     <span style="color:var(--txd)"> / <span id="hp-max-display">0</span></span>
-    <span id="hp-temp-display-wrap" style="display:none"> &nbsp;<span style="color:#aaddff;font-size:11px">(+<span id="hp-temp-display">0</span> temp)</span></span>
+    <span id="hp-temp-display-wrap" style="display:none"> <span style="color:#aaddff;font-size:11px">(+<span id="hp-temp-display">0</span> temp)</span></span></span>
+    <span style="color:var(--txd)">AC: <strong id="hp-ac-display" style="color:var(--tx)">—</strong></span>
   </div>
   <div style="display:flex;gap:4px;margin-bottom:8px;align-items:center">
     <input type="number" id="hp-amount" value="1" min="1" style="width:52px;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px;padding:3px 5px;font-size:12px">

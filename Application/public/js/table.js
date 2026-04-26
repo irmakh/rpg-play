@@ -35,6 +35,7 @@ let _pendingTokenData = {};
 let _charList = [];
 let _monsterList = [];
 let _addTokenBusy = false; // true while in placement mode or while placement POST is in flight
+let _hpPanelAc = null; // cached AC for the currently open HP panel
 
 // Serialises all token-mutating network requests so they never interleave.
 // Optimistic UI updates happen immediately outside the queue; only fetch() calls go in.
@@ -2272,17 +2273,47 @@ document.addEventListener('keydown', e => {
 });
 
 // ── HP Panel ──────────────────────────────────────────────────────────────────
-function openHpPanel(tok) {
+async function openHpPanel(tok) {
   selectedTokenId = tok.id;
+  _hpPanelAc = null;
   _refreshHpPanel(tok);
   document.getElementById('hp-panel').style.display = '';
+  // Fetch AC from linked character or monster
+  if (tok.linkedId) {
+    try {
+      if (tok.type === 'monster') {
+        const r = await fetch(`/api/monsters/${tok.linkedId}`, { headers: { 'X-Master-Password': masterPw } });
+        if (r.ok) {
+          const m = await r.json();
+          const ac = [].concat((m.data || {}).ac || [])[0];
+          _hpPanelAc = typeof ac === 'number' ? ac : (ac && ac.ac != null ? ac.ac : null);
+        }
+      } else {
+        const headers = isDM() ? { 'X-Character-Password': masterPw } : {};
+        const r = await fetch(`/api/characters/${tok.linkedId}`, { headers });
+        if (r.ok) {
+          const c = await r.json();
+          const ac = (c.data || {}).ac;
+          _hpPanelAc = ac != null && ac !== '' ? ac : null;
+        }
+      }
+    } catch {}
+  }
+  // Only update if the same token is still selected
+  if (selectedTokenId === tok.id) {
+    const acEl = document.getElementById('hp-ac-display');
+    if (acEl) acEl.textContent = _hpPanelAc != null ? _hpPanelAc : '—';
+  }
 }
 function closeHpPanel() {
   document.getElementById('hp-panel').style.display = 'none';
+  _hpPanelAc = null;
   // Keep selectedTokenId — token stays selected after closing HP panel
 }
 function _refreshHpPanel(tok) {
   const hpPct = (tok.hpMax || 0) > 0 ? Math.max(0, Math.min(1, (tok.hpCurrent || 0) / tok.hpMax)) : 0;
+  const acEl = document.getElementById('hp-ac-display');
+  if (acEl) acEl.textContent = _hpPanelAc != null ? _hpPanelAc : '—';
   const hpNameEl = document.getElementById('hp-panel-name');
   if (isDM() && tok.type === 'monster' && tok.label) {
     const baseName = tok.name.slice(0, tok.name.length - tok.label.length).trimEnd() || tok.name;
