@@ -30,6 +30,7 @@
 - **Move tool** — 500ms delay before drag activates (prevents accidental moves)
 - - **Calendar (Calendar of Harptos)** — DM calendar at events.html (DM-only, password-gated); player calendar tab in index.html. Tenday (3×10) grid display. Festival days: Midwinter, Greengrass, Midsummer, Shieldmeet (leap years), Highharvestide, The Feast of the Moon. DM sets current campaign date (day-by-day or jump). Events have title, description, FR date, public/DM-only flag, event type. SSE broadcasts calendar-updated on changes.
 - table.html/table.css/table.js: left sidebar layout (240px #left-panel) — Initiative, Chat, Token/HP sections. No floating panels. Both sidebars have toolbar toggle buttons.
+- table.js has been split into 12 modules under Application/public/js/table/ (commit e4bc4b9). The monolithic file no longer exists. table.html loads the 12 files in order via defer script tags.
 
 ## Key Facts — App Stack
 
