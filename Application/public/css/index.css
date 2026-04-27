@@ -277,6 +277,10 @@ td input[type=checkbox]{accent-color:var(--ac)}
 .media-card.is-portrait{border-color:var(--ac);border-width:2px}
 .media-card img{width:100%;height:130px;object-fit:cover;display:block;cursor:pointer}
 .media-card video{width:100%;height:130px;object-fit:cover;display:block;background:#000}
+.media-vid-thumb{position:relative;width:100%;height:130px;cursor:pointer;overflow:hidden;background:#000}
+.media-vid-thumb video{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}
+.media-vid-thumb .media-vid-play{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:32px;text-shadow:0 2px 10px #000;opacity:.8;transition:opacity .15s;pointer-events:none}
+.media-vid-thumb:hover .media-vid-play{opacity:1}
 .media-card-name{font-size:10px;color:var(--txd);padding:4px 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .media-card-actions{display:flex;gap:4px;padding:4px 6px 6px;flex-wrap:wrap;margin-top:auto}
 .portrait-badge{position:absolute;top:4px;left:4px;background:var(--ac);color:var(--bg);font-size:9px;padding:1px 6px;border-radius:8px;font-weight:bold;letter-spacing:.5px;pointer-events:none}

@@ -53,7 +53,7 @@ function renderMedia() {
     const cardSrc = (isImg && m.mediumUrl) ? m.mediumUrl : m.dataUrl;
     const media = isImg
       ? `<img src="${esc(cardSrc)}" alt="${esc(m.name)}" loading="lazy" onclick="lightboxOpen('${m.id}')">`
-      : `<video src="${esc(m.dataUrl)}" controls preload="metadata"></video>`;
+      : `<div class="media-vid-thumb" onclick="lightboxOpen('${m.id}')"><video src="${esc(m.dataUrl)}" preload="metadata" muted playsinline></video><div class="media-vid-play">&#9654;</div></div>`;
     const setPortBtn = isImg && !m.isPortrait
       ? `<button class="char-btn" style="padding:2px 7px;font-size:10px" onclick="setPortrait('${m.id}')">Set Portrait</button>`
       : '';
@@ -150,21 +150,42 @@ async function setPortrait(id) {
   } catch { showAlert('Network error.'); }
 }
 
-// Simple lightbox for images
+// Lightbox for images and videos
 function lightboxOpen(id) {
   const m = mediaList.find(x => x.id === id);
-  if (!m || !m.mimeType.startsWith('image/')) return;
-  let lb = document.getElementById('media-lightbox');
-  if (!lb) {
-    lb = document.createElement('div');
-    lb.id = 'media-lightbox';
-    lb.style.cssText = 'position:fixed;inset:0;background:#000d;display:flex;align-items:center;justify-content:center;z-index:4000;cursor:zoom-out';
-    lb.onclick = () => lb.remove();
+  if (!m) return;
+  const isVideo = m.mimeType.startsWith('video/');
+
+  const existing = document.getElementById('media-lightbox');
+  if (existing) existing.remove();
+
+  const lb = document.createElement('div');
+  lb.id = 'media-lightbox';
+  lb.style.cssText = 'position:fixed;inset:0;background:#000d;display:flex;align-items:center;justify-content:center;z-index:4000;cursor:zoom-out';
+  lb.onclick = () => lb.remove();
+
+  const closeBtn = document.createElement('button');
+  closeBtn.textContent = '✕';
+  closeBtn.style.cssText = 'position:absolute;top:14px;right:18px;background:none;border:none;color:#fff;font-size:22px;cursor:pointer;line-height:1;padding:4px;opacity:.8';
+  closeBtn.onmouseenter = () => closeBtn.style.opacity = '1';
+  closeBtn.onmouseleave = () => closeBtn.style.opacity = '.8';
+  closeBtn.onclick = e => { e.stopPropagation(); lb.remove(); };
+  lb.appendChild(closeBtn);
+
+  if (isVideo) {
+    const vid = document.createElement('video');
+    vid.src = m.dataUrl;
+    vid.controls = true;
+    vid.autoplay = true;
+    vid.style.cssText = 'max-width:92vw;max-height:88vh;border-radius:6px;box-shadow:0 8px 40px #000;cursor:default';
+    vid.onclick = e => e.stopPropagation();
+    lb.appendChild(vid);
+  } else {
     const img = document.createElement('img');
+    img.src = m.dataUrl;
     img.style.cssText = 'max-width:94vw;max-height:94vh;border-radius:6px;box-shadow:0 8px 40px #000';
     lb.appendChild(img);
-    document.body.appendChild(lb);
   }
-  lb.querySelector('img').src = m.dataUrl;
-  lb.style.display = 'flex';
+
+  document.body.appendChild(lb);
 }
