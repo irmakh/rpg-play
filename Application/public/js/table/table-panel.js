@@ -248,6 +248,7 @@ async function confirmRoll(type) {
 }
 
 document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && document.getElementById('media-lightbox')) { lightboxClose(); return; }
   if (e.key === 'Escape' && placementState) { exitPlacementMode(); return; }
   if (e.key === 'Escape' && currentTool === 'draw') { drawingState = null; oCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height); setTool('select'); return; }
   if (document.getElementById('dice-roller-modal').style.display === 'flex') {

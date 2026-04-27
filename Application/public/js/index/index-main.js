@@ -24,7 +24,7 @@ document.addEventListener('keydown', e => {
   else if (document.getElementById('item-detail-modal').style.display !== 'none') closeItemDetail();
   else if (document.getElementById('item-modal').style.display !== 'none') closeItemModal();
   else if (document.getElementById('loot-add-modal').style.display !== 'none') closeLootAddModal();
-  else if (document.getElementById('media-lightbox')) document.getElementById('media-lightbox').remove();
+  else if (document.getElementById('media-lightbox')) lightboxClose();
 });
 
 document.getElementById('wpn-tbl').addEventListener('input', renderWeaponsSummary);
