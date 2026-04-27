@@ -80,6 +80,10 @@ function startSSE() {
     'chat-clear': () => {
       document.getElementById('chat-log').innerHTML = '';
     },
+    'chat-delete': (d) => {
+      const div = document.querySelector(`[data-entry-id="${CSS.escape(d.id)}"]`);
+      if (div) div.remove();
+    },
     drawing: (d) => {
       if (d.action === 'add') {
         if (!drawings.find(s => s.id === d.shape.id)) drawings.push(d.shape);

@@ -1486,6 +1486,19 @@ app.post('/api/chat', (req, res) => {
   res.json(entry);
 });
 
+app.delete('/api/chat/:id', (req, res) => {
+  if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
+  const id = String(req.params.id);
+  if (DB_PROVIDER === 'localdb') {
+    ldb.deleteChatMessage(id);
+  } else {
+    const idx = chatLog.findIndex(e => e.id === id);
+    if (idx !== -1) chatLog.splice(idx, 1);
+  }
+  broadcast('chat-delete', { id });
+  res.json({ ok: true });
+});
+
 app.post('/api/chat/clear', (req, res) => {
   if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
   if (DB_PROVIDER === 'localdb') {
@@ -2440,9 +2453,10 @@ app.post('/api/table/tokens', async (req, res) => {
       }
       resolvedInitId = initEntryId;
       broadcast('initiative', { action: 'roll' });
-      if (type !== 'monster') {
+      {
+        const chatSender = type === 'monster' ? String(label || name).trim() : String(name).trim();
         const chatEntry = {
-          id: genId(), sender: String(name).trim(), dice: '1d20', results: [d20],
+          id: genId(), sender: chatSender, dice: '1d20', results: [d20],
           modifier: initBonus, total: roll, label: 'Initiative', timestamp: new Date().toISOString()
         };
         if (DB_PROVIDER === 'localdb') {

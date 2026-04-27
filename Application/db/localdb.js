@@ -421,6 +421,9 @@ export function appendChatLog(entry) {
     .run(entry.id, JSON.stringify(entry), entry.timestamp || new Date().toISOString());
   db.prepare('DELETE FROM chat_log WHERE rowid NOT IN (SELECT rowid FROM chat_log ORDER BY timestamp DESC LIMIT ?)').run(CHAT_MAX_LDB);
 }
+export function deleteChatMessage(id) {
+  db.prepare('DELETE FROM chat_log WHERE id = ?').run(id);
+}
 export function clearChatLog() {
   db.prepare('DELETE FROM chat_log').run();
 }

@@ -12,6 +12,8 @@ function appendChatEntry(e) {
   const time = dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   const div = document.createElement('div');
 
+  if (e.id) div.dataset.entryId = e.id;
+
   if (e.type === 'text') {
     div.className = 'chat-entry chat-text';
     div.innerHTML = `<div style="display:flex;justify-content:space-between;margin-bottom:2px">

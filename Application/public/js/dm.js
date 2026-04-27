@@ -529,12 +529,15 @@ function appendChatEntry(e) {
   const dt = rawTs ? new Date(rawTs + (rawTs.endsWith('Z') ? '' : 'Z')) : new Date();
   const time = dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   const div = document.createElement('div');
+  if (e.id) div.dataset.entryId = e.id;
+  const delBtn = e.id ? `<button onclick="deleteChatMsg('${esc(e.id)}')" style="background:none;border:none;cursor:pointer;color:var(--txd);font-size:11px;padding:0 0 0 4px;opacity:.6;line-height:1;flex-shrink:0" title="Delete message">✕</button>` : '';
+  const timeCol = `<span style="display:flex;align-items:center"><span style="color:var(--txd);font-size:10px">${time}</span>${delBtn}</span>`;
 
   if (e.type === 'text') {
     div.className = 'chat-entry chat-text';
     div.innerHTML = `<div style="display:flex;justify-content:space-between;margin-bottom:2px">
       <span class="ce-sender">${esc(e.sender || '?')}</span>
-      <span style="color:var(--txd);font-size:10px">${time}</span>
+      ${timeCol}
     </div>
     <div style="word-break:break-word">${esc(e.message || '')}</div>`;
     log.appendChild(div);
@@ -556,7 +559,7 @@ function appendChatEntry(e) {
     div.className = 'chat-entry';
     div.innerHTML = `<div style="display:flex;justify-content:space-between;margin-bottom:4px">
       <span class="ce-sender">${esc(e.sender)} <span style="font-size:10px;color:var(--txd);font-weight:normal">shared media</span></span>
-      <span style="color:var(--txd);font-size:10px">${time}</span>
+      ${timeCol}
     </div>${mediaEl}${cap}`;
     log.appendChild(div);
     return;
@@ -573,11 +576,21 @@ function appendChatEntry(e) {
   div.className = `chat-entry${cls}`;
   div.innerHTML = `<div style="display:flex;justify-content:space-between;margin-bottom:2px">
     <span class="ce-sender">${esc(e.sender)}</span>
-    <span style="color:var(--txd);font-size:10px">${time}</span>
+    ${timeCol}
   </div>
   <span style="color:var(--txd)">${esc(e.dice || '')}${modStr}${labelStr}</span>${multiStr}
   <div class="ce-total" style="color:${isNat20 ? 'var(--ok)' : isNat1 ? 'var(--err)' : 'var(--tx)'}">${e.total}${natStr}</div>`;
   log.appendChild(div);
+}
+
+async function deleteChatMsg(id) {
+  try {
+    const res = await fetch(`/api/chat/${id}`, {
+      method: 'DELETE',
+      headers: { 'X-Master-Password': masterPw }
+    });
+    if (!res.ok) showStatus('Failed to delete message.', true);
+  } catch { showStatus('Network error.', true); }
 }
 
 function scrollChatLog() {
@@ -792,6 +805,10 @@ connectRealtime({
   },
   'chat-clear': () => {
     document.getElementById('chat-log').innerHTML = '';
+  },
+  'chat-delete': (d) => {
+    const div = document.querySelector(`[data-entry-id="${CSS.escape(d.id)}"]`);
+    if (div) div.remove();
   },
 });
 
