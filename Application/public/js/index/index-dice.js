@@ -1,9 +1,4 @@
-// ── Dice rolling ──────────────────────────────────────────────────────────────
-const SKILL_NAMES = ['Acrobatics','Animal Handling','Arcana','Athletics','Deception','History',
-  'Insight','Intimidation','Investigation','Medicine','Nature','Perception',
-  'Performance','Persuasion','Religion','Sleight of Hand','Stealth','Survival'];
-const AB_NAMES = {str:'Strength',dex:'Dexterity',con:'Constitution',int:'Intelligence',wis:'Wisdom',cha:'Charisma'};
-
+// ── Dice rolling (SKILL_NAMES, AB_NAMES in js/lib/dnd-data.js) ───────────────
 let toastTimer = null;
 let toastDismissHandler = null;
 let _autoSaveTimer = null;

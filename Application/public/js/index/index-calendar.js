@@ -5,10 +5,6 @@ let pcalEvents      = [];
 let pcalLoaded      = false;
 let pcalSelectedDay = null; // { month, day } or { festival } when a cell is clicked
 
-function pcalEsc(s) {
-  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
 async function pcalLoad() {
   if (pcalLoaded) return;
   pcalLoaded = true;
@@ -75,13 +71,13 @@ function pcalRenderGrid() {
     const isSelected = pcalSelectedDay && pcalSelectedDay.festival === pcalView.festival;
     const fest       = FR_FESTIVALS.find(f => f.key === pcalView.festival);
     const dots       = pcalEventsForView().map(e =>
-      `<span class="cal-dot pub" title="${pcalEsc(e.title)}"></span>`
+      `<span class="cal-dot pub" title="${esc(e.title)}"></span>`
     ).join('');
     area.innerHTML = `
       <div class="cal-festival-row${isToday?' cal-is-today':''}${isSelected?' cal-is-today':''}"
            onclick="pcalDayClick(null,'${pcalView.festival}')" style="cursor:pointer">
         <span class="cal-fest-icon">✦</span>
-        <span class="cal-fest-name">${pcalEsc(fest ? fest.name : pcalView.festival)}</span>
+        <span class="cal-fest-name">${esc(fest ? fest.name : pcalView.festival)}</span>
         ${dots ? `<div class="cal-fest-dots">${dots}</div>` : ''}
         ${isToday ? '<span class="cal-fest-mark">Today</span>' : ''}
       </div>`;
@@ -103,7 +99,7 @@ function pcalRenderGrid() {
       const isToday    = frDatesEqual(pcalCurrentDate, { frYear: pcalView.year, frMonth: pcalView.month, frDay: day, frFestival: '' });
       const isSelected = pcalSelectedDay && pcalSelectedDay.day === day && !pcalSelectedDay.festival;
       const dayEvs     = evByDay[day] || [];
-      const dots       = dayEvs.map(e => `<span class="cal-dot pub" title="${pcalEsc(e.title)}"></span>`).join('');
+      const dots       = dayEvs.map(e => `<span class="cal-dot pub" title="${esc(e.title)}"></span>`).join('');
       const classes    = ['cal-day-cell', isToday ? 'cal-is-today' : '', isSelected ? 'cal-selected' : ''].filter(Boolean).join(' ');
       cells += `
         <td class="${classes}" onclick="pcalDayClick(${day},null)">
@@ -144,7 +140,7 @@ function pcalRenderEventsList() {
     }
   }
 
-  if (titleEl) titleEl.innerHTML = pcalEsc(heading) + showAllLink;
+  if (titleEl) titleEl.innerHTML = esc(heading) + showAllLink;
 
   if (!evs.length) {
     el.innerHTML = '<div class="cal-empty">No events recorded for this period.</div>';
@@ -156,9 +152,9 @@ function pcalRenderEventsList() {
     return `
       <div class="cal-event-item">
         <div class="cal-event-info">
-          <div class="cal-event-title">${pcalEsc(e.title)}</div>
-          <div class="cal-event-date">${pcalEsc(dateStr)} &middot; ${pcalEsc(e.eventType)}</div>
-          ${e.description ? `<div class="cal-event-desc">${pcalEsc(e.description)}</div>` : ''}
+          <div class="cal-event-title">${esc(e.title)}</div>
+          <div class="cal-event-date">${esc(dateStr)} &middot; ${esc(e.eventType)}</div>
+          ${e.description ? `<div class="cal-event-desc">${esc(e.description)}</div>` : ''}
         </div>
       </div>`;
   }).join('');

@@ -1,10 +1,4 @@
-// ── Shared constants ──────────────────────────────────────────────────────────
-const SKILL_AB = ['dex','wis','int','str','cha','int','wis','cha','int','wis','int','wis','cha','cha','int','dex','dex','wis'];
-// Acrobatics, Animal Handling, Arcana, Athletics, Deception, History,
-// Insight, Intimidation, Investigation, Medicine, Nature, Perception,
-// Performance, Persuasion, Religion, Sleight of Hand, Stealth, Survival
-
-// ── Shared mutable state ──────────────────────────────────────────────────────
+// ── Shared mutable state (SKILL_AB, SKILL_NAMES, AB_NAMES in js/lib/dnd-data.js) ──
 
 // Character
 let currentCharId    = null;

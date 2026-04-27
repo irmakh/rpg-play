@@ -41,22 +41,7 @@ let _hpPanelAc = null; // cached AC for the currently open HP panel
 // Optimistic UI updates happen immediately outside the queue; only fetch() calls go in.
 const _tokQ = { _p: Promise.resolve(), run(fn) { this._p = this._p.then(() => fn(), () => fn()); } };
 
-const CONDITIONS = [
-  'Blinded','Charmed','Deafened','Exhaustion','Frightened','Grappled',
-  'Incapacitated','Invisible','Paralyzed','Petrified','Poisoned',
-  'Prone','Restrained','Stunned','Unconscious'
-];
-const COND_ABBREV = {
-  Blinded:'BL', Charmed:'CH', Deafened:'DF', Exhaustion:'EX', Frightened:'FR',
-  Grappled:'GR', Incapacitated:'IC', Invisible:'IV', Paralyzed:'PA', Petrified:'PT',
-  Poisoned:'PO', Prone:'PR', Restrained:'RS', Stunned:'ST', Unconscious:'UC'
-};
-
-const SKILL_NAMES = ['Acrobatics','Animal Handling','Arcana','Athletics','Deception','History',
-  'Insight','Intimidation','Investigation','Medicine','Nature','Perception',
-  'Performance','Persuasion','Religion','Sleight of Hand','Stealth','Survival'];
-const SAVE_NAMES = ['STR','DEX','CON','INT','WIS','CHA'];
-const SAVE_KEYS  = ['str','dex','con','int','wis','cha'];
+// CONDITIONS, COND_ABBREV, SKILL_NAMES, SAVE_NAMES, SAVE_KEYS in js/lib/dnd-data.js
 
 // Used by both table-chat.js (add) and table-realtime.js (check/delete) to deduplicate
 // dice-roll SSE events that originated from this client.
