@@ -264,7 +264,17 @@
     <div class="card"><div class="ct">Cantrips & Prepared Spells</div><div class="cb">
       <div class="tbl-wrap">
       <table id="spell-tbl">
-        <tr><th style="text-align:center">Prep</th><th>Lvl</th><th>Name</th><th>Time</th><th>Range</th><th style="text-align:center">Conc</th><th style="text-align:center">Ritual</th><th>School</th><th>V/S/M</th><th>Notes</th><th></th></tr>
+        <tr>
+          <th class="sp-sortable" style="text-align:center" onclick="sortSpells(0)">Prep<span class="sort-ind" id="spth-0"></span></th>
+          <th class="sp-sortable" onclick="sortSpells(1)">Lvl<span class="sort-ind" id="spth-1"></span></th>
+          <th class="sp-sortable" onclick="sortSpells(2)">Name<span class="sort-ind" id="spth-2"></span></th>
+          <th class="sp-sortable" onclick="sortSpells(3)">Time<span class="sort-ind" id="spth-3"></span></th>
+          <th class="sp-sortable" onclick="sortSpells(4)">Range<span class="sort-ind" id="spth-4"></span></th>
+          <th class="sp-sortable" style="text-align:center" onclick="sortSpells(5)">Conc<span class="sort-ind" id="spth-5"></span></th>
+          <th class="sp-sortable" style="text-align:center" onclick="sortSpells(6)">Ritual<span class="sort-ind" id="spth-6"></span></th>
+          <th class="sp-sortable" onclick="sortSpells(7)">School<span class="sort-ind" id="spth-7"></span></th>
+          <th>V/S/M</th><th>Notes</th><th></th>
+        </tr>
       </table>
       </div>
       <button class="add-btn" onclick="addSpell()">+ Add Spell</button>

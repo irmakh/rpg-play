@@ -160,3 +160,43 @@ function spellMChange(cb) {
   const mat = cb.closest('tr').querySelector('.spell-mat');
   if (mat) mat.style.display = cb.checked ? 'block' : 'none';
 }
+
+// ── Spell table column sort ───────────────────────────────────────────────────
+let spellSortCol = null, spellSortDir = 1;
+
+function sortSpells(col) {
+  spellSortDir = spellSortCol === col ? -spellSortDir : 1;
+  spellSortCol = col;
+
+  const tbl  = document.getElementById('spell-tbl');
+  const rows = Array.from(tbl.querySelectorAll('tr:not(:first-child)'));
+  rows.sort((a, b) => {
+    const av = _spellCellVal(a, col), bv = _spellCellVal(b, col);
+    if (av < bv) return -spellSortDir;
+    if (av > bv) return  spellSortDir;
+    return 0;
+  });
+  rows.forEach(r => tbl.appendChild(r));
+
+  for (let i = 0; i <= 7; i++) {
+    const ind = document.getElementById('spth-' + i);
+    if (ind) ind.textContent = i === spellSortCol ? (spellSortDir === 1 ? ' ▲' : ' ▼') : '';
+  }
+}
+
+function _spellCellVal(row, col) {
+  const cell = row.querySelectorAll('td')[col];
+  if (!cell) return '';
+  switch (col) {
+    case 0: case 5: case 6:  // Prep / Conc / Ritual — checked sorts first (asc)
+      return cell.querySelector('input[type=checkbox]')?.checked ? 0 : 1;
+    case 1:  // Lvl — numeric
+      return parseInt(cell.querySelector('input')?.value || '0', 10);
+    case 2:  // Name — text inside flex div
+      return (cell.querySelector('input[type=text]')?.value || '').toLowerCase();
+    case 7:  // School — select
+      return (cell.querySelector('select')?.value || '').toLowerCase();
+    default:  // Time (3), Range (4) — plain text input
+      return (cell.querySelector('input')?.value || '').toLowerCase();
+  }
+}

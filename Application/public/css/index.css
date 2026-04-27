@@ -173,6 +173,9 @@ textarea{resize:vertical;min-height:60px}
 .del-btn{background:#ff444422;border:1px solid #ff444444;color:#ff8888;padding:1px 6px;border-radius:3px;cursor:pointer;font-size:10px}
 table{width:100%;border-collapse:collapse}
 th{color:var(--ac);font-size:10px;text-transform:uppercase;padding:4px;border-bottom:1px solid var(--a44);text-align:left}
+#spell-tbl th.sp-sortable{cursor:pointer;user-select:none}
+#spell-tbl th.sp-sortable:hover{color:var(--tx)}
+.sort-ind{margin-left:2px;font-size:9px}
 td{padding:3px 4px;border-bottom:1px solid var(--sep);vertical-align:middle}
 td input[type=checkbox]{accent-color:var(--ac)}
 .inspire{width:40px;height:40px;border-radius:50%;background:var(--bg3);border:2px solid var(--ac);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px;margin:2px auto 0;user-select:none}
