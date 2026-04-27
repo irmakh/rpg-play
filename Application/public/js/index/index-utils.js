@@ -1,6 +1,3 @@
-// ── Escape helper ─────────────────────────────────────────────────────────────
-function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
-
 // ── Ability score helpers ─────────────────────────────────────────────────────
 function getMod(stat) {
   const score = parseInt(document.querySelector(`[data-key="${stat}"]`)?.value) || 10;

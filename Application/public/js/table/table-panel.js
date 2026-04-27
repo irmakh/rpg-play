@@ -156,25 +156,6 @@ function qroll(label, modifier) {
   document.getElementById('adv-modal').style.display = 'flex';
 }
 
-function parseDice(expr) {
-  if (!expr) return null;
-  const cleaned = String(expr).trim().replace(/\s+/g, '');
-  const m = cleaned.match(/^(\d+)[dD](\d+)((?:[+\-]\d+)*)/);
-  if (!m) {
-    const flat = parseInt(cleaned);
-    if (!isNaN(flat)) return { total: flat, detail: String(flat) };
-    return null;
-  }
-  const num = parseInt(m[1]), die = parseInt(m[2]);
-  let mod = 0;
-  (m[3] || '').match(/[+\-]\d+/g)?.forEach(s => { mod += parseInt(s); });
-  const rolls = Array.from({ length: num }, () => Math.ceil(Math.random() * die));
-  const total = rolls.reduce((a, b) => a + b, 0) + mod;
-  let detail = `${num}d${die}(${rolls.join(',')})`;
-  if (mod !== 0) detail += (mod > 0 ? '+' : '') + mod;
-  return { total, detail, rolls, die, num, mod, diceExpr: `${num}d${die}` };
-}
-
 async function rollDamageStr(label, dmgStr) {
   const result = parseDice(dmgStr);
   if (!result) return;
@@ -216,12 +197,7 @@ function rollInitiativeFromPanel() {
   document.getElementById('adv-modal').style.display = 'flex';
 }
 
-// ── Advantage modal ───────────────────────────────────────────────────────────
-function advClose() {
-  document.getElementById('adv-modal').style.display = 'none';
-  rollPending = null;
-}
-
+// ── Advantage modal (advClose in js/lib/dice-engine.js) ──────────────────────
 async function confirmRoll(type) {
   if (!rollPending) return;
   document.getElementById('adv-modal').style.display = 'none';

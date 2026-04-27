@@ -39,9 +39,6 @@ function showConfirm(msg) {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-function esc(s) {
-  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
 function isDM() { return !!masterPw; }
 function initials(name) {
   return String(name||'?').split(' ').map(w=>w[0]||'').join('').slice(0,2).toUpperCase() || '?';

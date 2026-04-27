@@ -564,12 +564,6 @@
   </div>
 </div>
 
-<!-- Media viewer modal -->
-<div id="media-modal" onclick="closeMediaModal()" style="position:fixed;inset:0;background:rgba(0,0,0,.92);display:none;align-items:center;justify-content:center;z-index:3000;cursor:zoom-out;flex-direction:column;gap:12px">
-  <button onclick="closeMediaModal()" style="position:absolute;top:14px;right:18px;background:none;border:none;color:#fff;font-size:28px;cursor:pointer;line-height:1;opacity:.8">✕</button>
-  <div id="media-modal-content" onclick="event.stopPropagation()" style="max-width:92vw;max-height:88vh;display:flex;align-items:center;justify-content:center"></div>
-  <div id="media-modal-caption" onclick="event.stopPropagation()" style="color:#ccc;font-size:13px;text-align:center;max-width:80vw;display:none"></div>
-</div>
 
 <!-- Roll toast -->
 <div id="roll-toast">
@@ -717,8 +711,11 @@
   <div class="loading-label" id="loading-label">Loading…</div>
 </div>
 
-<script src="/js/lightbox.js" defer></script>
-<script src="/js/fr_calendar.js" defer></script>
+<script src="/js/lib/esc.js" defer></script>
+<script src="/js/lib/lightbox.js" defer></script>
+<script src="/js/lib/fr_calendar.js" defer></script>
+<script src="/js/lib/dice-engine.js" defer></script>
+<script src="/js/lib/chat-render.js" defer></script>
 <script src="/js/index/index-state.js" defer></script>
 <script src="/js/index/index-utils.js" defer></script>
 <script src="/js/index/index-calc.js" defer></script>
