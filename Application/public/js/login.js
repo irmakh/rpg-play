@@ -167,7 +167,12 @@ function _storeSession(sess) {
 (function() {
   try {
     const s = JSON.parse(sessionStorage.getItem('rpgSession') || 'null');
-    if (s && s.role) { location.replace(_nextUrl()); return; }
+    if (s && s.role) {
+      // Characters can only access index/table — don't let them loop into DM-only pages
+      const dest = s.role === 'character' ? '/index.html' : _nextUrl();
+      location.replace(dest);
+      return;
+    }
   } catch {}
   loadCharacters();
   // Focus password field if DM tab is active (it won't be on load, so focus char pw)

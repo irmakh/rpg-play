@@ -14,13 +14,13 @@
   <!-- Character selector -->
   <div class="char-bar">
     <span id="char-user-label" style="display:none;font-size:11px;color:var(--ac);font-weight:bold;padding:0 4px"></span>
-    <label class="char-btn-admin">Character:</label>
+    <label class="char-btn-dm-only">Character:</label>
     <select id="char-select" onchange="loadCharacter(this.value)"></select>
-    <button class="char-btn char-btn-admin" onclick="newCharacter()">+ New</button>
-    <button class="char-btn char-btn-admin" onclick="managePassword()">🔒 Password</button>
-    <button class="char-btn char-btn-admin" onclick="exportCharacter()">Export</button>
-    <button class="char-btn danger char-btn-admin" onclick="deleteCharacter()">Delete</button>
-    <button class="char-btn char-btn-admin" onclick="window.open('/dm.html','_blank')" title="Open DM Panel">🎲 DM</button>
+    <button class="char-btn char-btn-dm-only" onclick="newCharacter()">+ New</button>
+    <button class="char-btn" onclick="managePassword()">🔒 Password</button>
+    <button class="char-btn" onclick="exportCharacter()">Export</button>
+    <button class="char-btn danger char-btn-dm-only" onclick="deleteCharacter()">Delete</button>
+    <button class="char-btn char-btn-dm-only" onclick="window.open('/dm.html','_blank')" title="Open DM Panel">🎲 DM</button>
     <button class="char-btn" onclick="window.open('/table.html','_blank')" title="Open Tactical Map">🗺 Map</button>
     <button id="char-logout-btn" class="char-btn" style="display:none" onclick="indexLogout()" title="Logout">🚪 Logout</button>
     <select id="theme-sel" onchange="applyTheme(this.value)" title="Theme">

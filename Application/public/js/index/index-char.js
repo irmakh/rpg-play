@@ -177,8 +177,8 @@ function _applySessionUI() {
   const isChar = !!indexCharId();
   const charBar = document.querySelector('.char-bar');
   if (!charBar) return;
-  // For character sessions: hide admin controls and the character selector
-  const adminBtns = charBar.querySelectorAll('.char-btn-admin');
+  // For character sessions: hide DM-only controls and the character selector
+  const adminBtns = charBar.querySelectorAll('.char-btn-dm-only');
   adminBtns.forEach(b => b.style.display = isChar ? 'none' : '');
   const sel = document.getElementById('char-select');
   if (sel) sel.style.display = isChar ? 'none' : '';
