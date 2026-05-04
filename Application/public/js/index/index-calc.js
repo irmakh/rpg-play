@@ -47,11 +47,13 @@ function recalcAll() {
   const spKey = ABILITY_MAP[(document.querySelector('[data-key="sp-ability"]')?.value || '').toLowerCase().trim()];
   if (spKey) {
     const spMod = getMod(spKey);
+    const spAtkItem = items.filter(i => i.equipped).reduce((s, i) => s + (parseInt(i.spellAtkBonus) || 0), 0);
+    const spDcItem  = items.filter(i => i.equipped).reduce((s, i) => s + (parseInt(i.spellDcBonus)  || 0), 0);
     const dcEl  = document.querySelector('[data-key="sp-dc"]');
     const atkEl = document.querySelector('[data-key="sp-atk"]');
     const modEl = document.querySelector('[data-key="sp-mod"]');
-    if (dcEl)  dcEl.value  = 8 + prof + spMod;
-    if (atkEl) atkEl.value = fmt(prof + spMod);
+    if (dcEl)  dcEl.value  = 8 + prof + spMod + spDcItem;
+    if (atkEl) atkEl.value = fmt(prof + spMod + spAtkItem);
     if (modEl) modEl.value = fmt(spMod);
   }
 

@@ -3,6 +3,7 @@ let masterPw = '';
 let shopItems = [];
 let editingShopId = null;
 let shopIsOpen = true;
+let shopActiveTag = '';
 let selectedItems = new Set();
 let tagKeysList = [];
 let expandedTags = new Set(JSON.parse(localStorage.getItem('shop-expanded-tags') || '[]'));
@@ -109,7 +110,8 @@ function renderShopStatusBtn() {
   const btn = document.getElementById('shop-status-btn');
   if (!btn) return;
   if (shopIsOpen) {
-    btn.textContent = '🟢 Shop Open';
+    const tagLabel = shopActiveTag ? ` (${shopActiveTag})` : '';
+    btn.textContent = `🟢 Shop Open${tagLabel}`;
     btn.style.color = 'var(--ok)';
     btn.style.borderColor = '#88ff8844';
   } else {
@@ -123,7 +125,9 @@ async function loadShopStatus() {
   try {
     const res = await fetch('/api/shop/status', { headers: { 'X-Master-Password': masterPw } });
     if (!res.ok) return;
-    shopIsOpen = (await res.json()).isOpen;
+    const data = await res.json();
+    shopIsOpen = data.isOpen;
+    shopActiveTag = data.activeTag || '';
     renderShopStatusBtn();
   } catch {}
 }
@@ -134,13 +138,34 @@ async function toggleShopStatus() {
     const res = await fetch('/api/shop/status', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', 'X-Master-Password': masterPw },
-      body: JSON.stringify({ isOpen: newState })
+      body: JSON.stringify({ isOpen: newState, activeTag: '' })
     });
     if (res.status === 401) { handleUnauth(); return; }
     if (!res.ok) { showStatus('Failed to update shop status.', true); return; }
-    shopIsOpen = newState;
+    const data = await res.json();
+    shopIsOpen = data.isOpen;
+    shopActiveTag = data.activeTag || '';
     renderShopStatusBtn();
     showStatus(newState ? 'Shop is now open.' : 'Shop is now closed.', false);
+  } catch { showStatus('Network error.', true); }
+}
+
+async function openShopByTag() {
+  const tag = document.getElementById('open-tag-input').value.trim();
+  if (!tag) { showStatus('Enter a tag to filter by.', true); return; }
+  try {
+    const res = await fetch('/api/shop/status', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'X-Master-Password': masterPw },
+      body: JSON.stringify({ isOpen: true, activeTag: tag })
+    });
+    if (res.status === 401) { handleUnauth(); return; }
+    if (!res.ok) { showStatus('Failed to open shop.', true); return; }
+    const data = await res.json();
+    shopIsOpen = data.isOpen;
+    shopActiveTag = data.activeTag || '';
+    renderShopStatusBtn();
+    showStatus(`Shop opened for tag: ${shopActiveTag}`, false);
   } catch { showStatus('Network error.', true); }
 }
 
@@ -277,6 +302,12 @@ function renderTable() {
   if (dl) dl.innerHTML = tagOpts;
   const dlBulk = document.getElementById('tag-datalist-bulk');
   if (dlBulk) dlBulk.innerHTML = tagOpts;
+  const selOpen = document.getElementById('open-tag-input');
+  if (selOpen) {
+    const cur = selOpen.value;
+    selOpen.innerHTML = '<option value="">— Tag —</option>' + tagKeysList.filter(t => t).map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join('');
+    if (cur) selOpen.value = cur;
+  }
 
   container.innerHTML = tagKeysList.map(tag => {
     const items = groups[tag];
@@ -401,6 +432,8 @@ function openItemModal(id) {
     document.getElementById('f-ac-bonus').value = item.acBonus;
     document.getElementById('f-init-bonus').value = item.initBonus;
     document.getElementById('f-speed-bonus').value = item.speedBonus;
+    document.getElementById('f-sp-atk-bonus').value = item.spellAtkBonus || 0;
+    document.getElementById('f-sp-dc-bonus').value = item.spellDcBonus || 0;
     document.getElementById('f-weapon-atk').value = item.weaponAtk || '0';
     document.getElementById('f-weapon-dmg').value = item.weaponDmg || '';
     initPropsGrid(); setSelectedProps(item.weaponProperties || []);
@@ -421,6 +454,8 @@ function openItemModal(id) {
     document.getElementById('f-ac-bonus').value = '0';
     document.getElementById('f-init-bonus').value = '0';
     document.getElementById('f-speed-bonus').value = '0';
+    document.getElementById('f-sp-atk-bonus').value = '0';
+    document.getElementById('f-sp-dc-bonus').value = '0';
     document.getElementById('f-weapon-atk').value = '0';
     document.getElementById('f-weapon-dmg').value = '';
     initPropsGrid(); setSelectedProps([]);
@@ -454,6 +489,8 @@ async function saveItemModal() {
     acBonus: parseInt(document.getElementById('f-ac-bonus').value) || 0,
     initBonus: parseInt(document.getElementById('f-init-bonus').value) || 0,
     speedBonus: parseInt(document.getElementById('f-speed-bonus').value) || 0,
+    spellAtkBonus: parseInt(document.getElementById('f-sp-atk-bonus').value) || 0,
+    spellDcBonus: parseInt(document.getElementById('f-sp-dc-bonus').value) || 0,
     requiresAttunement: document.getElementById('f-attune').value === '1',
     weaponAtk: document.getElementById('f-weapon-atk').value.trim(),
     weaponDmg: document.getElementById('f-weapon-dmg').value.trim(),

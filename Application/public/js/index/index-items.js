@@ -19,6 +19,8 @@ function openItemModal(id) {
     document.getElementById('im-ac-bonus').value = '0';
     document.getElementById('im-init-bonus').value = '0';
     document.getElementById('im-speed-bonus').value = '0';
+    document.getElementById('im-sp-atk-bonus').value = '0';
+    document.getElementById('im-sp-dc-bonus').value = '0';
     document.getElementById('im-weapon-atk').value = '0';
     document.getElementById('im-weapon-dmg').value = '';
     initItemPropsGrid(); setSelectedItemProps([]);
@@ -37,6 +39,8 @@ function openItemModal(id) {
     document.getElementById('im-ac-bonus').value = item.acBonus || 0;
     document.getElementById('im-init-bonus').value = item.initBonus || 0;
     document.getElementById('im-speed-bonus').value = item.speedBonus || 0;
+    document.getElementById('im-sp-atk-bonus').value = item.spellAtkBonus || 0;
+    document.getElementById('im-sp-dc-bonus').value = item.spellDcBonus || 0;
     document.getElementById('im-weapon-atk').value = item.weaponAtk || '0';
     document.getElementById('im-weapon-dmg').value = item.weaponDmg || '';
     initItemPropsGrid(); setSelectedItemProps(item.weaponProperties || []);
@@ -182,6 +186,8 @@ function saveItemModal() {
     acBonus: parseInt(document.getElementById('im-ac-bonus').value) || 0,
     initBonus: parseInt(document.getElementById('im-init-bonus').value) || 0,
     speedBonus: parseInt(document.getElementById('im-speed-bonus').value) || 0,
+    spellAtkBonus: parseInt(document.getElementById('im-sp-atk-bonus').value) || 0,
+    spellDcBonus: parseInt(document.getElementById('im-sp-dc-bonus').value) || 0,
     notes: document.getElementById('im-notes').value
   };
   if (editingItemId !== null) {

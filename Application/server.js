@@ -165,13 +165,16 @@ function broadcast(eventName, payload = {}) {
 // ── Shop helpers ──────────────────────────────────────────────────────────────
 const SHOP_CONFIG_ID = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
 
-async function getShopIsOpen() {
+async function getShopConfig() {
   try {
-    if (DB_PROVIDER === 'localdb') return !!ldb.getShopConfig().isOpen;
+    if (DB_PROVIDER === 'localdb') {
+      const cfg = ldb.getShopConfig();
+      return { isOpen: !!cfg.isOpen, activeTag: cfg.activeTag || '' };
+    }
     const result = await idb.query({ shopConfig: { $: { where: { id: SHOP_CONFIG_ID } } } });
     const cfg = result.shopConfig?.[0];
-    return cfg ? !!cfg.isOpen : true;
-  } catch { return true; }
+    return cfg ? { isOpen: !!cfg.isOpen, activeTag: cfg.activeTag || '' } : { isOpen: true, activeTag: '' };
+  } catch { return { isOpen: true, activeTag: '' }; }
 }
 
 function shopObjFromRecord(r) {
@@ -182,6 +185,7 @@ function shopObjFromRecord(r) {
     itemType: r.itemType || 'wondrous', armorType: r.armorType || 'light',
     acBase: r.acBase ?? 10, valueCp: r.valueCp ?? 0, quantity: r.quantity ?? 1,
     acBonus: r.acBonus ?? 0, initBonus: r.initBonus ?? 0, speedBonus: r.speedBonus ?? 0,
+    spellAtkBonus: r.spellAtkBonus ?? 0, spellDcBonus: r.spellDcBonus ?? 0,
     requiresAttunement: !!r.requiresAttunement, notes: r.notes || '',
     weaponAtk: r.weaponAtk || '', weaponDmg: r.weaponDmg || '', weaponProperties,
     tag: r.tag || '',
@@ -580,8 +584,8 @@ app.delete('/api/characters/:id/media/:mid', async (req, res) => {
 // ── Shop ──────────────────────────────────────────────────────────────────────
 app.get('/api/shop', async (req, res) => {
   try {
-    const isOpen = await getShopIsOpen();
-    if (!isOpen) return res.json({ isOpen: false, items: [] });
+    const cfg = await getShopConfig();
+    if (!cfg.isOpen) return res.json({ isOpen: false, items: [] });
     let items;
     if (DB_PROVIDER === 'localdb') {
       items = ldb.listShopItems().filter(r => r.quantity !== 0);
@@ -589,16 +593,17 @@ app.get('/api/shop', async (req, res) => {
       const result = await idb.query({ shopItems: {} });
       items = (result.shopItems || []).filter(r => r.quantity !== 0);
     }
+    if (cfg.activeTag) items = items.filter(r => (r.tag || '') === cfg.activeTag);
     items.sort((a, b) => (a.itemType || '').localeCompare(b.itemType || '') || (a.name || '').localeCompare(b.name || ''));
-    res.json({ isOpen: true, items: items.map(shopObjFromRecord) });
+    res.json({ isOpen: true, activeTag: cfg.activeTag, items: items.map(shopObjFromRecord) });
   } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
 });
 
 app.get('/api/shop/status', async (req, res) => {
   try {
     if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
-    const isOpen = await getShopIsOpen();
-    res.json({ isOpen });
+    const cfg = await getShopConfig();
+    res.json({ isOpen: cfg.isOpen, activeTag: cfg.activeTag });
   } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
 });
 
@@ -606,13 +611,14 @@ app.put('/api/shop/status', async (req, res) => {
   try {
     if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
     const isOpen = !!(req.body?.isOpen);
+    const activeTag = isOpen ? String(req.body?.activeTag || '').trim().slice(0, 40) : '';
     if (DB_PROVIDER === 'localdb') {
-      ldb.setShopConfig(isOpen);
+      ldb.setShopConfig(isOpen, activeTag);
     } else {
-      await idb.transact([idb.tx.shopConfig[SHOP_CONFIG_ID].update({ isOpen })]);
+      await idb.transact([idb.tx.shopConfig[SHOP_CONFIG_ID].update({ isOpen, activeTag })]);
     }
-    broadcast('shop', { action: 'statusChanged', isOpen });
-    res.json({ ok: true, isOpen });
+    broadcast('shop', { action: 'statusChanged', isOpen, activeTag });
+    res.json({ ok: true, isOpen, activeTag });
   } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
 });
 
@@ -636,6 +642,7 @@ app.post('/api/shop', async (req, res) => {
     const {
       name, itemType = 'wondrous', armorType = 'light', acBase = 10,
       valueCp = 0, quantity = 1, acBonus = 0, initBonus = 0, speedBonus = 0,
+      spellAtkBonus = 0, spellDcBonus = 0,
       requiresAttunement = false, notes = '', weaponAtk = '', weaponDmg = '', weaponProperties = [], tag = ''
     } = req.body || {};
     if (!name || !String(name).trim()) return res.status(400).json({ error: 'Name required' });
@@ -644,6 +651,7 @@ app.post('/api/shop', async (req, res) => {
       name: String(name).trim(), itemType, armorType,
       acBase: +acBase, valueCp: +valueCp, quantity: +quantity,
       acBonus: +acBonus, initBonus: +initBonus, speedBonus: +speedBonus,
+      spellAtkBonus: +spellAtkBonus, spellDcBonus: +spellDcBonus,
       requiresAttunement: !!requiresAttunement, notes: String(notes),
       weaponAtk: String(weaponAtk), weaponDmg: String(weaponDmg),
       weaponPropertiesJson: JSON.stringify(Array.isArray(weaponProperties) ? weaponProperties.slice(0, 3) : []),
@@ -665,7 +673,7 @@ app.put('/api/shop/:id', async (req, res) => {
     if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
     const existing = DB_PROVIDER === 'localdb' ? ldb.getShopItem(req.params.id) : (await idb.query({ shopItems: { $: { where: { id: req.params.id } } } })).shopItems?.[0];
     if (!existing) return res.status(404).json({ error: 'Not found' });
-    const { name, itemType, armorType, acBase, valueCp, quantity, acBonus, initBonus, speedBonus, requiresAttunement, notes, weaponAtk, weaponDmg, weaponProperties, tag } = req.body || {};
+    const { name, itemType, armorType, acBase, valueCp, quantity, acBonus, initBonus, speedBonus, spellAtkBonus, spellDcBonus, requiresAttunement, notes, weaponAtk, weaponDmg, weaponProperties, tag } = req.body || {};
     const update = {};
     if (name !== undefined)               update.name = String(name).trim();
     if (itemType !== undefined)           update.itemType = itemType;
@@ -676,6 +684,8 @@ app.put('/api/shop/:id', async (req, res) => {
     if (acBonus !== undefined)            update.acBonus = +acBonus;
     if (initBonus !== undefined)          update.initBonus = +initBonus;
     if (speedBonus !== undefined)         update.speedBonus = +speedBonus;
+    if (spellAtkBonus !== undefined)      update.spellAtkBonus = +spellAtkBonus;
+    if (spellDcBonus !== undefined)       update.spellDcBonus = +spellDcBonus;
     if (requiresAttunement !== undefined) update.requiresAttunement = !!requiresAttunement;
     if (notes !== undefined)              update.notes = String(notes);
     if (weaponAtk !== undefined)          update.weaponAtk = String(weaponAtk);

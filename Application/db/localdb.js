@@ -26,12 +26,13 @@ db.exec(`
     mimeType TEXT DEFAULT '', dataUrl TEXT DEFAULT '', isPortrait INTEGER DEFAULT 0,
     createdAt TEXT DEFAULT (datetime('now'))
   );
-  CREATE TABLE IF NOT EXISTS shop_config (id TEXT PRIMARY KEY, isOpen INTEGER DEFAULT 1);
+  CREATE TABLE IF NOT EXISTS shop_config (id TEXT PRIMARY KEY, isOpen INTEGER DEFAULT 1, activeTag TEXT DEFAULT '');
   CREATE TABLE IF NOT EXISTS shop_items (
     id TEXT PRIMARY KEY, name TEXT DEFAULT '', itemType TEXT DEFAULT 'wondrous',
     armorType TEXT DEFAULT 'light', acBase INTEGER DEFAULT 10, valueCp INTEGER DEFAULT 0,
     quantity INTEGER DEFAULT 1, acBonus INTEGER DEFAULT 0, initBonus INTEGER DEFAULT 0,
-    speedBonus INTEGER DEFAULT 0, requiresAttunement INTEGER DEFAULT 0, notes TEXT DEFAULT '',
+    speedBonus INTEGER DEFAULT 0, spellAtkBonus INTEGER DEFAULT 0, spellDcBonus INTEGER DEFAULT 0,
+    requiresAttunement INTEGER DEFAULT 0, notes TEXT DEFAULT '',
     weaponAtk TEXT DEFAULT '', weaponDmg TEXT DEFAULT '', weaponPropertiesJson TEXT DEFAULT '[]',
     tag TEXT DEFAULT '', createdAt TEXT DEFAULT (datetime('now'))
   );
@@ -147,6 +148,9 @@ const CAL_STATE_ID    = 'calendar-global';
 
 // Ensure singleton rows exist
 db.prepare("INSERT OR IGNORE INTO shop_config (id, isOpen) VALUES (?, 1)").run(SHOP_CONFIG_ID);
+try { db.prepare("ALTER TABLE shop_config ADD COLUMN activeTag TEXT DEFAULT ''").run(); } catch {}
+try { db.prepare("ALTER TABLE shop_items ADD COLUMN spellAtkBonus INTEGER DEFAULT 0").run(); } catch {}
+try { db.prepare("ALTER TABLE shop_items ADD COLUMN spellDcBonus INTEGER DEFAULT 0").run(); } catch {}
 db.prepare("INSERT OR IGNORE INTO initiative_state (id, currentId) VALUES (?, '')").run(INIT_STATE_ID);
 db.prepare("INSERT OR IGNORE INTO table_state (id) VALUES (?)").run(TABLE_STATE_ID);
 db.prepare("INSERT OR IGNORE INTO events_state (id, dataJson) VALUES (?, '{}')").run(EVENTS_ID);
@@ -199,10 +203,10 @@ export function deleteMedia(id) {
 
 // ── Shop Config ───────────────────────────────────────────────────────────────
 export function getShopConfig() {
-  return db.prepare('SELECT * FROM shop_config WHERE id = ?').get(SHOP_CONFIG_ID) || { id: SHOP_CONFIG_ID, isOpen: 1 };
+  return db.prepare('SELECT * FROM shop_config WHERE id = ?').get(SHOP_CONFIG_ID) || { id: SHOP_CONFIG_ID, isOpen: 1, activeTag: '' };
 }
-export function setShopConfig(isOpen) {
-  db.prepare('UPDATE shop_config SET isOpen = ? WHERE id = ?').run(isOpen ? 1 : 0, SHOP_CONFIG_ID);
+export function setShopConfig(isOpen, activeTag = '') {
+  db.prepare('UPDATE shop_config SET isOpen = ?, activeTag = ? WHERE id = ?').run(isOpen ? 1 : 0, String(activeTag).trim().slice(0, 40), SHOP_CONFIG_ID);
 }
 
 // ── Shop Items ────────────────────────────────────────────────────────────────

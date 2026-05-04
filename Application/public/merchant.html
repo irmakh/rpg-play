@@ -47,6 +47,10 @@
     </div>
     <div class="hdr-right">
       <button class="btn" id="shop-status-btn" onclick="toggleShopStatus()" style="min-width:130px">Loading…</button>
+      <div style="display:flex;align-items:center;gap:4px">
+        <select id="open-tag-input" style="font-size:12px;padding:4px 7px;border:1px solid var(--bdr);border-radius:4px;background:var(--bg2);color:var(--tx)"><option value="">— Tag —</option></select>
+        <button class="btn" onclick="openShopByTag()" title="Open shop for this tag">Open</button>
+      </div>
       <button class="btn" onclick="refreshAll()" title="Refresh data">↻ Refresh</button>
       <button class="btn primary" onclick="openItemModal(null)">+ Add Item</button>
     </div>
@@ -208,6 +212,14 @@
         <div class="field">
           <label class="lbl">Speed Bonus (ft)</label>
           <input type="number" id="f-speed-bonus" value="0">
+        </div>
+        <div class="field">
+          <label class="lbl">Spell Atk Bonus</label>
+          <input type="number" id="f-sp-atk-bonus" value="0">
+        </div>
+        <div class="field">
+          <label class="lbl">Spell DC Bonus</label>
+          <input type="number" id="f-sp-dc-bonus" value="0">
         </div>
       </div>
 
