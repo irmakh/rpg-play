@@ -20,7 +20,7 @@ function renderSidePanel() {
 
 // ── Page init ─────────────────────────────────────────────────────────────────
 window.addEventListener('load', async () => {
-  masterPw = sessionStorage.getItem('tableMasterPw') || '';
+  _loadSession();
   applyDMControls();
   setTool('select'); // initialize pointer-events on overlay canvas
 

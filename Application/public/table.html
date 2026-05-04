@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Tactical Map</title>
+<script>(function(){try{var s=JSON.parse(sessionStorage.getItem('rpgSession')||'null');if(!s||!s.role){var next=encodeURIComponent(location.pathname+location.search);location.replace('/login.html?next='+next);}}catch(e){location.replace('/login.html');}})();</script>
 <link rel="stylesheet" href="/css/table.css">
 </head>
 <body>
@@ -11,16 +12,8 @@
 <div id="toolbar">
   <a href="/dm.html" class="btn" style="text-decoration:none">← DM</a>
   <span id="dm-badge" style="display:none;background:var(--ac);color:var(--bg);padding:2px 8px;border-radius:3px;font-size:11px;font-weight:bold">DM</span>
-  <button class="btn" id="btn-dm-unlock" onclick="unlockDM()">🔑 DM</button>
-
-  <!-- Inline DM password form -->
-  <div id="dm-pw-inline" style="display:none;display:none;align-items:center;gap:4px">
-    <input type="password" id="dm-pw-input" placeholder="Master password…"
-      style="width:140px;padding:3px 7px;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px;font-size:12px"
-      onkeydown="if(event.key==='Enter')submitDMPassword();if(event.key==='Escape')cancelDMUnlock()">
-    <button class="btn primary" onclick="submitDMPassword()">Unlock</button>
-    <button class="btn" onclick="cancelDMUnlock()">✕</button>
-  </div>
+  <span id="user-badge" style="display:none;background:var(--a44);border:1px solid var(--a66);color:var(--ac);padding:2px 8px;border-radius:3px;font-size:11px;font-weight:bold"></span>
+  <button class="btn" id="btn-dm-unlock" style="display:none" onclick="unlockDM()">🔑 DM</button>
 
   <div class="dm-controls" style="display:none;display:contents">
     <select id="prep-map-sel" style="background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px;padding:3px 6px;font-size:12px;max-width:150px">
@@ -32,8 +25,8 @@
     <button class="btn" id="btn-prev-turn" onclick="dmPrevTurn()">⏮ Prev Turn</button>
     <button class="btn" id="btn-next-turn" onclick="dmNextTurn()">⏭ Next Turn</button>
     <button class="btn" id="btn-init-toggle" onclick="toggleInitiative()">▶ Start Initiative</button>
-    <button class="btn" onclick="exitDM()" style="margin-left:4px">🚪 Exit DM</button>
   </div>
+  <button class="btn" onclick="logout()" style="margin-left:4px" title="Logout">🚪</button>
 
   <div style="flex:1"></div>
 
@@ -129,13 +122,13 @@
           </span>
           <span style="color:var(--txd)">AC: <strong id="hp-ac-display" style="color:var(--tx)">—</strong></span>
         </div>
-        <!-- Damage / Heal row -->
+        <!-- Damage / Heal / Temp HP (own token or DM only) -->
+        <div id="hp-edit-area">
         <div style="display:flex;gap:4px;padding:4px 8px;align-items:center">
           <input type="number" id="hp-amount" value="1" min="1" style="width:52px;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px;padding:3px 5px;font-size:12px">
           <button class="btn danger sm" onclick="applyHpChange('dmg')">⚔ Damage</button>
           <button class="btn success sm" onclick="applyHpChange('heal')">💚 Heal</button>
         </div>
-        <!-- Quick buttons -->
         <div style="display:flex;gap:4px;padding:0 8px 6px;flex-wrap:wrap">
           <button class="btn danger sm" onclick="quickDmg(1)">-1</button>
           <button class="btn danger sm" onclick="quickDmg(5)">-5</button>
@@ -144,11 +137,11 @@
           <button class="btn success sm" onclick="quickHeal(5)">+5</button>
           <button class="btn success sm" onclick="quickHeal(10)">+10</button>
         </div>
-        <!-- Temp HP -->
         <div style="display:flex;gap:4px;align-items:center;border-top:1px solid var(--a44);padding:6px 8px">
           <span style="font-size:11px;color:var(--txd);white-space:nowrap">Temp HP:</span>
           <input type="number" id="hp-temp-input" value="0" min="0" style="width:52px;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px;padding:3px 5px;font-size:12px">
           <button class="btn sm" onclick="applyTempHp()">Set</button>
+        </div>
         </div>
         <!-- Conditions -->
         <div id="hp-conditions-row" style="border-top:1px solid var(--a44);padding:6px 8px 4px">
@@ -171,6 +164,14 @@
             <input id="hp-label-input" type="text" style="flex:1;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px;padding:3px 6px;font-size:12px" placeholder="e.g. A3" onkeydown="if(event.key==='Enter')saveEditLabel();else if(event.key==='Escape')cancelEditLabel();">
             <button class="btn sm success" onclick="saveEditLabel()">Save</button>
             <button class="btn sm" onclick="cancelEditLabel()">✕</button>
+          </div>
+        </div>
+        <!-- Token assignment (DM only) -->
+        <div id="hp-assign-row" style="display:none;border-top:1px solid var(--a44);padding:6px 8px">
+          <div style="font-size:10px;color:var(--txd);margin-bottom:4px">Assign to character</div>
+          <div style="display:flex;gap:4px">
+            <select id="hp-assign-sel" style="flex:1;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px;padding:3px 6px;font-size:12px"></select>
+            <button class="btn sm success" onclick="saveTokenAssignment()">Save</button>
           </div>
         </div>
       </div>

@@ -103,42 +103,59 @@ async function loadSideQroll() {
   if (activeTok.type === 'monster') {
     qrollCharName = (activeTok.label) ? activeTok.label : tokDisplayName(activeTok);
     qrollData = null;
-    if (isDM() && activeTok.linkedId) {
-      // DM: load and show full stat block
-      if (_monsterList.length === 0) {
+    const canSeeMonsterStats = isDM() || isMyToken(activeTok);
+    if (canSeeMonsterStats && activeTok.linkedId) {
+      if (isDM()) {
+        // DM: use cached full list
+        if (_monsterList.length === 0) {
+          try {
+            const r = await fetch('/api/monsters', { headers: authHeaders() });
+            if (r.ok) _monsterList = await r.json();
+          } catch {}
+        }
+        const mon = _monsterList.find(m => m.id === activeTok.linkedId);
+        if (mon) {
+          content.innerHTML = renderMonsterFullStats(mon.data || {}, activeTok);
+          return;
+        }
+      } else {
+        // Assigned player: fetch this specific monster by ID
         try {
-          const r = await fetch('/api/monsters', { headers: { 'X-Master-Password': masterPw } });
-          if (r.ok) _monsterList = await r.json();
+          const r = await fetch(`/api/monsters/${activeTok.linkedId}`, { headers: authHeaders() });
+          if (r.ok) {
+            const mon = await r.json();
+            content.innerHTML = renderMonsterFullStats(mon.data || {}, activeTok);
+            return;
+          }
         } catch {}
       }
-      const mon = _monsterList.find(m => m.id === activeTok.linkedId);
-      if (mon) {
-        content.innerHTML = renderMonsterFullStats(mon.data || {}, activeTok);
-        // section open/collapsed state is preserved via _sideOpenSections
-        return;
-      }
     }
-    // Players (or monster with no linkedId): show identifier only — no HP, no real name
+    // Other players: show identifier only
     content.innerHTML = `<div style="font-size:13px;color:#ff9999;font-weight:bold;margin-bottom:6px">${esc(tokDisplayName(activeTok))}</div>`;
     return;
   }
 
   // Character / NPC / custom
+  // Side panel stats are only shown for the DM (any token) or for the character's own token
+  if (!isMyToken(activeTok)) {
+    qrollCharName = tokDisplayName(activeTok);
+    qrollData = null;
+    content.innerHTML = `<div style="font-size:12px;color:var(--ac);font-weight:bold;padding:2px 0">${esc(tokDisplayName(activeTok))}</div>
+      <div style="font-size:11px;color:var(--txd)">HP: ${activeTok.hpCurrent||0}/${activeTok.hpMax||0}</div>`;
+    return;
+  }
   if (activeTok.linkedId) {
     try {
-      // Use public qroll endpoint so all players can see skills/saves/attacks
-      // DM uses full endpoint (has access to all data anyway)
       const url = isDM()
         ? `/api/characters/${activeTok.linkedId}`
         : `/api/characters/${activeTok.linkedId}/qroll`;
-      const headers = isDM() ? { 'X-Character-Password': masterPw } : {};
+      const headers = isDM() ? { 'X-Character-Password': masterPw } : sessionCharPw ? { 'X-Character-Password': sessionCharPw } : {};
       const r = await fetch(url, { headers });
       if (r.ok) {
         const char = await r.json();
         qrollCharName = char.name || activeTok.name;
         qrollData = char.data || {};
         content.innerHTML = renderSideCharacter();
-        // section open/collapsed state is preserved via _sideOpenSections
         return;
       }
     } catch {}

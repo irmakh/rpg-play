@@ -41,7 +41,10 @@ function showConfirm(msg) {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function isDM() { return !!masterPw; }
 function initials(name) {
-  return String(name||'?').split(' ').map(w=>w[0]||'').join('').slice(0,2).toUpperCase() || '?';
+  const words = String(name||'?').trim().split(/\s+/);
+  if (words.length === 1) return words[0].slice(0, 4) || '?';
+  // Multi-word: show first 3 chars of first word, keeps it readable without overflow
+  return words[0].slice(0, 3) || '?';
 }
 // Returns what a given user should see as the token's name.
 // Players see only the identifier for monsters (e.g. "A3"), DM sees full name.

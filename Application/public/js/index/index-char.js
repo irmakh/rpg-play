@@ -1,3 +1,9 @@
+function indexLogout() {
+  sessionStorage.removeItem('rpgSession');
+  sessionStorage.removeItem('dmMasterPw');
+  location.replace('/login.html');
+}
+
 // ── Data collection / application ─────────────────────────────────────────────
 function collectData() {
   const out = {};
@@ -138,8 +144,19 @@ let ncImportData   = null; // parsed XML data for new-char import
 
 // ── Character list ────────────────────────────────────────────────────────────
 async function loadCharacterList(skipAutoLoad = false) {
+  // Character session: always load their one character directly — skipAutoLoad does not apply
+  if (indexCharId()) {
+    const charId = indexCharId();
+    const charPw = indexCharPw();
+    if (charPw) charPasswords[charId] = charPw;
+    _applySessionUI();
+    await loadCharacter(charId);
+    return;
+  }
+  // DM session: load all characters
   try {
-    const res = await fetch('/api/characters');
+    const headers = indexMasterPw() ? { 'X-Master-Password': indexMasterPw() } : {};
+    const res = await fetch('/api/characters', { headers });
     const chars = await res.json();
     charHasPassword = {};
     charTypes = {};
@@ -150,8 +167,29 @@ async function loadCharacterList(skipAutoLoad = false) {
     ).join('');
     if (currentCharId) sel.value = currentCharId;
     if (!skipAutoLoad && chars.length > 0) await loadCharacter(chars[0].id);
+    _applySessionUI();
   } catch(e) {
     setStatus('Failed to load characters', true);
+  }
+}
+
+function _applySessionUI() {
+  const isChar = !!indexCharId();
+  const charBar = document.querySelector('.char-bar');
+  if (!charBar) return;
+  // For character sessions: hide admin controls and the character selector
+  const adminBtns = charBar.querySelectorAll('.char-btn-admin');
+  adminBtns.forEach(b => b.style.display = isChar ? 'none' : '');
+  const sel = document.getElementById('char-select');
+  if (sel) sel.style.display = isChar ? 'none' : '';
+  // Show logout button
+  const logoutBtn = document.getElementById('char-logout-btn');
+  if (logoutBtn) logoutBtn.style.display = '';
+  // Show user label for character session
+  const userLabel = document.getElementById('char-user-label');
+  if (userLabel) {
+    userLabel.textContent = isChar ? (_indexSession?.characterName || '') : ('DM');
+    userLabel.style.display = '';
   }
 }
 
@@ -250,15 +288,24 @@ async function unlockSubmit() {
 // ── Load character ────────────────────────────────────────────────────────────
 async function loadCharacter(id) {
   if (!id) return;
+  // Character session: can only load their own character
+  if (indexCharId() && id !== indexCharId()) return;
   hideUnlockScreen();
   showLoading('Loading character…');
   try {
     const headers = {};
     if (charPasswords[id]) headers['X-Character-Password'] = charPasswords[id];
+    else if (indexMasterPw()) headers['X-Character-Password'] = indexMasterPw();
     const res = await fetch(`/api/characters/${id}`, { headers });
 
     if (res.status === 401) {
       hideLoading();
+      // Character session with wrong password — force logout
+      if (indexCharId()) {
+        sessionStorage.removeItem('rpgSession');
+        location.replace('/login.html');
+        return;
+      }
       const rawName = document.querySelector(`#char-select option[value="${id}"]`)
         ?.textContent?.replace(/^🔒\s*/, '').replace(/^\[NPC\]\s*/, '') || 'Character';
       showUnlockScreen(id, rawName);
@@ -281,6 +328,7 @@ async function saveCharacter(silent = false) {
   if (!silent) showLoading('Saving…');
   const headers = { 'Content-Type': 'application/json' };
   if (charPasswords[currentCharId]) headers['X-Character-Password'] = charPasswords[currentCharId];
+  else if (indexMasterPw()) headers['X-Character-Password'] = indexMasterPw();
   try {
     const res = await fetch(`/api/characters/${currentCharId}`, {
       method: 'PUT', headers, body: JSON.stringify({ data })

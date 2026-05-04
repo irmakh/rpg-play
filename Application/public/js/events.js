@@ -34,7 +34,9 @@ async function authenticate() {
 }
 
 (async function tryAutoLogin() {
-  const saved = sessionStorage.getItem('dmMasterPw');
+  let saved = null;
+  try { saved = JSON.parse(sessionStorage.getItem('rpgSession') || 'null')?.masterPw; } catch {}
+  if (!saved) saved = sessionStorage.getItem('dmMasterPw');
   if (!saved) return;
   document.getElementById('gate-pw').value = saved;
   await authenticate();

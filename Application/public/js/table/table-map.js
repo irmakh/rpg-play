@@ -387,8 +387,10 @@ function renderTokens() {
       tok.visible === false ? 'opacity:0.5' : ''
     ].filter(Boolean).join(';');
     const dn = tokDisplayName(tok);
-    if (!tok.portraitThumb && !tok.portrait) div.textContent = (!isDM() && tok.type === 'monster') ? dn : initials(tok.name);
-    const hpStr = (!isDM() && tok.type === 'monster') ? '' : ` | HP: ${tok.hpCurrent||0}/${tok.hpMax||0} | Speed: ${tok.speed||30}ft`;
+    const isAssignedMonster = tok.type === 'monster' && !!tok.assignedCharId;
+    const showFullInfo = isDM() || tok.type !== 'monster' || isAssignedMonster;
+    if (!tok.portraitThumb && !tok.portrait) div.textContent = showFullInfo ? initials(tok.name) : dn;
+    const hpStr = showFullInfo ? ` | HP: ${tok.hpCurrent||0}/${tok.hpMax||0} | Speed: ${tok.speed||30}ft` : '';
     div.title = `${dn}${hpStr}${tok.id === activeTokId ? ' | YOUR TURN' : ''}`;
 
     const hpPct = (tok.hpMax || 0) > 0 ? Math.max(0, Math.min(1, (tok.hpCurrent || 0) / tok.hpMax)) : 0;
@@ -398,7 +400,16 @@ function renderTokens() {
 
     const label = document.createElement('div');
     label.className = 'token-name';
-    label.textContent = dn.length > 10 ? dn.slice(0,9)+'…' : dn;
+    label.textContent = dn;
+    // Controller badge (shown for all player-assigned tokens)
+    const ownerId = tok.assignedCharId || (tok.type !== 'monster' ? tok.linkedId : '');
+    const ownerChar = ownerId ? _charList.find(c => c.id === ownerId) : null;
+    if (ownerChar && ownerChar.name !== dn) {
+      const ctrlLabel = document.createElement('div');
+      ctrlLabel.className = 'token-controller';
+      ctrlLabel.textContent = ownerChar.name;
+      label.appendChild(ctrlLabel);
+    }
 
     const conds = parseConditions(tok.conditions);
     let condDiv = null;
@@ -409,9 +420,9 @@ function renderTokens() {
     }
 
     attachTokenEvents(div, tok);
-    // For players: monster tokens sit below the fog layer so fog can cover them.
-    // For DM: all tokens stay above fog (DM can see everything).
-    const behindFog = !isDM() && tok.type === 'monster';
+    // Player-assigned monsters are treated like player tokens (above fog).
+    // Unassigned monsters sit behind fog for non-DM so fog can cover them.
+    const behindFog = !isDM() && tok.type === 'monster' && !tok.assignedCharId;
     (behindFog ? tokenLayerBg : tokenLayer).appendChild(div);
 
     // Labels for fog-managed monster tokens stay inside the token div so fog
@@ -445,7 +456,7 @@ function selectToken(id) {
 function moveSelectedToken(key) {
   const tok = tokens.find(t => t.id === selectedTokenId);
   if (!tok) return;
-  const canMove = isDM() || (tok.type !== 'monster' && (!initData.currentId || tok.id === getActiveTurnTokenId()));
+  const canMove = isMyToken(tok) && (!initData.currentId || tok.id === getActiveTurnTokenId());
   if (!canMove) return;
   const dx = key === 'ArrowLeft' ? -1 : key === 'ArrowRight' ? 1 : 0;
   const dy = key === 'ArrowUp'   ? -1 : key === 'ArrowDown'  ? 1 : 0;
@@ -458,10 +469,8 @@ function moveSelectedToken(key) {
   const origX = tok.x, origY = tok.y;
   _tokQ.run(async () => {
     try {
-      const headers = { 'Content-Type': 'application/json' };
-      if (isDM()) headers['X-Master-Password'] = masterPw;
       await fetch(`/api/table/tokens/${id}`, {
-        method: 'PUT', headers, body: JSON.stringify({ x: nx, y: ny })
+        method: 'PUT', headers: authHeaders(), body: JSON.stringify({ x: nx, y: ny })
       });
     } catch {
       patchToken(id, { x: origX, y: origY });
@@ -494,7 +503,7 @@ async function deleteSelectedToken() {
 function attachTokenEvents(div, tok) {
   div.addEventListener('mousedown', e => {
     if (currentTool !== 'move') return;
-    const canMove = isDM() || (tok.type !== 'monster' && (!initData.currentId || tok.id === getActiveTurnTokenId()));
+    const canMove = isMyToken(tok) && (!initData.currentId || tok.id === getActiveTurnTokenId());
     if (!canMove) return;
     e.preventDefault();
     e.stopPropagation();
@@ -505,8 +514,8 @@ function attachTokenEvents(div, tok) {
     if (dragState && dragState.didMove) return;
     if (currentTool === 'select' || currentTool === 'move') {
       selectToken(tok.id);
-      const canEditHp = isDM() || tok.type === 'character' || tok.type === 'npc';
-      if (canEditHp) openHpPanel(tok);
+      // openHpPanel internally checks isMyToken — only opens for own token or DM
+      openHpPanel(tok);
     }
   });
 }
@@ -546,10 +555,8 @@ function finishDrag(e) {
   // Network — queued
   _tokQ.run(async () => {
     try {
-      const headers = { 'Content-Type': 'application/json' };
-      if (isDM()) headers['X-Master-Password'] = masterPw;
       await fetch(`/api/table/tokens/${tokenId}`, {
-        method: 'PUT', headers,
+        method: 'PUT', headers: authHeaders(),
         body: JSON.stringify({ x: grid.x, y: grid.y })
       });
     } catch {

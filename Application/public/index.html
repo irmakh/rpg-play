@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>D&D 5e Character Sheet</title>
+<script>(function(){try{var s=JSON.parse(sessionStorage.getItem('rpgSession')||'null');if(!s||!s.role){var next=encodeURIComponent(location.pathname+location.search);location.replace('/login.html?next='+next);}}catch(e){location.replace('/login.html');}})();</script>
 <link rel="stylesheet" href="/css/index.css">
 <link rel="stylesheet" href="/css/calendar.css">
 </head>
@@ -12,14 +13,16 @@
 
   <!-- Character selector -->
   <div class="char-bar">
-    <label>Character:</label>
+    <span id="char-user-label" style="display:none;font-size:11px;color:var(--ac);font-weight:bold;padding:0 4px"></span>
+    <label class="char-btn-admin">Character:</label>
     <select id="char-select" onchange="loadCharacter(this.value)"></select>
-    <button class="char-btn" onclick="newCharacter()">+ New</button>
-    <button class="char-btn" onclick="managePassword()">🔒 Password</button>
-    <button class="char-btn" onclick="exportCharacter()">Export</button>
-    <button class="char-btn danger" onclick="deleteCharacter()">Delete</button>
-    <button class="char-btn" onclick="window.open('/dm.html','_blank')" title="Open DM Panel">🎲 DM</button>
+    <button class="char-btn char-btn-admin" onclick="newCharacter()">+ New</button>
+    <button class="char-btn char-btn-admin" onclick="managePassword()">🔒 Password</button>
+    <button class="char-btn char-btn-admin" onclick="exportCharacter()">Export</button>
+    <button class="char-btn danger char-btn-admin" onclick="deleteCharacter()">Delete</button>
+    <button class="char-btn char-btn-admin" onclick="window.open('/dm.html','_blank')" title="Open DM Panel">🎲 DM</button>
     <button class="char-btn" onclick="window.open('/table.html','_blank')" title="Open Tactical Map">🗺 Map</button>
+    <button id="char-logout-btn" class="char-btn" style="display:none" onclick="indexLogout()" title="Logout">🚪 Logout</button>
     <select id="theme-sel" onchange="applyTheme(this.value)" title="Theme">
       <option value="dark-gold">🌙 Dark Gold</option>
       <option value="parchment">📜 Parchment</option>

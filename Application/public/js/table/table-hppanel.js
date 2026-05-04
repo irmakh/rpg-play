@@ -1,5 +1,7 @@
 // ── HP Panel ──────────────────────────────────────────────────────────────────
 async function openHpPanel(tok) {
+  // Characters may only open the panel for their own token
+  if (!isDM() && !isMyToken(tok)) return;
   selectedTokenId = tok.id;
   // Monsters: use stored AC (set at token creation, doesn't change). Render immediately.
   // Characters: render immediately with stored AC if present, then update real-time from server.
@@ -54,10 +56,14 @@ function _refreshHpPanel(tok) {
   } else {
     hpNameEl.textContent = tokDisplayName(tok);
   }
+  const canEdit = isDM() || isMyToken(tok);
   const delBtn = document.getElementById('hp-del-btn');
   if (delBtn) delBtn.style.display = isDM() ? '' : 'none';
   const editLabelBtn = document.getElementById('hp-edit-label-btn');
   if (editLabelBtn) editLabelBtn.style.display = isDM() ? '' : 'none';
+  // HP change inputs — visible only to editors
+  const hpEditArea = document.getElementById('hp-edit-area');
+  if (hpEditArea) hpEditArea.style.display = canEdit ? '' : 'none';
   const labelRow = document.getElementById('hp-label-row');
   if (labelRow) labelRow.style.display = 'none';
   const curEl = document.getElementById('hp-cur-display');
@@ -108,6 +114,19 @@ function _refreshHpPanel(tok) {
       initBtn.textContent = hasEntry ? '🎲 Reroll Initiative' : '🎲 Roll Initiative';
     } else {
       initRow.style.display = 'none';
+    }
+  }
+  // Token assignment — DM only
+  const assignRow = document.getElementById('hp-assign-row');
+  const assignSel = document.getElementById('hp-assign-sel');
+  if (assignRow && assignSel) {
+    if (isDM()) {
+      assignRow.style.display = '';
+      const currentAssign = tok.assignedCharId || (tok.type !== 'monster' ? tok.linkedId : '');
+      assignSel.innerHTML = '<option value="">(Unassigned)</option>' +
+        _charList.map(c => `<option value="${c.id}"${currentAssign === c.id ? ' selected' : ''}>${c.name}</option>`).join('');
+    } else {
+      assignRow.style.display = 'none';
     }
   }
 }
@@ -236,7 +255,7 @@ function _putHp(fields) {
     try {
       await fetch(`/api/table/tokens/${id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'X-Master-Password': masterPw },
+        headers: authHeaders(),
         body: JSON.stringify(fields)
       });
     } catch {}
@@ -259,11 +278,30 @@ function toggleCondition(name) {
     try {
       await fetch(`/api/table/tokens/${id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders(),
         body: JSON.stringify({ conditions: condStr })
       });
     } catch {}
   });
+}
+
+async function saveTokenAssignment() {
+  if (!isDM()) return;
+  const tok = tokens.find(t => t.id === selectedTokenId);
+  if (!tok) return;
+  const newAssignedCharId = document.getElementById('hp-assign-sel')?.value || '';
+  try {
+    const res = await fetch(`/api/table/tokens/${tok.id}`, {
+      method: 'PUT',
+      headers: dmHeaders(),
+      body: JSON.stringify({ assignedCharId: newAssignedCharId }),
+    });
+    if (!res.ok) { showToast('Failed to assign token.', true); return; }
+    patchToken(tok.id, { assignedCharId: newAssignedCharId });
+    _refreshHpPanel({ ...tok, assignedCharId: newAssignedCharId });
+    renderHpTable();
+    renderTokens();
+  } catch { showToast('Connection error.', true); }
 }
 
 function applyHpChange(mode) {
@@ -307,8 +345,10 @@ function renderHpTable() {
   if (!list) return;
   const visible = tokens.filter(t => {
     if (t.visible === false && !isDM()) return false;
-    // Hide monsters from non-DM players until initiative is running
-    if (!isDM() && t.type === 'monster' && !initData.currentId) return false;
+    if (!isDM()) {
+      // Show only player tokens (character/NPC tokens or assigned monsters)
+      if (!isPlayerToken(t)) return false;
+    }
     return true;
   });
   if (visible.length === 0) {
@@ -323,14 +363,19 @@ function renderHpTable() {
     const hpPct = max > 0 ? Math.max(0, Math.min(1, cur / max)) : 0;
     const col = hpBarColor(hpPct);
     const isMonster = tok.type === 'monster';
-    const showNums = !isMonster || isDM();
+    const showNums = !isMonster || isDM() || isMyToken(tok);
     const isCur = tok.id === activeTokId;
-    const canEdit = isDM() || tok.type === 'character' || tok.type === 'npc';
-    const rowStyle = `display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid var(--sep)${isCur ? ';background:var(--a22);margin:0 -10px;padding-left:10px;padding-right:10px' : ''}${canEdit ? ';cursor:pointer' : ''}`;
+    const canOpenPanel = isDM() || isMyToken(tok);
+    const ownerId = tok.assignedCharId || (!isMonster ? tok.linkedId : '');
+    const ownerChar = ownerId ? _charList.find(c => c.id === ownerId) : null;
+    const controllerHtml = ownerChar && ownerChar.name !== tokDisplayName(tok)
+      ? `<div style="font-size:9px;color:var(--ac);margin-top:1px">⚔ ${esc(ownerChar.name)}</div>`
+      : '';
+    const rowStyle = `display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid var(--sep)${isCur ? ';background:var(--a22);margin:0 -10px;padding-left:10px;padding-right:10px' : ''}${canOpenPanel ? ';cursor:pointer' : ''}`;
     const hpNumStr = showNums
       ? `<span style="font-weight:bold;color:${col}">${cur}</span><span style="color:var(--txd)">/${max}</span>${temp > 0 ? `<span style="color:#aaddff;font-size:10px"> +${temp}</span>` : ''}`
       : '';
-    const clickAttr = canEdit ? `onclick="openHpPanel(tokens.find(t=>t.id==='${tok.id}'))"` : '';
+    const clickAttr = canOpenPanel ? `onclick="openHpPanel(tokens.find(t=>t.id==='${tok.id}'))"` : '';
     const activeConds = parseConditions(tok.conditions);
     const condsHtml = activeConds.length > 0
       ? `<div style="display:flex;flex-wrap:wrap;gap:2px;margin-top:2px" onclick="event.stopPropagation()">
@@ -341,7 +386,8 @@ function renderHpTable() {
       : '';
     return `<div style="${rowStyle}" ${clickAttr}>
       <div style="flex:1;min-width:0">
-        <div style="font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap${isCur ? ';color:var(--ac);font-weight:bold' : ''}">${isCur ? '▶ ' : ''}${esc(tokDisplayName(tok))}</div>
+        <div style="font-size:11px;word-break:break-word${isCur ? ';color:var(--ac);font-weight:bold' : ''}">${isCur ? '▶ ' : ''}${esc(tokDisplayName(tok))}</div>
+        ${controllerHtml}
         ${condsHtml}
         <div style="display:flex;align-items:center;gap:3px;margin-top:2px">
           <div style="flex:1;background:var(--bg3);border-radius:2px;overflow:hidden;height:4px">

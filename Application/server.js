@@ -233,6 +233,27 @@ app.get('/api/events', (req, res) => {
   req.on('close', () => { clearInterval(hb); sseClients.delete(res); });
 });
 
+// ── Auth ──────────────────────────────────────────────────────────────────────
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { type, characterId, password } = req.body || {};
+    if (type === 'dm') {
+      if (!password || !isMasterPassword(password)) return res.status(401).json({ error: 'Wrong password' });
+      return res.json({ ok: true, role: 'dm' });
+    }
+    if (type === 'character') {
+      if (!characterId) return res.status(400).json({ error: 'characterId required' });
+      const char = await getCharacter(characterId);
+      if (!char) return res.status(404).json({ error: 'Character not found' });
+      if (!char.passwordHash) return res.json({ needsSetup: true, characterId: char.id, characterName: char.name });
+      if (!password || !verifyPassword(password, char.passwordHash))
+        return res.status(401).json({ error: 'Wrong password' });
+      return res.json({ ok: true, role: 'character', characterId: char.id, characterName: char.name });
+    }
+    return res.status(400).json({ error: 'Invalid login type' });
+  } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
+});
+
 // ── Characters ────────────────────────────────────────────────────────────────
 app.get('/api/characters', async (req, res) => {
   try {
@@ -1531,7 +1552,16 @@ app.get('/api/monsters', async (req, res) => {
 
 app.get('/api/monsters/:id', async (req, res) => {
   try {
-    if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
+    // Also allow a character who controls a token linked to this monster
+    if (!masterAuth(req)) {
+      const callerCharId = req.headers['x-character-id'];
+      if (!callerCharId) return res.status(401).json({ error: 'Unauthorized' });
+      const assigned = DB_PROVIDER === 'localdb'
+        ? ldb.listTableTokens().some(t => t.linkedId === req.params.id && t.assignedCharId === callerCharId)
+        : (await idb.query({ tableTokens: { $: { where: { linkedId: req.params.id } } } }))
+            .tableTokens?.some(t => t.assignedCharId === callerCharId);
+      if (!assigned) return res.status(401).json({ error: 'Unauthorized' });
+    }
     const r = DB_PROVIDER === 'localdb' ? ldb.getMonster(req.params.id) : (await idb.query({ monsters: { $: { where: { id: req.params.id } } } })).monsters?.[0];
     if (!r) return res.status(404).json({ error: 'Not found' });
     let data = {};
@@ -2410,7 +2440,7 @@ app.put('/api/table/state', async (req, res) => {
 app.post('/api/table/tokens', async (req, res) => {
   try {
     if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
-    const { name, type = 'custom', linkedId = '', x = 0, y = 0, color = '#888888',
+    const { name, type = 'custom', linkedId = '', assignedCharId = '', x = 0, y = 0, color = '#888888',
             hpCurrent = 0, hpMax = 0, hpTemp = 0, speed = 30, initiativeId = '',
             tokenSize = 1, portrait = null, portraitThumb = null, label = '', conditions = '[]',
             ac = null } = req.body || {};
@@ -2471,7 +2501,7 @@ app.post('/api/table/tokens', async (req, res) => {
 
     const newId = genId();
     const token = {
-      name: String(name).trim(), type, linkedId: String(linkedId),
+      name: String(name).trim(), type, linkedId: String(linkedId), assignedCharId: String(assignedCharId),
       x: parseInt(x) || 0, y: parseInt(y) || 0,
       color: String(color), hpCurrent: parseInt(hpCurrent) || 0,
       hpMax: parseInt(hpMax) || 0, hpTemp: Math.max(0, parseInt(hpTemp) || 0), speed: parseInt(speed) || 30,
@@ -2526,22 +2556,24 @@ app.put('/api/table/tokens/:id', async (req, res) => {
         return res.json({ ok: true });
       }
 
-      const { name, label, x, y, color, hpCurrent, hpMax, hpTemp, speed, initiativeId, visible, movedFt, tokenSize, conditions } = body;
+      const { name, label, x, y, color, hpCurrent, hpMax, hpTemp, speed, initiativeId, visible, movedFt, tokenSize, conditions, linkedId, assignedCharId } = body;
       const update = {};
-      if (name !== undefined)        update.name = String(name).trim();
-      if (label !== undefined)       update.label = String(label).trim();
-      if (x !== undefined)           update.x = parseInt(x) || 0;
-      if (y !== undefined)           update.y = parseInt(y) || 0;
-      if (color !== undefined)       update.color = String(color);
-      if (hpCurrent !== undefined)   update.hpCurrent = Math.max(0, parseInt(hpCurrent) || 0);
-      if (hpMax !== undefined)       update.hpMax = Math.max(0, parseInt(hpMax) || 0);
-      if (hpTemp !== undefined)      update.hpTemp = Math.max(0, parseInt(hpTemp) || 0);
-      if (speed !== undefined)       update.speed = Math.max(0, parseInt(speed) || 30);
-      if (initiativeId !== undefined) update.initiativeId = String(initiativeId);
-      if (visible !== undefined)     update.visible = !!visible;
-      if (movedFt !== undefined)     update.movedFt = Math.max(0, parseInt(movedFt) || 0);
-      if (tokenSize !== undefined)   update.tokenSize = Math.max(1, Math.min(4, parseInt(tokenSize) || 1));
-      if (conditions !== undefined)  update.conditions = Array.isArray(conditions) ? JSON.stringify(conditions) : String(conditions);
+      if (name !== undefined)          update.name = String(name).trim();
+      if (label !== undefined)         update.label = String(label).trim();
+      if (x !== undefined)             update.x = parseInt(x) || 0;
+      if (y !== undefined)             update.y = parseInt(y) || 0;
+      if (color !== undefined)         update.color = String(color);
+      if (hpCurrent !== undefined)     update.hpCurrent = Math.max(0, parseInt(hpCurrent) || 0);
+      if (hpMax !== undefined)         update.hpMax = Math.max(0, parseInt(hpMax) || 0);
+      if (hpTemp !== undefined)        update.hpTemp = Math.max(0, parseInt(hpTemp) || 0);
+      if (speed !== undefined)         update.speed = Math.max(0, parseInt(speed) || 30);
+      if (initiativeId !== undefined)  update.initiativeId = String(initiativeId);
+      if (visible !== undefined)       update.visible = !!visible;
+      if (movedFt !== undefined)       update.movedFt = Math.max(0, parseInt(movedFt) || 0);
+      if (tokenSize !== undefined)     update.tokenSize = Math.max(1, Math.min(4, parseInt(tokenSize) || 1));
+      if (conditions !== undefined)    update.conditions = Array.isArray(conditions) ? JSON.stringify(conditions) : String(conditions);
+      if (linkedId !== undefined)      update.linkedId = String(linkedId);
+      if (assignedCharId !== undefined) update.assignedCharId = String(assignedCharId);
       if (DB_PROVIDER === 'localdb') { ldb.updateTableToken(req.params.id, update); }
       else { await idb.transact([idb.tx.tableTokens[req.params.id].update(update)]); }
       const updated = { ...tok, ...update };
@@ -2602,6 +2634,12 @@ app.put('/api/table/tokens/:id', async (req, res) => {
       const { x, y } = body;
       if (x === undefined || y === undefined) return res.status(400).json({ error: 'x and y required' });
       if (tok.type === 'monster') return res.status(403).json({ error: 'Unauthorized' });
+      // If caller identifies as a specific character, they may only move tokens assigned to them
+      const callerCharId = req.headers['x-character-id'];
+      if (callerCharId) {
+        const ownerField = tok.assignedCharId || tok.linkedId;
+        if (!ownerField || ownerField !== callerCharId) return res.status(403).json({ error: 'Not your token' });
+      }
       let currentId = '';
       if (DB_PROVIDER === 'localdb') {
         currentId = ldb.getInitState().currentId || '';

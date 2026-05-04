@@ -1,5 +1,13 @@
 // ── Shared mutable state (SKILL_AB, SKILL_NAMES, AB_NAMES in js/lib/dnd-data.js) ──
 
+// Session (read once on page load from sessionStorage)
+let _indexSession = null;
+try { _indexSession = JSON.parse(sessionStorage.getItem('rpgSession') || 'null'); } catch {}
+function indexIsDM() { return _indexSession?.role === 'dm'; }
+function indexCharId() { return _indexSession?.role === 'character' ? _indexSession.characterId : null; }
+function indexCharPw() { return _indexSession?.role === 'character' ? _indexSession.charPw : null; }
+function indexMasterPw() { return _indexSession?.role === 'dm' ? _indexSession.masterPw : null; }
+
 // Character
 let currentCharId    = null;
 let charPasswords    = {};   // { id: plaintext password for this session }

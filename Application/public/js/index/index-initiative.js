@@ -6,6 +6,9 @@ let initTrackerCollapsed = true;
 let _initDataLoaded    = false;
 
 function getDmPw() {
+  // Prefer the session master password (DM login)
+  const sessionPw = indexMasterPw();
+  if (sessionPw) return sessionPw;
   let pw = sessionStorage.getItem('initDmPw') || '';
   if (!pw) {
     pw = prompt('DM password:') || '';

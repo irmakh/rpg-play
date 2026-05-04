@@ -345,7 +345,9 @@ document.addEventListener('keydown', e => {
 
 // ── Auto-auth from stored session password ────────────────────────────────────
 (async function() {
-  const stored = sessionStorage.getItem('dmMasterPw');
+  let stored = null;
+  try { stored = JSON.parse(sessionStorage.getItem('rpgSession') || 'null')?.masterPw; } catch {}
+  if (!stored) stored = sessionStorage.getItem('dmMasterPw');
   if (!stored) return;
   document.getElementById('gate-pw').value = stored;
   await authenticate();

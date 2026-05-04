@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login — RPG Play</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#1a1a2e;--bg2:#16213e;--bg3:#0f3460;--bg4:#1a4a7a;
+  --ac:#c8a04a;--ahi:#e0b860;--a22:#c8a04a22;--a44:#c8a04a44;--a55:#c8a04a55;--a66:#c8a04a66;
+  --tx:#e0d8c8;--txd:#aaa;--sep:#ffffff11;--ok:#88ff88;--err:#ff8888;
+}
+body{font-family:'Segoe UI',sans-serif;background:var(--bg);color:var(--tx);min-height:100vh;display:flex;align-items:center;justify-content:center}
+.login-wrap{width:100%;max-width:380px;padding:16px}
+.login-box{background:var(--bg2);border:1px solid var(--a55);border-radius:10px;padding:32px 28px}
+.logo{text-align:center;margin-bottom:24px}
+.logo h1{color:var(--ac);font-size:22px;letter-spacing:2px;text-transform:uppercase;font-weight:bold}
+.logo p{color:var(--txd);font-size:11px;margin-top:4px;letter-spacing:.5px}
+.tabs{display:flex;gap:0;margin-bottom:24px;border-radius:5px;overflow:hidden;border:1px solid var(--a55)}
+.tab-btn{flex:1;padding:8px;background:transparent;border:none;color:var(--txd);font-size:12px;font-weight:bold;cursor:pointer;letter-spacing:.5px;text-transform:uppercase;transition:background .15s}
+.tab-btn.active{background:var(--ac);color:var(--bg)}
+.tab-btn:not(.active):hover{background:var(--a22);color:var(--tx)}
+.tab-content{display:none}
+.tab-content.active{display:block}
+.field{margin-bottom:14px}
+label{display:block;font-size:10px;color:var(--ac);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+input,select{width:100%;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:4px;padding:8px 10px;font-size:13px;font-family:inherit}
+input:focus,select:focus{outline:none;border-color:var(--ac);background:var(--bg4)}
+select option{background:var(--bg3)}
+.btn{width:100%;padding:10px;background:var(--ac);border:none;color:var(--bg);border-radius:4px;font-size:13px;font-weight:bold;cursor:pointer;letter-spacing:.5px;text-transform:uppercase;margin-top:4px}
+.btn:hover{background:var(--ahi)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.err-msg{color:var(--err);font-size:11px;min-height:16px;margin-bottom:10px;text-align:center}
+.ok-msg{color:var(--ok);font-size:11px;min-height:16px;margin-bottom:10px;text-align:center}
+.divider{border:none;border-top:1px solid var(--sep);margin:16px 0}
+.hint{font-size:11px;color:var(--txd);text-align:center;margin-top:12px}
+/* Setup step */
+#char-setup-step{display:none}
+#char-login-step{display:block}
+.step-title{font-size:13px;color:var(--ac);font-weight:bold;margin-bottom:4px}
+.step-sub{font-size:11px;color:var(--txd);margin-bottom:16px}
+</style>
+</head>
+<body>
+<div class="login-wrap">
+  <div class="login-box">
+    <div class="logo">
+      <h1>⚔ RPG Play</h1>
+      <p>Tactical D&amp;D Companion</p>
+    </div>
+
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('character')" id="tab-char-btn">Character</button>
+      <button class="tab-btn" onclick="switchTab('dm')" id="tab-dm-btn">Dungeon Master</button>
+    </div>
+
+    <!-- Character tab -->
+    <div class="tab-content active" id="tab-character">
+      <!-- Step 1: select + password -->
+      <div id="char-login-step">
+        <div class="field">
+          <label>Character</label>
+          <select id="char-select" onchange="onCharSelect()">
+            <option value="">Loading…</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Password</label>
+          <input type="password" id="char-pw" placeholder="Enter password…" autocomplete="current-password"
+                 onkeydown="if(event.key==='Enter')loginCharacter()">
+        </div>
+        <div class="err-msg" id="char-err"></div>
+        <button class="btn" onclick="loginCharacter()" id="char-login-btn">Login</button>
+      </div>
+
+      <!-- Step 2: first-time password setup -->
+      <div id="char-setup-step">
+        <div class="step-title" id="setup-char-name"></div>
+        <div class="step-sub">This character has no password yet.<br>Set one to continue.</div>
+        <div class="field">
+          <label>New Password</label>
+          <input type="password" id="setup-pw1" placeholder="Choose a password…" autocomplete="new-password"
+                 onkeydown="if(event.key==='Enter')document.getElementById('setup-pw2').focus()">
+        </div>
+        <div class="field">
+          <label>Confirm Password</label>
+          <input type="password" id="setup-pw2" placeholder="Confirm password…" autocomplete="new-password"
+                 onkeydown="if(event.key==='Enter')setupPassword()">
+        </div>
+        <div class="err-msg" id="setup-err"></div>
+        <button class="btn" onclick="setupPassword()" id="setup-btn">Set Password &amp; Login</button>
+        <button class="btn" style="margin-top:8px;background:transparent;border:1px solid var(--a55);color:var(--txd)"
+                onclick="cancelSetup()">Back</button>
+      </div>
+    </div>
+
+    <!-- DM tab -->
+    <div class="tab-content" id="tab-dm">
+      <div class="field">
+        <label>Master Password</label>
+        <input type="password" id="dm-pw" placeholder="Enter master password…" autocomplete="current-password"
+               onkeydown="if(event.key==='Enter')loginDM()">
+      </div>
+      <div class="err-msg" id="dm-err"></div>
+      <button class="btn" onclick="loginDM()">Login as DM</button>
+    </div>
+
+    <div class="hint">Session is stored in this browser tab only.</div>
+  </div>
+</div>
+<script src="/js/login.js"></script>
+</body>
+</html>
