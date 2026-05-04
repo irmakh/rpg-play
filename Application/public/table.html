@@ -171,7 +171,8 @@
           <div style="font-size:10px;color:var(--txd);margin-bottom:4px">Assign to character</div>
           <div style="display:flex;gap:4px">
             <select id="hp-assign-sel" style="flex:1;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px;padding:3px 6px;font-size:12px"></select>
-            <button class="btn sm success" onclick="saveTokenAssignment()">Save</button>
+            <button class="btn sm success" onclick="saveTokenAssignment()">Assign</button>
+            <button id="hp-unassign-btn" class="btn sm" onclick="unassignToken()" style="display:none">Unassign</button>
           </div>
         </div>
       </div>

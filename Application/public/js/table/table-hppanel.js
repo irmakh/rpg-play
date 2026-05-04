@@ -1,7 +1,7 @@
 // ── HP Panel ──────────────────────────────────────────────────────────────────
 async function openHpPanel(tok) {
   // Characters may only open the panel for their own token
-  if (!isDM() && !isMyToken(tok)) return;
+  if (!isDM() && !isMyToken(tok)) { closeHpPanel(); return; }
   selectedTokenId = tok.id;
   // Monsters: use stored AC (set at token creation, doesn't change). Render immediately.
   // Characters: render immediately with stored AC if present, then update real-time from server.
@@ -119,12 +119,14 @@ function _refreshHpPanel(tok) {
   // Token assignment — DM only
   const assignRow = document.getElementById('hp-assign-row');
   const assignSel = document.getElementById('hp-assign-sel');
+  const unassignBtn = document.getElementById('hp-unassign-btn');
   if (assignRow && assignSel) {
     if (isDM()) {
       assignRow.style.display = '';
       const currentAssign = tok.assignedCharId || (tok.type !== 'monster' ? tok.linkedId : '');
       assignSel.innerHTML = '<option value="">(Unassigned)</option>' +
         _charList.map(c => `<option value="${c.id}"${currentAssign === c.id ? ' selected' : ''}>${c.name}</option>`).join('');
+      if (unassignBtn) unassignBtn.style.display = tok.assignedCharId ? '' : 'none';
     } else {
       assignRow.style.display = 'none';
     }
@@ -302,6 +304,13 @@ async function saveTokenAssignment() {
     renderHpTable();
     renderTokens();
   } catch { showToast('Connection error.', true); }
+}
+
+async function unassignToken() {
+  if (!isDM()) return;
+  const sel = document.getElementById('hp-assign-sel');
+  if (sel) sel.value = '';
+  await saveTokenAssignment();
 }
 
 function applyHpChange(mode) {
