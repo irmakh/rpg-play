@@ -12,6 +12,7 @@ async function loadMedia() {
   try {
     const headers = {};
     if (charPasswords[currentCharId]) headers['X-Character-Password'] = charPasswords[currentCharId];
+    else if (indexMasterPw()) headers['X-Character-Password'] = indexMasterPw();
     const res = await fetch(`/api/characters/${currentCharId}/media`, { headers });
     if (!res.ok) { mediaList = []; renderMedia(); updatePortraitHeader(); return; }
     mediaList = await res.json();
@@ -111,6 +112,7 @@ async function uploadMedia(input, isPortrait) {
   try {
     const headers = { 'Content-Type': 'application/json' };
     if (charPasswords[currentCharId]) headers['X-Character-Password'] = charPasswords[currentCharId];
+    else if (indexMasterPw()) headers['X-Character-Password'] = indexMasterPw();
     const res = await fetch(`/api/characters/${currentCharId}/media`, {
       method: 'POST', headers,
       body: JSON.stringify({ dataUrl, originalName: file.name, isPortrait })
@@ -132,6 +134,7 @@ function deleteMedia(id) {
     try {
       const headers = {};
       if (charPasswords[currentCharId]) headers['X-Character-Password'] = charPasswords[currentCharId];
+      else if (indexMasterPw()) headers['X-Character-Password'] = indexMasterPw();
       const res = await fetch(`/api/characters/${currentCharId}/media/${id}`, { method: 'DELETE', headers });
       if (res.ok) await loadMedia();
       else showAlert('Delete failed.');
@@ -144,6 +147,7 @@ async function setPortrait(id) {
   try {
     const headers = {};
     if (charPasswords[currentCharId]) headers['X-Character-Password'] = charPasswords[currentCharId];
+    else if (indexMasterPw()) headers['X-Character-Password'] = indexMasterPw();
     const res = await fetch(`/api/characters/${currentCharId}/media/${id}/portrait`, { method: 'PUT', headers });
     if (res.ok) await loadMedia();
     else showAlert('Failed to set portrait.');
