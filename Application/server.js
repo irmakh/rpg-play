@@ -1481,7 +1481,7 @@ app.post('/api/dice/broadcast', (req, res) => {
 });
 
 app.post('/api/chat', (req, res) => {
-  const { sender, dice, results, modifier, total, label, type, message } = req.body;
+  const { sender, dice, results, modifier, total, label, type, message, description } = req.body;
   let entry;
   if (type === 'text') {
     if (!sender || !message)
@@ -1504,6 +1504,7 @@ app.post('/api/chat', (req, res) => {
       modifier: parseInt(modifier) || 0,
       total: parseInt(total),
       label: label ? String(label).slice(0, 60) : null,
+      description: description ? String(description).slice(0, 200) : null,
       timestamp: new Date().toISOString()
     };
   }

@@ -41,13 +41,13 @@ function confirmRoll(type) {
 }
 
 
-function rollDamage(label, expr) {
+function rollDamage(label, expr, description = '') {
   const result = parseDice(expr.trim());
   if (!result) return;
   const entry = { time: new Date(), label, type: 'dmg', detail: result.detail, total: result.total, isCrit: false, isFail: false, isDamage: true };
   pushRoll(entry);
   showToast(entry);
-  postToChat({ sender: getChatSender(), dice: result.diceExpr || String(result.total), results: result.rolls || [result.total], modifier: result.mod || 0, total: result.total, label });
+  postToChat({ sender: getChatSender(), dice: result.diceExpr || String(result.total), results: result.rolls || [result.total], modifier: result.mod || 0, total: result.total, label, ...(description ? { description } : {}) });
 }
 
 function rollWeaponAtk(btn) {
@@ -59,7 +59,8 @@ function rollWeaponAtk(btn) {
 function rollWeaponDmg(btn) {
   const row = btn.closest('tr');
   const inputs = row.querySelectorAll('input[type=text], input[type=number]');
-  rollDamage((inputs[0]?.value || 'Weapon') + ' Damage', inputs[2]?.value || '1d6');
+  const notes = inputs[3]?.value || '';
+  rollDamage((inputs[0]?.value || 'Weapon') + ' Damage', inputs[2]?.value || '1d6', notes);
 }
 
 function showToast(entry) {
@@ -138,7 +139,7 @@ function clearRollHistory() {
 }
 
 function rollWeaponAtkVal(name, atk) { startRoll(name + ' Attack', atk); }
-function rollWeaponDmgVal(name, dmg)  { rollDamage(name + ' Damage', dmg); }
+function rollWeaponDmgVal(name, dmg, notes = '') { rollDamage(name + ' Damage', dmg, notes); }
 
 function initRollClickHandlers() {
   // Skills: insert a roll button after each skill value input

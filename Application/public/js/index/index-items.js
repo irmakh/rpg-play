@@ -325,7 +325,7 @@ function renderWeaponsSummary() {
     return `<tr>
       <td style="font-weight:bold">${n}</td>
       <td><div style="display:flex;align-items:center;gap:2px">${a}<button class="roll-btn" data-name="${n}" data-val="${a}" onclick="rollWeaponAtkVal(this.dataset.name,this.dataset.val)" title="Roll attack">🎲</button></div></td>
-      <td><div style="display:flex;align-items:center;gap:2px">${d}<button class="roll-btn" data-name="${n}" data-val="${esc(dmg||'1d6')}" onclick="rollWeaponDmgVal(this.dataset.name,this.dataset.val)" title="Roll damage">🎲</button></div></td>
+      <td><div style="display:flex;align-items:center;gap:2px">${d}<button class="roll-btn" data-name="${n}" data-val="${esc(dmg||'1d6')}" data-notes="${esc(notes||'')}" onclick="rollWeaponDmgVal(this.dataset.name,this.dataset.val,this.dataset.notes)" title="Roll damage">🎲</button></div></td>
       <td style="color:var(--txd);font-size:11px">${esc(notes)}</td>
     </tr>`;
   }).join('');

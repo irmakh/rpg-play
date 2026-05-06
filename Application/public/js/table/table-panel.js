@@ -37,9 +37,10 @@ function renderSideCharacter() {
   let weapons = [];
   try { weapons = JSON.parse(d['_weapons'] || '[]'); } catch {}
   const atkRows = weapons.filter(r => r[0]).map(r => {
-    const [wName, wAtk, wDmg] = [r[0]||'', r[1]||'+0', r[2]||''];
+    const [wName, wAtk, wDmg, wNote] = [r[0]||'', r[1]||'+0', r[2]||'', r[3]||''];
+    const wNoteJs = wNote.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\r?\n/g, ' ');
     const dmgRow = wDmg
-      ? `<div class="qroll-row" onclick="rollDamageStr('${esc(wName)} Dmg','${esc(wDmg)}')" style="padding-left:20px;background:rgba(0,0,0,.15)">
+      ? `<div class="qroll-row" onclick="rollDamageStr('${esc(wName)} Dmg','${esc(wDmg)}'${wNoteJs ? `,'${wNoteJs}'` : ''})" style="padding-left:20px;background:rgba(0,0,0,.15)">
           <span style="font-size:11px;color:var(--txd)">↳ Damage</span>
           <span class="qroll-val" style="color:#ff9966;font-size:13px">${esc(wDmg)}</span>
         </div>`
@@ -173,7 +174,7 @@ function qroll(label, modifier) {
   document.getElementById('adv-modal').style.display = 'flex';
 }
 
-async function rollDamageStr(label, dmgStr) {
+async function rollDamageStr(label, dmgStr, description = '') {
   const result = parseDice(dmgStr);
   if (!result) return;
   const sides    = result.die || 6;
@@ -185,7 +186,7 @@ async function rollDamageStr(label, dmgStr) {
   _selfRollIds.add(rollId);
   _broadcastDiceRoll(rollId, sides, rolls, modifier, total, label, duration);
   await showDiceAnimation(sides, rolls, modifier, total, label, duration);
-  await postToChat({ sender: getChatSender(), dice: result.diceExpr || String(total), results: rolls, modifier, total, label });
+  await postToChat({ sender: getChatSender(), dice: result.diceExpr || String(total), results: rolls, modifier, total, label, ...(description ? { description } : {}) });
   _pushRollToChar(getActiveCharLinkedId(), { label, type: 'dmg', detail: result.detail, total, isCrit: false, isFail: false, isDamage: true, time: new Date().toISOString() });
 }
 

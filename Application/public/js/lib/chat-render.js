@@ -57,12 +57,15 @@ function appendChatEntry(e) {
   const labelStr = e.label ? ` — ${esc(e.label)}` : '';
   const natStr = isNat20 ? ' <span style="color:var(--ok)">✨ NAT 20!</span>'
                : isNat1  ? ' <span style="color:var(--err)">💀 NAT 1</span>' : '';
+  const descStr = e.description
+    ? `<div style="font-size:10px;color:var(--txd);margin-top:3px;font-style:italic;line-height:1.4">${esc(e.description)}</div>`
+    : '';
   div.className = `chat-entry${cls}`;
   div.innerHTML = `<div style="display:flex;justify-content:space-between;margin-bottom:2px">
     <span class="ce-sender">${esc(e.sender || '?')}</span>
     <span style="color:var(--txd);font-size:10px">${time}</span>
   </div>
   <span style="color:var(--txd);font-size:11px">${esc(e.dice || '')}${modStr}${labelStr}</span>${multiStr}
-  <div class="ce-total" style="color:${isNat20 ? 'var(--ok)' : isNat1 ? 'var(--err)' : 'var(--tx)'}">${e.total}${natStr}</div>`;
+  <div class="ce-total" style="color:${isNat20 ? 'var(--ok)' : isNat1 ? 'var(--err)' : 'var(--tx)'}">${e.total}${natStr}</div>${descStr}`;
   log.appendChild(div);
 }

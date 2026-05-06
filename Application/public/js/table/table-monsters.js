@@ -1,4 +1,113 @@
 // ── Monster stat rendering (same logic as monsters.js) ───────────────────────
+let _currentMonsterData = null;
+
+function _plainEntry(s) {
+  return String(s || '').replace(/\{@(\w+)\s([^}]*)\}/g, (_, tag, content) => {
+    const p = content.split('|');
+    switch (tag) {
+      case 'hit': return (parseInt(p[0]) >= 0 ? '+' : '') + p[0];
+      case 'damage': case 'dice': return p[0];
+      case 'dc': return 'DC ' + p[0];
+      case 'h': return 'Hit: ';
+      case 'atk': case 'atkr': return '';
+      case 'recharge': return '(Recharge ' + p[0] + '–6)';
+      default: return p[0] || content;
+    }
+  }).replace(/\{@\w+\}/g, '').replace(/\s+/g, ' ').trim();
+}
+
+async function rollMonsterDamage(section, idx, dmgStr) {
+  const items = (_currentMonsterData && _currentMonsterData[section]) || [];
+  const item = items[idx];
+  const label = (item ? item.name : '') || 'Damage';
+  let description = '';
+  if (item) {
+    const entryText = [].concat(item.entries || []).join(' ');
+    description = _plainEntry(entryText).slice(0, 150);
+  }
+  rollDamageStr(label + ' Dmg', dmgStr, description);
+}
+
+async function useMonsterAction(section, idx) {
+  if (!_currentMonsterData) return;
+  const items = _currentMonsterData[section] || [];
+  const item = items[idx];
+  if (!item) return;
+  const sender = (_currentMonsterData.label || _currentMonsterData.name || 'Monster').slice(0, 40);
+  const rawText = [].concat(item.entries || []).map(e => {
+    if (typeof e === 'string') return _plainEntry(e);
+    if (e && e.type === 'list' && Array.isArray(e.items))
+      return e.items.map(i => '• ' + _plainEntry(typeof i === 'string' ? i : (i.name || ''))).join(' ');
+    return '';
+  }).filter(Boolean).join(' ');
+  try {
+    await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sender, type: 'text', message: item.name + ': ' + rawText })
+    });
+  } catch {}
+}
+
+function renderMonsterActionsPanel(data, tok) {
+  const hasAny = (data.action?.length || 0) + (data.bonus?.length || 0) +
+    (data.reaction?.length || 0) + (data.legendary?.length || 0) > 0;
+  if (!hasAny) return '';
+
+  _currentMonsterData = {
+    name: data.name || 'Monster',
+    label: tok?.label || '',
+    action: data.action || [],
+    bonus: data.bonus || [],
+    reaction: data.reaction || [],
+    legendary: data.legendary || []
+  };
+
+  if (!_sideOpenSections.has('monster-actions')) _sideOpenSections.add('monster-actions');
+
+  function rActionItem(item, section, idx) {
+    const entryText = [].concat(item.entries || []).join(' ');
+    const atkMatch = entryText.match(/\{@hit\s([+-]?\d+)\}/i);
+    const dmgTagMatch = entryText.match(/\{@damage\s+([^}]+)\}/i);
+    const rawDmg = dmgTagMatch ? dmgTagMatch[1] : (entryText.match(/\d+d\d+\s*(?:[+-]\s*\d+)?/i)?.[0] || '');
+    const dmgStr = rawDmg.replace(/\s+/g, '');
+    const sn = (item.name || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    const useBtn = `<button class="btn sm" onclick="useMonsterAction('${section}',${idx})" style="font-size:10px;padding:1px 5px;flex-shrink:0;background:rgba(100,150,255,.18);color:#aaf">Use</button>`;
+
+    if (atkMatch) {
+      const bonus = parseInt(atkMatch[1]);
+      const dmgRow = dmgStr
+        ? `<div class="qroll-row" onclick="rollMonsterDamage('${section}',${idx},'${dmgStr}')" style="padding-left:20px;background:rgba(0,0,0,.15)"><span style="font-size:11px;color:var(--txd)">↳ Damage</span><span class="qroll-val" style="color:#ff9966;font-size:13px">${esc(dmgStr)}</span></div>`
+        : '';
+      return `<div style="display:flex;align-items:center;gap:2px"><div class="qroll-row" style="flex:1;min-width:0;margin:0" onclick="qroll('${sn} atk','${bonus}')" title="${esc(entryText.slice(0, 120))}"><span>${parseEntry(item.name || '')}</span><span class="qroll-val">${bonus >= 0 ? '+' : ''}${bonus}</span></div>${useBtn}</div>${dmgRow}`;
+    }
+
+    return `<div style="display:flex;align-items:center;gap:2px;padding:2px 4px"><span style="flex:1;font-size:11px;color:var(--ac);font-weight:bold;font-style:italic">${parseEntry(item.name || '')}</span>${useBtn}</div>`;
+  }
+
+  const HR2 = '<hr style="border:none;border-top:1px solid var(--a44);margin:4px 0">';
+
+  function rActionGroup(items, title, section) {
+    if (!items || !items.length) return '';
+    return `${HR2}<div style="font-size:10px;color:var(--ac);text-transform:uppercase;font-weight:bold;letter-spacing:.5px;margin-bottom:2px">${title}</div>` +
+      items.map((item, idx) => rActionItem(item, section, idx)).join('');
+  }
+
+  const content =
+    rActionGroup(data.action, 'Actions', 'action') +
+    rActionGroup(data.bonus, 'Bonus Actions', 'bonus') +
+    rActionGroup(data.reaction, 'Reactions', 'reaction') +
+    rActionGroup(data.legendary, 'Legendary', 'legendary');
+
+  return `<div class="qroll-section">
+    <div class="qroll-section-hdr" onclick="toggleSideSection('monster-actions')">
+      <span style="color:#ff9999">Actions</span>
+      <span id="side-sec-monster-actions-arrow">${_sideSecArrow('monster-actions')}</span>
+    </div>
+    <div id="side-sec-monster-actions" class="qroll-rows" style="${_sideSecStyle('monster-actions')}">${content}</div>
+  </div>`;
+}
+
 function parseEntry(s) {
   const escaped = String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   return escaped.replace(/\{@(\w+)\s([^}]*)\}/g, (_,tag,content) => {
@@ -40,6 +149,7 @@ function renderMonsterFullStats(data, tok) {
   function rSection(items,title){if(!items||!items.length)return'';return HR+'<div style="font-size:10px;color:var(--ac);text-transform:uppercase;font-weight:bold;letter-spacing:.5px;margin-bottom:3px">'+title+'</div>'+items.map(item=>'<div style="margin:4px 0"><span style="color:var(--ac);font-weight:bold;font-style:italic">'+parseEntry(item.name||'')+'</span> '+rEntries(item.entries)+'</div>').join('');}
   function rSectionRollable(items,title){if(!items||!items.length)return'';const HR2=HR+'<div style="font-size:10px;color:var(--ac);text-transform:uppercase;font-weight:bold;letter-spacing:.5px;margin-bottom:3px">'+title+'</div>';return HR2+items.map(item=>{const entryText=[].concat(item.entries||[]).join(' ');const atkMatch=entryText.match(/\{@hit\s([+-]?\d+)\}|([+-]\d+)\s+to\s+hit/i);const dmgMatch=entryText.match(/\d+d\d+(?:[+-]\d+)?/i);if(atkMatch){const bonus=parseInt(atkMatch[1]||atkMatch[2]);const dmgStr=dmgMatch?dmgMatch[0]:'';const sn=item.name.replace(/'/g,"\\'");const dmgRow=dmgStr?'<div class="qroll-row" onclick="rollDamageStr(\''+sn+' Dmg\',\''+dmgStr+'\')" style="padding-left:20px;background:rgba(0,0,0,.15)"><span style="font-size:11px;color:var(--txd)">↳ Damage</span><span class="qroll-val" style="color:#ff9966;font-size:13px">'+esc(dmgStr)+'</span></div>':'';return'<div class="qroll-row" onclick="qroll(\''+sn+' atk\',\''+bonus+'\')" title="'+esc(entryText.slice(0,120))+'">'+'<span>'+parseEntry(item.name||'')+'</span>'+'<span class="qroll-val">'+(bonus>=0?'+':'')+bonus+'</span></div>'+dmgRow;}return'<div style="margin:4px 0"><span style="color:var(--ac);font-weight:bold;font-style:italic">'+parseEntry(item.name||'')+'</span> '+rEntries(item.entries)+'</div>';}).join('');}
 
+  const actionsPanel = renderMonsterActionsPanel(data, tok);
   const hpFrac=(tok.hpMax>0)?(tok.hpCurrent||0)/tok.hpMax:0;
   let html='<div style="font-size:11px;line-height:1.5">';
   if(size||typeStr||align)html+='<div style="font-size:10px;font-style:italic;color:var(--txd);margin-bottom:4px">'+esc([size,typeStr,align].filter(Boolean).join(', '))+'</div>';
@@ -60,10 +170,6 @@ function renderMonsterFullStats(data, tok) {
   if(sensesStr)html+='<div><span style="color:var(--ac);font-weight:bold">Senses</span> '+esc(sensesStr)+'</div>';
   html+='<div><span style="color:var(--ac);font-weight:bold">Languages</span> '+esc(langStr)+'</div>';
   html+=rSection(data.trait,'Traits');
-  html+=rSectionRollable(data.action,'Actions');
-  html+=rSectionRollable(data.bonus,'Bonus Actions');
-  html+=rSectionRollable(data.reaction,'Reactions');
-  html+=rSectionRollable(data.legendary,'Legendary Actions');
   html+='<div style="margin-top:8px"><a href="/monsters.html" target="_blank" style="color:var(--ac);font-size:10px">📖 Full view →</a></div>';
   html+='</div>';
   const dexMod=Math.floor(((data.dex||10)-10)/2);const initStr=(dexMod>=0?'+':'')+dexMod;
@@ -74,6 +180,7 @@ function renderMonsterFullStats(data, tok) {
       <button class="btn sm" onclick="rollMonsterInitiativeFromPanel()" title="Roll Initiative (d20${initStr})" style="font-size:10px;padding:2px 6px">🎲 Init ${initStr}</button>
     </div>
   </div>
+  ${actionsPanel}
   <div class="qroll-section">
     <div class="qroll-section-hdr" onclick="toggleSideSection('monster')">
       <span style="color:#ff9999">Stat Block</span>
