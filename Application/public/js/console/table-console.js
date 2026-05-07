@@ -50,17 +50,35 @@ function _setDot(state) {
   if (dot) dot.className = state;
 }
 
+// Show/hide D-pad based on whether current user can move the selected token
+function _consoleUpdateArrows() {
+  const wrap = document.getElementById('console-arrow-btns');
+  if (!wrap) return;
+  const tok = (tokens || []).find(t => t.id === selectedTokenId);
+  const canMove = tok && isMyToken(tok) && (!initData.currentId || tok.id === getActiveTurnTokenId());
+  wrap.style.display = canMove ? 'flex' : 'none';
+}
+
 // Wrap openHpPanel to relay the selected token to the secondary
 const _prevOpenHpPanel = openHpPanel;
 window.openHpPanel = function(tok) {
   _prevOpenHpPanel(tok);
   _consolePost({ type: 'TOKEN_SELECTED', token: JSON.parse(JSON.stringify(tok)) });
+  _consoleUpdateArrows();
 };
 
 const _prevCloseHpPanel = closeHpPanel;
 window.closeHpPanel = function() {
   _prevCloseHpPanel();
   _consolePost({ type: 'TOKEN_CLEARED' });
+  _consoleUpdateArrows();
+};
+
+// Keep arrows in sync when initiative changes (turn advance hides/shows arrow for non-active tokens)
+const _prevRenderTokens = renderTokens;
+window.renderTokens = function() {
+  _prevRenderTokens();
+  _consoleUpdateArrows();
 };
 
 // Detect secondary window closed via polling (no close event from window.open)
@@ -68,8 +86,9 @@ setInterval(() => {
   if (_secondaryWin && _secondaryWin.closed) { _secondaryWin = null; _setDot('offline'); }
 }, 2000);
 
-// On logout: clear session and reload this page — the gate will appear
+// On logout: broadcast to other PWA apps, clear session, reload
 window.logout = function() {
+  navigator.sendBeacon('/api/console/event', new Blob([JSON.stringify({ type: 'SESSION_LOGOUT' })], { type: 'application/json' }));
   sessionStorage.removeItem('rpgSession');
   sessionStorage.removeItem('tableMasterPw');
   sessionStorage.removeItem('dmMasterPw');

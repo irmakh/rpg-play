@@ -99,6 +99,27 @@
 </div>
 <script>
 (function(){
+  var _gateEs=new EventSource('/api/console/events');
+  _gateEs.onmessage=function(ev){
+    try{
+      var d=JSON.parse(ev.data);
+      if(d.type==='SESSION_SYNC'&&d.session){
+        var cur=null;try{cur=JSON.parse(sessionStorage.getItem('rpgSession')||'null');}catch{}
+        if(cur&&cur.role===d.session.role&&(cur.role==='dm'?cur.masterPw===d.session.masterPw:cur.characterId===d.session.characterId))return;
+        sessionStorage.setItem('rpgSession',JSON.stringify(d.session));
+        if(d.session.role==='dm'){sessionStorage.setItem('tableMasterPw',d.session.masterPw);sessionStorage.setItem('dmMasterPw',d.session.masterPw);}
+        else{sessionStorage.removeItem('tableMasterPw');sessionStorage.removeItem('dmMasterPw');}
+        location.reload();
+      }
+      if(d.type==='SESSION_LOGOUT'){
+        if(!sessionStorage.getItem('rpgSession'))return;
+        sessionStorage.removeItem('rpgSession');
+        sessionStorage.removeItem('tableMasterPw');
+        sessionStorage.removeItem('dmMasterPw');
+        location.reload();
+      }
+    }catch{}
+  };
   try{var s=JSON.parse(sessionStorage.getItem('rpgSession')||'null');if(s&&s.role)return;}catch{}
   var g=document.getElementById('pwa-gate');
   g.style.display='flex';
@@ -122,6 +143,7 @@ function _pwagStore(sess){
   sessionStorage.setItem('rpgSession',JSON.stringify(sess));
   if(sess.role==='dm'){sessionStorage.setItem('tableMasterPw',sess.masterPw);sessionStorage.setItem('dmMasterPw',sess.masterPw);}
   else{sessionStorage.removeItem('tableMasterPw');sessionStorage.removeItem('dmMasterPw');}
+  navigator.sendBeacon('/api/console/event',new Blob([JSON.stringify({type:'SESSION_SYNC',session:sess})],{type:'application/json'}));
   location.reload();
 }
 
@@ -223,6 +245,10 @@ async function pwagLoginDM(){
     🐉 Monster
     <span class="s-tab-dot" id="s-monster-dot"></span>
   </button>
+  <button class="s-tab" data-tab="actions" onclick="sShowTab('actions')" id="s-tab-btn-actions" style="display:none">
+    ⚡ Actions
+    <span class="s-tab-dot" id="s-actions-dot"></span>
+  </button>
 </div>
 
 <!-- ── Initiative Tab ─────────────────────────────────────────────────────── -->
@@ -291,10 +317,17 @@ async function pwagLoginDM(){
     <!-- DM-only extras -->
     <div id="s-hp-dm-extras" class="s-hp-dm-extras" style="display:none">
       <button class="s-btn" id="s-roll-init-btn" onclick="sRollTokenInit()">🎲 Roll Initiative</button>
+      <button class="s-btn" id="s-vis-toggle-btn" onclick="sToggleTokenVisibility()">🚫 Hide Token</button>
+      <div style="border-top:1px solid var(--a44);padding-top:6px;display:flex;flex-direction:column;gap:5px">
+        <div class="s-label">Assign to character</div>
+        <div style="display:flex;gap:6px">
+          <select id="s-assign-sel" class="s-select" style="flex:1;min-height:38px;font-size:12px;padding:4px 6px"></select>
+          <button class="s-btn" onclick="sSaveTokenAssignment()" style="flex:none;min-width:66px">Assign</button>
+          <button class="s-btn s-btn-danger" id="s-unassign-btn" onclick="sUnassignToken()" style="flex:none;min-width:74px;display:none">Unassign</button>
+        </div>
+      </div>
       <button class="s-btn s-btn-danger" onclick="sDeleteToken()">🗑 Delete Token</button>
     </div>
-    <!-- Character skills / saves / attacks (populated by sRenderCharStats) -->
-    <div id="s-char-stats" style="display:none;border-top:2px solid var(--a44)"></div>
   </div>
 </div>
 
@@ -369,7 +402,12 @@ async function pwagLoginDM(){
     <div>Select a monster token</div>
     <div style="font-size:12px;margin-top:6px;color:var(--a88)">DM mode only</div>
   </div>
-  <div id="s-monster-panel" style="display:none;padding:8px;overflow-y:auto;flex:1;font-size:12px;line-height:1.5"></div>
+  <div id="s-monster-panel" style="display:none;padding:8px;overflow-y:auto;flex:1;font-size:12px;line-height:1.5;padding-bottom:calc(8px + env(safe-area-inset-bottom,0px))"></div>
+</div>
+
+<!-- ── Actions Tab ─────────────────────────────────────────────────────────── -->
+<div id="s-tab-actions" class="s-tab-content">
+  <div id="s-char-stats" style="overflow-y:auto;flex:1;min-height:0;padding-bottom:env(safe-area-inset-bottom,0px)"></div>
 </div>
 
 <script src="/js/lib/esc.js" defer></script>

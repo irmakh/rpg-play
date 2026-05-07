@@ -126,7 +126,6 @@ body.secondary-screen {
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
   user-select: none;
-  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 /* Header */
@@ -241,6 +240,7 @@ body.secondary-screen {
   overflow-y: auto;
   min-height: 0;
   padding: 2px 0;
+  padding-bottom: calc(2px + env(safe-area-inset-bottom, 0px));
 }
 
 .s-empty-msg {
@@ -304,7 +304,7 @@ body.secondary-screen {
 
 /* ── HP Tab ──────────────────────────────────────────────────────────────── */
 
-#s-hp-panel { display: flex; flex-direction: column; overflow-y: auto; flex: 1; min-height: 0; }
+#s-hp-panel { display: flex; flex-direction: column; overflow-y: auto; flex: 1; min-height: 0; padding-bottom: env(safe-area-inset-bottom, 0px); }
 
 .s-hp-header {
   display: flex;
@@ -432,6 +432,7 @@ body.secondary-screen {
   flex-shrink: 0;
   border-top: 1px solid var(--a44);
   padding: 6px 8px;
+  padding-bottom: max(6px, env(safe-area-inset-bottom, 0px));
   display: flex;
   flex-direction: column;
   gap: 5px;
@@ -442,7 +443,7 @@ body.secondary-screen {
 
 /* ── DM Tab ──────────────────────────────────────────────────────────────── */
 
-#s-tab-dm { overflow-y: auto; }
+#s-tab-dm { overflow-y: auto; padding-bottom: env(safe-area-inset-bottom, 0px); }
 
 .s-dm-section { border-bottom: 1px solid var(--a44); padding: 6px 0; }
 

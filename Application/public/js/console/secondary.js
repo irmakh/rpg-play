@@ -92,6 +92,7 @@ function sApplyBadges() {
 }
 
 function sLogout() {
+  navigator.sendBeacon('/api/console/event', new Blob([JSON.stringify({ type: 'SESSION_LOGOUT' })], { type: 'application/json' }));
   sessionStorage.removeItem('rpgSession');
   sessionStorage.removeItem('tableMasterPw');
   sessionStorage.removeItem('dmMasterPw');
@@ -123,6 +124,10 @@ function sShowTab(name) {
   }
   if (name === 'monster') {
     const dot = document.getElementById('s-monster-dot');
+    if (dot) dot.classList.remove('show');
+  }
+  if (name === 'actions') {
+    const dot = document.getElementById('s-actions-dot');
     if (dot) dot.classList.remove('show');
   }
 }
@@ -244,6 +249,23 @@ function sRenderHpPanel(tok) {
   const dmExtras = document.getElementById('s-hp-dm-extras');
   if (dmExtras) dmExtras.style.display = sIsDM() ? '' : 'none';
 
+  if (sIsDM()) {
+    const visBtn = document.getElementById('s-vis-toggle-btn');
+    if (visBtn) {
+      const nowHidden = tok.visible === false;
+      visBtn.textContent = nowHidden ? '👁 Show Token' : '🚫 Hide Token';
+      visBtn.className = 's-btn' + (nowHidden ? ' s-btn-success' : '');
+    }
+    const assignSel = document.getElementById('s-assign-sel');
+    if (assignSel) {
+      const pcs = sCharList.filter(c => c.char_type === 'pc');
+      assignSel.innerHTML = '<option value="">— Select character —</option>' +
+        pcs.map(c => `<option value="${c.id}"${tok.assignedCharId === c.id ? ' selected' : ''}>${esc(c.name)}</option>`).join('');
+    }
+    const unassignBtn = document.getElementById('s-unassign-btn');
+    if (unassignBtn) unassignBtn.style.display = tok.assignedCharId ? '' : 'none';
+  }
+
   const condGrid = document.getElementById('s-conds-grid');
   if (condGrid) {
     const active    = sParseConditions(tok.conditions);
@@ -320,6 +342,24 @@ async function sDeleteToken() {
   try { await fetch(`/api/table/tokens/${sSelectedToken.id}`, { method: 'DELETE', headers: { 'X-Master-Password': masterPw } }); } catch {}
 }
 
+function sToggleTokenVisibility() {
+  if (!sSelectedToken || !sIsDM()) return;
+  const nowHidden = sSelectedToken.visible === false;
+  sPutHp({ visible: nowHidden });
+}
+
+function sSaveTokenAssignment() {
+  if (!sSelectedToken || !sIsDM()) return;
+  const charId = document.getElementById('s-assign-sel')?.value || '';
+  if (!charId) return;
+  sPutHp({ assignedCharId: charId });
+}
+
+function sUnassignToken() {
+  if (!sSelectedToken || !sIsDM()) return;
+  sPutHp({ assignedCharId: '' });
+}
+
 // ── Character Stats (HP tab) ──────────────────────────────────────────────────
 function sSetRollMode(mode) {
   sRollMode = mode;
@@ -386,6 +426,7 @@ function sRenderCharStats(tok) {
 
   if (!canSeeStats || !sQrollData) {
     container.style.display = 'none';
+    _sShowActionsTab(false);
     return;
   }
   container.style.display = '';
@@ -456,6 +497,7 @@ function sRenderCharStats(tok) {
       <div id="s-stats-attacks" class="s-qroll-rows" style="display:none">${atkRows}</div>
     </div>`;
   sSetRollMode(sRollMode);
+  _sShowActionsTab(true);
 }
 
 // ── Monster Stats ─────────────────────────────────────────────────────────────
@@ -535,6 +577,7 @@ function sRenderMonsterStats(tok) {
   if (!container) return;
   if (!tok || tok.type !== 'monster' || !sIsDM() || !sMonsterData) {
     container.style.display = 'none';
+    _sShowActionsTab(false);
     return;
   }
   const d          = sMonsterData;
@@ -600,6 +643,7 @@ function sRenderMonsterStats(tok) {
     ${rGroup(d.reaction,  'Reactions',     'reaction')}
     ${rGroup(d.legendary, 'Legendary',     'legendary')}`;
   sSetRollMode(sRollMode);
+  _sShowActionsTab(true);
 }
 
 function sRenderMonsterStatBlock(data, tok) {
@@ -743,6 +787,17 @@ function sRenderMonsterTab(tok) {
   panel.innerHTML = sRenderMonsterStatBlock(sMonsterData, tok);
   if (sCurrentTab !== 'monster') {
     const dot = document.getElementById('s-monster-dot');
+    if (dot) dot.classList.add('show');
+  }
+}
+
+function _sShowActionsTab(show) {
+  const btn = document.getElementById('s-tab-btn-actions');
+  if (!btn) return;
+  btn.style.display = show ? '' : 'none';
+  if (!show && sCurrentTab === 'actions') sShowTab('hp');
+  if (show && sCurrentTab !== 'actions') {
+    const dot = document.getElementById('s-actions-dot');
     if (dot) dot.classList.add('show');
   }
 }
@@ -1137,6 +1192,7 @@ function _sStartConsoleSSE() {
       sMonsterData   = null;
       if (sCurrentTab === 'hp') sRenderHpPanel(null);
       sRenderMonsterTab(null);
+      _sShowActionsTab(false);
     }
   };
 }

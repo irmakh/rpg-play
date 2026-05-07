@@ -97,6 +97,27 @@
 </div>
 <script>
 (function(){
+  var _gateEs=new EventSource('/api/console/events');
+  _gateEs.onmessage=function(ev){
+    try{
+      var d=JSON.parse(ev.data);
+      if(d.type==='SESSION_SYNC'&&d.session){
+        var cur=null;try{cur=JSON.parse(sessionStorage.getItem('rpgSession')||'null');}catch{}
+        if(cur&&cur.role===d.session.role&&(cur.role==='dm'?cur.masterPw===d.session.masterPw:cur.characterId===d.session.characterId))return;
+        sessionStorage.setItem('rpgSession',JSON.stringify(d.session));
+        if(d.session.role==='dm'){sessionStorage.setItem('tableMasterPw',d.session.masterPw);sessionStorage.setItem('dmMasterPw',d.session.masterPw);}
+        else{sessionStorage.removeItem('tableMasterPw');sessionStorage.removeItem('dmMasterPw');}
+        location.reload();
+      }
+      if(d.type==='SESSION_LOGOUT'){
+        if(!sessionStorage.getItem('rpgSession'))return;
+        sessionStorage.removeItem('rpgSession');
+        sessionStorage.removeItem('tableMasterPw');
+        sessionStorage.removeItem('dmMasterPw');
+        location.reload();
+      }
+    }catch{}
+  };
   try{var s=JSON.parse(sessionStorage.getItem('rpgSession')||'null');if(s&&s.role)return;}catch{}
   var g=document.getElementById('pwa-gate');
   g.style.display='flex';
@@ -119,6 +140,7 @@ function _pwagStore(sess){
   sessionStorage.setItem('rpgSession',JSON.stringify(sess));
   if(sess.role==='dm'){sessionStorage.setItem('tableMasterPw',sess.masterPw);sessionStorage.setItem('dmMasterPw',sess.masterPw);}
   else{sessionStorage.removeItem('tableMasterPw');sessionStorage.removeItem('dmMasterPw');}
+  navigator.sendBeacon('/api/console/event',new Blob([JSON.stringify({type:'SESSION_SYNC',session:sess})],{type:'application/json'}));
   location.reload();
 }
 
@@ -220,6 +242,16 @@ async function pwagLoginDM(){
     <span id="zoom-val" style="font-size:11px;color:var(--ac);min-width:34px">100%</span>
   </div>
   <button class="btn tool-btn" onclick="openDiceRollerModal()" title="Dice Roller" style="margin-left:4px">🎲</button>
+
+  <!-- D-pad: move selected token — shown only when user can move it -->
+  <div id="console-arrow-btns" style="display:none;flex-direction:column;align-items:center;gap:2px;margin-left:8px;padding-left:8px;border-left:1px solid var(--a44)">
+    <button class="btn" onclick="moveSelectedToken('ArrowUp')"    title="Move Up"    style="width:36px;height:32px;padding:0;font-size:13px;line-height:1">▲</button>
+    <div style="display:flex;gap:2px">
+      <button class="btn" onclick="moveSelectedToken('ArrowLeft')"  title="Move Left"  style="width:36px;height:32px;padding:0;font-size:13px;line-height:1">◀</button>
+      <button class="btn" onclick="moveSelectedToken('ArrowRight')" title="Move Right" style="width:36px;height:32px;padding:0;font-size:13px;line-height:1">▶</button>
+    </div>
+    <button class="btn" onclick="moveSelectedToken('ArrowDown')"  title="Move Down"  style="width:36px;height:32px;padding:0;font-size:13px;line-height:1">▼</button>
+  </div>
 
   <!-- Console: secondary screen button + connection dot -->
   <div style="display:flex;align-items:center;gap:5px;margin-left:8px;padding-left:8px;border-left:1px solid var(--a44)">
