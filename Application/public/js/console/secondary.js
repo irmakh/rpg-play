@@ -1094,6 +1094,14 @@ function sStartSSE() {
 function _sStartConsoleSSE() {
   if (_sConsoleEs) _sConsoleEs.close();
   _sConsoleEs = new EventSource('/api/console/events');
+  // Send SECONDARY_READY only after the SSE connection is confirmed open.
+  // Posting it immediately races with the EventSource GET — the server may
+  // broadcast STATE_SNAPSHOT/TOKEN_SELECTED before this client is registered,
+  // causing the secondary to miss the snapshot.  onopen fires on reconnects
+  // too, so state is automatically re-synced after a drop.
+  _sConsoleEs.onopen = () => {
+    _sConsolePost({ type: 'SECONDARY_READY' });
+  };
   _sConsoleEs.onmessage = ev => {
     let d;
     try { d = JSON.parse(ev.data); } catch { return; }
@@ -1121,14 +1129,7 @@ function _sStartConsoleSSE() {
           }).catch(() => {});
       }
       sFetchCharStats(tok);
-      if (sCurrentTab === 'init') {
-        sShowTab('hp');
-      } else if (sCurrentTab !== 'hp') {
-        const dot = document.getElementById('s-hp-dot');
-        if (dot) dot.classList.add('show');
-      } else {
-        sRenderHpPanel(sSelectedToken);
-      }
+      sShowTab('hp');
     }
     if (type === 'TOKEN_CLEARED') {
       sSelectedToken = null;
@@ -1173,7 +1174,6 @@ window.addEventListener('load', async () => {
 
   sStartSSE();
   _sStartConsoleSSE();
-  _sConsolePost({ type: 'SECONDARY_READY' });
 
   window.addEventListener('beforeunload', () => {
     navigator.sendBeacon('/api/console/event',

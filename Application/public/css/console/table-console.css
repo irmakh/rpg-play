@@ -96,6 +96,10 @@
 body.console-mode #left-panel,
 body.console-mode #side-panel { display: none !important; }
 
+body.console-mode {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
 body.console-mode #toolbar {
   background: rgba(22, 33, 62, 0.88);
   backdrop-filter: blur(6px);
@@ -122,6 +126,7 @@ body.secondary-screen {
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
   user-select: none;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 /* Header */
