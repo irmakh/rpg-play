@@ -25,6 +25,11 @@
 - **extToMime(fileUrl)** - Infers MIME type from a file URL's extension; used during backup restore
 - **broadcast(channel, data)** - Sends a JSON event to all SSE/WebSocket clients subscribed to a named channel
 
+## Application — Frontend Modules (`Application/public/js/table/`)
+
+- **table-console.js** - BroadcastChannel bridge for console theme Screen 1 (map); opens secondary window, broadcasts TOKEN_SELECTED
+- **secondary.js** - Self-contained logic for Screen 2 (info panel); own SSE, own state, own API calls; receives TOKEN_SELECTED via BroadcastChannel
+
 ## Application — LocalDB Helpers (`Application/db/localdb.js`)
 
 > Exported functions from the SQLite abstraction layer.

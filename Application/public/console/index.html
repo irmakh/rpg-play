@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RPG Console</title>
+<link rel="manifest" href="/console/manifest.json">
+<meta name="theme-color" content="#1a1a2e">
+<script>if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js');</script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#1a1a2e;--bg2:#16213e;--bg3:#0f3460;--bg4:#1a4a7a;
+  --ac:#c8a04a;--ahi:#e0b860;--a22:#c8a04a22;--a44:#c8a04a44;--a55:#c8a04a55;
+  --tx:#e0d8c8;--txd:#aaa;--sep:#ffffff11;--ok:#88ff88;--err:#ff8888;
+}
+body{font-family:'Segoe UI',sans-serif;background:var(--bg);color:var(--tx);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+
+/* ── Login view ──────────────────────────────────────────────────────────── */
+.login-wrap{width:100%;max-width:360px}
+.login-box{background:var(--bg2);border:1px solid var(--a55);border-radius:10px;padding:28px 24px}
+.login-logo{text-align:center;margin-bottom:20px}
+.login-logo h1{color:var(--ac);font-size:22px;letter-spacing:2px;text-transform:uppercase;font-weight:bold}
+.login-logo p{color:var(--txd);font-size:11px;margin-top:4px;letter-spacing:.5px}
+.tab-row{display:flex;margin-bottom:20px;border-radius:5px;overflow:hidden;border:1px solid var(--a55)}
+.tab-btn{flex:1;padding:8px;background:transparent;border:none;color:var(--txd);font-size:12px;font-weight:bold;cursor:pointer;letter-spacing:.5px;text-transform:uppercase;transition:background .15s}
+.tab-btn.active{background:var(--ac);color:var(--bg)}
+.tab-btn:not(.active):hover{background:var(--a22);color:var(--tx)}
+.tab-pane{display:none}.tab-pane.active{display:block}
+.field{margin-bottom:13px}
+.field label{display:block;font-size:10px;color:var(--ac);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.field input,.field select{width:100%;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:4px;padding:8px 10px;font-size:13px;font-family:inherit}
+.field input:focus,.field select:focus{outline:none;border-color:var(--ac);background:var(--bg4)}
+.field select option{background:var(--bg3)}
+.login-btn{width:100%;padding:10px;background:var(--ac);border:none;color:var(--bg);border-radius:4px;font-size:13px;font-weight:bold;cursor:pointer;letter-spacing:.5px;text-transform:uppercase;margin-top:2px}
+.login-btn:hover{background:var(--ahi)}
+.login-btn:disabled{opacity:.5;cursor:not-allowed}
+.login-btn.ghost{background:transparent;border:1px solid var(--a55);color:var(--txd);margin-top:7px}
+.login-btn.ghost:hover{background:var(--a22);color:var(--tx)}
+.err-msg{color:var(--err);font-size:11px;min-height:14px;margin-bottom:8px;text-align:center}
+.step-title{font-size:13px;color:var(--ac);font-weight:bold;margin-bottom:3px}
+.step-sub{font-size:11px;color:var(--txd);margin-bottom:14px}
+
+/* ── Launcher view ───────────────────────────────────────────────────────── */
+.launcher{width:100%;max-width:340px;display:flex;flex-direction:column;align-items:center;gap:0}
+.launcher-logo{text-align:center;margin-bottom:6px}
+.launcher-logo h1{color:var(--ac);font-size:26px;letter-spacing:2px;text-transform:uppercase;font-weight:bold}
+.session-badge{font-size:11px;color:var(--txd);margin-bottom:24px;text-align:center}
+.session-badge strong{color:var(--ac)}
+.launch-btns{display:flex;flex-direction:column;gap:14px;width:100%}
+.btn-launch{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;padding:22px 20px;background:var(--bg2);border:2px solid var(--a55);border-radius:10px;color:var(--tx);text-decoration:none;font-size:17px;font-weight:bold;transition:background .15s,border-color .15s;text-align:center}
+.btn-launch:hover,.btn-launch:active{background:var(--bg3);border-color:var(--ac)}
+.btn-launch small{font-size:11px;color:var(--txd);font-weight:normal}
+.logout-row{margin-top:20px;text-align:center}
+.logout-btn{background:none;border:none;color:var(--txd);font-size:12px;cursor:pointer;text-decoration:underline;padding:4px}
+.logout-btn:hover{color:var(--tx)}
+</style>
+</head>
+<body>
+
+<!-- ── Login view ─────────────────────────────────────────────────────────── -->
+<div id="view-login" class="login-wrap" style="display:none">
+  <div class="login-box">
+    <div class="login-logo">
+      <h1>🎮 RPG Console</h1>
+      <p>Dual-Screen Mode</p>
+    </div>
+
+    <div class="tab-row">
+      <button class="tab-btn active" id="tb-char" onclick="cSwitch('character')">Character</button>
+      <button class="tab-btn" id="tb-dm" onclick="cSwitch('dm')">Dungeon Master</button>
+    </div>
+
+    <!-- Character tab -->
+    <div class="tab-pane active" id="pane-character">
+
+      <!-- Step 1: select + password -->
+      <div id="char-step-login">
+        <div class="field">
+          <label>Character</label>
+          <select id="char-select">
+            <option value="">Loading…</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Password</label>
+          <input type="password" id="char-pw" placeholder="Enter password…" autocomplete="current-password"
+                 onkeydown="if(event.key==='Enter')cLoginChar()">
+        </div>
+        <div class="err-msg" id="char-err"></div>
+        <button class="login-btn" id="char-login-btn" onclick="cLoginChar()">Login</button>
+      </div>
+
+      <!-- Step 2: first-time password setup -->
+      <div id="char-step-setup" style="display:none">
+        <div class="step-title" id="setup-char-name"></div>
+        <div class="step-sub">No password set yet — choose one to continue.</div>
+        <div class="field">
+          <label>New Password</label>
+          <input type="password" id="setup-pw1" placeholder="Choose a password…" autocomplete="new-password"
+                 onkeydown="if(event.key==='Enter')document.getElementById('setup-pw2').focus()">
+        </div>
+        <div class="field">
+          <label>Confirm Password</label>
+          <input type="password" id="setup-pw2" placeholder="Confirm password…" autocomplete="new-password"
+                 onkeydown="if(event.key==='Enter')cSetupPassword()">
+        </div>
+        <div class="err-msg" id="setup-err"></div>
+        <button class="login-btn" id="setup-btn" onclick="cSetupPassword()">Set Password &amp; Login</button>
+        <button class="login-btn ghost" onclick="cCancelSetup()">Back</button>
+      </div>
+
+    </div><!-- /pane-character -->
+
+    <!-- DM tab -->
+    <div class="tab-pane" id="pane-dm">
+      <div class="field">
+        <label>Master Password</label>
+        <input type="password" id="dm-pw" placeholder="Enter master password…" autocomplete="current-password"
+               onkeydown="if(event.key==='Enter')cLoginDM()">
+      </div>
+      <div class="err-msg" id="dm-err"></div>
+      <button class="login-btn" onclick="cLoginDM()">Login as DM</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── Launcher view ──────────────────────────────────────────────────────── -->
+<div id="view-launcher" class="launcher" style="display:none">
+  <div class="launcher-logo"><h1>🎮 RPG Console</h1></div>
+  <div class="session-badge" id="session-badge"></div>
+  <div class="launch-btns" id="launch-btns"></div>
+  <div class="logout-row">
+    <button class="logout-btn" onclick="cLogout()">Logout</button>
+  </div>
+</div>
+
+<script>
+// ── Session helpers ───────────────────────────────────────────────────────────
+function _storeSession(sess) {
+  sessionStorage.setItem('rpgSession', JSON.stringify(sess));
+  if (sess.role === 'dm') {
+    sessionStorage.setItem('tableMasterPw', sess.masterPw);
+    sessionStorage.setItem('dmMasterPw', sess.masterPw);
+  } else {
+    sessionStorage.removeItem('tableMasterPw');
+    sessionStorage.removeItem('dmMasterPw');
+  }
+}
+
+function _getSession() {
+  try { return JSON.parse(sessionStorage.getItem('rpgSession') || 'null'); } catch { return null; }
+}
+
+// ── Tab switcher ──────────────────────────────────────────────────────────────
+function cSwitch(tab) {
+  document.getElementById('tb-char').classList.toggle('active', tab === 'character');
+  document.getElementById('tb-dm').classList.toggle('active', tab === 'dm');
+  document.getElementById('pane-character').classList.toggle('active', tab === 'character');
+  document.getElementById('pane-dm').classList.toggle('active', tab === 'dm');
+  setTimeout(() => {
+    (tab === 'dm'
+      ? document.getElementById('dm-pw')
+      : document.getElementById('char-pw')
+    )?.focus();
+  }, 30);
+}
+
+// ── Character login ───────────────────────────────────────────────────────────
+async function cLoadChars() {
+  try {
+    const res = await fetch('/api/characters');
+    if (!res.ok) throw new Error();
+    const chars = await res.json();
+    const sel = document.getElementById('char-select');
+    const pcs = chars.filter(c => c.char_type === 'pc');
+    if (pcs.length === 0) {
+      sel.innerHTML = '<option value="">No characters found</option>';
+      return;
+    }
+    sel.innerHTML = pcs.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+  } catch {
+    document.getElementById('char-select').innerHTML = '<option value="">Error loading characters</option>';
+  }
+}
+
+async function cLoginChar() {
+  const characterId = document.getElementById('char-select').value;
+  const password    = document.getElementById('char-pw').value;
+  const errEl       = document.getElementById('char-err');
+  errEl.textContent = '';
+  if (!characterId) { errEl.textContent = 'Select a character.'; return; }
+  if (!password)    { errEl.textContent = 'Enter your password.'; return; }
+  const btn = document.getElementById('char-login-btn');
+  btn.disabled = true;
+  try {
+    const res  = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'character', characterId, password }),
+    });
+    const data = await res.json();
+    if (data.needsSetup) { cShowSetup(data.characterId, data.characterName); return; }
+    if (!res.ok) { errEl.textContent = data.error || 'Login failed.'; return; }
+    _storeSession({ role: 'character', characterId: data.characterId, characterName: data.characterName, charPw: password });
+    showLauncher(_getSession());
+  } catch { errEl.textContent = 'Connection error.'; }
+  finally { btn.disabled = false; }
+}
+
+// ── Password setup ────────────────────────────────────────────────────────────
+let _setupCharId = null;
+
+function cShowSetup(charId, charName) {
+  _setupCharId = charId;
+  document.getElementById('char-step-login').style.display = 'none';
+  document.getElementById('char-step-setup').style.display = 'block';
+  document.getElementById('setup-char-name').textContent   = charName;
+  document.getElementById('setup-pw1').value = '';
+  document.getElementById('setup-pw2').value = '';
+  document.getElementById('setup-err').textContent = '';
+  setTimeout(() => document.getElementById('setup-pw1').focus(), 30);
+}
+
+function cCancelSetup() {
+  _setupCharId = null;
+  document.getElementById('char-step-setup').style.display = 'none';
+  document.getElementById('char-step-login').style.display = 'block';
+  document.getElementById('char-pw').value = '';
+  document.getElementById('char-err').textContent = '';
+}
+
+async function cSetupPassword() {
+  const pw1   = document.getElementById('setup-pw1').value;
+  const pw2   = document.getElementById('setup-pw2').value;
+  const errEl = document.getElementById('setup-err');
+  errEl.textContent = '';
+  if (!pw1)         { errEl.textContent = 'Enter a password.'; return; }
+  if (pw1 !== pw2)  { errEl.textContent = 'Passwords do not match.'; return; }
+  if (pw1.length < 3) { errEl.textContent = 'Password must be at least 3 characters.'; return; }
+  const btn = document.getElementById('setup-btn');
+  btn.disabled = true;
+  try {
+    const setRes = await fetch(`/api/characters/${_setupCharId}/password`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ new_password: pw1 }),
+    });
+    if (!setRes.ok) { errEl.textContent = 'Failed to set password.'; return; }
+    const loginRes  = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'character', characterId: _setupCharId, password: pw1 }),
+    });
+    const loginData = await loginRes.json();
+    if (!loginRes.ok) { errEl.textContent = loginData.error || 'Login failed after setup.'; return; }
+    _storeSession({ role: 'character', characterId: loginData.characterId, characterName: loginData.characterName, charPw: pw1 });
+    showLauncher(_getSession());
+  } catch { errEl.textContent = 'Connection error.'; }
+  finally { btn.disabled = false; }
+}
+
+// ── DM login ──────────────────────────────────────────────────────────────────
+async function cLoginDM() {
+  const password = document.getElementById('dm-pw').value;
+  const errEl    = document.getElementById('dm-err');
+  errEl.textContent = '';
+  if (!password) { errEl.textContent = 'Enter the master password.'; return; }
+  try {
+    const res  = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'dm', password }),
+    });
+    const data = await res.json();
+    if (!res.ok) { errEl.textContent = data.error || 'Wrong password.'; return; }
+    _storeSession({ role: 'dm', masterPw: password });
+    showLauncher(_getSession());
+  } catch { errEl.textContent = 'Connection error.'; }
+}
+
+// ── Launcher ──────────────────────────────────────────────────────────────────
+function showLauncher(sess) {
+  document.getElementById('view-login').style.display    = 'none';
+  document.getElementById('view-launcher').style.display = '';
+
+  const isDM = sess.role === 'dm';
+  document.getElementById('session-badge').innerHTML = isDM
+    ? 'Logged in as <strong>Dungeon Master</strong>'
+    : `Logged in as <strong>${sess.characterName || 'Character'}</strong>`;
+
+  const btns = document.getElementById('launch-btns');
+  btns.innerHTML = '';
+
+  if (isDM) {
+    btns.innerHTML += `
+      <a href="/console/table-console.html" class="btn-launch">
+        🗺 Map Screen
+        <small>Primary display — map, tokens, controls</small>
+      </a>`;
+  }
+
+  btns.innerHTML += `
+    <a href="/console/table-secondary.html" class="btn-launch">
+      📊 Info Panel
+      <small>HP, initiative, chat, monster details</small>
+    </a>`;
+}
+
+function cLogout() {
+  sessionStorage.removeItem('rpgSession');
+  sessionStorage.removeItem('tableMasterPw');
+  sessionStorage.removeItem('dmMasterPw');
+  document.getElementById('view-launcher').style.display = 'none';
+  document.getElementById('view-login').style.display    = '';
+  document.getElementById('char-pw').value = '';
+  document.getElementById('dm-pw').value   = '';
+  cSwitch('character');
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+(function() {
+  const sess = _getSession();
+  if (sess && sess.role) {
+    document.getElementById('view-launcher').style.display = '';
+    showLauncher(sess);
+  } else {
+    document.getElementById('view-login').style.display = '';
+    cLoadChars();
+    setTimeout(() => document.getElementById('char-pw')?.focus(), 100);
+  }
+})();
+</script>
+</body>
+</html>

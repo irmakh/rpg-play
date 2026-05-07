@@ -237,6 +237,30 @@ app.get('/api/events', (req, res) => {
   req.on('close', () => { clearInterval(hb); sseClients.delete(res); });
 });
 
+// ── Console relay ────────────────────────────────────────────────────────────
+const consoleSseClients = new Set();
+app.get('/api/console/events', (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+  res.write(': connected\n\n');
+  consoleSseClients.add(res);
+  const hb = setInterval(() => {
+    try { res.write(': heartbeat\n\n'); } catch { clearInterval(hb); consoleSseClients.delete(res); }
+  }, 25000);
+  req.on('close', () => { clearInterval(hb); consoleSseClients.delete(res); });
+});
+app.post('/api/console/event', (req, res) => {
+  const d = req.body;
+  if (!d || !d.type) return res.status(400).json({ error: 'missing type' });
+  const msg = `data: ${JSON.stringify(d)}\n\n`;
+  for (const client of [...consoleSseClients]) {
+    try { client.write(msg); } catch { consoleSseClients.delete(client); }
+  }
+  res.json({ ok: true });
+});
+
 // ── Auth ──────────────────────────────────────────────────────────────────────
 app.post('/api/auth/login', async (req, res) => {
   try {

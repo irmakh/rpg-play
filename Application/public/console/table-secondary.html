@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>RPG Table — Info</title>
+<link rel="manifest" href="/console/manifest-d20-companion.json">
+<meta name="theme-color" content="#1a1a2e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<script>if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js');</script>
+<style>
+#pwa-gate{position:fixed;inset:0;background:#1a1a2e;z-index:9999;display:flex;align-items:center;justify-content:center;font-family:'Segoe UI',sans-serif;padding:16px}
+.pwag-box{background:#16213e;border:1px solid #c8a04a55;border-radius:10px;padding:24px 20px;width:100%;max-width:340px}
+.pwag-logo{text-align:center;margin-bottom:16px}
+.pwag-logo h2{color:#c8a04a;font-size:18px;font-weight:bold;letter-spacing:1px}
+.pwag-logo p{color:#aaa;font-size:11px;margin-top:3px}
+.pwag-tabs{display:flex;border:1px solid #c8a04a55;border-radius:5px;overflow:hidden;margin-bottom:16px}
+.pwag-tab{flex:1;padding:7px;background:transparent;border:none;color:#aaa;font-size:12px;font-weight:bold;cursor:pointer;letter-spacing:.5px;text-transform:uppercase}
+.pwag-tab.active{background:#c8a04a;color:#1a1a2e}
+.pwag-pane{display:none}.pwag-pane.active{display:block}
+.pwag-lbl{display:block;font-size:10px;color:#c8a04a;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.pwag-field{margin-bottom:12px}
+.pwag-inp{width:100%;background:#0f3460;border:1px solid #c8a04a55;color:#e0d8c8;border-radius:4px;padding:8px 10px;font-size:13px;font-family:inherit}
+.pwag-inp:focus{outline:none;border-color:#c8a04a}
+.pwag-btn{width:100%;padding:10px;background:#c8a04a;border:none;color:#1a1a2e;border-radius:4px;font-size:13px;font-weight:bold;cursor:pointer;letter-spacing:.5px;margin-top:2px}
+.pwag-btn:hover{background:#e0b860}
+.pwag-btn:disabled{opacity:.5;cursor:not-allowed}
+.pwag-btn.ghost{background:transparent;border:1px solid #c8a04a55;color:#aaa;margin-top:7px}
+.pwag-btn.ghost:hover{background:#c8a04a22;color:#e0d8c8}
+.pwag-err{color:#ff8888;font-size:11px;min-height:14px;margin-bottom:8px;text-align:center}
+.pwag-step-title{font-size:13px;color:#c8a04a;font-weight:bold;margin-bottom:3px}
+.pwag-step-sub{font-size:11px;color:#aaa;margin-bottom:14px}
+</style>
+<link rel="stylesheet" href="/css/table.css">
+<link rel="stylesheet" href="/css/console/table-console.css">
+</head>
+<body class="secondary-screen">
+
+<!-- Login gate — shown immediately if no session; covers UI until authenticated -->
+<div id="pwa-gate" style="display:none">
+  <div class="pwag-box">
+    <div class="pwag-logo">
+      <h2>📊 d20-companion</h2>
+      <p>Login to continue</p>
+    </div>
+    <div class="pwag-tabs">
+      <button class="pwag-tab active" id="pwag-tb-char" onclick="pwagSwitch('char')">Character</button>
+      <button class="pwag-tab" id="pwag-tb-dm" onclick="pwagSwitch('dm')">DM</button>
+    </div>
+
+    <!-- Character pane -->
+    <div class="pwag-pane active" id="pwag-pane-char">
+      <!-- Step 1: login -->
+      <div id="pwag-char-step">
+        <div class="pwag-field">
+          <label class="pwag-lbl">Character</label>
+          <select id="pwag-char-sel" class="pwag-inp"><option value="">Loading…</option></select>
+        </div>
+        <div class="pwag-field">
+          <label class="pwag-lbl">Password</label>
+          <input type="password" id="pwag-char-pw" class="pwag-inp" placeholder="Enter password…"
+                 autocomplete="current-password" onkeydown="if(event.key==='Enter')pwagLoginChar()">
+        </div>
+        <div class="pwag-err" id="pwag-char-err"></div>
+        <button class="pwag-btn" id="pwag-char-btn" onclick="pwagLoginChar()">Login</button>
+      </div>
+      <!-- Step 2: first-time setup -->
+      <div id="pwag-setup-step" style="display:none">
+        <div class="pwag-step-title" id="pwag-setup-name"></div>
+        <div class="pwag-step-sub">No password set yet — choose one to continue.</div>
+        <div class="pwag-field">
+          <label class="pwag-lbl">New Password</label>
+          <input type="password" id="pwag-setup-pw1" class="pwag-inp" placeholder="Choose a password…"
+                 autocomplete="new-password" onkeydown="if(event.key==='Enter')document.getElementById('pwag-setup-pw2').focus()">
+        </div>
+        <div class="pwag-field">
+          <label class="pwag-lbl">Confirm Password</label>
+          <input type="password" id="pwag-setup-pw2" class="pwag-inp" placeholder="Confirm password…"
+                 autocomplete="new-password" onkeydown="if(event.key==='Enter')pwagSetupPw()">
+        </div>
+        <div class="pwag-err" id="pwag-setup-err"></div>
+        <button class="pwag-btn" id="pwag-setup-btn" onclick="pwagSetupPw()">Set Password &amp; Login</button>
+        <button class="pwag-btn ghost" onclick="pwagCancelSetup()">Back</button>
+      </div>
+    </div>
+
+    <!-- DM pane -->
+    <div class="pwag-pane" id="pwag-pane-dm">
+      <div class="pwag-field">
+        <label class="pwag-lbl">Master Password</label>
+        <input type="password" id="pwag-dm-pw" class="pwag-inp" placeholder="Enter master password…"
+               autocomplete="current-password" onkeydown="if(event.key==='Enter')pwagLoginDM()">
+      </div>
+      <div class="pwag-err" id="pwag-dm-err"></div>
+      <button class="pwag-btn" onclick="pwagLoginDM()">Login as DM</button>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+  try{var s=JSON.parse(sessionStorage.getItem('rpgSession')||'null');if(s&&s.role)return;}catch{}
+  var g=document.getElementById('pwa-gate');
+  g.style.display='flex';
+  // load character list
+  fetch('/api/characters').then(function(r){return r.ok?r.json():[];}).then(function(chars){
+    var sel=document.getElementById('pwag-char-sel');
+    var pcs=chars.filter(function(c){return c.char_type==='pc';});
+    sel.innerHTML=pcs.length?pcs.map(function(c){return'<option value="'+c.id+'">'+c.name+'</option>';}).join(''):'<option value="">No characters found</option>';
+  }).catch(function(){document.getElementById('pwag-char-sel').innerHTML='<option value="">Error loading</option>';});
+})();
+
+function pwagSwitch(tab){
+  ['char','dm'].forEach(function(t){
+    document.getElementById('pwag-tb-'+t).classList.toggle('active',t===tab);
+    document.getElementById('pwag-pane-'+t).classList.toggle('active',t===tab);
+  });
+  setTimeout(function(){document.getElementById(tab==='dm'?'pwag-dm-pw':'pwag-char-pw').focus();},30);
+}
+
+function _pwagStore(sess){
+  sessionStorage.setItem('rpgSession',JSON.stringify(sess));
+  if(sess.role==='dm'){sessionStorage.setItem('tableMasterPw',sess.masterPw);sessionStorage.setItem('dmMasterPw',sess.masterPw);}
+  else{sessionStorage.removeItem('tableMasterPw');sessionStorage.removeItem('dmMasterPw');}
+  location.reload();
+}
+
+async function pwagLoginChar(){
+  var id=document.getElementById('pwag-char-sel').value,
+      pw=document.getElementById('pwag-char-pw').value,
+      err=document.getElementById('pwag-char-err'),
+      btn=document.getElementById('pwag-char-btn');
+  err.textContent='';
+  if(!id){err.textContent='Select a character.';return;}
+  if(!pw){err.textContent='Enter your password.';return;}
+  btn.disabled=true;
+  try{
+    var res=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'character',characterId:id,password:pw})});
+    var d=await res.json();
+    if(d.needsSetup){pwagShowSetup(d.characterId,d.characterName);return;}
+    if(!res.ok){err.textContent=d.error||'Login failed.';return;}
+    _pwagStore({role:'character',characterId:d.characterId,characterName:d.characterName,charPw:pw});
+  }catch{err.textContent='Connection error.';}
+  finally{btn.disabled=false;}
+}
+
+var _pwagSetupId=null;
+function pwagShowSetup(charId,charName){
+  _pwagSetupId=charId;
+  document.getElementById('pwag-char-step').style.display='none';
+  document.getElementById('pwag-setup-step').style.display='block';
+  document.getElementById('pwag-setup-name').textContent=charName;
+  document.getElementById('pwag-setup-pw1').value='';
+  document.getElementById('pwag-setup-pw2').value='';
+  setTimeout(function(){document.getElementById('pwag-setup-pw1').focus();},30);
+}
+function pwagCancelSetup(){
+  document.getElementById('pwag-setup-step').style.display='none';
+  document.getElementById('pwag-char-step').style.display='block';
+  document.getElementById('pwag-char-pw').value='';
+}
+async function pwagSetupPw(){
+  var pw1=document.getElementById('pwag-setup-pw1').value,
+      pw2=document.getElementById('pwag-setup-pw2').value,
+      err=document.getElementById('pwag-setup-err'),
+      btn=document.getElementById('pwag-setup-btn');
+  err.textContent='';
+  if(!pw1){err.textContent='Enter a password.';return;}
+  if(pw1!==pw2){err.textContent='Passwords do not match.';return;}
+  if(pw1.length<3){err.textContent='At least 3 characters.';return;}
+  btn.disabled=true;
+  try{
+    var sr=await fetch('/api/characters/'+_pwagSetupId+'/password',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({new_password:pw1})});
+    if(!sr.ok){err.textContent='Failed to set password.';return;}
+    var lr=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'character',characterId:_pwagSetupId,password:pw1})});
+    var ld=await lr.json();
+    if(!lr.ok){err.textContent=ld.error||'Login failed.';return;}
+    _pwagStore({role:'character',characterId:ld.characterId,characterName:ld.characterName,charPw:pw1});
+  }catch{err.textContent='Connection error.';}
+  finally{btn.disabled=false;}
+}
+
+async function pwagLoginDM(){
+  var pw=document.getElementById('pwag-dm-pw').value,
+      err=document.getElementById('pwag-dm-err');
+  err.textContent='';
+  if(!pw){err.textContent='Enter the master password.';return;}
+  try{
+    var res=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'dm',password:pw})});
+    var d=await res.json();
+    if(!res.ok){err.textContent=d.error||'Wrong password.';return;}
+    _pwagStore({role:'dm',masterPw:pw});
+  }catch{err.textContent='Connection error.';}
+}
+</script>
+
+<!-- Header -->
+<div id="s-header">
+  <span id="s-title">RPG Table</span>
+  <span id="s-badge-dm" style="display:none">DM</span>
+  <span id="s-badge-char" style="display:none"></span>
+  <div style="flex:1"></div>
+  <button id="s-btn-logout" onclick="sLogout()">🚪</button>
+</div>
+
+<!-- Tabs -->
+<div id="s-tabs">
+  <button class="s-tab active" data-tab="init" onclick="sShowTab('init')">
+    ⚔️ Init
+  </button>
+  <button class="s-tab" data-tab="hp" onclick="sShowTab('hp')">
+    💚 HP
+    <span class="s-tab-dot" id="s-hp-dot"></span>
+  </button>
+  <button class="s-tab" data-tab="chat" onclick="sShowTab('chat')">
+    💬 Chat
+    <span class="s-tab-dot" id="s-chat-dot"></span>
+  </button>
+  <button class="s-tab" data-tab="dm" onclick="sShowTab('dm')" style="display:none">
+    🗺 DM
+  </button>
+  <button class="s-tab" data-tab="monster" onclick="sShowTab('monster')" id="s-tab-btn-monster" style="display:none">
+    🐉 Monster
+    <span class="s-tab-dot" id="s-monster-dot"></span>
+  </button>
+</div>
+
+<!-- ── Initiative Tab ─────────────────────────────────────────────────────── -->
+<div id="s-tab-init" class="s-tab-content active">
+  <div class="s-current-banner">
+    <span id="s-init-current-name">No initiative running</span>
+  </div>
+  <div class="s-btn-row" id="s-init-ctrl-row">
+    <button class="s-btn" onclick="sPrevTurn()">⏮ Prev</button>
+    <button class="s-btn s-btn-primary" id="s-init-toggle-btn" onclick="sToggleInitiative()">▶ Start</button>
+    <button class="s-btn" onclick="sNextTurn()">Next ⏭</button>
+  </div>
+  <div id="s-init-list" class="s-list">
+    <div class="s-empty-msg-small">No combatants yet.</div>
+  </div>
+</div>
+
+<!-- ── HP Tab ──────────────────────────────────────────────────────────────── -->
+<div id="s-tab-hp" class="s-tab-content">
+  <div id="s-hp-empty" class="s-empty-msg">
+    <div style="font-size:36px;margin-bottom:10px">🎯</div>
+    <div>Select a token on the map screen</div>
+    <div style="font-size:12px;margin-top:6px;color:var(--a88)">or tap a token in the DM tab</div>
+  </div>
+  <div id="s-hp-panel" style="display:none">
+    <!-- Token header -->
+    <div class="s-hp-header">
+      <span id="s-hp-name" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0"></span>
+      <span id="s-hp-ac-badge">AC —</span>
+    </div>
+    <!-- HP bar -->
+    <div class="s-hp-bar-wrap"><div id="s-hp-bar" class="s-hp-bar" style="width:100%"></div></div>
+    <!-- HP numbers -->
+    <div class="s-hp-numbers">
+      <span id="s-hp-cur" style="font-size:28px;font-weight:bold">0</span>
+      <span style="color:var(--txd);font-size:18px"> / </span>
+      <span id="s-hp-max" style="font-size:18px;color:var(--txd)">0</span>
+      <span id="s-hp-temp-wrap" style="display:none;margin-left:10px;color:#aaddff;font-size:13px">(+<span id="s-hp-temp">0</span> temp)</span>
+    </div>
+    <!-- Edit area (own token or DM) -->
+    <div id="s-hp-edit">
+      <div class="s-amount-row">
+        <input type="number" id="s-hp-amount" value="1" min="1" class="s-num-input" onkeydown="if(event.key==='Enter')sApplyHp('dmg')">
+        <button class="s-btn s-btn-danger" onclick="sApplyHp('dmg')" style="flex:none;padding:10px 14px">⚔ Dmg</button>
+        <button class="s-btn s-btn-success" onclick="sApplyHp('heal')" style="flex:none;padding:10px 14px">💚 Heal</button>
+      </div>
+      <div class="s-quick-row">
+        <button class="s-qbtn s-qbtn-dmg" onclick="sQuickDmg(1)">-1</button>
+        <button class="s-qbtn s-qbtn-dmg" onclick="sQuickDmg(5)">-5</button>
+        <button class="s-qbtn s-qbtn-dmg" onclick="sQuickDmg(10)">-10</button>
+        <button class="s-qbtn s-qbtn-heal" onclick="sQuickHeal(1)">+1</button>
+        <button class="s-qbtn s-qbtn-heal" onclick="sQuickHeal(5)">+5</button>
+        <button class="s-qbtn s-qbtn-heal" onclick="sQuickHeal(10)">+10</button>
+      </div>
+      <div class="s-temp-row">
+        <span class="s-label">Temp HP</span>
+        <input type="number" id="s-hp-temp-input" value="0" min="0" class="s-num-input" style="width:60px">
+        <button class="s-btn" onclick="sApplyTempHp()" style="flex:none;padding:8px 14px">Set</button>
+      </div>
+    </div>
+    <!-- Conditions -->
+    <div class="s-conds-wrap">
+      <div class="s-section-label" style="padding-left:0;padding-top:4px">Conditions</div>
+      <div id="s-conds-grid" class="s-conds-grid"></div>
+    </div>
+    <!-- DM-only extras -->
+    <div id="s-hp-dm-extras" class="s-hp-dm-extras" style="display:none">
+      <button class="s-btn" id="s-roll-init-btn" onclick="sRollTokenInit()">🎲 Roll Initiative</button>
+      <button class="s-btn s-btn-danger" onclick="sDeleteToken()">🗑 Delete Token</button>
+    </div>
+    <!-- Character skills / saves / attacks (populated by sRenderCharStats) -->
+    <div id="s-char-stats" style="display:none;border-top:2px solid var(--a44)"></div>
+  </div>
+</div>
+
+<!-- ── Chat Tab ────────────────────────────────────────────────────────────── -->
+<div id="s-tab-chat" class="s-tab-content">
+  <!-- id="chat-log" is used by chat-render.js's appendChatEntry() -->
+  <div id="chat-log" class="chat-log s-chat-log"></div>
+  <div class="s-chat-footer">
+    <div class="s-dice-row">
+      <button class="dice-btn" onclick="sRollDie(4)">d4</button>
+      <button class="dice-btn" onclick="sRollDie(6)">d6</button>
+      <button class="dice-btn" onclick="sRollDie(8)">d8</button>
+      <button class="dice-btn" onclick="sRollDie(10)">d10</button>
+      <button class="dice-btn" onclick="sRollDie(12)">d12</button>
+      <button class="dice-btn" style="background:var(--ac);color:var(--bg);border-color:var(--ac)" onclick="sRollDie(20)">d20</button>
+    </div>
+    <div class="chat-input-row">
+      <input type="text" id="s-chat-input" class="chat-input" placeholder="Message or /r 2d6+5…" autocomplete="off" onkeydown="if(event.key==='Enter')sSendChat()">
+      <button class="dice-btn chat-send-btn" onclick="sSendChat()">Send</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── DM Tab ──────────────────────────────────────────────────────────────── -->
+<div id="s-tab-dm" class="s-tab-content">
+  <div class="s-dm-section">
+    <div class="s-section-label">Map</div>
+    <div class="s-btn-row">
+      <select id="s-map-sel" class="s-select">
+        <option value="">— Select Map —</option>
+      </select>
+      <button class="s-btn s-btn-primary" onclick="sLoadMap()" style="flex:none;padding:10px 14px">📂 Load</button>
+    </div>
+  </div>
+  <div class="s-dm-section">
+    <div class="s-section-label">Tokens</div>
+    <div class="s-btn-row">
+      <button class="s-btn s-btn-primary" onclick="sOpenAddTokenOnPrimary()">+ Add Token</button>
+      <button class="s-btn s-btn-danger" onclick="sClearTokens()">🗑 Clear All</button>
+    </div>
+  </div>
+  <div class="s-dm-section">
+    <div class="s-section-label">Initiative</div>
+    <div class="s-btn-row">
+      <button class="s-btn" onclick="sPrevTurn()">⏮ Prev</button>
+      <button class="s-btn s-btn-primary" id="s-dm-init-toggle" onclick="sToggleInitiative()">▶ Start Initiative</button>
+      <button class="s-btn" onclick="sNextTurn()">Next ⏭</button>
+    </div>
+  </div>
+  <div class="s-dm-section">
+    <div class="s-section-label">HP Tracker</div>
+    <div id="s-dm-hp-list">
+      <div class="s-empty-msg-small">No tokens on map.</div>
+    </div>
+  </div>
+  <!-- Fog Regions — hidden until data present -->
+  <div id="s-fog-section" class="s-dm-section" style="display:none">
+    <div class="s-section-label">Fog Regions</div>
+    <div id="s-fog-list"></div>
+  </div>
+  <!-- Hidden Items — hidden until data present -->
+  <div id="s-items-section" class="s-dm-section" style="display:none;border-bottom:none">
+    <div class="s-section-label">Hidden Items</div>
+    <div id="s-items-list"></div>
+  </div>
+</div>
+
+<!-- ── Monster Tab ──────────────────────────────────────────────────────────── -->
+<div id="s-tab-monster" class="s-tab-content">
+  <div id="s-monster-empty" class="s-empty-msg">
+    <div style="font-size:36px;margin-bottom:10px">🐉</div>
+    <div>Select a monster token</div>
+    <div style="font-size:12px;margin-top:6px;color:var(--a88)">DM mode only</div>
+  </div>
+  <div id="s-monster-panel" style="display:none;padding:8px;overflow-y:auto;flex:1;font-size:12px;line-height:1.5"></div>
+</div>
+
+<script src="/js/lib/esc.js" defer></script>
+<script src="/js/lib/chat-render.js" defer></script>
+<script src="/js/lib/dnd-data.js" defer></script>
+<script src="/js/lib/realtime.js" defer></script>
+<script src="/js/console/secondary.js" defer></script>
+</body>
+</html>

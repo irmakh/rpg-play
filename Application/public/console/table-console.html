@@ -2,15 +2,194 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Tactical Map</title>
-<script>(function(){try{var s=JSON.parse(sessionStorage.getItem('rpgSession')||'null');if(!s||!s.role){var next=encodeURIComponent(location.pathname+location.search);location.replace('/login.html?next='+next);}}catch(e){location.replace('/login.html');}})();</script>
-<link rel="manifest" href="/manifest.json">
+<link rel="manifest" href="/console/manifest-d20.json">
 <meta name="theme-color" content="#1a1a2e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <script>if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js');</script>
+<style>
+#pwa-gate{position:fixed;inset:0;background:#1a1a2e;z-index:9999;display:flex;align-items:center;justify-content:center;font-family:'Segoe UI',sans-serif;padding:16px}
+.pwag-box{background:#16213e;border:1px solid #c8a04a55;border-radius:10px;padding:24px 20px;width:100%;max-width:340px}
+.pwag-logo{text-align:center;margin-bottom:16px}
+.pwag-logo h2{color:#c8a04a;font-size:18px;font-weight:bold;letter-spacing:1px}
+.pwag-logo p{color:#aaa;font-size:11px;margin-top:3px}
+.pwag-tabs{display:flex;border:1px solid #c8a04a55;border-radius:5px;overflow:hidden;margin-bottom:16px}
+.pwag-tab{flex:1;padding:7px;background:transparent;border:none;color:#aaa;font-size:12px;font-weight:bold;cursor:pointer;letter-spacing:.5px;text-transform:uppercase}
+.pwag-tab.active{background:#c8a04a;color:#1a1a2e}
+.pwag-pane{display:none}.pwag-pane.active{display:block}
+.pwag-lbl{display:block;font-size:10px;color:#c8a04a;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.pwag-field{margin-bottom:12px}
+.pwag-inp{width:100%;background:#0f3460;border:1px solid #c8a04a55;color:#e0d8c8;border-radius:4px;padding:8px 10px;font-size:13px;font-family:inherit}
+.pwag-inp:focus{outline:none;border-color:#c8a04a}
+.pwag-btn{width:100%;padding:10px;background:#c8a04a;border:none;color:#1a1a2e;border-radius:4px;font-size:13px;font-weight:bold;cursor:pointer;letter-spacing:.5px;margin-top:2px}
+.pwag-btn:hover{background:#e0b860}
+.pwag-btn:disabled{opacity:.5;cursor:not-allowed}
+.pwag-btn.ghost{background:transparent;border:1px solid #c8a04a55;color:#aaa;margin-top:7px}
+.pwag-btn.ghost:hover{background:#c8a04a22;color:#e0d8c8}
+.pwag-err{color:#ff8888;font-size:11px;min-height:14px;margin-bottom:8px;text-align:center}
+.pwag-step-title{font-size:13px;color:#c8a04a;font-weight:bold;margin-bottom:3px}
+.pwag-step-sub{font-size:11px;color:#aaa;margin-bottom:14px}
+</style>
 <link rel="stylesheet" href="/css/table.css">
+<link rel="stylesheet" href="/css/console/table-console.css">
 </head>
-<body>
+<body class="console-mode">
+
+<!-- Login gate — shown immediately if no session; covers UI until authenticated -->
+<div id="pwa-gate" style="display:none">
+  <div class="pwag-box">
+    <div class="pwag-logo">
+      <h2>🗺 d20</h2>
+      <p>Login to continue</p>
+    </div>
+    <div class="pwag-tabs">
+      <button class="pwag-tab active" id="pwag-tb-char" onclick="pwagSwitch('char')">Character</button>
+      <button class="pwag-tab" id="pwag-tb-dm" onclick="pwagSwitch('dm')">DM</button>
+    </div>
+
+    <!-- Character pane -->
+    <div class="pwag-pane active" id="pwag-pane-char">
+      <div id="pwag-char-step">
+        <div class="pwag-field">
+          <label class="pwag-lbl">Character</label>
+          <select id="pwag-char-sel" class="pwag-inp"><option value="">Loading…</option></select>
+        </div>
+        <div class="pwag-field">
+          <label class="pwag-lbl">Password</label>
+          <input type="password" id="pwag-char-pw" class="pwag-inp" placeholder="Enter password…"
+                 autocomplete="current-password" onkeydown="if(event.key==='Enter')pwagLoginChar()">
+        </div>
+        <div class="pwag-err" id="pwag-char-err"></div>
+        <button class="pwag-btn" id="pwag-char-btn" onclick="pwagLoginChar()">Login</button>
+      </div>
+      <div id="pwag-setup-step" style="display:none">
+        <div class="pwag-step-title" id="pwag-setup-name"></div>
+        <div class="pwag-step-sub">No password set yet — choose one to continue.</div>
+        <div class="pwag-field">
+          <label class="pwag-lbl">New Password</label>
+          <input type="password" id="pwag-setup-pw1" class="pwag-inp" placeholder="Choose a password…"
+                 autocomplete="new-password" onkeydown="if(event.key==='Enter')document.getElementById('pwag-setup-pw2').focus()">
+        </div>
+        <div class="pwag-field">
+          <label class="pwag-lbl">Confirm Password</label>
+          <input type="password" id="pwag-setup-pw2" class="pwag-inp" placeholder="Confirm password…"
+                 autocomplete="new-password" onkeydown="if(event.key==='Enter')pwagSetupPw()">
+        </div>
+        <div class="pwag-err" id="pwag-setup-err"></div>
+        <button class="pwag-btn" id="pwag-setup-btn" onclick="pwagSetupPw()">Set Password &amp; Login</button>
+        <button class="pwag-btn ghost" onclick="pwagCancelSetup()">Back</button>
+      </div>
+    </div>
+
+    <!-- DM pane -->
+    <div class="pwag-pane" id="pwag-pane-dm">
+      <div class="pwag-field">
+        <label class="pwag-lbl">Master Password</label>
+        <input type="password" id="pwag-dm-pw" class="pwag-inp" placeholder="Enter master password…"
+               autocomplete="current-password" onkeydown="if(event.key==='Enter')pwagLoginDM()">
+      </div>
+      <div class="pwag-err" id="pwag-dm-err"></div>
+      <button class="pwag-btn" onclick="pwagLoginDM()">Login as DM</button>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+  try{var s=JSON.parse(sessionStorage.getItem('rpgSession')||'null');if(s&&s.role)return;}catch{}
+  var g=document.getElementById('pwa-gate');
+  g.style.display='flex';
+  fetch('/api/characters').then(function(r){return r.ok?r.json():[];}).then(function(chars){
+    var sel=document.getElementById('pwag-char-sel');
+    var pcs=chars.filter(function(c){return c.char_type==='pc';});
+    sel.innerHTML=pcs.length?pcs.map(function(c){return'<option value="'+c.id+'">'+c.name+'</option>';}).join(''):'<option value="">No characters found</option>';
+  }).catch(function(){document.getElementById('pwag-char-sel').innerHTML='<option value="">Error loading</option>';});
+})();
+
+function pwagSwitch(tab){
+  ['char','dm'].forEach(function(t){
+    document.getElementById('pwag-tb-'+t).classList.toggle('active',t===tab);
+    document.getElementById('pwag-pane-'+t).classList.toggle('active',t===tab);
+  });
+  setTimeout(function(){document.getElementById(tab==='dm'?'pwag-dm-pw':'pwag-char-pw').focus();},30);
+}
+
+function _pwagStore(sess){
+  sessionStorage.setItem('rpgSession',JSON.stringify(sess));
+  if(sess.role==='dm'){sessionStorage.setItem('tableMasterPw',sess.masterPw);sessionStorage.setItem('dmMasterPw',sess.masterPw);}
+  else{sessionStorage.removeItem('tableMasterPw');sessionStorage.removeItem('dmMasterPw');}
+  location.reload();
+}
+
+async function pwagLoginChar(){
+  var id=document.getElementById('pwag-char-sel').value,
+      pw=document.getElementById('pwag-char-pw').value,
+      err=document.getElementById('pwag-char-err'),
+      btn=document.getElementById('pwag-char-btn');
+  err.textContent='';
+  if(!id){err.textContent='Select a character.';return;}
+  if(!pw){err.textContent='Enter your password.';return;}
+  btn.disabled=true;
+  try{
+    var res=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'character',characterId:id,password:pw})});
+    var d=await res.json();
+    if(d.needsSetup){pwagShowSetup(d.characterId,d.characterName);return;}
+    if(!res.ok){err.textContent=d.error||'Login failed.';return;}
+    _pwagStore({role:'character',characterId:d.characterId,characterName:d.characterName,charPw:pw});
+  }catch{err.textContent='Connection error.';}
+  finally{btn.disabled=false;}
+}
+
+var _pwagSetupId=null;
+function pwagShowSetup(charId,charName){
+  _pwagSetupId=charId;
+  document.getElementById('pwag-char-step').style.display='none';
+  document.getElementById('pwag-setup-step').style.display='block';
+  document.getElementById('pwag-setup-name').textContent=charName;
+  document.getElementById('pwag-setup-pw1').value='';
+  document.getElementById('pwag-setup-pw2').value='';
+  setTimeout(function(){document.getElementById('pwag-setup-pw1').focus();},30);
+}
+function pwagCancelSetup(){
+  document.getElementById('pwag-setup-step').style.display='none';
+  document.getElementById('pwag-char-step').style.display='block';
+  document.getElementById('pwag-char-pw').value='';
+}
+async function pwagSetupPw(){
+  var pw1=document.getElementById('pwag-setup-pw1').value,
+      pw2=document.getElementById('pwag-setup-pw2').value,
+      err=document.getElementById('pwag-setup-err'),
+      btn=document.getElementById('pwag-setup-btn');
+  err.textContent='';
+  if(!pw1){err.textContent='Enter a password.';return;}
+  if(pw1!==pw2){err.textContent='Passwords do not match.';return;}
+  if(pw1.length<3){err.textContent='At least 3 characters.';return;}
+  btn.disabled=true;
+  try{
+    var sr=await fetch('/api/characters/'+_pwagSetupId+'/password',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({new_password:pw1})});
+    if(!sr.ok){err.textContent='Failed to set password.';return;}
+    var lr=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'character',characterId:_pwagSetupId,password:pw1})});
+    var ld=await lr.json();
+    if(!lr.ok){err.textContent=ld.error||'Login failed.';return;}
+    _pwagStore({role:'character',characterId:ld.characterId,characterName:ld.characterName,charPw:pw1});
+  }catch{err.textContent='Connection error.';}
+  finally{btn.disabled=false;}
+}
+
+async function pwagLoginDM(){
+  var pw=document.getElementById('pwag-dm-pw').value,
+      err=document.getElementById('pwag-dm-err');
+  err.textContent='';
+  if(!pw){err.textContent='Enter the master password.';return;}
+  try{
+    var res=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'dm',password:pw})});
+    var d=await res.json();
+    if(!res.ok){err.textContent=d.error||'Wrong password.';return;}
+    _pwagStore({role:'dm',masterPw:pw});
+  }catch{err.textContent='Connection error.';}
+}
+</script>
 
 <div id="toolbar">
   <a href="/dm.html" class="btn" style="text-decoration:none">← DM</a>
@@ -19,15 +198,8 @@
   <button class="btn" id="btn-dm-unlock" style="display:none" onclick="unlockDM()">🔑 DM</button>
 
   <div class="dm-controls" style="display:none;display:contents">
-    <select id="prep-map-sel" style="background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px;padding:3px 6px;font-size:12px;max-width:150px">
-      <option value="">— Map —</option>
-    </select>
-    <button class="btn primary" onclick="loadPrepMapToTable()">📂 Load</button>
     <button class="btn primary" id="btn-add-token" onclick="openAddTokenModal()">+ Token</button>
     <button class="btn danger" onclick="clearAllTokens()">Clear</button>
-    <button class="btn" id="btn-prev-turn" onclick="dmPrevTurn()">⏮ Prev Turn</button>
-    <button class="btn" id="btn-next-turn" onclick="dmNextTurn()">⏭ Next Turn</button>
-    <button class="btn" id="btn-init-toggle" onclick="toggleInitiative()">▶ Start Initiative</button>
   </div>
   <button class="btn" onclick="logout()" style="margin-left:4px" title="Logout">🚪</button>
 
@@ -48,8 +220,12 @@
     <span id="zoom-val" style="font-size:11px;color:var(--ac);min-width:34px">100%</span>
   </div>
   <button class="btn tool-btn" onclick="openDiceRollerModal()" title="Dice Roller" style="margin-left:4px">🎲</button>
-  <button class="btn tool-btn" id="btn-leftpanel-toggle" onclick="toggleLeftPanel()" title="Toggle left panel" style="margin-left:4px">◀</button>
-  <button class="btn tool-btn" id="btn-sidepanel-toggle" onclick="toggleSidePanel()" title="Toggle right panel" style="margin-left:2px">▶</button>
+
+  <!-- Console: secondary screen button + connection dot -->
+  <div style="display:flex;align-items:center;gap:5px;margin-left:8px;padding-left:8px;border-left:1px solid var(--a44)">
+    <div id="console-secondary-dot" title="Secondary screen connection"></div>
+    <button class="btn tool-btn" onclick="consoleOpenSecondary()" title="Open secondary screen">📱</button>
+  </div>
 </div>
 
 <!-- Draw sub-toolbar (shown when draw tool active) -->
@@ -70,10 +246,8 @@
 
 <div id="table-wrap">
 
-  <!-- ── Left Panel ──────────────────────────────────────────────────────────── -->
+  <!-- Left panel kept in DOM so existing JS can still render to it (display:none via CSS) -->
   <div id="left-panel">
-
-    <!-- Initiative section -->
     <div class="lp-section">
       <div class="lp-section-hdr" onclick="initTogglePanel()">
         <span>⚔️ Initiative <span id="init-badge" class="chat-new-badge" style="display:none">!</span></span>
@@ -88,8 +262,6 @@
         <div id="init-tracker-list"><div class="init-empty-msg">No combatants yet.</div></div>
       </div>
     </div>
-
-    <!-- Chat section -->
     <div class="lp-section">
       <div class="lp-section-hdr" onclick="chatToggle()">
         <span>💬 Chat <span id="chat-badge" class="chat-new-badge" style="display:none">0</span></span>
@@ -105,8 +277,6 @@
         </div>
       </div>
     </div>
-
-    <!-- Token / HP Edit section (shown when a token is selected) -->
     <div class="lp-section" id="lp-token-section" style="display:none">
       <div class="lp-section-hdr lp-token-hdr">
         <span id="hp-panel-name" style="font-weight:bold;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1"></span>
@@ -117,7 +287,6 @@
         </div>
       </div>
       <div class="lp-body open" id="hp-body-wrap">
-        <!-- HP / AC display -->
         <div style="font-size:12px;padding:6px 10px 2px;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">
           <span>HP: <strong id="hp-cur-display" style="color:var(--ok)">0</strong>
             <span style="color:var(--txd)"> / <span id="hp-max-display">0</span></span>
@@ -125,7 +294,6 @@
           </span>
           <span style="color:var(--txd)">AC: <strong id="hp-ac-display" style="color:var(--tx)">—</strong></span>
         </div>
-        <!-- Damage / Heal / Temp HP (own token or DM only) -->
         <div id="hp-edit-area">
         <div style="display:flex;gap:4px;padding:4px 8px;align-items:center">
           <input type="number" id="hp-amount" value="1" min="1" style="width:52px;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px;padding:3px 5px;font-size:12px">
@@ -146,21 +314,17 @@
           <button class="btn sm" onclick="applyTempHp()">Set</button>
         </div>
         </div>
-        <!-- Conditions -->
         <div id="hp-conditions-row" style="border-top:1px solid var(--a44);padding:6px 8px 4px">
           <div style="font-size:10px;color:var(--txd);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Conditions</div>
           <div id="hp-conditions-grid" style="display:flex;flex-wrap:wrap;gap:3px"></div>
         </div>
-        <!-- Visibility toggle (DM only) -->
         <div id="hp-vis-row" style="display:none;border-top:1px solid var(--a44);padding:6px 8px">
           <button id="hp-vis-btn" class="btn sm" onclick="toggleTokenVisibility()" style="width:100%;font-size:12px"></button>
         </div>
-        <!-- Initiative roll + edit label (DM only) -->
         <div id="hp-init-row" style="display:none;border-top:1px solid var(--a44);padding:6px 8px">
           <button id="hp-init-btn" class="btn sm" onclick="rollTokenInitiative()" style="width:100%;font-size:12px">🎲 Roll Initiative</button>
           <button class="btn sm" onclick="openEditLabel()" style="width:100%;font-size:12px;margin-top:4px">✏ Edit Identifier</button>
         </div>
-        <!-- Edit label inline -->
         <div id="hp-label-row" style="display:none;border-top:1px solid var(--a44);padding:6px 8px">
           <div style="font-size:10px;color:var(--txd);margin-bottom:4px">Identifier (shown to players)</div>
           <div style="display:flex;gap:4px">
@@ -169,7 +333,6 @@
             <button class="btn sm" onclick="cancelEditLabel()">✕</button>
           </div>
         </div>
-        <!-- Token assignment (DM only) -->
         <div id="hp-assign-row" style="display:none;border-top:1px solid var(--a44);padding:6px 8px">
           <div style="font-size:10px;color:var(--txd);margin-bottom:4px">Assign to character</div>
           <div style="display:flex;gap:4px">
@@ -180,7 +343,6 @@
         </div>
       </div>
     </div>
-
   </div><!-- /#left-panel -->
 
   <div id="canvas-area">
@@ -368,5 +530,6 @@
 <script src="/js/table/table-hppanel.js" defer></script>
 <script src="/js/table/table-addtoken.js" defer></script>
 <script src="/js/table/table-main.js" defer></script>
+<script src="/js/console/table-console.js" defer></script>
 </body>
 </html>
