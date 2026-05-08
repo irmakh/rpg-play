@@ -91,20 +91,26 @@ async function dmPrevTurn() {
   } catch {}
 }
 
-async function toggleInitiative() {
+async function startInitiative() {
   if (!isDM()) return;
-  const running = !!initData.currentId;
   try {
-    await fetch(running ? '/api/initiative/end' : '/api/initiative/start', {
-      method: 'POST', headers: { 'X-Master-Password': masterPw }
-    });
-  } catch { showToast('Failed to toggle initiative.', true); }
+    await fetch('/api/initiative/start', { method: 'POST', headers: { 'X-Master-Password': masterPw } });
+  } catch { showToast('Failed to start initiative.', true); }
+}
+
+async function endInitiative() {
+  if (!isDM()) return;
+  try {
+    await fetch('/api/initiative/end', { method: 'POST', headers: { 'X-Master-Password': masterPw } });
+  } catch { showToast('Failed to end initiative.', true); }
 }
 
 function updateInitiativeButton() {
-  const btn = document.getElementById('btn-init-toggle');
-  if (!btn) return;
-  btn.textContent = initData.currentId ? '⏹ End Initiative' : '▶ Start Initiative';
+  const running = !!initData.currentId;
+  const btnStart = document.getElementById('btn-init-start');
+  const btnEnd   = document.getElementById('btn-init-end');
+  if (btnStart) btnStart.style.display = running ? 'none' : '';
+  if (btnEnd)   btnEnd.style.display   = running ? '' : 'none';
 }
 
 async function updateInitRoll(input) {

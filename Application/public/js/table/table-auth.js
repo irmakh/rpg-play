@@ -61,6 +61,15 @@ function cancelDMUnlock() {}
 function submitDMPassword() {}
 function exitDM() { logout(); }
 
+function openSettingsModal() {
+  const m = document.getElementById('settings-modal');
+  if (m) m.style.display = 'flex';
+}
+function closeSettingsModal() {
+  const m = document.getElementById('settings-modal');
+  if (m) m.style.display = 'none';
+}
+
 function toggleLeftPanel() {
   const panel = document.getElementById('left-panel');
   const btn = document.getElementById('btn-leftpanel-toggle');

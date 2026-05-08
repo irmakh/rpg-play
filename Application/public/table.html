@@ -19,18 +19,13 @@
   <button class="btn" id="btn-dm-unlock" style="display:none" onclick="unlockDM()">🔑 DM</button>
 
   <div class="dm-controls" style="display:none;display:contents">
-    <select id="prep-map-sel" style="background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px;padding:3px 6px;font-size:12px;max-width:150px">
-      <option value="">— Map —</option>
-    </select>
-    <button class="btn primary" onclick="loadPrepMapToTable()">📂 Load</button>
     <button class="btn primary" id="btn-add-token" onclick="openAddTokenModal()">+ Token</button>
-    <button class="btn danger" onclick="clearAllTokens()">Clear</button>
-    <button class="btn" id="btn-prev-turn" onclick="dmPrevTurn()">⏮ Prev Turn</button>
-    <button class="btn" id="btn-next-turn" onclick="dmNextTurn()">⏭ Next Turn</button>
-    <button class="btn" id="btn-init-toggle" onclick="toggleInitiative()">▶ Start Initiative</button>
     <button class="btn" id="btn-music" onclick="openMusicModal()" title="Music Player">🎵</button>
+    <button class="btn" onclick="openSettingsModal()" title="Settings">⚙️</button>
   </div>
-  <button class="btn" onclick="logout()" style="margin-left:4px" title="Logout">🚪</button>
+  <button class="btn" onclick="logout()" style="margin-left:4px" title="Logout">
+    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;display:inline-block"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+  </button>
 
   <div style="flex:1"></div>
 
@@ -95,7 +90,10 @@
       </div>
       <div class="lp-body" id="init-body-wrap">
         <div class="init-panel-btns">
-          <button class="dice-btn" onclick="rollMyInitiative()">🎲 Roll Init</button>
+          <div class="dm-controls" style="display:none;display:contents">
+            <button class="dice-btn" id="btn-init-start" onclick="startInitiative()" style="display:none">▶ Start</button>
+            <button class="dice-btn" id="btn-init-end" onclick="endInitiative()" style="display:none">⏹ End</button>
+          </div>
           <button class="dice-btn" id="btn-init-prev" onclick="dmPrevTurn()">⏮ Prev</button>
           <button class="dice-btn" id="btn-init-next" onclick="initSkipTurn()">⏭ Next</button>
         </div>
@@ -233,6 +231,27 @@
   </div>
 
 </div><!-- /#table-wrap -->
+
+<!-- Settings Modal (DM only) -->
+<div id="settings-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:2000;align-items:center;justify-content:center">
+  <div style="background:var(--bg2);border:1px solid var(--ac);border-radius:8px;width:340px;max-width:96vw;display:flex;flex-direction:column">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--a44)">
+      <span style="font-weight:bold;font-size:14px">⚙️ Settings</span>
+      <button class="btn sm" onclick="closeSettingsModal()">✕</button>
+    </div>
+    <div style="padding:16px">
+      <div style="font-size:10px;color:var(--ac);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Map</div>
+      <div style="display:flex;gap:6px;align-items:center;margin-bottom:16px">
+        <select id="prep-map-sel" style="flex:1;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px;padding:5px 8px;font-size:12px">
+          <option value="">— Select Map —</option>
+        </select>
+        <button class="btn primary" onclick="loadPrepMapToTable()">📂 Load</button>
+      </div>
+      <div style="font-size:10px;color:var(--ac);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Tokens</div>
+      <button class="btn danger" style="width:100%" onclick="clearAllTokens()">🗑 Clear All Tokens</button>
+    </div>
+  </div>
+</div>
 
 <!-- Advantage modal -->
 <div id="adv-modal" style="position:fixed;inset:0;background:var(--ov);display:none;align-items:center;justify-content:center;z-index:2500" onclick="advClose()">
