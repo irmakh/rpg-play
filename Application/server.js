@@ -2783,7 +2783,10 @@ app.post('/api/table/clear', async (req, res) => {
 // ── Sound Player ─────────────────────────────────────────────────────────────
 const AUDIO_MIME = new Set(['audio/mpeg','audio/wav','audio/ogg','audio/webm','audio/flac','audio/mp4','audio/aac','audio/x-m4a','video/mpeg']);
 
-let soundPlaybackState = { isPlaying: false, playlistId: null, trackIndex: 0, url: null, name: null, volume: 1.0 };
+let soundPlaybackState = {
+  isPlaying: false, playlistId: null, trackIndex: 0, url: null, name: null, volume: 1.0,
+  position: 0, positionSetAt: null, duration: 0, loopMode: 'none',
+};
 
 app.get('/api/sounds', (req, res) => {
   if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
@@ -2866,24 +2869,37 @@ app.delete('/api/playlists/:id', (req, res) => {
 });
 
 app.get('/api/sound/state', (req, res) => {
-  res.json(soundPlaybackState);
+  const st = { ...soundPlaybackState };
+  st.currentPosition = (st.isPlaying && st.positionSetAt)
+    ? Math.min(st.position + (Date.now() - st.positionSetAt) / 1000, st.duration || Infinity)
+    : st.position;
+  res.json(st);
 });
 
 app.post('/api/sound/control', (req, res) => {
   if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
-  const { action, playlistId, trackIndex, volume } = req.body || {};
+  const { action, playlistId, trackIndex, volume, position, duration, loopMode } = req.body || {};
   if (action === 'play') {
     let tracks = [];
     if (DB_PROVIDER === 'localdb' && playlistId) tracks = ldb.getSoundsForPlaylist(playlistId);
     const idx = Math.max(0, parseInt(trackIndex) || 0);
     const track = tracks[idx] || null;
-    soundPlaybackState = { isPlaying: true, playlistId: playlistId || null, trackIndex: idx, url: track?.url || null, name: track?.name || null, volume: soundPlaybackState.volume };
-    broadcast('sound', { action: 'play', url: track?.url || null, name: track?.name || null, playlistId, trackIndex: idx, volume: soundPlaybackState.volume });
+    const pos = typeof position === 'number' ? Math.max(0, position) : 0;
+    const keepDur = (track?.url && track.url === soundPlaybackState.url) ? soundPlaybackState.duration : 0;
+    soundPlaybackState = {
+      isPlaying: true, playlistId: playlistId || null, trackIndex: idx,
+      url: track?.url || null, name: track?.name || null, volume: soundPlaybackState.volume,
+      position: pos, positionSetAt: Date.now(), duration: keepDur, loopMode: soundPlaybackState.loopMode,
+    };
+    broadcast('sound', { action: 'play', url: track?.url || null, name: track?.name || null, playlistId, trackIndex: idx, volume: soundPlaybackState.volume, position: pos, duration: keepDur });
   } else if (action === 'pause') {
+    const pos = typeof position === 'number' ? Math.max(0, position) : soundPlaybackState.position;
     soundPlaybackState.isPlaying = false;
-    broadcast('sound', { action: 'pause' });
+    soundPlaybackState.position = pos;
+    soundPlaybackState.positionSetAt = null;
+    broadcast('sound', { action: 'pause', position: pos });
   } else if (action === 'stop') {
-    soundPlaybackState = { isPlaying: false, playlistId: null, trackIndex: 0, url: null, name: null, volume: soundPlaybackState.volume };
+    soundPlaybackState = { isPlaying: false, playlistId: null, trackIndex: 0, url: null, name: null, volume: soundPlaybackState.volume, position: 0, positionSetAt: null, duration: 0, loopMode: soundPlaybackState.loopMode };
     broadcast('sound', { action: 'stop' });
   } else if (action === 'next' || action === 'prev') {
     let tracks = [];
@@ -2892,15 +2908,25 @@ app.post('/api/sound/control', (req, res) => {
     const dir = action === 'next' ? 1 : -1;
     const newIdx = ((soundPlaybackState.trackIndex + dir) + tracks.length) % tracks.length;
     const track = tracks[newIdx];
-    soundPlaybackState.trackIndex = newIdx;
-    soundPlaybackState.url = track.url;
-    soundPlaybackState.name = track.name;
-    soundPlaybackState.isPlaying = true;
-    broadcast('sound', { action: 'play', url: track.url, name: track.name, playlistId: soundPlaybackState.playlistId, trackIndex: newIdx, volume: soundPlaybackState.volume });
+    soundPlaybackState = { ...soundPlaybackState, trackIndex: newIdx, url: track.url, name: track.name, isPlaying: true, position: 0, positionSetAt: Date.now(), duration: 0 };
+    broadcast('sound', { action: 'play', url: track.url, name: track.name, playlistId: soundPlaybackState.playlistId, trackIndex: newIdx, volume: soundPlaybackState.volume, position: 0, duration: 0 });
   } else if (action === 'volume') {
     const vol = Math.max(0, Math.min(1, parseFloat(volume) || 1));
     soundPlaybackState.volume = vol;
     broadcast('sound', { action: 'volume', volume: vol });
+  } else if (action === 'seek') {
+    const pos = Math.max(0, parseFloat(position) || 0);
+    soundPlaybackState.position = pos;
+    soundPlaybackState.positionSetAt = soundPlaybackState.isPlaying ? Date.now() : null;
+    broadcast('sound', { action: 'seek', position: pos });
+  } else if (action === 'duration') {
+    const dur = Math.max(0, parseFloat(duration) || 0);
+    soundPlaybackState.duration = dur;
+    broadcast('sound', { action: 'duration', duration: dur });
+  } else if (action === 'loopMode') {
+    const lm = ['none', 'track', 'playlist'].includes(loopMode) ? loopMode : 'none';
+    soundPlaybackState.loopMode = lm;
+    broadcast('sound', { action: 'loopMode', loopMode: lm });
   }
   res.json({ ok: true, state: soundPlaybackState });
 });

@@ -54,12 +54,15 @@
 </div>
 
 <!-- Now Playing bar — visible to all clients when music is playing -->
-<div id="now-playing-bar" style="display:none;background:var(--bg2);border-bottom:1px solid var(--a44);padding:4px 12px;align-items:center;gap:10px;font-size:12px">
+<div id="now-playing-bar" style="display:none;background:var(--bg2);border-bottom:1px solid var(--a44);padding:4px 10px;align-items:center;gap:7px;font-size:12px">
   <span id="now-playing-state" style="font-size:10px;color:var(--txd);white-space:nowrap">Now playing:</span>
   <span style="color:var(--ac)">🎵</span>
   <span id="now-playing-name" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+  <span id="now-playing-pos" style="font-size:10px;color:var(--ac);white-space:nowrap;min-width:26px;text-align:right">0:00</span>
+  <input type="range" id="now-playing-seek" min="0" max="100" value="0" step="0.5" style="width:80px;cursor:pointer" oninput="musicSeekInput(this.value)" onchange="musicSeekSend(this.value)">
+  <span id="now-playing-dur" style="font-size:10px;color:var(--txd);white-space:nowrap;min-width:26px">0:00</span>
   <span style="font-size:10px;color:var(--txd);white-space:nowrap">Vol</span>
-  <input type="range" id="local-vol-slider" min="0" max="100" value="100" style="width:70px;cursor:pointer" oninput="setLocalVolume(this.value)" onchange="setLocalVolume(this.value)">
+  <input type="range" id="local-vol-slider" min="0" max="100" value="100" style="width:60px;cursor:pointer" oninput="setLocalVolume(this.value)" onchange="setLocalVolume(this.value)">
   <span id="local-vol-pct" style="font-size:11px;color:var(--ac);min-width:28px;text-align:right">100%</span>
 </div>
 
@@ -379,11 +382,21 @@
         </select>
       </div>
       <div id="music-now-playing" style="font-size:11px;color:var(--txd);margin-bottom:10px;min-height:16px"></div>
-      <div style="display:flex;justify-content:center;gap:8px;margin-bottom:14px">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
+        <span id="music-pos" style="font-size:11px;color:var(--ac);min-width:30px;text-align:right">0:00</span>
+        <input type="range" id="music-seek" min="0" max="100" value="0" step="0.5" style="flex:1;cursor:pointer" oninput="musicSeekInput(this.value)" onchange="musicSeekSend(this.value)">
+        <span id="music-dur" style="font-size:11px;color:var(--txd);min-width:30px">0:00</span>
+      </div>
+      <div style="display:flex;justify-content:center;gap:8px;margin-bottom:8px">
         <button class="btn" onclick="musicControl('prev')" title="Previous">⏮</button>
         <button class="btn primary" id="music-play-btn" onclick="musicPlayPause()" style="min-width:72px">▶ Play</button>
         <button class="btn" onclick="musicControl('next')" title="Next">⏭</button>
         <button class="btn danger" onclick="musicControl('stop')" title="Stop">⏹</button>
+      </div>
+      <div style="display:flex;justify-content:center;gap:6px;margin-bottom:14px">
+        <button class="btn sm" id="music-loop-none" onclick="musicSetLoopMode('none')">No Loop</button>
+        <button class="btn sm" id="music-loop-track" onclick="musicSetLoopMode('track')">🔂 Track</button>
+        <button class="btn sm" id="music-loop-playlist" onclick="musicSetLoopMode('playlist')">🔁 Playlist</button>
       </div>
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
         <span style="font-size:11px;color:var(--txd);white-space:nowrap">🔊 Vol</span>

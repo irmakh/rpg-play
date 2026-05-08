@@ -1091,15 +1091,113 @@ let _sMusicPlaying         = false;
 let _sMusicCurrentPl       = null;
 let _sMusicCurrentName     = null;
 let _sMusicCurrentTrackIdx = 0;
+let _sMusicDuration        = 0;
+let _sMusicLoopMode        = 'none';
+let _sMusicSeeking         = false;
+let _sMusicProgressTick    = null;
 let _sMusicVolDebounce     = null;
 
+function sFmtTime(s) {
+  if (!isFinite(s) || s < 0) return '0:00';
+  return Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0');
+}
+
+function sStartProgressTick() {
+  if (_sMusicProgressTick) return;
+  _sMusicProgressTick = setInterval(sTickProgress, 500);
+}
+
+function sStopProgressTick() {
+  clearInterval(_sMusicProgressTick);
+  _sMusicProgressTick = null;
+}
+
+function sTickProgress() {
+  const audioEl = document.getElementById('s-bg-music');
+  if (!audioEl) return;
+  const pos = audioEl.currentTime;
+  const dur = isFinite(audioEl.duration) ? audioEl.duration : _sMusicDuration;
+  if (!_sMusicSeeking) {
+    const sk = document.getElementById('s-music-seek');
+    if (sk) { sk.max = dur || 100; sk.value = pos; }
+  }
+  const posEl = document.getElementById('s-music-pos');
+  if (posEl) posEl.textContent = sFmtTime(pos);
+  const sbarPos = document.getElementById('s-now-playing-pos');
+  if (sbarPos) sbarPos.textContent = sFmtTime(pos);
+}
+
+function sUpdateDurationDisplay(dur) {
+  _sMusicDuration = dur;
+  const durEl = document.getElementById('s-music-dur');
+  if (durEl) durEl.textContent = sFmtTime(dur);
+  const sbarDur = document.getElementById('s-now-playing-dur');
+  if (sbarDur) sbarDur.textContent = sFmtTime(dur);
+  const sk = document.getElementById('s-music-seek');
+  if (sk && dur) sk.max = dur;
+}
+
+function sMusicSeekInput(val) {
+  if (!sIsDM()) return;
+  _sMusicSeeking = true;
+  const t = sFmtTime(parseFloat(val));
+  const posEl = document.getElementById('s-music-pos');
+  if (posEl) posEl.textContent = t;
+  const sbarPos = document.getElementById('s-now-playing-pos');
+  if (sbarPos) sbarPos.textContent = t;
+}
+
+function sMusicSeekSend(val) {
+  if (!sIsDM()) return;
+  _sMusicSeeking = false;
+  const pos = parseFloat(val);
+  const audioEl = document.getElementById('s-bg-music');
+  if (audioEl) audioEl.currentTime = pos;
+  sMusicSendControl({ action: 'seek', position: pos });
+}
+
+function sMusicSetLoopMode(mode) {
+  if (!sIsDM()) return;
+  _sMusicLoopMode = mode;
+  sMusicSendControl({ action: 'loopMode', loopMode: mode });
+  sUpdateLoopBtns(mode);
+  sApplyLoopToAudio(mode);
+}
+
+function sApplyLoopToAudio(mode) {
+  const audioEl = document.getElementById('s-bg-music');
+  if (!audioEl) return;
+  audioEl.loop = (mode === 'track');
+  if (sIsDM()) {
+    audioEl.onended =
+      mode === 'playlist' ? () => sMusicSendControl({ action: 'next' }) :
+      mode === 'none'     ? () => sMusicSendControl({ action: 'stop' }) :
+      null;
+  }
+}
+
+function sUpdateLoopBtns(mode) {
+  ['none', 'track', 'playlist'].forEach(m => {
+    const btn = document.getElementById('s-music-loop-' + m);
+    if (btn) btn.classList.toggle('s-btn-primary', m === mode);
+  });
+}
+
 async function sMusicInit() {
-  // DM only: fetch playlists for the music tab UI
+  // DM only: fetch playlists + wire duration reporting
   if (!sIsDM()) return;
   try {
     const r = await fetch('/api/playlists', { headers: sAuthHeaders() });
     if (r.ok) { _sMusicPlaylists = await r.json(); sMusicPopulateSel(); }
   } catch {}
+  const audioEl = document.getElementById('s-bg-music');
+  if (audioEl) {
+    audioEl.addEventListener('loadedmetadata', () => {
+      if (isFinite(audioEl.duration) && audioEl.duration > 0) {
+        sMusicSendControl({ action: 'duration', duration: audioEl.duration });
+      }
+    });
+  }
   await sMusicRestoreState();
 }
 
@@ -1108,18 +1206,36 @@ async function sMusicRestoreState() {
   try {
     const st = await fetch('/api/sound/state').then(r => r.json()).catch(() => ({}));
     const audioEl = document.getElementById('s-bg-music');
+    _sMusicLoopMode        = st.loopMode || 'none';
+    _sMusicCurrentTrackIdx = st.trackIndex ?? 0;
+    sUpdateLoopBtns(_sMusicLoopMode);
+    sApplyLoopToAudio(_sMusicLoopMode);
+    if (st.duration) sUpdateDurationDisplay(st.duration);
     if (st.url) {
       _sMusicCurrentName = st.name;
+      const currentPos   = st.currentPosition ?? 0;
       if (st.isPlaying) {
         if (audioEl) {
           const fullUrl = new URL(st.url, location.origin).href;
-          if (audioEl.src !== fullUrl) audioEl.src = st.url;
+          if (audioEl.src !== fullUrl) {
+            if (currentPos > 0) {
+              audioEl.addEventListener('loadedmetadata', () => {
+                audioEl.currentTime = currentPos;
+              }, { once: true });
+            }
+            audioEl.src = st.url;
+          } else if (currentPos > 0) {
+            audioEl.currentTime = currentPos;
+          }
           audioEl.volume = st.volume ?? 1;
-          audioEl.play().catch(() => {});
+          sMusicUpdateNowPlaying(st.name, 'loading');
+          audioEl.play()
+            .then(() => sMusicUpdateNowPlaying(_sMusicCurrentName, 'playing'))
+            .catch(() => {});
         }
         _sMusicPlaying = true;
         sMusicUpdateBtn(true);
-        sMusicUpdateNowPlaying(st.name, 'playing');
+        sStartProgressTick();
       } else {
         sMusicUpdateNowPlaying(st.name, 'paused');
       }
@@ -1181,11 +1297,12 @@ function sMusicPlayTrack(idx) {
 }
 
 function sMusicPlayPause() {
+  const audioEl = document.getElementById('s-bg-music');
   if (_sMusicPlaying) {
-    sMusicSendControl({ action: 'pause' });
+    sMusicSendControl({ action: 'pause', position: audioEl?.currentTime ?? 0 });
   } else {
     const plId = document.getElementById('s-music-pl-sel')?.value;
-    if (plId) sMusicSendControl({ action: 'play', playlistId: plId, trackIndex: _sMusicCurrentTrackIdx });
+    if (plId) sMusicSendControl({ action: 'play', playlistId: plId, trackIndex: _sMusicCurrentTrackIdx, position: audioEl?.currentTime ?? 0 });
   }
 }
 
@@ -1209,31 +1326,48 @@ function sMusicUpdateBtn(playing) {
 }
 
 function sMusicUpdateNowPlaying(name, state) {
-  const bar = document.getElementById('s-now-playing-bar');
+  const bar     = document.getElementById('s-now-playing-bar');
   const stateEl = document.getElementById('s-now-playing-state');
   const barName = document.getElementById('s-now-playing-name');
   if (bar) bar.style.display = name ? 'flex' : 'none';
-  if (stateEl) stateEl.textContent = state === 'paused' ? 'Paused:' : 'Now playing:';
+  if (stateEl) stateEl.textContent =
+      state === 'paused'  ? 'Paused:'  :
+      state === 'loading' ? 'Loading:' : 'Now playing:';
   if (barName) barName.textContent = name || '';
   const el = document.getElementById('s-music-now-playing');
-  if (el) el.textContent = name ? (state === 'paused' ? '⏸ ' : '♪ ') + name : '';
+  if (el) el.textContent = name
+      ? (state === 'paused' ? '⏸ ' : state === 'loading' ? '⏳ ' : '♪ ') + name
+      : '';
 }
 
 function sHandleSoundEvent(d) {
   const audioEl = document.getElementById('s-bg-music');
   if (!audioEl) return;
   if (d.action === 'play') {
-    if (d.url) {
-      const fullUrl = new URL(d.url, location.origin).href;
-      if (audioEl.src !== fullUrl) audioEl.src = d.url;
-      audioEl.volume = d.volume ?? 1;
-      audioEl.play().catch(() => {});
+    const fullUrl     = d.url ? new URL(d.url, location.origin).href : '';
+    const isSameTrack = fullUrl && audioEl.src === fullUrl;
+    if (fullUrl && !isSameTrack) {
+      const pos = d.position ?? 0;
+      if (pos > 0) {
+        audioEl.addEventListener('loadedmetadata', () => {
+          audioEl.currentTime = pos;
+        }, { once: true });
+      }
+      audioEl.src = d.url;
+    } else if (isSameTrack && typeof d.position === 'number' && Math.abs(audioEl.currentTime - d.position) > 1) {
+      audioEl.currentTime = d.position;
     }
-    _sMusicPlaying = true;
-    _sMusicCurrentName = d.name;
+    audioEl.volume = d.volume ?? 1;
+    _sMusicCurrentName     = d.name;
     _sMusicCurrentTrackIdx = d.trackIndex ?? 0;
+    if (d.duration) sUpdateDurationDisplay(d.duration);
+    sMusicUpdateNowPlaying(d.name, 'loading');
+    audioEl.play()
+      .then(() => sMusicUpdateNowPlaying(_sMusicCurrentName, 'playing'))
+      .catch(() => {});
+    _sMusicPlaying = true;
     sMusicUpdateBtn(true);
-    sMusicUpdateNowPlaying(d.name, 'playing');
+    sStartProgressTick();
     if (sIsDM() && d.playlistId) {
       const sel = document.getElementById('s-music-pl-sel');
       if (sel && sel.value !== d.playlistId) { sel.value = d.playlistId; sMusicLoadPlaylist(); }
@@ -1247,11 +1381,25 @@ function sHandleSoundEvent(d) {
       if (volPct) volPct.textContent = vol + '%';
     }
   } else if (d.action === 'pause') {
-    audioEl.pause(); _sMusicPlaying = false; sMusicUpdateBtn(false);
+    audioEl.pause();
+    _sMusicPlaying = false;
+    sStopProgressTick();
+    sMusicUpdateBtn(false);
     sMusicUpdateNowPlaying(_sMusicCurrentName, 'paused');
   } else if (d.action === 'stop') {
-    audioEl.pause(); audioEl.src = ''; _sMusicPlaying = false; _sMusicCurrentName = null; _sMusicCurrentTrackIdx = 0;
-    sMusicUpdateBtn(false); sMusicUpdateNowPlaying(null, null);
+    audioEl.pause();
+    audioEl.src = '';
+    _sMusicPlaying         = false;
+    _sMusicCurrentName     = null;
+    _sMusicCurrentTrackIdx = 0;
+    sStopProgressTick();
+    sUpdateDurationDisplay(0);
+    const posEl = document.getElementById('s-music-pos');
+    if (posEl) posEl.textContent = '0:00';
+    const sbarPos = document.getElementById('s-now-playing-pos');
+    if (sbarPos) sbarPos.textContent = '0:00';
+    sMusicUpdateBtn(false);
+    sMusicUpdateNowPlaying(null, null);
     if (sIsDM()) sMusicRenderTracks(null);
   } else if (d.action === 'volume') {
     audioEl.volume = d.volume ?? 1;
@@ -1260,6 +1408,14 @@ function sHandleSoundEvent(d) {
     const volPct = document.getElementById('s-music-vol-pct');
     if (volEl) volEl.value = vol;
     if (volPct) volPct.textContent = vol + '%';
+  } else if (d.action === 'seek') {
+    audioEl.currentTime = d.position ?? 0;
+  } else if (d.action === 'duration') {
+    sUpdateDurationDisplay(d.duration ?? 0);
+  } else if (d.action === 'loopMode') {
+    _sMusicLoopMode = d.loopMode || 'none';
+    sUpdateLoopBtns(_sMusicLoopMode);
+    sApplyLoopToAudio(_sMusicLoopMode);
   }
 }
 

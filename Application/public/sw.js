@@ -1,4 +1,4 @@
-const CACHE = 'rpg-v15';
+const CACHE = 'rpg-v16';
 
 const STATIC = [
   // Core pages
@@ -38,6 +38,7 @@ const STATIC = [
   '/js/table/table-panel.js',
   '/js/table/table-hppanel.js',
   '/js/table/table-addtoken.js',
+  '/js/table/table-music.js',
   '/js/table/table-main.js',
   // Console JS
   '/js/console/table-console.js',
