@@ -113,6 +113,7 @@ function startSSE() {
         if (modal && modal.style.display !== 'none') populateAddTokenModal(_charList);
       }
     },
+    sound: (d) => { handleSoundEvent(d); },
   });
 }
 

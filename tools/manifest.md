@@ -28,6 +28,7 @@
 ## Application — Frontend Modules (`Application/public/js/table/`)
 
 - **table-console.js** - BroadcastChannel bridge for console theme Screen 1 (map); opens secondary window, broadcasts TOKEN_SELECTED
+- **table-music.js** - Music player module for table screen; DM controls (modal), hidden `<audio>` element, handles `sound` SSE events for all clients
 - **secondary.js** - Self-contained logic for Screen 2 (info panel); own SSE, own state, own API calls; receives TOKEN_SELECTED via BroadcastChannel
 
 ## Application — LocalDB Helpers (`Application/db/localdb.js`)
@@ -35,6 +36,9 @@
 > Exported functions from the SQLite abstraction layer.
 
 - **listOrphanMonsterInitEntries()** - Returns initiative entries for monsters that have no matching table token; used by the initiative cleanup endpoint to avoid a double full-table scan
+- **listSoundFiles() / createSoundFile() / deleteSoundFile()** - CRUD for uploaded audio files
+- **listPlaylists() / createPlaylist() / updatePlaylist() / deletePlaylist()** - CRUD for tag-based playlists (generic or map-typed)
+- **getSoundsForPlaylist(playlistId)** - Returns sounds whose tags intersect with a playlist's tag filter
 
 ---
 

@@ -71,6 +71,7 @@ window.addEventListener('load', async () => {
 
   fetchDrawings();
   startSSE();
+  initMusicPlayer();
 
   // Load chat history in background — non-blocking so map and SSE start immediately
   fetch('/api/chat')
