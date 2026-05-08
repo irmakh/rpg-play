@@ -2824,6 +2824,17 @@ app.delete('/api/sounds/:id', (req, res) => {
   res.json({ ok: true });
 });
 
+app.patch('/api/sounds/:id', (req, res) => {
+  if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
+  const { name } = req.body || {};
+  if (!name) return res.status(400).json({ error: 'name required' });
+  if (DB_PROVIDER === 'localdb') {
+    if (!ldb.getSoundFile(req.params.id)) return res.status(404).json({ error: 'Not found' });
+    ldb.updateSoundFile(req.params.id, { name: String(name).trim().slice(0, 120) });
+  }
+  res.json({ ok: true });
+});
+
 app.get('/api/playlists', (req, res) => {
   if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
   if (DB_PROVIDER === 'localdb') {

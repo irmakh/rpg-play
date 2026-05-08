@@ -102,6 +102,8 @@ async function endInitiative() {
   if (!isDM()) return;
   try {
     await fetch('/api/initiative/end', { method: 'POST', headers: { 'X-Master-Password': masterPw } });
+    initData = { ...initData, currentId: null };
+    updateInitiativeButton();
   } catch { showToast('Failed to end initiative.', true); }
 }
 
@@ -109,8 +111,12 @@ function updateInitiativeButton() {
   const running = !!initData.currentId;
   const btnStart = document.getElementById('btn-init-start');
   const btnEnd   = document.getElementById('btn-init-end');
+  const btnPrev  = document.getElementById('btn-init-prev');
+  const btnNext  = document.getElementById('btn-init-next');
   if (btnStart) btnStart.style.display = running ? 'none' : '';
   if (btnEnd)   btnEnd.style.display   = running ? '' : 'none';
+  if (btnPrev)  btnPrev.style.display  = running ? '' : 'none';
+  if (btnNext)  btnNext.style.display  = running ? '' : 'none';
 }
 
 async function updateInitRoll(input) {

@@ -16,11 +16,18 @@
 .tag-chip button{background:none;border:none;color:var(--ac);cursor:pointer;font-size:11px;padding:0;line-height:1;opacity:.7}
 .tag-chip button:hover{opacity:1}
 .tag-bare-input{background:none;border:none;color:var(--tx);font-size:12px;outline:none;min-width:80px;flex:1;padding:0}
-.sound-row{display:flex;align-items:center;gap:8px;padding:7px 10px;border-bottom:1px solid var(--sep)}
+.sound-row{display:flex;align-items:center;gap:6px;padding:7px 10px;border-bottom:1px solid var(--sep);flex-wrap:wrap}
 .sound-row:last-child{border-bottom:none}
 .sound-row:hover{background:var(--a22)}
-.sound-name{flex:1;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.sound-tags{display:flex;gap:3px;flex-wrap:wrap;max-width:180px}
+.sound-name{min-width:80px;max-width:180px;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex-shrink:0}
+.sound-name-input{min-width:80px;max-width:180px;background:var(--bg3);border:1px solid var(--ac);color:var(--tx);border-radius:3px;padding:2px 5px;font-size:12px;flex-shrink:0}
+.sound-pl-chips{display:flex;gap:3px;flex-wrap:wrap;align-items:center;flex:1;min-width:0}
+.sound-pl-chip{display:inline-flex;align-items:center;gap:2px;background:var(--a44);border:1px solid var(--a66);border-radius:3px;padding:1px 6px;font-size:10px;color:var(--ac);white-space:nowrap}
+.sound-pl-chip button{background:none;border:none;color:var(--ac);cursor:pointer;font-size:11px;padding:0 1px;line-height:1;opacity:.6}
+.sound-pl-chip button:hover{opacity:1}
+.pl-add-dropdown{display:none;position:fixed;z-index:1500;background:var(--bg2);border:1px solid var(--ac);border-radius:4px;padding:4px 0;min-width:160px;max-height:200px;overflow-y:auto;box-shadow:0 4px 12px #0008}
+.pl-drop-item{padding:6px 12px;font-size:12px;cursor:pointer}
+.pl-drop-item:hover{background:var(--a44);color:var(--ac)}
 .pl-row{display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid var(--sep)}
 .pl-row:last-child{border-bottom:none}
 .pl-row:hover{background:var(--a22)}
@@ -159,6 +166,8 @@
     </div>
   </div>
 </div>
+
+<div class="pl-add-dropdown" id="pl-add-dropdown"></div>
 
 <script>
 // ── Auth ──────────────────────────────────────────────────────────────────────
@@ -306,11 +315,146 @@ function renderSounds() {
   const el = document.getElementById('sound-list');
   if (!list.length) { el.innerHTML = '<div style="padding:14px;text-align:center;color:var(--txd);font-size:12px">No sounds yet.</div>'; return; }
   el.innerHTML = list.map(s => `
-    <div class="sound-row">
+    <div class="sound-row" data-sound-id="${s.id}">
       <span class="sound-name" title="${esc(s.name)}">${esc(s.name)}</span>
-      <audio src="${esc(s.url)}" controls preload="none" style="height:28px;width:160px"></audio>
-      <button class="btn sm danger" onclick="deleteSound('${s.id}','${esc(s.name)}')" title="Delete">🗑</button>
+      <audio src="${esc(s.url)}" controls preload="none" style="height:28px;width:140px;flex-shrink:0"></audio>
+      <div class="sound-pl-chips" data-sound-id="${s.id}"></div>
+      <button class="btn sm" onclick="openAddDropdown('${s.id}',this)" title="Add to playlist" style="flex-shrink:0">+</button>
+      <button class="btn sm sound-edit-btn" onclick="startRename('${s.id}')" title="Rename" style="flex-shrink:0">✏</button>
+      <button class="btn sm success sound-save-btn" onclick="saveRename('${s.id}')" title="Save" style="display:none;flex-shrink:0">✓</button>
+      <button class="btn sm sound-cancel-btn" onclick="cancelRename('${s.id}')" title="Cancel" style="display:none;flex-shrink:0">✕</button>
+      <button class="btn sm danger" onclick="deleteSound('${s.id}','${esc(s.name)}')" title="Delete" style="flex-shrink:0">🗑</button>
     </div>`).join('');
+  renderAllPlChips();
+}
+
+function renderPlChips(soundId) {
+  const el = document.querySelector(`.sound-pl-chips[data-sound-id="${soundId}"]`);
+  if (!el) return;
+  const inPl = playlists.filter(pl => {
+    const ids = (pl.sounds || []).map(s => typeof s === 'string' ? s : s.id);
+    return ids.includes(soundId);
+  });
+  el.innerHTML = inPl.map(pl =>
+    `<span class="sound-pl-chip">${esc(pl.name)} <button onclick="removeSoundFromPl('${soundId}','${pl.id}')" title="Remove from ${esc(pl.name)}">×</button></span>`
+  ).join('');
+}
+
+function renderAllPlChips() {
+  sounds.forEach(s => renderPlChips(s.id));
+}
+
+async function addSoundToPl(soundId, plId) {
+  closeAddDropdown();
+  const pl = playlists.find(p => p.id === plId);
+  if (!pl) return;
+  const currentIds = (pl.sounds || []).map(s => typeof s === 'string' ? s : s.id);
+  if (currentIds.includes(soundId)) return;
+  const newIds = [...currentIds, soundId];
+  const resp = await fetch('/api/playlists/' + plId, {
+    method: 'PUT', headers: authHeaders(),
+    body: JSON.stringify({ name: pl.name, type: pl.type, sounds: newIds, map_name: pl.map_name || '' })
+  });
+  if (resp.ok) {
+    pl.sounds = newIds.map(id => sounds.find(s => s.id === id) || { id });
+    renderPlChips(soundId);
+  }
+}
+
+async function removeSoundFromPl(soundId, plId) {
+  const pl = playlists.find(p => p.id === plId);
+  if (!pl) return;
+  const currentIds = (pl.sounds || []).map(s => typeof s === 'string' ? s : s.id);
+  const newIds = currentIds.filter(id => id !== soundId);
+  const resp = await fetch('/api/playlists/' + plId, {
+    method: 'PUT', headers: authHeaders(),
+    body: JSON.stringify({ name: pl.name, type: pl.type, sounds: newIds, map_name: pl.map_name || '' })
+  });
+  if (resp.ok) {
+    pl.sounds = newIds.map(id => sounds.find(s => s.id === id) || { id });
+    renderPlChips(soundId);
+  }
+}
+
+let _addDropSoundId = null;
+function openAddDropdown(soundId, btn) {
+  const drop = document.getElementById('pl-add-dropdown');
+  if (_addDropSoundId === soundId) { closeAddDropdown(); return; }
+  _addDropSoundId = soundId;
+  const available = playlists.filter(pl => {
+    const ids = (pl.sounds || []).map(s => typeof s === 'string' ? s : s.id);
+    return !ids.includes(soundId);
+  });
+  drop.innerHTML = available.length
+    ? available.map(p => `<div class="pl-drop-item" onclick="addSoundToPl('${soundId}','${p.id}')">${esc(p.name)}</div>`).join('')
+    : '<div style="padding:8px 12px;font-size:11px;color:var(--txd)">In all playlists</div>';
+  const rect = btn.getBoundingClientRect();
+  drop.style.top = (rect.bottom + 4) + 'px';
+  drop.style.left = rect.left + 'px';
+  drop.style.display = 'block';
+}
+function closeAddDropdown() {
+  document.getElementById('pl-add-dropdown').style.display = 'none';
+  _addDropSoundId = null;
+}
+
+function startRename(soundId) {
+  const row = document.querySelector(`.sound-row[data-sound-id="${soundId}"]`);
+  if (!row) return;
+  const nameEl = row.querySelector('.sound-name');
+  const s = sounds.find(s => s.id === soundId);
+  if (!nameEl || !s) return;
+  const input = document.createElement('input');
+  input.className = 'sound-name-input';
+  input.value = s.name;
+  input.maxLength = 120;
+  input.onkeydown = e => { if (e.key === 'Enter') saveRename(soundId); else if (e.key === 'Escape') cancelRename(soundId); };
+  nameEl.replaceWith(input);
+  input.focus();
+  input.select();
+  row.querySelector('.sound-edit-btn').style.display = 'none';
+  row.querySelector('.sound-save-btn').style.display = '';
+  row.querySelector('.sound-cancel-btn').style.display = '';
+}
+
+async function saveRename(soundId) {
+  const row = document.querySelector(`.sound-row[data-sound-id="${soundId}"]`);
+  if (!row) return;
+  const input = row.querySelector('.sound-name-input');
+  if (!input) return;
+  const newName = input.value.trim();
+  if (!newName) { input.focus(); return; }
+  const resp = await fetch('/api/sounds/' + soundId, {
+    method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ name: newName })
+  });
+  if (resp.ok) {
+    const s = sounds.find(s => s.id === soundId);
+    if (s) s.name = newName;
+    const span = document.createElement('span');
+    span.className = 'sound-name';
+    span.title = newName;
+    span.textContent = newName;
+    input.replaceWith(span);
+    row.querySelector('.sound-edit-btn').style.display = '';
+    row.querySelector('.sound-save-btn').style.display = 'none';
+    row.querySelector('.sound-cancel-btn').style.display = 'none';
+  }
+}
+
+function cancelRename(soundId) {
+  const row = document.querySelector(`.sound-row[data-sound-id="${soundId}"]`);
+  if (!row) return;
+  const input = row.querySelector('.sound-name-input');
+  const s = sounds.find(s => s.id === soundId);
+  if (!input || !s) return;
+  const span = document.createElement('span');
+  span.className = 'sound-name';
+  span.title = s.name;
+  span.textContent = s.name;
+  input.replaceWith(span);
+  row.querySelector('.sound-edit-btn').style.display = '';
+  row.querySelector('.sound-save-btn').style.display = 'none';
+  row.querySelector('.sound-cancel-btn').style.display = 'none';
 }
 
 async function deleteSound(id, name) {
@@ -422,6 +566,12 @@ function showStatus(msg, isErr = false) {
 
 // Close modal on backdrop click
 document.getElementById('edit-pl-modal').addEventListener('click', function(e) { if (e.target === this) closeEditPl(); });
+
+// Close add-to-playlist dropdown when clicking outside
+document.addEventListener('click', e => {
+  const drop = document.getElementById('pl-add-dropdown');
+  if (drop && drop.style.display !== 'none' && !drop.contains(e.target) && !e.target.closest('.sound-row')) closeAddDropdown();
+});
 </script>
 </body>
 </html>

@@ -699,6 +699,13 @@ export function createSoundFile(id, fields) {
 export function deleteSoundFile(id) {
   db.prepare('DELETE FROM sound_files WHERE id = ?').run(id);
 }
+export function updateSoundFile(id, fields) {
+  const allowed = { name: 'name' };
+  const cols = Object.keys(fields).filter(k => allowed[k]);
+  if (!cols.length) return;
+  db.prepare(`UPDATE sound_files SET ${cols.map(k => k + ' = ?').join(', ')} WHERE id = ?`)
+    .run(...cols.map(k => fields[k]), id);
+}
 
 // ── Playlists ─────────────────────────────────────────────────────────────────
 function _playlistRow(r) {
