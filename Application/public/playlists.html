@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Playlists — DM</title>
+<script>(function(){try{var s=JSON.parse(sessionStorage.getItem('rpgSession')||'null');if(!s||s.role!=='dm'){location.replace('/login.html?next='+encodeURIComponent(location.pathname));}}catch(e){location.replace('/login.html');}})();</script>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#1a1a2e">
+<script>if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js');</script>
+<link rel="stylesheet" href="/css/dm.css">
+<style>
+.tag-input-wrap{display:flex;gap:6px;flex-wrap:wrap;align-items:center;background:var(--bg3);border:1px solid var(--a55);border-radius:3px;padding:4px 7px;min-height:34px;cursor:text}
+.tag-input-wrap:focus-within{border-color:var(--ac);background:var(--bg4)}
+.tag-chip{display:inline-flex;align-items:center;gap:3px;background:var(--a44);border:1px solid var(--a66);border-radius:3px;padding:1px 5px;font-size:11px;color:var(--ac);white-space:nowrap}
+.tag-chip button{background:none;border:none;color:var(--ac);cursor:pointer;font-size:11px;padding:0;line-height:1;opacity:.7}
+.tag-chip button:hover{opacity:1}
+.tag-bare-input{background:none;border:none;color:var(--tx);font-size:12px;outline:none;min-width:80px;flex:1;padding:0}
+.sound-row{display:flex;align-items:center;gap:8px;padding:7px 10px;border-bottom:1px solid var(--sep)}
+.sound-row:last-child{border-bottom:none}
+.sound-row:hover{background:var(--a22)}
+.sound-name{flex:1;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sound-tags{display:flex;gap:3px;flex-wrap:wrap;max-width:180px}
+.pl-row{display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid var(--sep)}
+.pl-row:last-child{border-bottom:none}
+.pl-row:hover{background:var(--a22)}
+.pl-name{flex:1;font-size:12px;font-weight:bold;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pl-meta{font-size:10px;color:var(--txd)}
+.drop-zone{border:2px dashed var(--a55);border-radius:6px;padding:22px;text-align:center;color:var(--txd);font-size:12px;cursor:pointer;transition:border-color .15s}
+.drop-zone:hover,.drop-zone.drag-over{border-color:var(--ac);color:var(--ac);background:var(--a22)}
+.hdr{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--a44);gap:10px;flex-wrap:wrap}
+.hdr-left{display:flex;align-items:center;gap:10px}
+.nav-back{font-size:12px;color:var(--ac);text-decoration:none;border:1px solid var(--a55);border-radius:3px;padding:4px 10px;background:var(--a22)}
+.nav-back:hover{background:var(--a44)}
+</style>
+</head>
+<body>
+
+<!-- Password gate -->
+<div class="gate" id="gate">
+  <div class="gate-box">
+    <div style="font-size:36px;margin-bottom:10px">🎵</div>
+    <h2>DM Playlists</h2>
+    <p>Enter master password to manage sounds and playlists.</p>
+    <input type="password" id="gate-pw" placeholder="Master password…" autocomplete="off"
+           onkeydown="if(event.key==='Enter')authenticate()">
+    <div id="gate-err"></div>
+    <button class="btn primary" style="width:100%" onclick="authenticate()">Unlock</button>
+  </div>
+</div>
+
+<div class="sheet" id="main-content" style="display:none">
+
+  <div class="hdr" style="background:var(--bg2);border-radius:6px;margin-bottom:14px;border:1px solid var(--a44)">
+    <div class="hdr-left">
+      <a href="/dm.html" class="nav-back">← DM Panel</a>
+      <h1>🎵 Playlists</h1>
+    </div>
+    <div id="status-msg" style="font-size:11px;color:var(--txd)"></div>
+  </div>
+
+  <!-- Upload Sound -->
+  <div class="card">
+    <div class="ct">📤 Upload Sound File</div>
+    <div class="cb">
+      <div class="drop-zone" id="upload-drop" onclick="document.getElementById('upload-file').click()"
+           ondragover="event.preventDefault();this.classList.add('drag-over')"
+           ondragleave="this.classList.remove('drag-over')"
+           ondrop="handleFileDrop(event)">
+        Click or drag &amp; drop audio file (MP3, WAV, OGG, FLAC, M4A, AAC — max 20 MB)
+      </div>
+      <input type="file" id="upload-file" accept="audio/*,.mp3,.mpeg,.mp4,.m4a,.wav,.ogg,.flac,.aac,.webm" style="display:none" onchange="handleFileSelect(this.files[0])">
+
+      <div id="upload-form" style="display:none;margin-top:12px">
+        <div class="field">
+          <label class="lbl">Sound Name *</label>
+          <input type="text" id="upload-name" maxlength="120" placeholder="e.g. Tavern Ambience">
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="btn primary" id="upload-btn" onclick="doUpload()">⬆ Upload</button>
+          <button class="btn" onclick="clearUploadForm()">✕ Cancel</button>
+          <span id="upload-status" style="font-size:11px;color:var(--txd)"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sound Library -->
+  <div class="card">
+    <div class="ct">🎶 Sound Library</div>
+    <div class="cb" style="padding:0">
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid var(--a44)">
+        <input type="text" id="sound-search" placeholder="Search sounds…" oninput="renderSounds()" style="flex:1">
+      </div>
+      <div id="sound-list"><div style="padding:14px;text-align:center;color:var(--txd);font-size:12px">Loading…</div></div>
+    </div>
+  </div>
+
+  <!-- Playlists -->
+  <div class="card">
+    <div class="ct">📋 Playlists</div>
+    <div class="cb">
+      <div style="display:grid;grid-template-columns:1fr 1fr auto auto;gap:8px;align-items:end;margin-bottom:10px;flex-wrap:wrap">
+        <div class="field" style="margin:0">
+          <label class="lbl">Name *</label>
+          <input type="text" id="pl-name" maxlength="80" placeholder="e.g. Combat Music">
+        </div>
+        <div class="field" style="margin:0">
+          <label class="lbl">Type</label>
+          <select id="pl-type" onchange="toggleMapField()">
+            <option value="generic">Generic</option>
+            <option value="map">Map-based</option>
+          </select>
+        </div>
+        <div class="field" style="margin:0;display:none" id="pl-mapname-field">
+          <label class="lbl">Map Name</label>
+          <input type="text" id="pl-mapname" maxlength="80" placeholder="Map name">
+        </div>
+        <button class="btn primary" onclick="createPlaylist()" style="white-space:nowrap;height:30px">+ Create</button>
+      </div>
+      <div id="pl-status" style="font-size:11px;color:var(--txd);min-height:14px;margin-bottom:8px"></div>
+
+      <div id="pl-list"><div style="padding:10px;text-align:center;color:var(--txd);font-size:12px">No playlists yet.</div></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Edit Playlist Modal -->
+<div class="modal-overlay" id="edit-pl-modal" style="display:none">
+  <div class="modal-box" style="max-width:420px;width:96%">
+    <div class="ct">Edit Playlist</div>
+    <div class="modal-body">
+      <div class="field">
+        <label class="lbl">Name *</label>
+        <input type="text" id="edit-pl-name" maxlength="80">
+      </div>
+      <div class="field">
+        <label class="lbl">Type</label>
+        <select id="edit-pl-type" onchange="toggleEditMapField()">
+          <option value="generic">Generic</option>
+          <option value="map">Map-based</option>
+        </select>
+      </div>
+      <div class="field" id="edit-pl-mapname-field" style="display:none">
+        <label class="lbl">Map Name</label>
+        <input type="text" id="edit-pl-mapname" maxlength="80">
+      </div>
+      <div class="field">
+        <label class="lbl">Sounds in playlist</label>
+        <div id="edit-pl-sound-list" style="max-height:220px;overflow-y:auto;border:1px solid var(--a55);border-radius:3px;background:var(--bg3)">
+          <div style="color:var(--txd);font-size:11px;padding:8px">No sounds uploaded yet.</div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn" onclick="closeEditPl()">Cancel</button>
+      <button class="btn primary" onclick="saveEditPl()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Auth ──────────────────────────────────────────────────────────────────────
+let masterPw = '';
+function authenticate() {
+  const pw = document.getElementById('gate-pw').value;
+  if (!pw) { document.getElementById('gate-err').textContent = 'Enter password.'; return; }
+  fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'dm', password: pw }) })
+    .then(r => r.json()).then(d => {
+      if (d.ok || d.role === 'dm') { masterPw = pw; unlock(); }
+      else document.getElementById('gate-err').textContent = d.error || 'Wrong password.';
+    }).catch(() => { document.getElementById('gate-err').textContent = 'Connection error.'; });
+}
+function unlock() {
+  document.getElementById('gate').style.display = 'none';
+  document.getElementById('main-content').style.display = '';
+  loadAll();
+}
+function authHeaders() { return { 'Content-Type': 'application/json', 'X-Master-Password': masterPw }; }
+
+// Try auto-unlock from session
+(function() {
+  const s = JSON.parse(sessionStorage.getItem('rpgSession') || 'null');
+  if (s && s.role === 'dm' && s.masterPw) { masterPw = s.masterPw; unlock(); }
+})();
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let sounds = [];
+let playlists = [];
+
+// Tag state per widget context
+const _tags = {};
+function getTags(ctx) { return _tags[ctx] || (_tags[ctx] = []); }
+
+// ── Tag widget ────────────────────────────────────────────────────────────────
+function renderTagChips(ctx) {
+  const wrap = document.getElementById(ctx + '-tags-wrap');
+  if (!wrap) return;
+  const bare = document.getElementById(ctx + '-tag-bare');
+  // Remove old chips
+  wrap.querySelectorAll('.tag-chip').forEach(c => c.remove());
+  getTags(ctx).forEach((t, i) => {
+    const chip = document.createElement('span');
+    chip.className = 'tag-chip';
+    chip.innerHTML = `${t} <button onclick="removeTag('${ctx}',${i})">×</button>`;
+    wrap.insertBefore(chip, bare);
+  });
+}
+function addTag(ctx, val) {
+  const tag = val.trim().toLowerCase().replace(/[^a-z0-9-_ ]/g, '').slice(0, 30);
+  if (!tag) return;
+  if (!getTags(ctx).includes(tag)) { getTags(ctx).push(tag); renderTagChips(ctx); }
+}
+function removeTag(ctx, idx) {
+  getTags(ctx).splice(idx, 1);
+  renderTagChips(ctx);
+}
+function handleTagKey(e, ctx) {
+  if (e.key === 'Enter' || e.key === ',') {
+    e.preventDefault();
+    addTag(ctx, e.target.value);
+    e.target.value = '';
+  } else if (e.key === 'Backspace' && !e.target.value && getTags(ctx).length) {
+    getTags(ctx).pop(); renderTagChips(ctx);
+  }
+}
+function handleTagInput(e, ctx) {
+  if (e.target.value.endsWith(',')) {
+    addTag(ctx, e.target.value.slice(0, -1));
+    e.target.value = '';
+  }
+}
+function setTagsCtx(ctx, tags) {
+  _tags[ctx] = [...tags];
+  renderTagChips(ctx);
+}
+
+// ── Upload ────────────────────────────────────────────────────────────────────
+let _pendingFile = null;
+const MAX_AUDIO_MB = 20;
+
+function handleFileDrop(e) {
+  e.preventDefault();
+  document.getElementById('upload-drop').classList.remove('drag-over');
+  const f = e.dataTransfer.files[0];
+  if (f) prepareUpload(f);
+}
+function handleFileSelect(f) { if (f) prepareUpload(f); }
+function prepareUpload(f) {
+  if (f.size > MAX_AUDIO_MB * 1024 * 1024) { showStatus('File too large (max 20 MB)', true); return; }
+  _pendingFile = f;
+  document.getElementById('upload-form').style.display = '';
+  const nameEl = document.getElementById('upload-name');
+  if (!nameEl.value) nameEl.value = f.name.replace(/\.[^.]+$/, '');
+  document.getElementById('upload-status').textContent = f.name + ' (' + (f.size / 1024 / 1024).toFixed(1) + ' MB)';
+}
+function clearUploadForm() {
+  _pendingFile = null;
+  document.getElementById('upload-form').style.display = 'none';
+  document.getElementById('upload-file').value = '';
+  document.getElementById('upload-name').value = '';
+  document.getElementById('upload-status').textContent = '';
+}
+async function doUpload() {
+  if (!_pendingFile) return;
+  const name = document.getElementById('upload-name').value.trim();
+  if (!name) { document.getElementById('upload-status').textContent = 'Name is required.'; return; }
+  const btn = document.getElementById('upload-btn');
+  btn.disabled = true;
+  document.getElementById('upload-status').textContent = 'Reading file…';
+  try {
+    const dataUrl = await new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload = e => res(e.target.result);
+      r.onerror = rej;
+      r.readAsDataURL(_pendingFile);
+    });
+    document.getElementById('upload-status').textContent = 'Uploading…';
+    const resp = await fetch('/api/sounds', { method: 'POST', headers: authHeaders(), body: JSON.stringify({ name, dataUrl, tags: [] }) });
+    const d = await resp.json();
+    if (!resp.ok) throw new Error(d.error || 'Upload failed');
+    showStatus('Uploaded: ' + name);
+    clearUploadForm();
+    await loadAll();
+  } catch (err) {
+    document.getElementById('upload-status').textContent = err.message;
+  } finally { btn.disabled = false; }
+}
+
+// ── Load ──────────────────────────────────────────────────────────────────────
+async function loadAll() {
+  const [sRes, pRes] = await Promise.all([
+    fetch('/api/sounds', { headers: authHeaders() }),
+    fetch('/api/playlists', { headers: authHeaders() }),
+  ]);
+  sounds = sRes.ok ? await sRes.json() : [];
+  playlists = pRes.ok ? await pRes.json() : [];
+  renderSounds();
+  renderPlaylists();
+}
+
+function renderSounds() {
+  const q = (document.getElementById('sound-search')?.value || '').toLowerCase();
+  const list = sounds.filter(s => !q || s.name.toLowerCase().includes(q));
+  const el = document.getElementById('sound-list');
+  if (!list.length) { el.innerHTML = '<div style="padding:14px;text-align:center;color:var(--txd);font-size:12px">No sounds yet.</div>'; return; }
+  el.innerHTML = list.map(s => `
+    <div class="sound-row">
+      <span class="sound-name" title="${esc(s.name)}">${esc(s.name)}</span>
+      <audio src="${esc(s.url)}" controls preload="none" style="height:28px;width:160px"></audio>
+      <button class="btn sm danger" onclick="deleteSound('${s.id}','${esc(s.name)}')" title="Delete">🗑</button>
+    </div>`).join('');
+}
+
+async function deleteSound(id, name) {
+  if (!confirm('Delete "' + name + '"?')) return;
+  await fetch('/api/sounds/' + id, { method: 'DELETE', headers: authHeaders() });
+  await loadAll();
+}
+
+function renderPlaylists() {
+  const el = document.getElementById('pl-list');
+  if (!playlists.length) { el.innerHTML = '<div style="padding:10px;text-align:center;color:var(--txd);font-size:12px">No playlists yet.</div>'; return; }
+  el.innerHTML = playlists.map(pl => {
+    const typeLabel = pl.type === 'map' ? '🗺 Map' : '🎶 Generic';
+    const mapLabel = pl.type === 'map' && pl.map_name ? ' — ' + esc(pl.map_name) : '';
+    const cnt = pl.sounds ? pl.sounds.length : 0;
+    return `
+      <div class="pl-row">
+        <div style="flex:1;min-width:0">
+          <div class="pl-name">${esc(pl.name)}</div>
+          <div class="pl-meta">${typeLabel}${mapLabel} &nbsp;·&nbsp; ${cnt} track${cnt === 1 ? '' : 's'}</div>
+        </div>
+        <button class="btn sm" onclick="openEditPl('${pl.id}')" style="white-space:nowrap">✏ Edit</button>
+        <button class="btn sm danger" onclick="deletePlaylist('${pl.id}','${esc(pl.name)}')" style="white-space:nowrap">🗑</button>
+      </div>`;
+  }).join('');
+}
+
+// ── Playlist CRUD ─────────────────────────────────────────────────────────────
+function toggleMapField() {
+  const t = document.getElementById('pl-type').value;
+  document.getElementById('pl-mapname-field').style.display = t === 'map' ? '' : 'none';
+}
+function toggleEditMapField() {
+  const t = document.getElementById('edit-pl-type').value;
+  document.getElementById('edit-pl-mapname-field').style.display = t === 'map' ? '' : 'none';
+}
+
+async function createPlaylist() {
+  const name = document.getElementById('pl-name').value.trim();
+  if (!name) { document.getElementById('pl-status').textContent = 'Name is required.'; return; }
+  const type = document.getElementById('pl-type').value;
+  const map_name = document.getElementById('pl-mapname')?.value.trim() || '';
+  const resp = await fetch('/api/playlists', { method: 'POST', headers: authHeaders(), body: JSON.stringify({ name, type, sounds: [], map_name }) });
+  if (resp.ok) {
+    document.getElementById('pl-name').value = '';
+    document.getElementById('pl-mapname').value = '';
+    document.getElementById('pl-status').textContent = '';
+    await loadAll();
+  } else {
+    const d = await resp.json();
+    document.getElementById('pl-status').textContent = d.error || 'Failed';
+  }
+}
+
+async function deletePlaylist(id, name) {
+  if (!confirm('Delete playlist "' + name + '"?')) return;
+  await fetch('/api/playlists/' + id, { method: 'DELETE', headers: authHeaders() });
+  await loadAll();
+}
+
+let _editPlId = null;
+function openEditPl(id) {
+  const pl = playlists.find(p => p.id === id);
+  if (!pl) return;
+  _editPlId = id;
+  document.getElementById('edit-pl-name').value = pl.name;
+  document.getElementById('edit-pl-type').value = pl.type || 'generic';
+  document.getElementById('edit-pl-mapname').value = pl.map_name || '';
+  toggleEditMapField();
+  // Build sound checklist
+  const currentIds = new Set((pl.sounds || []).map(s => typeof s === 'string' ? s : s.id));
+  const listEl = document.getElementById('edit-pl-sound-list');
+  if (listEl) {
+    if (!sounds.length) {
+      listEl.innerHTML = '<div style="color:var(--txd);font-size:11px;padding:6px">No sounds uploaded yet.</div>';
+    } else {
+      listEl.innerHTML = sounds.map(s => `
+        <label style="display:flex;align-items:center;gap:8px;padding:5px 7px;cursor:pointer;border-radius:2px;font-size:12px">
+          <input type="checkbox" value="${s.id}" ${currentIds.has(s.id) ? 'checked' : ''} style="width:14px;height:14px;cursor:pointer;flex-shrink:0">
+          <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(s.name)}</span>
+        </label>`).join('');
+    }
+  }
+  document.getElementById('edit-pl-modal').style.display = 'flex';
+}
+function closeEditPl() { document.getElementById('edit-pl-modal').style.display = 'none'; _editPlId = null; }
+async function saveEditPl() {
+  if (!_editPlId) return;
+  const name = document.getElementById('edit-pl-name').value.trim();
+  if (!name) return;
+  const soundIds = Array.from(document.querySelectorAll('#edit-pl-sound-list input[type="checkbox"]:checked'))
+    .map(cb => cb.value);
+  await fetch('/api/playlists/' + _editPlId, {
+    method: 'PUT', headers: authHeaders(),
+    body: JSON.stringify({ name, type: document.getElementById('edit-pl-type').value, sounds: soundIds, map_name: document.getElementById('edit-pl-mapname').value.trim() })
+  });
+  closeEditPl();
+  await loadAll();
+}
+
+// ── Utils ─────────────────────────────────────────────────────────────────────
+function esc(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function showStatus(msg, isErr = false) {
+  const el = document.getElementById('status-msg');
+  el.textContent = msg;
+  el.style.color = isErr ? 'var(--err)' : 'var(--ok)';
+  setTimeout(() => { if (el.textContent === msg) el.textContent = ''; }, 3000);
+}
+
+// Close modal on backdrop click
+document.getElementById('edit-pl-modal').addEventListener('click', function(e) { if (e.target === this) closeEditPl(); });
+</script>
+</body>
+</html>

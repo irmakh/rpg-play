@@ -28,6 +28,7 @@
     <button class="btn" id="btn-prev-turn" onclick="dmPrevTurn()">⏮ Prev Turn</button>
     <button class="btn" id="btn-next-turn" onclick="dmNextTurn()">⏭ Next Turn</button>
     <button class="btn" id="btn-init-toggle" onclick="toggleInitiative()">▶ Start Initiative</button>
+    <button class="btn" id="btn-music" onclick="openMusicModal()" title="Music Player">🎵</button>
   </div>
   <button class="btn" onclick="logout()" style="margin-left:4px" title="Logout">🚪</button>
 
@@ -50,6 +51,16 @@
   <button class="btn tool-btn" onclick="openDiceRollerModal()" title="Dice Roller" style="margin-left:4px">🎲</button>
   <button class="btn tool-btn" id="btn-leftpanel-toggle" onclick="toggleLeftPanel()" title="Toggle left panel" style="margin-left:4px">◀</button>
   <button class="btn tool-btn" id="btn-sidepanel-toggle" onclick="toggleSidePanel()" title="Toggle right panel" style="margin-left:2px">▶</button>
+</div>
+
+<!-- Now Playing bar — visible to all clients when music is playing -->
+<div id="now-playing-bar" style="display:none;background:var(--bg2);border-bottom:1px solid var(--a44);padding:4px 12px;align-items:center;gap:10px;font-size:12px">
+  <span id="now-playing-state" style="font-size:10px;color:var(--txd);white-space:nowrap">Now playing:</span>
+  <span style="color:var(--ac)">🎵</span>
+  <span id="now-playing-name" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+  <span style="font-size:10px;color:var(--txd);white-space:nowrap">Vol</span>
+  <input type="range" id="local-vol-slider" min="0" max="100" value="100" style="width:70px;cursor:pointer" oninput="setLocalVolume(this.value)" onchange="setLocalVolume(this.value)">
+  <span id="local-vol-pct" style="font-size:11px;color:var(--ac);min-width:28px;text-align:right">100%</span>
 </div>
 
 <!-- Draw sub-toolbar (shown when draw tool active) -->
@@ -350,6 +361,43 @@
   </div>
 </div>
 
+<!-- Background audio element — all clients, controlled by SSE -->
+<audio id="bg-music" style="display:none" preload="none"></audio>
+
+<!-- Music Player Modal (DM only) -->
+<div id="music-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:2000;align-items:center;justify-content:center">
+  <div style="background:var(--bg2);border:1px solid var(--ac);border-radius:8px;width:400px;max-width:96vw;max-height:90vh;display:flex;flex-direction:column">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--a44)">
+      <span style="font-weight:bold;font-size:14px">🎵 Music Player</span>
+      <button class="btn sm" onclick="closeMusicModal()">✕</button>
+    </div>
+    <div style="padding:14px 16px;overflow-y:auto;flex:1">
+      <div style="margin-bottom:10px">
+        <label style="display:block;font-size:10px;color:var(--ac);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Playlist</label>
+        <select id="music-pl-sel" onchange="loadMusicPlaylist()" style="width:100%;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px;padding:5px 8px;font-size:12px">
+          <option value="">— Select Playlist —</option>
+        </select>
+      </div>
+      <div id="music-now-playing" style="font-size:11px;color:var(--txd);margin-bottom:10px;min-height:16px"></div>
+      <div style="display:flex;justify-content:center;gap:8px;margin-bottom:14px">
+        <button class="btn" onclick="musicControl('prev')" title="Previous">⏮</button>
+        <button class="btn primary" id="music-play-btn" onclick="musicPlayPause()" style="min-width:72px">▶ Play</button>
+        <button class="btn" onclick="musicControl('next')" title="Next">⏭</button>
+        <button class="btn danger" onclick="musicControl('stop')" title="Stop">⏹</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+        <span style="font-size:11px;color:var(--txd);white-space:nowrap">🔊 Vol</span>
+        <input type="range" id="music-volume" min="0" max="100" value="100" style="flex:1;cursor:pointer" oninput="musicVolumeChange(this.value)" onchange="musicVolumeChange(this.value)">
+        <span id="music-vol-pct" style="font-size:11px;color:var(--ac);min-width:32px">100%</span>
+      </div>
+      <div style="border-top:1px solid var(--a44);padding-top:10px">
+        <div style="font-size:10px;color:var(--ac);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Tracks</div>
+        <div id="music-track-list" style="max-height:200px;overflow-y:auto"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script src="/js/lib/esc.js" defer></script>
 <script src="/js/lib/lightbox.js" defer></script>
 <script src="/js/lib/dice-engine.js" defer></script>
@@ -367,6 +415,7 @@
 <script src="/js/table/table-panel.js" defer></script>
 <script src="/js/table/table-hppanel.js" defer></script>
 <script src="/js/table/table-addtoken.js" defer></script>
+<script src="/js/table/table-music.js" defer></script>
 <script src="/js/table/table-main.js" defer></script>
 </body>
 </html>

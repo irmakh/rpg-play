@@ -40,7 +40,7 @@ function readUploadAsBase64(fileUrl) {
   if (!fileUrl || !fileUrl.startsWith('/uploads/')) return null;
   try { return fs.readFileSync(path.join(__dirname, 'public', fileUrl)).toString('base64'); } catch { return null; }
 }
-const MIME_TO_EXT = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/gif': 'gif', 'image/webp': 'webp', 'image/svg+xml': 'svg' };
+const MIME_TO_EXT = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/gif': 'gif', 'image/webp': 'webp', 'image/svg+xml': 'svg', 'audio/mpeg': 'mp3', 'audio/x-m4a': 'm4a', 'video/mpeg': 'mpeg' };
 function mimeToExt(mimeType) { return MIME_TO_EXT[mimeType] || mimeType.split('/')[1] || 'bin'; }
 function saveUploadFile(subdir, id, mimeType, b64) {
   const filename = `${id}.${mimeToExt(mimeType)}`;
@@ -2778,6 +2778,131 @@ app.post('/api/table/clear', async (req, res) => {
     broadcast('initiative', { action: 'clear' });
     res.json({ ok: true });
   } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
+});
+
+// ── Sound Player ─────────────────────────────────────────────────────────────
+const AUDIO_MIME = new Set(['audio/mpeg','audio/wav','audio/ogg','audio/webm','audio/flac','audio/mp4','audio/aac','audio/x-m4a','video/mpeg']);
+
+let soundPlaybackState = { isPlaying: false, playlistId: null, trackIndex: 0, url: null, name: null, volume: 1.0 };
+
+app.get('/api/sounds', (req, res) => {
+  if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
+  if (DB_PROVIDER === 'localdb') {
+    return res.json(ldb.listSoundFiles());
+  }
+  res.json([]);
+});
+
+app.post('/api/sounds', async (req, res) => {
+  try {
+    if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
+    const { name, dataUrl, tags = [] } = req.body || {};
+    if (!name || !dataUrl) return res.status(400).json({ error: 'name and dataUrl required' });
+    const mimeMatch = dataUrl.match(/^data:([^;]+);base64,(.+)$/s);
+    if (!mimeMatch) return res.status(400).json({ error: 'Invalid data URL' });
+    const mimeType = mimeMatch[1];
+    if (!AUDIO_MIME.has(mimeType)) return res.status(400).json({ error: 'Invalid audio type' });
+    const newId = genId();
+    const url = saveUploadFile('sounds', newId, mimeType, mimeMatch[2]);
+    const fields = { name: String(name).trim().slice(0, 120), url, mime_type: mimeType, tags: Array.isArray(tags) ? tags : [], created_at: new Date().toISOString() };
+    if (DB_PROVIDER === 'localdb') ldb.createSoundFile(newId, fields);
+    res.json({ ok: true, id: newId, url, name: fields.name, tags: fields.tags });
+  } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
+});
+
+app.delete('/api/sounds/:id', (req, res) => {
+  if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
+  if (DB_PROVIDER === 'localdb') {
+    const sf = ldb.getSoundFile(req.params.id);
+    if (!sf) return res.status(404).json({ error: 'Not found' });
+    deleteUploadFile(sf.url);
+    ldb.deleteSoundFile(req.params.id);
+  }
+  res.json({ ok: true });
+});
+
+app.get('/api/playlists', (req, res) => {
+  if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
+  if (DB_PROVIDER === 'localdb') {
+    const playlists = ldb.listPlaylists().map(pl => ({ ...pl, sounds: ldb.getSoundsForPlaylist(pl.id) }));
+    return res.json(playlists);
+  }
+  res.json([]);
+});
+
+app.post('/api/playlists', (req, res) => {
+  if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
+  const { name, type = 'generic', sounds = [], map_name = '' } = req.body || {};
+  if (!name) return res.status(400).json({ error: 'name required' });
+  const newId = genId();
+  const fields = { name: String(name).trim().slice(0, 80), type: type === 'map' ? 'map' : 'generic', sounds: Array.isArray(sounds) ? sounds : [], map_name: String(map_name).slice(0, 80) };
+  if (DB_PROVIDER === 'localdb') ldb.createPlaylist(newId, fields);
+  res.json({ ok: true, id: newId, ...fields });
+});
+
+app.put('/api/playlists/:id', (req, res) => {
+  if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
+  if (DB_PROVIDER === 'localdb') {
+    const pl = ldb.getPlaylist(req.params.id);
+    if (!pl) return res.status(404).json({ error: 'Not found' });
+    const { name, type, sounds, map_name } = req.body || {};
+    const update = {};
+    if (name     !== undefined) update.name     = String(name).trim().slice(0, 80);
+    if (type     !== undefined) update.type     = type === 'map' ? 'map' : 'generic';
+    if (sounds   !== undefined) update.sounds   = Array.isArray(sounds) ? sounds : [];
+    if (map_name !== undefined) update.map_name = String(map_name).slice(0, 80);
+    ldb.updatePlaylist(req.params.id, update);
+  }
+  res.json({ ok: true });
+});
+
+app.delete('/api/playlists/:id', (req, res) => {
+  if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
+  if (DB_PROVIDER === 'localdb') {
+    if (!ldb.getPlaylist(req.params.id)) return res.status(404).json({ error: 'Not found' });
+    ldb.deletePlaylist(req.params.id);
+  }
+  res.json({ ok: true });
+});
+
+app.get('/api/sound/state', (req, res) => {
+  res.json(soundPlaybackState);
+});
+
+app.post('/api/sound/control', (req, res) => {
+  if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
+  const { action, playlistId, trackIndex, volume } = req.body || {};
+  if (action === 'play') {
+    let tracks = [];
+    if (DB_PROVIDER === 'localdb' && playlistId) tracks = ldb.getSoundsForPlaylist(playlistId);
+    const idx = Math.max(0, parseInt(trackIndex) || 0);
+    const track = tracks[idx] || null;
+    soundPlaybackState = { isPlaying: true, playlistId: playlistId || null, trackIndex: idx, url: track?.url || null, name: track?.name || null, volume: soundPlaybackState.volume };
+    broadcast('sound', { action: 'play', url: track?.url || null, name: track?.name || null, playlistId, trackIndex: idx, volume: soundPlaybackState.volume });
+  } else if (action === 'pause') {
+    soundPlaybackState.isPlaying = false;
+    broadcast('sound', { action: 'pause' });
+  } else if (action === 'stop') {
+    soundPlaybackState = { isPlaying: false, playlistId: null, trackIndex: 0, url: null, name: null, volume: soundPlaybackState.volume };
+    broadcast('sound', { action: 'stop' });
+  } else if (action === 'next' || action === 'prev') {
+    let tracks = [];
+    if (DB_PROVIDER === 'localdb' && soundPlaybackState.playlistId) tracks = ldb.getSoundsForPlaylist(soundPlaybackState.playlistId);
+    if (tracks.length === 0) return res.json({ ok: true });
+    const dir = action === 'next' ? 1 : -1;
+    const newIdx = ((soundPlaybackState.trackIndex + dir) + tracks.length) % tracks.length;
+    const track = tracks[newIdx];
+    soundPlaybackState.trackIndex = newIdx;
+    soundPlaybackState.url = track.url;
+    soundPlaybackState.name = track.name;
+    soundPlaybackState.isPlaying = true;
+    broadcast('sound', { action: 'play', url: track.url, name: track.name, playlistId: soundPlaybackState.playlistId, trackIndex: newIdx, volume: soundPlaybackState.volume });
+  } else if (action === 'volume') {
+    const vol = Math.max(0, Math.min(1, parseFloat(volume) || 1));
+    soundPlaybackState.volume = vol;
+    broadcast('sound', { action: 'volume', volume: vol });
+  }
+  res.json({ ok: true, state: soundPlaybackState });
 });
 
 // ── Server startup: HTTPS in production, plain HTTP for local dev ─────────────

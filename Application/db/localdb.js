@@ -114,6 +114,16 @@ db.exec(`
     color TEXT DEFAULT '#ff4444', thickness INTEGER DEFAULT 2,
     createdAt TEXT DEFAULT (datetime('now'))
   );
+  CREATE TABLE IF NOT EXISTS sound_files (
+    id TEXT PRIMARY KEY, name TEXT DEFAULT '', url TEXT DEFAULT '',
+    mime_type TEXT DEFAULT '', tags TEXT DEFAULT '[]',
+    created_at TEXT DEFAULT (datetime('now'))
+  );
+  CREATE TABLE IF NOT EXISTS playlists (
+    id TEXT PRIMARY KEY, name TEXT DEFAULT '', type TEXT DEFAULT 'generic',
+    tags TEXT DEFAULT '[]', map_name TEXT DEFAULT '',
+    created_at TEXT DEFAULT (datetime('now'))
+  );
 `);
 
 // Indexes (idempotent — safe on every startup)
@@ -138,6 +148,7 @@ try { db.exec(`ALTER TABLE char_media ADD COLUMN mediumUrl TEXT DEFAULT ''`); } 
 try { db.exec(`ALTER TABLE table_tokens ADD COLUMN portraitThumb TEXT`); } catch {}
 try { db.exec(`ALTER TABLE table_tokens ADD COLUMN ac INTEGER`); } catch {}
 try { db.exec(`ALTER TABLE table_tokens ADD COLUMN assignedCharId TEXT DEFAULT ''`); } catch {}
+try { db.exec(`ALTER TABLE playlists ADD COLUMN sounds TEXT DEFAULT '[]'`); } catch {}
 
 // Singleton IDs (match server.js constants)
 const SHOP_CONFIG_ID  = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
@@ -669,6 +680,63 @@ export function updateCalendarEvent(id, ev) {
 
 export function deleteCalendarEvent(id) {
   db.prepare('DELETE FROM calendar_events WHERE id = ?').run(id);
+}
+
+// ── Sound Files ───────────────────────────────────────────────────────────────
+export function listSoundFiles() {
+  return db.prepare('SELECT * FROM sound_files ORDER BY created_at DESC').all()
+    .map(r => ({ ...r, tags: (() => { try { return JSON.parse(r.tags); } catch { return []; } })() }));
+}
+export function getSoundFile(id) {
+  const r = db.prepare('SELECT * FROM sound_files WHERE id = ?').get(id);
+  if (!r) return null;
+  return { ...r, tags: (() => { try { return JSON.parse(r.tags); } catch { return []; } })() };
+}
+export function createSoundFile(id, fields) {
+  db.prepare('INSERT INTO sound_files (id, name, url, mime_type, tags, created_at) VALUES (?, ?, ?, ?, ?, ?)')
+    .run(id, fields.name || '', fields.url || '', fields.mime_type || '', JSON.stringify(fields.tags || []), fields.created_at || new Date().toISOString());
+}
+export function deleteSoundFile(id) {
+  db.prepare('DELETE FROM sound_files WHERE id = ?').run(id);
+}
+
+// ── Playlists ─────────────────────────────────────────────────────────────────
+function _playlistRow(r) {
+  return {
+    ...r,
+    tags:   (() => { try { return JSON.parse(r.tags   || '[]'); } catch { return []; } })(),
+    sounds: (() => { try { return JSON.parse(r.sounds || '[]'); } catch { return []; } })(),
+  };
+}
+export function listPlaylists() {
+  return db.prepare('SELECT * FROM playlists ORDER BY created_at').all().map(_playlistRow);
+}
+export function getPlaylist(id) {
+  const r = db.prepare('SELECT * FROM playlists WHERE id = ?').get(id);
+  return r ? _playlistRow(r) : null;
+}
+export function createPlaylist(id, fields) {
+  db.prepare('INSERT INTO playlists (id, name, type, tags, map_name, sounds, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
+    .run(id, fields.name || '', fields.type || 'generic', JSON.stringify(fields.tags || []), fields.map_name || '', JSON.stringify(fields.sounds || []), fields.created_at || new Date().toISOString());
+}
+export function updatePlaylist(id, fields) {
+  const mapped = { ...fields };
+  if ('tags'   in mapped) mapped.tags   = JSON.stringify(mapped.tags   || []);
+  if ('sounds' in mapped) mapped.sounds = JSON.stringify(mapped.sounds || []);
+  const sets = Object.keys(mapped).map(k => `"${k}" = ?`).join(', ');
+  if (!sets) return;
+  db.prepare(`UPDATE playlists SET ${sets} WHERE id = ?`).run(...Object.values(mapped), id);
+}
+export function deletePlaylist(id) {
+  db.prepare('DELETE FROM playlists WHERE id = ?').run(id);
+}
+export function getSoundsForPlaylist(playlistId) {
+  const pl = getPlaylist(playlistId);
+  if (!pl) return [];
+  const soundIds = pl.sounds || [];
+  if (!soundIds.length) return [];
+  const allSounds = listSoundFiles();
+  return soundIds.map(id => allSounds.find(s => s.id === id)).filter(Boolean);
 }
 
 // ── Full export (for backup) ──────────────────────────────────────────────────
