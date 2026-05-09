@@ -74,7 +74,7 @@
            ondragover="event.preventDefault();this.classList.add('drag-over')"
            ondragleave="this.classList.remove('drag-over')"
            ondrop="handleFileDrop(event)">
-        Click or drag &amp; drop audio file (MP3, WAV, OGG, FLAC, M4A, AAC — max 20 MB)
+        Click or drag &amp; drop audio file (MP3, WAV, OGG, FLAC, M4A, AAC — max 50 MB)
       </div>
       <input type="file" id="upload-file" accept="audio/*,.mp3,.mpeg,.mp4,.m4a,.wav,.ogg,.flac,.aac,.webm" style="display:none" onchange="handleFileSelect(this.files[0])">
 
@@ -87,6 +87,12 @@
           <button class="btn primary" id="upload-btn" onclick="doUpload()">⬆ Upload</button>
           <button class="btn" onclick="clearUploadForm()">✕ Cancel</button>
           <span id="upload-status" style="font-size:11px;color:var(--txd)"></span>
+        </div>
+        <div id="upload-progress-wrap" style="display:none;margin-top:8px">
+          <div style="background:var(--a22);border-radius:3px;height:6px;overflow:hidden">
+            <div id="upload-progress-bar" style="height:100%;width:0%;background:var(--acc);transition:width 0.1s"></div>
+          </div>
+          <div id="upload-progress-pct" style="font-size:10px;color:var(--txd);margin-top:3px;text-align:right">0%</div>
         </div>
       </div>
     </div>
@@ -247,7 +253,7 @@ function setTagsCtx(ctx, tags) {
 
 // ── Upload ────────────────────────────────────────────────────────────────────
 let _pendingFile = null;
-const MAX_AUDIO_MB = 20;
+const MAX_AUDIO_MB = 50;
 
 function handleFileDrop(e) {
   e.preventDefault();
@@ -257,7 +263,7 @@ function handleFileDrop(e) {
 }
 function handleFileSelect(f) { if (f) prepareUpload(f); }
 function prepareUpload(f) {
-  if (f.size > MAX_AUDIO_MB * 1024 * 1024) { showStatus('File too large (max 20 MB)', true); return; }
+  if (f.size > MAX_AUDIO_MB * 1024 * 1024) { showStatus('File too large (max 50 MB)', true); return; }
   _pendingFile = f;
   document.getElementById('upload-form').style.display = '';
   const nameEl = document.getElementById('upload-name');
@@ -270,12 +276,17 @@ function clearUploadForm() {
   document.getElementById('upload-file').value = '';
   document.getElementById('upload-name').value = '';
   document.getElementById('upload-status').textContent = '';
+  document.getElementById('upload-progress-wrap').style.display = 'none';
+  document.getElementById('upload-progress-bar').style.width = '0%';
 }
 async function doUpload() {
   if (!_pendingFile) return;
   const name = document.getElementById('upload-name').value.trim();
   if (!name) { document.getElementById('upload-status').textContent = 'Name is required.'; return; }
   const btn = document.getElementById('upload-btn');
+  const progressWrap = document.getElementById('upload-progress-wrap');
+  const progressBar = document.getElementById('upload-progress-bar');
+  const progressPct = document.getElementById('upload-progress-pct');
   btn.disabled = true;
   document.getElementById('upload-status').textContent = 'Reading file…';
   try {
@@ -286,14 +297,37 @@ async function doUpload() {
       r.readAsDataURL(_pendingFile);
     });
     document.getElementById('upload-status').textContent = 'Uploading…';
-    const resp = await fetch('/api/sounds', { method: 'POST', headers: authHeaders(), body: JSON.stringify({ name, dataUrl, tags: [] }) });
-    const d = await resp.json();
-    if (!resp.ok) throw new Error(d.error || 'Upload failed');
+    progressWrap.style.display = '';
+    progressBar.style.width = '0%';
+    progressPct.textContent = '0%';
+    await new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.upload.onprogress = e => {
+        if (e.lengthComputable) {
+          const pct = Math.round(e.loaded / e.total * 100);
+          progressBar.style.width = pct + '%';
+          progressPct.textContent = pct + '%';
+        }
+      };
+      xhr.onload = () => {
+        try {
+          const d = JSON.parse(xhr.responseText);
+          if (xhr.status >= 200 && xhr.status < 300) resolve(d);
+          else reject(new Error(d.error || 'Upload failed'));
+        } catch { reject(new Error('Upload failed')); }
+      };
+      xhr.onerror = () => reject(new Error('Network error'));
+      const hdrs = authHeaders();
+      xhr.open('POST', '/api/sounds');
+      Object.entries(hdrs).forEach(([k, v]) => xhr.setRequestHeader(k, v));
+      xhr.send(JSON.stringify({ name, dataUrl, tags: [] }));
+    });
     showStatus('Uploaded: ' + name);
     clearUploadForm();
     await loadAll();
   } catch (err) {
     document.getElementById('upload-status').textContent = err.message;
+    progressWrap.style.display = 'none';
   } finally { btn.disabled = false; }
 }
 
