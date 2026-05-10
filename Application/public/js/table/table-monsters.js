@@ -8,12 +8,13 @@ function _plainEntry(s) {
       case 'hit': return (parseInt(p[0]) >= 0 ? '+' : '') + p[0];
       case 'damage': case 'dice': return p[0];
       case 'dc': return 'DC ' + p[0];
-      case 'h': return 'Hit: ';
+      case 'h': return '\nHit: ';
       case 'atk': case 'atkr': return '';
       case 'recharge': return '(Recharge ' + p[0] + '–6)';
       default: return p[0] || content;
     }
-  }).replace(/\{@\w+\}/g, '').replace(/\s+/g, ' ').trim();
+  }).replace(/\{@\w+\}/g, '')
+    .split('\n').map(l => l.replace(/\s+/g, ' ').trim()).filter(Boolean).join('\n');
 }
 
 async function rollMonsterDamage(section, idx, dmgStr) {
@@ -37,14 +38,14 @@ async function useMonsterAction(section, idx) {
   const rawText = [].concat(item.entries || []).map(e => {
     if (typeof e === 'string') return _plainEntry(e);
     if (e && e.type === 'list' && Array.isArray(e.items))
-      return e.items.map(i => '• ' + _plainEntry(typeof i === 'string' ? i : (i.name || ''))).join(' ');
+      return e.items.map(i => '• ' + _plainEntry(typeof i === 'string' ? i : (i.name || ''))).join('\n');
     return '';
-  }).filter(Boolean).join(' ');
+  }).filter(Boolean).join('\n');
   try {
     await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sender, type: 'text', message: item.name + ': ' + rawText })
+      body: JSON.stringify({ sender, type: 'text', message: item.name + '\n' + rawText })
     });
   } catch {}
 }
@@ -145,7 +146,7 @@ function renderMonsterFullStats(data, tok) {
   const sensesStr=[...(data.senses||[])].join(', ')+(data.passive?((data.senses||[]).length?', ':'')+'Passive Perception '+data.passive:'');
   const langStr=(data.languages||[]).join(', ')||'—';
   const HR='<hr style="border:none;border-top:1px solid var(--a44);margin:6px 0">';
-  function rEntries(entries){return(entries||[]).map(e=>{if(typeof e==='string')return'<p style="margin:2px 0 3px">'+parseEntry(e)+'</p>';if(e&&e.type==='list'&&Array.isArray(e.items))return'<ul style="margin:2px 0 3px;padding-left:14px">'+e.items.map(i=>'<li>'+parseEntry(typeof i==='string'?i:(i.name||''))+'</li>').join('')+'</ul>';return'';}).join('');}
+  function rEntries(entries){return(entries||[]).map(e=>{if(typeof e==='string')return'<p style="margin:2px 0 3px;white-space:pre-wrap">'+parseEntry(e)+'</p>';if(e&&e.type==='list'&&Array.isArray(e.items))return'<ul style="margin:2px 0 3px;padding-left:14px">'+e.items.map(i=>'<li>'+parseEntry(typeof i==='string'?i:(i.name||''))+'</li>').join('')+'</ul>';return'';}).join('');}
   function rSection(items,title){if(!items||!items.length)return'';return HR+'<div style="font-size:10px;color:var(--ac);text-transform:uppercase;font-weight:bold;letter-spacing:.5px;margin-bottom:3px">'+title+'</div>'+items.map(item=>'<div style="margin:4px 0"><span style="color:var(--ac);font-weight:bold;font-style:italic">'+parseEntry(item.name||'')+'</span> '+rEntries(item.entries)+'</div>').join('');}
   function rSectionRollable(items,title){if(!items||!items.length)return'';const HR2=HR+'<div style="font-size:10px;color:var(--ac);text-transform:uppercase;font-weight:bold;letter-spacing:.5px;margin-bottom:3px">'+title+'</div>';return HR2+items.map(item=>{const entryText=[].concat(item.entries||[]).join(' ');const atkMatch=entryText.match(/\{@hit\s([+-]?\d+)\}|([+-]\d+)\s+to\s+hit/i);const dmgMatch=entryText.match(/\d+d\d+(?:[+-]\d+)?/i);if(atkMatch){const bonus=parseInt(atkMatch[1]||atkMatch[2]);const dmgStr=dmgMatch?dmgMatch[0]:'';const sn=item.name.replace(/'/g,"\\'");const dmgRow=dmgStr?'<div class="qroll-row" onclick="rollDamageStr(\''+sn+' Dmg\',\''+dmgStr+'\')" style="padding-left:20px;background:rgba(0,0,0,.15)"><span style="font-size:11px;color:var(--txd)">↳ Damage</span><span class="qroll-val" style="color:#ff9966;font-size:13px">'+esc(dmgStr)+'</span></div>':'';return'<div class="qroll-row" onclick="qroll(\''+sn+' atk\',\''+bonus+'\')" title="'+esc(entryText.slice(0,120))+'">'+'<span>'+parseEntry(item.name||'')+'</span>'+'<span class="qroll-val">'+(bonus>=0?'+':'')+bonus+'</span></div>'+dmgRow;}return'<div style="margin:4px 0"><span style="color:var(--ac);font-weight:bold;font-style:italic">'+parseEntry(item.name||'')+'</span> '+rEntries(item.entries)+'</div>';}).join('');}
 
@@ -212,11 +213,14 @@ function renderMonsterInfoFull(data) {
   const sensesStr=[...(data.senses||[])].join(', ')+(data.passive?((data.senses||[]).length?', ':'')+('Passive Perception '+data.passive):'');
   const langStr=(data.languages||[]).join(', ')||'—';
   const HR='<hr style="border:none;border-top:1px solid var(--a44);margin:8px 0">';
-  function rEntries(entries){return(entries||[]).map(e=>{if(typeof e==='string')return'<p style="margin:2px 0 4px">'+parseEntry(e)+'</p>';if(e&&e.type==='list'&&Array.isArray(e.items))return'<ul style="margin:2px 0 4px;padding-left:16px">'+e.items.map(i=>'<li>'+parseEntry(typeof i==='string'?i:(i.name||''))+'</li>').join('')+'</ul>';return'';}).join('');}
+  function rEntries(entries){return(entries||[]).map(e=>{if(typeof e==='string')return'<p style="margin:2px 0 4px;white-space:pre-wrap">'+parseEntry(e)+'</p>';if(e&&e.type==='list'&&Array.isArray(e.items))return'<ul style="margin:2px 0 4px;padding-left:16px">'+e.items.map(i=>'<li>'+parseEntry(typeof i==='string'?i:(i.name||''))+'</li>').join('')+'</ul>';return'';}).join('');}
   function rSection(items,title){if(!items||!items.length)return'';return HR+'<div style="font-size:10px;color:var(--ac);text-transform:uppercase;font-weight:bold;letter-spacing:.5px;margin-bottom:4px">'+title+'</div>'+items.map(item=>'<div style="margin:5px 0"><span style="color:var(--ac);font-weight:bold;font-style:italic">'+parseEntry(item.name||'')+'</span> '+rEntries(item.entries)+'</div>').join('');}
   function rSpellEntries(list){return(list||[]).map(sc=>{let h='<div style="margin:5px 0"><span style="color:var(--ac);font-weight:bold;font-style:italic">'+esc(sc.name||'')+'</span> ';if(sc.headerEntries)h+=rEntries(sc.headerEntries);if(sc.will&&sc.will.length)h+='<p style="margin:2px 0 4px"><em>At will:</em> '+sc.will.map(s=>parseEntry(s)).join(', ')+'</p>';if(sc.daily)for(const[k,v]of Object.entries(sc.daily)){const n=k.replace('e','');h+='<p style="margin:2px 0 4px"><em>'+n+'/day'+(k.endsWith('e')?' each':'')+':</em> '+v.map(s=>parseEntry(s)).join(', ')+'</p>';}if(sc.spells)for(const[lvl,sd]of Object.entries(sc.spells)){const slots=sd.slots?' ('+sd.slots+' slot'+(sd.slots!==1?'s':'')+')':'';const ord=['','st','nd','rd'];const lvlStr=lvl==='0'?'Cantrips (at will)':lvl+(ord[+lvl]||'th')+'-level'+slots;h+='<p style="margin:2px 0 4px"><em>'+esc(lvlStr)+':</em> '+[].concat(sd.spells||[]).map(s=>parseEntry(s)).join(', ')+'</p>';}return h+'</div>';}).join('');}
   function rSectionWithSc(items,scList,title){const hi=items&&items.length;const hs=scList&&scList.length;if(!hi&&!hs)return'';return HR+'<div style="font-size:10px;color:var(--ac);text-transform:uppercase;font-weight:bold;letter-spacing:.5px;margin-bottom:4px">'+title+'</div>'+(hi?items.map(item=>'<div style="margin:5px 0"><span style="color:var(--ac);font-weight:bold;font-style:italic">'+parseEntry(item.name||'')+'</span> '+rEntries(item.entries)+'</div>').join(''):'')+rSpellEntries(scList);}
   let html='<div style="font-size:12px">';
+  if (data.portraitMedium || data.portrait) {
+    html += '<img src="'+esc(data.portraitMedium||data.portrait)+'" style="float:right;max-width:120px;max-height:120px;object-fit:cover;border-radius:4px;margin:0 0 8px 10px;border:1px solid var(--a44)">';
+  }
   html+='<div style="font-size:16px;font-weight:bold;color:var(--ac)">'+esc(data.name||'Unknown')+'</div>';
   html+='<div style="font-size:12px;font-style:italic;color:var(--txd);margin-bottom:6px">'+esc([size,typeStr,alignment].filter(Boolean).join(', '))+(data.source?' <span style="font-size:10px;opacity:.6">('+esc(data.source)+')</span>':'')+'</div>';
   html+=HR;

@@ -20,7 +20,7 @@ function appendChatEntry(e) {
       <span class="ce-sender">${esc(e.sender || '?')}</span>
       <span style="color:var(--txd);font-size:10px">${time}</span>
     </div>
-    <div style="word-break:break-word">${esc(e.message || '')}</div>`;
+    <div style="word-break:break-word;white-space:pre-wrap">${esc(e.message || '')}</div>`;
     log.appendChild(div);
     return;
   }
@@ -58,7 +58,7 @@ function appendChatEntry(e) {
   const natStr = isNat20 ? ' <span style="color:var(--ok)">✨ NAT 20!</span>'
                : isNat1  ? ' <span style="color:var(--err)">💀 NAT 1</span>' : '';
   const descStr = e.description
-    ? `<div style="font-size:10px;color:var(--txd);margin-top:3px;font-style:italic;line-height:1.4">${esc(e.description)}</div>`
+    ? `<div style="font-size:10px;color:var(--txd);margin-top:3px;font-style:italic;line-height:1.4;white-space:pre-wrap">${esc(e.description)}</div>`
     : '';
   div.className = `chat-entry${cls}`;
   div.innerHTML = `<div style="display:flex;justify-content:space-between;margin-bottom:2px">

@@ -101,23 +101,6 @@
       </div>
     </div>
 
-    <!-- Chat section -->
-    <div class="lp-section">
-      <div class="lp-section-hdr" onclick="chatToggle()">
-        <span>💬 Chat <span id="chat-badge" class="chat-new-badge" style="display:none">0</span></span>
-        <span id="chat-chevron">▲</span>
-      </div>
-      <div class="lp-body" id="chat-body-wrap">
-        <div class="chat-log" id="chat-log"></div>
-        <div class="chat-roller">
-          <div class="chat-input-row">
-            <input type="text" id="chat-input" class="chat-input" placeholder="Message or /r 2d6+5…" autocomplete="off" onkeydown="if(event.key==='Enter')sendChatInput()">
-            <button class="dice-btn chat-send-btn" onclick="sendChatInput()">Send</button>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <!-- Token / HP Edit section (shown when a token is selected) -->
     <div class="lp-section" id="lp-token-section" style="display:none">
       <div class="lp-section-hdr lp-token-hdr">
@@ -231,6 +214,23 @@
   </div>
 
 </div><!-- /#table-wrap -->
+
+<!-- Chat Bar -->
+<div id="chat-bar">
+  <div id="chat-bar-hdr" onclick="chatToggle()">
+    <span>💬 Chat <span id="chat-badge" class="chat-new-badge" style="display:none">0</span></span>
+    <span id="chat-chevron">▼</span>
+  </div>
+  <div class="lp-body open" id="chat-body-wrap">
+    <div class="chat-log" id="chat-log"></div>
+  </div>
+  <div class="chat-roller">
+    <div class="chat-input-row">
+      <input type="text" id="chat-input" class="chat-input" placeholder="Message or /r 2d6+5…" autocomplete="off" onkeydown="if(event.key==='Enter')sendChatInput()">
+      <button class="dice-btn chat-send-btn" onclick="sendChatInput()">Send</button>
+    </div>
+  </div>
+</div>
 
 <!-- Settings Modal (DM only) -->
 <div id="settings-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:2000;align-items:center;justify-content:center">
@@ -416,11 +416,6 @@
         <button class="btn sm" id="music-loop-none" onclick="musicSetLoopMode('none')">No Loop</button>
         <button class="btn sm" id="music-loop-track" onclick="musicSetLoopMode('track')">🔂 Track</button>
         <button class="btn sm" id="music-loop-playlist" onclick="musicSetLoopMode('playlist')">🔁 Playlist</button>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
-        <span style="font-size:11px;color:var(--txd);white-space:nowrap">🔊 Vol</span>
-        <input type="range" id="music-volume" min="0" max="100" value="100" style="flex:1;cursor:pointer" oninput="musicVolumeChange(this.value)" onchange="musicVolumeChange(this.value)">
-        <span id="music-vol-pct" style="font-size:11px;color:var(--ac);min-width:32px">100%</span>
       </div>
       <div style="border-top:1px solid var(--a44);padding-top:10px">
         <div style="font-size:10px;color:var(--ac);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Tracks</div>

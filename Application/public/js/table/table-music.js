@@ -10,7 +10,6 @@ let _musicDuration         = 0;
 let _musicLoopMode         = 'none';
 let _musicSeeking          = false;
 let _musicProgressTick     = null;
-let _volumeDebounce        = null;
 
 // ── Time helpers ──────────────────────────────────────────────────────────────
 function fmtTime(s) {
@@ -64,6 +63,16 @@ function initMusicPlayer() {
   const audioEl = document.getElementById('bg-music');
   if (!audioEl) return;
 
+  // Restore each client's own local volume preference
+  const savedVol = localStorage.getItem('localVolume');
+  if (savedVol !== null) {
+    const slider = document.getElementById('local-vol-slider');
+    if (slider) slider.value = savedVol;
+    const pct = document.getElementById('local-vol-pct');
+    if (pct) pct.textContent = savedVol + '%';
+    audioEl.volume = parseFloat(savedVol) / 100;
+  }
+
   if (sessionRole === 'dm') {
     const btn = document.getElementById('btn-music');
     if (btn) btn.style.display = '';
@@ -104,7 +113,6 @@ function initMusicPlayer() {
         } else if (currentPos > 0) {
           audioEl.currentTime = currentPos;
         }
-        audioEl.volume = st.volume ?? 1;
         updateNowPlaying(st.name, 'loading');
         audioEl.play()
           .then(() => updateNowPlaying(_musicCurrentName, 'playing'))
@@ -117,13 +125,6 @@ function initMusicPlayer() {
       }
     }
 
-    if (sessionRole === 'dm') {
-      const vol = Math.round((st.volume ?? 1) * 100);
-      const volEl = document.getElementById('music-volume');
-      const volPct = document.getElementById('music-vol-pct');
-      if (volEl) volEl.value = vol;
-      if (volPct) volPct.textContent = vol + '%';
-    }
   }).catch(() => {});
 }
 
@@ -146,7 +147,6 @@ function handleSoundEvent(d) {
     } else if (isSameTrack && typeof d.position === 'number' && Math.abs(audioEl.currentTime - d.position) > 1) {
       audioEl.currentTime = d.position;
     }
-    audioEl.volume = d.volume ?? 1;
     _musicCurrentName      = d.name;
     _musicCurrentTrackIdx  = d.trackIndex ?? 0;
     if (d.duration) updateDurationDisplay(d.duration);
@@ -183,15 +183,6 @@ function handleSoundEvent(d) {
     updateMusicBtn(false);
     updateNowPlaying(null, null);
     if (sessionRole === 'dm') renderMusicTrackList(null);
-  } else if (d.action === 'volume') {
-    audioEl.volume = d.volume ?? 1;
-    if (sessionRole === 'dm') {
-      const pct = Math.round((d.volume ?? 1) * 100);
-      const volEl = document.getElementById('music-volume');
-      const volPct = document.getElementById('music-vol-pct');
-      if (volEl) volEl.value = pct;
-      if (volPct) volPct.textContent = pct + '%';
-    }
   } else if (d.action === 'seek') {
     audioEl.currentTime = d.position ?? 0;
   } else if (d.action === 'duration') {
@@ -230,6 +221,7 @@ function setLocalVolume(val) {
   if (pct) pct.textContent = val + '%';
   const audioEl = document.getElementById('bg-music');
   if (audioEl) audioEl.volume = parseFloat(val) / 100;
+  localStorage.setItem('localVolume', val);
 }
 
 // ── Seek controls (DM only — players get pointer-events:none on the element) ──
@@ -351,14 +343,6 @@ function musicPlayPause() {
 
 function musicControl(action) {
   musicSendControl({ action });
-}
-
-function musicVolumeChange(val) {
-  document.getElementById('music-vol-pct').textContent = val + '%';
-  clearTimeout(_volumeDebounce);
-  _volumeDebounce = setTimeout(() => {
-    musicSendControl({ action: 'volume', volume: parseFloat(val) / 100 });
-  }, 200);
 }
 
 function musicSendControl(body) {
