@@ -40,6 +40,32 @@
 - **listPlaylists() / createPlaylist() / updatePlaylist() / deletePlaylist()** - CRUD for tag-based playlists (generic or map-typed)
 - **getSoundsForPlaylist(playlistId)** - Returns sounds whose tags intersect with a playlist's tag filter
 
+## Application — Stories Module
+
+> Stories is a self-contained image-generation module. Prompt files live in `Application/stories/{character}/`, generated images in `Application/public/story-images/`, and records in `stories.db`.
+
+### DB (`Application/db/storiesdb.js`)
+- **listStories / getStory / getStoryByFile / createStory / updateStoryStatus / deleteStory** - CRUD for story records
+- **listSequences / replaceSequences / updateSequence / updateSequenceStatus** - CRUD for per-story image sequences
+- **listPresets / getPreset / createPreset / updatePreset / deletePreset** - CRUD for saved image-server presets
+
+### API Routes (`Application/server.js` — Stories section)
+- `GET /api/stories/files` — scan `Application/stories/` folder tree
+- `POST /api/stories/folders` — create a character folder under `Application/stories/`
+- `GET /api/stories/files/*` — read and parse a prompt `.txt` file
+- `PUT /api/stories/files/*` — create or overwrite a prompt `.txt` file
+- `DELETE /api/stories/files/*` — delete a prompt file
+- `GET /api/stories/presets` / `POST` / `PUT /:pid` / `DELETE /:pid` — image-server preset CRUD
+- `GET /api/stories` / `GET /:id` — list or fetch story DB records
+- `POST /api/stories` — create or reset a story record from a prompt file (idempotent on promptFile)
+- `DELETE /api/stories/:id` — delete story record and its generated images
+- `POST /api/stories/:id/generate` — stream SSE generation progress; calls ComfyUI or OpenRouter per sequence
+
+### Screens
+- **stories.html** — dashboard; character sidebar, story cards, generation modal with preset support
+- **story-builder.html** — prompt editor; create character folders, numbered textarea rows, save to disk
+- **story-viewer.html** — storyboard viewer; grid or strip layout, lightbox on click
+
 ---
 
 *Add new tools here as they are created*
