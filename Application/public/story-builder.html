@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Story Builder</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#1a1a2e">
+<script>if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js');</script>
+<link rel="stylesheet" href="/css/dm.css">
+<link rel="stylesheet" href="/css/stories.css">
+</head>
+<body>
+
+<div class="stories-wrap">
+
+  <div class="stories-hdr">
+    <a href="/stories.html" class="btn" style="padding:4px 10px;font-size:11px">← Stories</a>
+    <h1>✏️ Story Builder</h1>
+    <div class="hdr-right">
+      <span id="save-msg" style="font-size:11px;color:var(--ok)"></span>
+    </div>
+  </div>
+
+  <div class="stories-body">
+
+    <!-- Sidebar -->
+    <div class="stories-sidebar">
+      <div class="sidebar-title">Character</div>
+      <div id="char-list" style="flex:1;overflow-y:auto">
+        <div style="padding:10px;font-size:11px;color:var(--txd)">Loading…</div>
+      </div>
+      <div class="sidebar-bottom">
+        <div id="new-char-form" style="display:none">
+          <input type="text" id="new-char-input" placeholder="Character name…" maxlength="60"
+                 style="margin-bottom:6px"
+                 onkeydown="if(event.key==='Enter')confirmNewChar();if(event.key==='Escape')cancelNewChar()">
+          <div style="display:flex;gap:6px">
+            <button class="btn sm primary" onclick="confirmNewChar()" style="flex:1">✓ Create</button>
+            <button class="btn sm" onclick="cancelNewChar()">✕</button>
+          </div>
+          <div id="new-char-err" style="color:var(--err);font-size:10px;margin-top:4px;min-height:12px"></div>
+        </div>
+        <button id="new-char-btn" class="btn" style="font-size:11px;width:100%" onclick="showNewCharForm()">+ New Character</button>
+      </div>
+    </div>
+
+    <!-- Right panel: scrollable content + fixed footer -->
+    <div style="flex:1;display:flex;flex-direction:column;overflow:hidden">
+
+      <!-- Scrollable area -->
+      <div class="builder-editor">
+
+        <!-- Story title -->
+        <div class="card" style="margin:0;flex-shrink:0">
+          <div class="ct">Story</div>
+          <div class="cb" style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
+            <div class="field" style="flex:1;min-width:160px;margin:0">
+              <label class="lbl">Story Title</label>
+              <input type="text" id="story-title" placeholder="e.g. The Fellowship Begins" maxlength="100">
+            </div>
+            <div style="font-size:11px;color:var(--txd);padding-bottom:4px" id="file-preview"></div>
+          </div>
+        </div>
+
+        <!-- Generation config (collapsible) -->
+        <div class="card" style="margin:0;flex-shrink:0">
+          <div class="ct" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:6px 10px" onclick="toggleGenConfig()">
+            <span>🎨 Generation Settings</span>
+            <span id="gen-config-arrow" style="font-size:11px;font-weight:normal">▼</span>
+          </div>
+          <div class="cb" id="gen-config-body">
+
+            <div class="server-toggle">
+              <button id="toggle-comfyui" class="active" onclick="setServerType('comfyui')">ComfyUI (Local)</button>
+              <button id="toggle-openrouter" onclick="setServerType('openrouter')">OpenRouter</button>
+            </div>
+
+            <!-- ComfyUI fields -->
+            <div id="comfyui-fields">
+              <div style="display:flex;gap:8px;align-items:flex-end">
+                <div class="field" style="flex:1;margin:0">
+                  <label class="lbl">ComfyUI Endpoint</label>
+                  <input type="text" id="comfyui-endpoint" value="http://localhost:8188"
+                         placeholder="http://localhost:8188"
+                         onchange="clearCheckpoints()" onblur="autoFetchCheckpoints()">
+                </div>
+                <button class="btn sm" onclick="fetchCheckpoints()" id="fetch-ckpt-btn"
+                        style="flex-shrink:0;height:28px;margin-bottom:8px">⟳ Load Models</button>
+              </div>
+              <div class="field">
+                <label class="lbl">Checkpoint Model</label>
+                <select id="comfyui-checkpoint" style="font-size:12px">
+                  <option value="">— click "Load Models" to fetch —</option>
+                </select>
+                <div id="ckpt-status" style="font-size:10px;color:var(--txd);margin-top:3px;min-height:12px"></div>
+              </div>
+              <div class="field">
+                <label class="lbl">Negative Prompt</label>
+                <input type="text" id="comfyui-negative" value="ugly, blurry, low quality, deformed">
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+                <div class="field"><label class="lbl">Steps</label><input type="number" id="comfyui-steps" value="20" min="1" max="150"></div>
+                <div class="field"><label class="lbl">CFG Scale</label><input type="number" id="comfyui-cfg" value="7" min="1" max="30" step="0.5"></div>
+                <div class="field"><label class="lbl">Sampler</label>
+                  <select id="comfyui-sampler" style="font-size:12px">
+                    <option value="euler">euler</option>
+                    <option value="euler_ancestral">euler_ancestral</option>
+                    <option value="dpmpp_2m">dpmpp_2m</option>
+                    <option value="dpmpp_2m_sde">dpmpp_2m_sde</option>
+                    <option value="dpmpp_sde">dpmpp_sde</option>
+                    <option value="dpm_2">dpm_2</option>
+                    <option value="dpm_2_ancestral">dpm_2_ancestral</option>
+                    <option value="heun">heun</option>
+                    <option value="ddim">ddim</option>
+                    <option value="uni_pc">uni_pc</option>
+                  </select>
+                </div>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                <div class="field"><label class="lbl">Width (px)</label><input type="number" id="comfyui-width" value="512" min="64" max="2048" step="64"></div>
+                <div class="field"><label class="lbl">Height (px)</label><input type="number" id="comfyui-height" value="512" min="64" max="2048" step="64"></div>
+              </div>
+              <div style="margin-top:4px">
+                <button class="btn sm" onclick="toggleAdvanced()" id="adv-toggle-btn"
+                        style="font-size:10px;width:100%;text-align:left">▶ Advanced: Custom Workflow JSON</button>
+                <div id="adv-workflow-wrap" style="display:none;margin-top:6px">
+                  <label class="lbl">Custom Workflow JSON — use <code style="background:var(--a22);padding:1px 4px;border-radius:2px">{{PROMPT}}</code> as placeholder</label>
+                  <textarea id="comfyui-workflow" rows="6"
+                            placeholder='{"3":{"inputs":{"text":"{{PROMPT}}",...},...}}'
+                            style="font-size:11px;font-family:monospace"></textarea>
+                </div>
+              </div>
+            </div>
+
+            <!-- OpenRouter fields -->
+            <div id="openrouter-fields" style="display:none">
+              <div class="field"><label class="lbl">API Key</label><input type="password" id="or-apikey" placeholder="sk-or-..."></div>
+              <div class="field"><label class="lbl">Model</label><input type="text" id="or-model" placeholder="black-forest-labs/flux-1.1-pro"></div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                <div class="field"><label class="lbl">Width (px)</label><input type="number" id="or-width" value="1024" min="64" max="2048" step="64"></div>
+                <div class="field"><label class="lbl">Height (px)</label><input type="number" id="or-height" value="1024" min="64" max="2048" step="64"></div>
+              </div>
+            </div>
+
+            <!-- Presets -->
+            <div class="preset-row" style="margin-top:8px">
+              <select id="preset-sel" style="flex:1;font-size:11px" onchange="loadPreset()">
+                <option value="">— Load saved preset —</option>
+              </select>
+              <button class="btn sm" onclick="deleteSelectedPreset()" title="Delete selected preset">🗑</button>
+            </div>
+            <div class="preset-row">
+              <input type="text" id="preset-name" placeholder="Preset name…" style="flex:1;font-size:11px">
+              <button class="btn sm primary" onclick="savePreset()">Save Preset</button>
+            </div>
+            <div id="preset-msg" style="font-size:11px;color:var(--txd);min-height:14px"></div>
+            <div id="gen-error" style="color:var(--err);font-size:11px;min-height:14px"></div>
+          </div>
+        </div>
+
+        <!-- Sequence editor -->
+        <div class="card" style="margin:0">
+          <div class="ct" style="display:flex;align-items:center;justify-content:space-between;padding:3px 8px">
+            <span>Sequences</span>
+            <div style="display:flex;gap:10px;align-items:center">
+              <span id="seq-count-lbl" style="font-size:10px;font-weight:normal;text-transform:none;letter-spacing:0;color:var(--bg)">0 sequences</span>
+              <span id="gen-progress-txt" style="font-size:10px;color:var(--txd)"></span>
+            </div>
+          </div>
+          <div class="cb" style="padding:10px">
+            <div id="seq-list" class="editor-seq-list"></div>
+            <button class="btn" style="margin-top:10px;width:100%" onclick="addSeq()">+ Add Sequence</button>
+          </div>
+        </div>
+
+      </div><!-- end builder-editor -->
+
+      <!-- Fixed footer bar -->
+      <div style="flex-shrink:0;padding:10px 16px;border-top:1px solid var(--a44);background:var(--bg2);display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <button class="btn primary" onclick="saveStory()">💾 Save</button>
+        <button class="btn success" id="gen-all-btn" onclick="generateAll()">▶ Generate All</button>
+        <button class="btn danger" id="gen-stop-btn" style="display:none" onclick="stopGeneration()">■ Stop</button>
+        <span id="save-info" style="font-size:11px;color:var(--txd);flex:1;min-width:0">Select a character and enter a title to save.</span>
+      </div>
+
+    </div><!-- end right panel -->
+  </div>
+</div>
+
+<script>
+// ── State ─────────────────────────────────────────────────────────────────────
+let fileTree    = [];
+let sequences   = [];   // [{ seqNumber, prompt, imagePath, seqId, status }]
+let presets     = [];
+let activeChar  = null;
+let editingFile = null;
+let storyRecord = null;
+let serverType  = 'comfyui';
+let genReader   = null;
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+async function init() {
+  await Promise.all([loadCharList(), loadPresets()]);
+  const params    = new URLSearchParams(location.search);
+  const fileParam = params.get('file');
+  if (fileParam) await loadExistingFile(fileParam);
+  else addSeq();
+}
+
+async function loadCharList() {
+  const r = await fetch('/api/stories/files');
+  fileTree = r.ok ? await r.json() : [];
+  renderCharList();
+}
+
+// ── Sidebar ───────────────────────────────────────────────────────────────────
+function renderCharList() {
+  const el = document.getElementById('char-list');
+  if (!fileTree.length) { el.innerHTML = '<div style="padding:10px;font-size:11px;color:var(--txd)">No folders yet.</div>'; return; }
+  el.innerHTML = fileTree.map(c => `
+    <div class="char-item${activeChar === c.character ? ' active' : ''}" onclick="selectChar('${esc(c.character)}')">
+      ${esc(c.character)}
+    </div>`).join('');
+}
+
+function selectChar(name) { activeChar = name; renderCharList(); updateFilePreview(); }
+
+function showNewCharForm() {
+  document.getElementById('new-char-btn').style.display = 'none';
+  document.getElementById('new-char-form').style.display = '';
+  setTimeout(() => document.getElementById('new-char-input').focus(), 30);
+}
+function cancelNewChar() {
+  document.getElementById('new-char-form').style.display = 'none';
+  document.getElementById('new-char-btn').style.display = '';
+  document.getElementById('new-char-input').value = '';
+}
+async function confirmNewChar() {
+  const name = document.getElementById('new-char-input').value.trim();
+  if (!name) { document.getElementById('new-char-err').textContent = 'Name required.'; return; }
+  const r = await fetch('/api/stories/folders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) });
+  const d = await r.json();
+  if (!r.ok) { document.getElementById('new-char-err').textContent = d.error || 'Failed'; return; }
+  cancelNewChar();
+  await loadCharList();
+  selectChar(d.name);
+}
+
+// ── Sequence editor ───────────────────────────────────────────────────────────
+function addSeq(text) {
+  const num = sequences.length ? Math.max(...sequences.map(s => s.seqNumber)) + 1 : 1;
+  sequences.push({ seqNumber: num, prompt: text || '', imagePath: null, seqId: null, status: '' });
+  renderSeqs();
+  setTimeout(() => { const ta = document.querySelectorAll('.editor-seq-ta'); if (ta.length) ta[ta.length - 1].focus(); }, 30);
+}
+
+function removeSeq(idx) { sequences.splice(idx, 1); renumber(); }
+
+function moveSeq(idx, dir) {
+  const t = idx + dir;
+  if (t < 0 || t >= sequences.length) return;
+  [sequences[idx], sequences[t]] = [sequences[t], sequences[idx]];
+  renumber();
+}
+
+function renumber() { sequences.forEach((s, i) => s.seqNumber = i + 1); renderSeqs(); }
+
+function renderSeqs() {
+  const el = document.getElementById('seq-list');
+  el.innerHTML = sequences.map((s, i) => {
+    const thumbHtml = s.imagePath
+      ? `<img src="${esc(s.imagePath)}?t=${Date.now()}" class="builder-thumb" onclick="previewImg('${esc(s.imagePath)}')" title="Click to preview">`
+      : `<div class="builder-thumb-empty"></div>`;
+    const stIcon = s.status === 'generating' ? '<span style="color:var(--exp)">⟳</span>'
+                 : s.status === 'done'        ? '<span style="color:var(--ok)">✓</span>'
+                 : s.status === 'failed'      ? '<span style="color:var(--err)">✗</span>' : '';
+    return `
+    <div class="editor-seq-row" id="sr-${i}">
+      <span class="editor-seq-num" style="padding-top:6px">${String(s.seqNumber).padStart(3,'0')}</span>
+      <textarea class="editor-seq-ta" rows="1" data-idx="${i}"
+                placeholder="Describe scene ${s.seqNumber}…"
+                oninput="onSeqInput(${i},this)"
+                onkeydown="onSeqKey(event,${i})">${esc(s.prompt)}</textarea>
+      <div class="seq-img-col">
+        ${thumbHtml}
+        <div style="display:flex;gap:3px;margin-top:4px;align-items:center">
+          <label class="btn sm" title="Upload image" style="cursor:pointer;padding:3px 6px;font-size:11px">
+            📁<input type="file" accept="image/*" style="display:none" onchange="uploadSeqImage(${i},this)">
+          </label>
+          <button class="btn sm" title="Generate this sequence" onclick="generateSingle(${i})" style="padding:3px 6px;font-size:11px">▶</button>
+          <span style="font-size:13px">${stIcon}</span>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:2px;padding-top:4px">
+        <button class="editor-seq-up" onclick="moveSeq(${i},-1)" ${i===0?'style="visibility:hidden"':''}>▲</button>
+        <button class="editor-seq-dn" onclick="moveSeq(${i},1)" ${i===sequences.length-1?'style="visibility:hidden"':''}>▼</button>
+        <button class="editor-seq-del" onclick="removeSeq(${i})">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  el.querySelectorAll('.editor-seq-ta').forEach(ta => autoResize(ta));
+  document.getElementById('seq-count-lbl').textContent = sequences.length + ' sequence' + (sequences.length !== 1 ? 's' : '');
+  updateFilePreview();
+}
+
+function onSeqInput(idx, ta) { sequences[idx].prompt = ta.value; autoResize(ta); updateFilePreview(); }
+
+function onSeqKey(e, idx) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    if (idx === sequences.length - 1) addSeq();
+    else { const rows = document.querySelectorAll('.editor-seq-ta'); if (rows[idx+1]) rows[idx+1].focus(); }
+  } else if (e.key === 'Backspace' && !e.target.value && sequences.length > 1) {
+    e.preventDefault();
+    removeSeq(idx);
+    setTimeout(() => {
+      const rows = document.querySelectorAll('.editor-seq-ta');
+      const fi = Math.max(0, idx - 1);
+      if (rows[fi]) { rows[fi].focus(); rows[fi].selectionStart = rows[fi].selectionEnd = rows[fi].value.length; }
+    }, 30);
+  }
+}
+
+function autoResize(ta) { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; }
+
+// ── File preview ──────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('story-title').addEventListener('input', updateFilePreview);
+});
+
+function updateFilePreview() {
+  const title = document.getElementById('story-title').value.trim();
+  const el    = document.getElementById('file-preview');
+  const info  = document.getElementById('save-info');
+  if (!activeChar || !title) { el.textContent = ''; info.textContent = !activeChar ? 'Select a character first.' : 'Enter a story title.'; return; }
+  el.textContent = editingFile ? `Editing: ${editingFile}` : `Will save as: ${activeChar}/${getNextPrefix()}-${slugify(title)}.txt`;
+  info.textContent = '';
+}
+
+function slugify(s) { return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'story'; }
+
+function getNextPrefix() {
+  const g = fileTree.find(c => c.character === activeChar);
+  if (!g || !g.files.length) return '001';
+  const nums = g.files.map(f => parseInt(f.filename) || 0).filter(Boolean);
+  return String(nums.length ? Math.max(...nums) + 1 : 1).padStart(3, '0');
+}
+
+// ── Load existing file ────────────────────────────────────────────────────────
+async function loadExistingFile(filePath) {
+  editingFile = filePath;
+  const parts = filePath.split('/');
+  activeChar  = parts[0];
+  document.getElementById('story-title').value = (parts[1] || '').replace(/\.txt$/, '').replace(/^\d+-/, '').replace(/-/g, ' ');
+  renderCharList();
+
+  const [fileRes, recsRes] = await Promise.all([
+    fetch('/api/stories/files/' + filePath),
+    fetch('/api/stories'),
+  ]);
+  if (!fileRes.ok) { document.getElementById('save-info').textContent = 'Could not load file.'; return; }
+  const { sequences: seqs } = await fileRes.json();
+  const recs = recsRes.ok ? await recsRes.json() : [];
+  storyRecord = recs.find(r => r.prompt_file === filePath) || null;
+
+  // Load image_paths + seqIds from DB record if present
+  let byNum = {};
+  if (storyRecord) {
+    const recRes = await fetch('/api/stories/' + storyRecord.id);
+    if (recRes.ok) {
+      const { sequences: dbSeqs } = await recRes.json();
+      for (const s of dbSeqs) byNum[s.seq_number] = s;
+    }
+  }
+
+  sequences = seqs.map(s => ({
+    seqNumber: s.seqNumber,
+    prompt:    s.prompt,
+    imagePath: byNum[s.seqNumber]?.image_path || null,
+    seqId:     byNum[s.seqNumber]?.id         || null,
+    status:    byNum[s.seqNumber]?.image_path  ? 'done' : '',
+  }));
+  if (!sequences.length) sequences = [{ seqNumber: 1, prompt: '', imagePath: null, seqId: null, status: '' }];
+  renderSeqs();
+  updateFilePreview();
+}
+
+// ── Save ──────────────────────────────────────────────────────────────────────
+async function saveStory() {
+  const title = document.getElementById('story-title').value.trim();
+  if (!activeChar) { document.getElementById('save-info').textContent = 'Select a character first.'; return false; }
+  if (!title)      { document.getElementById('save-info').textContent = 'Enter a story title.'; return false; }
+  const nonEmpty = sequences.filter(s => s.prompt.trim());
+  if (!nonEmpty.length) { document.getElementById('save-info').textContent = 'Add at least one sequence.'; return false; }
+
+  const content  = nonEmpty.map((s, i) => `${String(i+1).padStart(3,'0')}: ${s.prompt.trim()}`).join('\n') + '\n';
+  const filePath = editingFile || `${activeChar}/${getNextPrefix()}-${slugify(title)}.txt`;
+
+  const r = await fetch('/api/stories/files/' + filePath, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content })
+  });
+  const d = await r.json();
+  if (!r.ok) { document.getElementById('save-info').textContent = d.error || 'Save failed.'; return false; }
+
+  editingFile = filePath;
+  document.getElementById('save-info').textContent = '';
+  const msg = document.getElementById('save-msg');
+  msg.textContent = '✓ Saved';
+  setTimeout(() => { msg.textContent = ''; }, 3000);
+  await loadCharList();
+  updateFilePreview();
+  return true;
+}
+
+// ── Ensure story record in DB ─────────────────────────────────────────────────
+async function ensureStoryRecord() {
+  if (!editingFile) {
+    const ok = await saveStory();
+    if (!ok) throw new Error('Save the story file first.');
+  }
+
+  // Always (re-)register via POST /api/stories so new/removed sequences are synced
+  // Existing sequences with images keep their IDs and image_paths (server preserves them)
+  const r = await fetch('/api/stories', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ promptFile: editingFile })
+  });
+  if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || 'Failed to create story record.');
+  const story = await r.json();
+  storyRecord = story;
+
+  for (const s of (story.sequences || [])) {
+    const seq = sequences.find(q => q.seqNumber === s.seq_number);
+    if (seq) {
+      seq.seqId     = s.id;
+      seq.imagePath = seq.imagePath || s.image_path || null;
+    }
+  }
+  return storyRecord;
+}
+
+// ── Upload pre-generated image ────────────────────────────────────────────────
+async function uploadSeqImage(idx, input) {
+  const file = input.files[0];
+  if (!file) return;
+  input.value = '';
+
+  sequences[idx].status = 'generating';
+  renderSeqs();
+  document.getElementById('gen-error').textContent = '';
+
+  try {
+    const story = await ensureStoryRecord();
+    const seq   = sequences[idx];
+    if (!seq.seqId) throw new Error('Sequence ID not found — try saving first.');
+
+    const dataUrl = await new Promise((res, rej) => {
+      const rd = new FileReader();
+      rd.onload = () => res(rd.result);
+      rd.onerror = rej;
+      rd.readAsDataURL(file);
+    });
+
+    const r = await fetch(`/api/stories/${story.id}/sequences/${seq.seqId}/image`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dataUrl })
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Upload failed');
+
+    sequences[idx].imagePath = d.imagePath;
+    sequences[idx].status    = 'done';
+  } catch (err) {
+    sequences[idx].status = 'failed';
+    document.getElementById('gen-error').textContent = err.message;
+  }
+  renderSeqs();
+}
+
+// ── Single sequence generation ────────────────────────────────────────────────
+async function generateSingle(idx) {
+  const cfg = buildConfig();
+  const err = validateConfig(cfg);
+  if (err) { document.getElementById('gen-error').textContent = err; return; }
+  document.getElementById('gen-error').textContent = '';
+
+  sequences[idx].status = 'generating';
+  renderSeqs();
+  document.getElementById('gen-stop-btn').style.display = '';
+
+  try {
+    const story = await ensureStoryRecord();
+    const seq   = sequences[idx];
+    if (!seq.seqId) throw new Error('Sequence ID not found after sync.');
+
+    await streamGeneration(story.id, { ...cfg, seqIds: [seq.seqId] });
+  } catch (err) {
+    if (err.name !== 'AbortError') {
+      sequences[idx].status = 'failed';
+      document.getElementById('gen-error').textContent = err.message;
+      renderSeqs();
+    }
+  } finally {
+    document.getElementById('gen-stop-btn').style.display = 'none';
+  }
+}
+
+// ── Generate all sequences ────────────────────────────────────────────────────
+async function generateAll() {
+  const cfg = buildConfig();
+  const err = validateConfig(cfg);
+  if (err) { document.getElementById('gen-error').textContent = err; return; }
+  document.getElementById('gen-error').textContent = '';
+
+  document.getElementById('gen-all-btn').disabled = true;
+  document.getElementById('gen-stop-btn').style.display = '';
+  sequences.forEach(s => { s.status = 'wait'; });
+  renderSeqs();
+
+  try {
+    const story = await ensureStoryRecord();
+    await streamGeneration(story.id, cfg);
+  } catch (err) {
+    if (err.name !== 'AbortError')
+      document.getElementById('gen-error').textContent = err.message;
+  } finally {
+    document.getElementById('gen-all-btn').disabled = false;
+    document.getElementById('gen-stop-btn').style.display = 'none';
+  }
+}
+
+// ── Stream generation ─────────────────────────────────────────────────────────
+async function streamGeneration(storyId, cfg) {
+  const r = await fetch('/api/stories/' + storyId + '/generate', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(cfg)
+  });
+  if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || `Server error ${r.status}`);
+
+  genReader = r.body.getReader();
+  const dec = new TextDecoder();
+  let buf = '';
+  let done = 0;
+  const total = cfg.seqIds ? cfg.seqIds.length : sequences.length;
+
+  while (true) {
+    const { done: rd, value } = await genReader.read();
+    if (rd) break;
+    buf += dec.decode(value, { stream: true });
+    const lines = buf.split('\n');
+    buf = lines.pop() || '';
+    for (const line of lines) {
+      if (!line.startsWith('data: ')) continue;
+      try {
+        const ev = JSON.parse(line.slice(6));
+        if (ev.type === 'progress') {
+          const i = sequences.findIndex(s => s.seqId === ev.seqId);
+          if (i >= 0) { sequences[i].status = 'generating'; renderSeqs(); }
+        } else if (ev.type === 'done') {
+          const i = sequences.findIndex(s => s.seqId === ev.seqId);
+          if (i >= 0) { sequences[i].imagePath = ev.imagePath; sequences[i].status = 'done'; renderSeqs(); }
+          done++;
+          document.getElementById('gen-progress-txt').textContent = `${done} / ${total}`;
+        } else if (ev.type === 'error') {
+          const i = sequences.findIndex(s => s.seqId === ev.seqId);
+          if (i >= 0) { sequences[i].status = 'failed'; renderSeqs(); }
+          document.getElementById('gen-error').textContent = ev.error || 'Generation failed';
+        } else if (ev.type === 'finish') {
+          document.getElementById('gen-progress-txt').textContent = `${ev.done} / ${ev.total} · ${ev.status}`;
+        }
+      } catch {}
+    }
+  }
+  genReader = null;
+}
+
+function stopGeneration() { if (genReader) { try { genReader.cancel(); } catch {} genReader = null; } }
+
+// ── Build / validate config ───────────────────────────────────────────────────
+function buildConfig() {
+  if (serverType === 'comfyui') {
+    return {
+      serverType:     'comfyui',
+      endpoint:       document.getElementById('comfyui-endpoint').value.trim().replace(/\/+$/, '') || 'http://localhost:8188',
+      checkpoint:     document.getElementById('comfyui-checkpoint').value,
+      negativePrompt: document.getElementById('comfyui-negative').value.trim(),
+      steps:          parseInt(document.getElementById('comfyui-steps').value)  || 20,
+      cfg:            parseFloat(document.getElementById('comfyui-cfg').value)  || 7,
+      sampler:        document.getElementById('comfyui-sampler').value,
+      width:          parseInt(document.getElementById('comfyui-width').value)  || 512,
+      height:         parseInt(document.getElementById('comfyui-height').value) || 512,
+      customWorkflow: document.getElementById('comfyui-workflow').value.trim(),
+    };
+  }
+  return {
+    serverType: 'openrouter',
+    apiKey:     document.getElementById('or-apikey').value.trim(),
+    model:      document.getElementById('or-model').value.trim(),
+    width:      parseInt(document.getElementById('or-width').value)  || 1024,
+    height:     parseInt(document.getElementById('or-height').value) || 1024,
+  };
+}
+
+function validateConfig(cfg) {
+  if (cfg.serverType === 'comfyui' && !cfg.customWorkflow && !cfg.checkpoint)
+    return 'Select a checkpoint model (click "Load Models" first).';
+  if (cfg.serverType === 'openrouter' && (!cfg.apiKey || !cfg.model))
+    return 'API key and model are required for OpenRouter.';
+  return null;
+}
+
+// ── Gen config UI ─────────────────────────────────────────────────────────────
+function toggleGenConfig() {
+  const body = document.getElementById('gen-config-body');
+  const arrow = document.getElementById('gen-config-arrow');
+  const open = body.style.display !== 'none';
+  body.style.display = open ? 'none' : '';
+  arrow.textContent = open ? '▶' : '▼';
+}
+
+function setServerType(type) {
+  serverType = type;
+  document.getElementById('toggle-comfyui').classList.toggle('active', type === 'comfyui');
+  document.getElementById('toggle-openrouter').classList.toggle('active', type === 'openrouter');
+  document.getElementById('comfyui-fields').style.display = type === 'comfyui' ? '' : 'none';
+  document.getElementById('openrouter-fields').style.display = type === 'openrouter' ? '' : 'none';
+}
+
+function toggleAdvanced() {
+  const wrap = document.getElementById('adv-workflow-wrap');
+  const btn  = document.getElementById('adv-toggle-btn');
+  const open = wrap.style.display === 'none';
+  wrap.style.display = open ? '' : 'none';
+  btn.textContent = (open ? '▼' : '▶') + ' Advanced: Custom Workflow JSON';
+}
+
+// ── Checkpoint fetching ───────────────────────────────────────────────────────
+function clearCheckpoints() {
+  document.getElementById('comfyui-checkpoint').innerHTML = '<option value="">— click "Load Models" to fetch —</option>';
+  document.getElementById('ckpt-status').textContent = '';
+}
+function autoFetchCheckpoints() { const ep = document.getElementById('comfyui-endpoint').value.trim(); if (ep) fetchCheckpoints(); }
+async function fetchCheckpoints() {
+  const ep  = document.getElementById('comfyui-endpoint').value.trim().replace(/\/+$/, '') || 'http://localhost:8188';
+  const btn = document.getElementById('fetch-ckpt-btn');
+  const st  = document.getElementById('ckpt-status');
+  btn.disabled = true; st.style.color = 'var(--txd)'; st.textContent = 'Connecting…';
+  try {
+    const r    = await fetch('/api/stories/comfyui/checkpoints?endpoint=' + encodeURIComponent(ep));
+    const data = await r.json();
+    if (!r.ok) { st.style.color = 'var(--err)'; st.textContent = data.error || 'Failed.'; return; }
+    if (data.endpoint && data.endpoint !== ep) document.getElementById('comfyui-endpoint').value = data.endpoint;
+    const ckpts = data.checkpoints || [];
+    const sel   = document.getElementById('comfyui-checkpoint');
+    if (!ckpts.length) {
+      sel.innerHTML = '<option value="">No models found</option>';
+      st.style.color = 'var(--err)'; st.textContent = 'No checkpoint models found.';
+    } else {
+      sel.innerHTML = '<option value="">— select a model —</option>' + ckpts.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+      st.style.color = 'var(--ok)'; st.textContent = ckpts.length + ' model(s) found.';
+      setTimeout(() => { st.textContent = ''; }, 4000);
+    }
+  } catch (e) { st.style.color = 'var(--err)'; st.textContent = 'Request failed: ' + e.message; }
+  finally { btn.disabled = false; }
+}
+function setCheckpointInSelect(name) {
+  if (!name) return;
+  const sel = document.getElementById('comfyui-checkpoint');
+  for (const o of sel.options) { if (o.value === name) { sel.value = name; return; } }
+  const o = document.createElement('option');
+  o.value = name; o.textContent = name + ' (not yet loaded)';
+  sel.appendChild(o); sel.value = name;
+}
+
+// ── Presets ───────────────────────────────────────────────────────────────────
+async function loadPresets() {
+  const r = await fetch('/api/stories/presets');
+  presets = r.ok ? await r.json() : [];
+  const sel = document.getElementById('preset-sel');
+  sel.innerHTML = '<option value="">— Load saved preset —</option>' +
+    presets.map(p => `<option value="${p.id}">${esc(p.name)} (${p.server_type})</option>`).join('');
+}
+function loadPreset() {
+  const p = presets.find(x => x.id === document.getElementById('preset-sel').value);
+  if (!p) return;
+  setServerType(p.server_type);
+  if (p.server_type === 'comfyui') {
+    document.getElementById('comfyui-endpoint').value = p.endpoint || 'http://localhost:8188';
+    document.getElementById('comfyui-negative').value = p.negative_prompt || 'ugly, blurry, low quality, deformed';
+    document.getElementById('comfyui-steps').value    = p.steps || 20;
+    document.getElementById('comfyui-cfg').value      = p.cfg || 7;
+    document.getElementById('comfyui-sampler').value  = p.sampler || 'euler';
+    document.getElementById('comfyui-width').value    = p.width || 512;
+    document.getElementById('comfyui-height').value   = p.height || 512;
+    document.getElementById('comfyui-workflow').value = p.workflow || '';
+    fetchCheckpoints().then(() => setCheckpointInSelect(p.checkpoint));
+  } else {
+    document.getElementById('or-apikey').value  = p.api_key || '';
+    document.getElementById('or-model').value   = p.model   || '';
+    document.getElementById('or-width').value   = p.width   || 1024;
+    document.getElementById('or-height').value  = p.height  || 1024;
+  }
+  document.getElementById('preset-name').value = p.name;
+  document.getElementById('preset-msg').textContent = 'Preset loaded.';
+  setTimeout(() => { document.getElementById('preset-msg').textContent = ''; }, 2000);
+}
+async function savePreset() {
+  const name = document.getElementById('preset-name').value.trim();
+  if (!name) { document.getElementById('preset-msg').textContent = 'Enter a preset name.'; return; }
+  const d    = buildConfig();
+  d.name     = name; d.isDefault = false;
+  const existId  = document.getElementById('preset-sel').value;
+  const existing = presets.find(p => p.id === existId);
+  const r = await fetch(existing ? '/api/stories/presets/' + existing.id : '/api/stories/presets', {
+    method: existing ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(d)
+  });
+  if (r.ok) { document.getElementById('preset-msg').textContent = 'Saved!'; await loadPresets(); setTimeout(() => { document.getElementById('preset-msg').textContent = ''; }, 2000); }
+  else { const e = await r.json(); document.getElementById('preset-msg').textContent = e.error || 'Failed.'; }
+}
+async function deleteSelectedPreset() {
+  const id = document.getElementById('preset-sel').value;
+  if (!id || !confirm('Delete this preset?')) return;
+  await fetch('/api/stories/presets/' + id, { method: 'DELETE' });
+  await loadPresets();
+}
+
+// ── Image preview lightbox ────────────────────────────────────────────────────
+function previewImg(src) {
+  const ov = Object.assign(document.createElement('div'), {
+    style: 'position:fixed;inset:0;background:rgba(0,0,0,.88);display:flex;align-items:center;justify-content:center;z-index:9999;cursor:pointer'
+  });
+  const img = Object.assign(document.createElement('img'), { src, style: 'max-width:92vw;max-height:92vh;border-radius:4px' });
+  ov.appendChild(img);
+  ov.onclick = () => ov.remove();
+  document.body.appendChild(ov);
+}
+
+// ── Utils ─────────────────────────────────────────────────────────────────────
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+init();
+</script>
+</body>
+</html>

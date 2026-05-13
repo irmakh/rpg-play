@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stories</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#1a1a2e">
+<script>if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js');</script>
+<link rel="stylesheet" href="/css/dm.css">
+<link rel="stylesheet" href="/css/stories.css">
+</head>
+<body>
+
+<div class="stories-wrap">
+
+  <!-- Header -->
+  <div class="stories-hdr">
+    <a href="/dm.html" class="btn" style="padding:4px 10px;font-size:11px">← DM Panel</a>
+    <h1>📖 Stories</h1>
+    <div class="hdr-right">
+      <span id="status-msg" style="font-size:11px;color:var(--txd)"></span>
+      <button class="btn" onclick="scanFiles()" title="Re-scan stories folder">↺ Scan</button>
+      <a href="/story-builder.html" class="btn primary">+ New Story</a>
+    </div>
+  </div>
+
+  <div class="stories-body">
+
+    <!-- Sidebar: character list -->
+    <div class="stories-sidebar">
+      <div class="sidebar-title">Characters</div>
+      <div id="char-list" style="flex:1;overflow-y:auto">
+        <div style="padding:10px;font-size:11px;color:var(--txd)">Loading…</div>
+      </div>
+      <div class="sidebar-bottom">
+        <button class="btn" style="font-size:11px" onclick="openNewCharModal()">+ New Character</button>
+      </div>
+    </div>
+
+    <!-- Main: story cards -->
+    <div class="stories-main">
+      <div id="story-list">
+        <div class="empty-hint">Select a character on the left to view stories.</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- New Character Modal -->
+<div class="modal-overlay" id="new-char-modal" style="display:none">
+  <div class="modal-box" style="max-width:360px;width:96%">
+    <div class="ct">New Character Folder</div>
+    <div class="modal-body">
+      <div class="field">
+        <label class="lbl">Character Name</label>
+        <input type="text" id="new-char-name" maxlength="60" placeholder="e.g. Aragorn"
+               onkeydown="if(event.key==='Enter')createCharFolder()">
+      </div>
+      <div id="new-char-err" style="color:var(--err);font-size:11px;min-height:14px"></div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn" onclick="closeNewCharModal()">Cancel</button>
+      <button class="btn primary" onclick="createCharFolder()">Create</button>
+    </div>
+  </div>
+</div>
+
+
+<script>
+// ── State ─────────────────────────────────────────────────────────────────────
+let fileTree    = [];
+let storyRecs   = [];
+let activeChar  = null;
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+async function init() {
+  await Promise.all([scanFiles(), loadPresets()]);
+}
+
+async function scanFiles() {
+  showStatus('Scanning…');
+  const [treeRes, recsRes] = await Promise.all([
+    fetch('/api/stories/files'),
+    fetch('/api/stories')
+  ]);
+  fileTree  = treeRes.ok  ? await treeRes.json()  : [];
+  storyRecs = recsRes.ok ? await recsRes.json() : [];
+  renderCharList();
+  if (activeChar) renderStoryList(activeChar);
+  showStatus('');
+}
+
+// ── Sidebar ───────────────────────────────────────────────────────────────────
+function renderCharList() {
+  const el = document.getElementById('char-list');
+  if (!fileTree.length) { el.innerHTML = '<div style="padding:10px;font-size:11px;color:var(--txd)">No character folders yet.</div>'; return; }
+  el.innerHTML = fileTree.map(c => {
+    const cnt = c.files.length;
+    return `<div class="char-item${activeChar === c.character ? ' active' : ''}" onclick="selectChar('${esc(c.character)}')">
+      ${esc(c.character)}
+      <span class="char-count">(${cnt})</span>
+    </div>`;
+  }).join('');
+}
+
+function selectChar(name) {
+  activeChar = name;
+  renderCharList();
+  renderStoryList(name);
+}
+
+// ── Story list ────────────────────────────────────────────────────────────────
+function renderStoryList(character) {
+  const el = document.getElementById('story-list');
+  const group = fileTree.find(c => c.character === character);
+  if (!group || !group.files.length) {
+    el.innerHTML = '<div class="empty-hint">No story files in this folder.<br><a href="/story-builder.html" style="color:var(--ac)">Create one →</a></div>';
+    return;
+  }
+
+  el.innerHTML = group.files.map(f => {
+    const rec = storyRecs.find(r => r.prompt_file === f.path);
+    const statusBadge = rec
+      ? `<span class="badge ${rec.status}">${rec.status}</span>`
+      : `<span class="badge no-record">not generated</span>`;
+    const meta = rec
+      ? `${rec.seq_count} sequence${rec.seq_count !== 1 ? 's' : ''} · ${rec.created_at?.slice(0,10) || ''}`
+      : f.filename;
+
+    const viewBtn  = rec && (rec.status === 'complete' || rec.status === 'partial')
+      ? `<a href="/story-viewer.html?id=${rec.id}" class="btn sm" style="white-space:nowrap">👁 View</a>` : '';
+    const genLabel = rec && (rec.status === 'complete' || rec.status === 'partial') ? '↺ Re-gen' : '▶ Generate';
+    const delBtn   = rec ? `<button class="btn sm danger" onclick="deleteRecord('${rec.id}','${esc(f.name)}')" title="Delete record & images">🗑</button>` : '';
+
+    return `<div class="story-card">
+      <div class="story-card-info">
+        <div class="story-card-name">${esc(f.name)}</div>
+        <div class="story-card-meta">${statusBadge} &nbsp;${esc(meta)}</div>
+      </div>
+      <div class="story-card-actions">
+        ${viewBtn}
+        <a href="/story-builder.html?file=${encodeURIComponent(f.path)}" class="btn sm">✏ Edit</a>
+        <a href="/story-builder.html?file=${encodeURIComponent(f.path)}" class="btn sm primary">${genLabel}</a>
+        ${delBtn}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── New character folder ──────────────────────────────────────────────────────
+function openNewCharModal() {
+  document.getElementById('new-char-name').value = '';
+  document.getElementById('new-char-err').textContent = '';
+  document.getElementById('new-char-modal').style.display = 'flex';
+  setTimeout(() => document.getElementById('new-char-name').focus(), 50);
+}
+function closeNewCharModal() { document.getElementById('new-char-modal').style.display = 'none'; }
+
+async function createCharFolder() {
+  const name = document.getElementById('new-char-name').value.trim();
+  if (!name) { document.getElementById('new-char-err').textContent = 'Name is required.'; return; }
+  const resp = await fetch('/api/stories/folders', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name })
+  });
+  const d = await resp.json();
+  if (!resp.ok) { document.getElementById('new-char-err').textContent = d.error || 'Failed'; return; }
+  closeNewCharModal();
+  await scanFiles();
+  selectChar(d.name);
+}
+
+// ── Delete record ─────────────────────────────────────────────────────────────
+async function deleteRecord(id, name) {
+  if (!confirm(`Delete story record and all generated images for "${name}"?`)) return;
+  await fetch('/api/stories/' + id, { method: 'DELETE' });
+  await scanFiles();
+}
+
+
+// ── Utils ─────────────────────────────────────────────────────────────────────
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function showStatus(msg) { document.getElementById('status-msg').textContent = msg; }
+
+document.getElementById('new-char-modal').addEventListener('click', function(e){ if(e.target===this) closeNewCharModal(); });
+
+init();
+</script>
+</body>
+</html>

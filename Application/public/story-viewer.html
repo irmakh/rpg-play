@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Story Viewer</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#1a1a2e">
+<script>if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js');</script>
+<link rel="stylesheet" href="/css/dm.css">
+<link rel="stylesheet" href="/css/stories.css">
+</head>
+<body>
+
+<div class="stories-wrap">
+
+  <!-- Header -->
+  <div class="stories-hdr">
+    <a href="/stories.html" class="btn" style="padding:4px 10px;font-size:11px">← Stories</a>
+    <div style="flex:1;min-width:0">
+      <h1 id="story-title" style="font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Loading…</h1>
+      <div id="story-meta" style="font-size:10px;color:var(--txd);margin-top:1px"></div>
+    </div>
+    <div class="hdr-right">
+      <span id="view-toggle-lbl" style="font-size:11px;color:var(--txd)">Layout:</span>
+      <button class="btn sm" id="toggle-grid" onclick="setLayout('grid')" title="Grid view">⊞ Grid</button>
+      <button class="btn sm" id="toggle-strip" onclick="setLayout('strip')" title="Strip view">≡ Strip</button>
+    </div>
+  </div>
+
+  <!-- Story content -->
+  <div class="viewer-body" id="viewer-body">
+    <div class="empty-hint">Loading story…</div>
+  </div>
+
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" style="display:none" onclick="closeLightbox()">
+  <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+  <img id="lightbox-img" src="" alt="">
+</div>
+
+<script>
+// ── State ─────────────────────────────────────────────────────────────────────
+let story    = null;
+let layout   = 'grid';
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+async function init() {
+  const id = new URLSearchParams(location.search).get('id');
+  if (!id) { document.getElementById('viewer-body').innerHTML = '<div class="empty-hint">No story ID provided.</div>'; return; }
+
+  const resp = await fetch('/api/stories/' + id);
+  if (!resp.ok) { document.getElementById('viewer-body').innerHTML = '<div class="empty-hint">Story not found.</div>'; return; }
+  story = await resp.json();
+
+  document.title = story.story_name + ' — Story Viewer';
+  document.getElementById('story-title').textContent = story.story_name;
+  document.getElementById('story-meta').textContent =
+    (story.character || 'generic') + ' · ' + story.seq_count + ' sequences · ' + (story.created_at || '').slice(0, 10) + ' · ' + story.status;
+
+  render();
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+function render() {
+  const body = document.getElementById('viewer-body');
+  if (!story.sequences || !story.sequences.length) {
+    body.innerHTML = '<div class="empty-hint">This story has no sequences.</div>';
+    return;
+  }
+
+  if (layout === 'grid') renderGrid(body);
+  else renderStrip(body);
+
+  document.getElementById('toggle-grid').classList.toggle('active', layout === 'grid');
+  document.getElementById('toggle-strip').classList.toggle('active', layout === 'strip');
+}
+
+function renderGrid(body) {
+  body.innerHTML = `<div class="viewer-grid">${story.sequences.map(s => seqCard(s)).join('')}</div>`;
+}
+
+function renderStrip(body) {
+  body.innerHTML = `<div style="max-width:700px;margin:0 auto;display:flex;flex-direction:column;gap:20px">
+    ${story.sequences.map(s => seqStrip(s)).join('')}
+  </div>`;
+}
+
+function seqCard(s) {
+  const num = String(s.seq_number).padStart(3, '0');
+  if (s.image_path && s.status === 'done') {
+    return `<div class="viewer-card">
+      <img src="${esc(s.image_path)}" alt="Scene ${num}" loading="lazy"
+           onclick="openLightbox('${esc(s.image_path)}','${esc(s.prompt)}')">
+      <div class="viewer-card-cap">
+        <div class="viewer-seq-num">${num}</div>
+        ${esc(s.prompt)}
+      </div>
+    </div>`;
+  }
+  return `<div class="viewer-card">
+    <div style="background:var(--bg3);aspect-ratio:1;display:flex;align-items:center;justify-content:center;color:var(--txd);font-size:11px">
+      ${s.status === 'failed' ? '✗ Failed' : s.status === 'generating' ? '⟳ Generating…' : 'Not generated'}
+    </div>
+    <div class="viewer-card-cap">
+      <div class="viewer-seq-num">${num}</div>
+      ${esc(s.prompt)}
+    </div>
+  </div>`;
+}
+
+function seqStrip(s) {
+  const num = String(s.seq_number).padStart(3, '0');
+  if (s.image_path && s.status === 'done') {
+    return `<div style="display:flex;gap:14px;align-items:flex-start">
+      <img src="${esc(s.image_path)}" alt="Scene ${num}" loading="lazy"
+           onclick="openLightbox('${esc(s.image_path)}','${esc(s.prompt)}')"
+           style="width:260px;flex-shrink:0;border-radius:6px;cursor:zoom-in;object-fit:cover;border:1px solid var(--a44)">
+      <div style="flex:1;padding-top:4px">
+        <div class="viewer-seq-num" style="font-size:12px;margin-bottom:6px">${num}</div>
+        <p style="font-size:13px;line-height:1.6;color:var(--tx)">${esc(s.prompt)}</p>
+      </div>
+    </div>`;
+  }
+  return `<div style="display:flex;gap:14px;align-items:flex-start">
+    <div style="width:260px;flex-shrink:0;aspect-ratio:1;background:var(--bg3);border-radius:6px;display:flex;align-items:center;justify-content:center;color:var(--txd);font-size:11px;border:1px solid var(--a44)">
+      ${s.status === 'failed' ? '✗ Failed' : s.status === 'generating' ? '⟳ Generating…' : 'Not generated'}
+    </div>
+    <div style="flex:1;padding-top:4px">
+      <div class="viewer-seq-num" style="font-size:12px;margin-bottom:6px">${num}</div>
+      <p style="font-size:13px;line-height:1.6;color:var(--tx)">${esc(s.prompt)}</p>
+    </div>
+  </div>`;
+}
+
+// ── Layout toggle ─────────────────────────────────────────────────────────────
+function setLayout(l) {
+  layout = l;
+  if (story) render();
+}
+
+// ── Lightbox ──────────────────────────────────────────────────────────────────
+function openLightbox(src, caption) {
+  document.getElementById('lightbox-img').src = src;
+  document.getElementById('lightbox-img').alt = caption;
+  document.getElementById('lightbox').style.display = 'flex';
+}
+function closeLightbox() {
+  document.getElementById('lightbox').style.display = 'none';
+  document.getElementById('lightbox-img').src = '';
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
+
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+init();
+</script>
+</body>
+</html>
