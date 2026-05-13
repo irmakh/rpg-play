@@ -72,6 +72,7 @@
 - Follow GOTCHA framework layers — don't collapse orchestration, tools, and goals into one place
 - Read full goals before starting tasks — don't skim
 - initiative init field stores dex+items only (NOT init-bonus). init-bonus is always added on top in all roll paths (table.js, index.js, server.js token placement). /api/characters/:id/qroll now returns 'ac' field (added to EXTRA_KEYS).
+- server.js refactored into 12 route modules under Application/server/routes/. Each exports register(app, ctx). server.js is a lean entry point (~364 lines). OpenRouter image generation uses /api/v1/chat/completions + modalities:['image'] + reads from message.images[0].image_url.url.
 
 ## Current Projects
 
@@ -79,5 +80,5 @@
 
 ---
 
-*Last updated: 2026-04-26*
+*Last updated: 2026-05-13*
 *This file is the source of truth for persistent facts. Edit directly to update.*
