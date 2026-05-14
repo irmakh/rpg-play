@@ -6,6 +6,9 @@
 <title>Story Viewer</title>
 <link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#1a1a2e">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <script>if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js');</script>
 <link rel="stylesheet" href="/css/dm.css">
 <link rel="stylesheet" href="/css/stories.css">
@@ -45,6 +48,7 @@
 // ── State ─────────────────────────────────────────────────────────────────────
 let story    = null;
 let layout   = 'grid';
+const PAGE_TS = Date.now();
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 async function init() {
@@ -92,8 +96,8 @@ function seqCard(s) {
   const num = String(s.seq_number).padStart(3, '0');
   if (s.image_path && s.status === 'done') {
     return `<div class="viewer-card">
-      <img src="${esc(s.image_path)}" alt="Scene ${num}" loading="lazy"
-           onclick="openLightbox('${esc(s.image_path)}','${esc(s.prompt)}')">
+      <img src="${esc(s.image_path)}?v=${PAGE_TS}" alt="Scene ${num}" loading="lazy"
+           onclick="openLightbox('${esc(s.image_path)}?v=${PAGE_TS}','${esc(s.prompt)}')">
       <div class="viewer-card-cap">
         <div class="viewer-seq-num">${num}</div>
         ${esc(s.prompt)}
@@ -115,8 +119,8 @@ function seqStrip(s) {
   const num = String(s.seq_number).padStart(3, '0');
   if (s.image_path && s.status === 'done') {
     return `<div style="display:flex;gap:14px;align-items:flex-start">
-      <img src="${esc(s.image_path)}" alt="Scene ${num}" loading="lazy"
-           onclick="openLightbox('${esc(s.image_path)}','${esc(s.prompt)}')"
+      <img src="${esc(s.image_path)}?v=${PAGE_TS}" alt="Scene ${num}" loading="lazy"
+           onclick="openLightbox('${esc(s.image_path)}?v=${PAGE_TS}','${esc(s.prompt)}')"
            style="width:260px;flex-shrink:0;border-radius:6px;cursor:zoom-in;object-fit:cover;border:1px solid var(--a44)">
       <div style="flex:1;padding-top:4px">
         <div class="viewer-seq-num" style="font-size:12px;margin-bottom:6px">${num}</div>

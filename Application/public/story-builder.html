@@ -6,6 +6,9 @@
 <title>Story Builder</title>
 <link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#1a1a2e">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <script>if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js');</script>
 <link rel="stylesheet" href="/css/dm.css">
 <link rel="stylesheet" href="/css/stories.css">
@@ -42,14 +45,14 @@
           <div id="new-char-err" style="color:var(--err);font-size:10px;margin-top:4px;min-height:12px"></div>
         </div>
         <button id="new-char-btn" class="btn" style="font-size:11px;width:100%" onclick="showNewCharForm()">+ New Character</button>
+        <button class="btn" style="font-size:11px;width:100%" onclick="autoCreateCharFolders()" title="Create a folder for every party character">📁 Auto-create</button>
       </div>
     </div>
 
-    <!-- Right panel: scrollable content + fixed footer -->
-    <div style="flex:1;display:flex;flex-direction:column;overflow:hidden">
+    <!-- Right panel: scrollable, footer is sticky -->
+    <div style="flex:1;min-height:0;overflow-y:auto">
 
-      <!-- Scrollable area -->
-      <div class="builder-editor">
+      <div style="padding:16px;display:flex;flex-direction:column;gap:12px">
 
         <!-- Story title -->
         <div class="card" style="margin:0;flex-shrink:0">
@@ -60,6 +63,37 @@
               <input type="text" id="story-title" placeholder="e.g. The Fellowship Begins" maxlength="100">
             </div>
             <div style="font-size:11px;color:var(--txd);padding-bottom:4px" id="file-preview"></div>
+          </div>
+        </div>
+
+        <!-- Campaign Context (collapsible) -->
+        <div class="card" style="margin:0;flex-shrink:0">
+          <div class="ct" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:6px 10px" onclick="toggleCampaignCtx()">
+            <span>🗺 Campaign Context</span>
+            <span id="ctx-arrow" style="font-size:11px;font-weight:normal">▼</span>
+          </div>
+          <div class="cb" id="ctx-body">
+            <div style="font-size:11px;color:var(--txd);margin-bottom:8px" id="ctx-date">Loading campaign date…</div>
+
+            <!-- Character portraits -->
+            <div style="margin-bottom:10px">
+              <div style="font-size:10px;color:var(--ac);text-transform:uppercase;letter-spacing:.6px;font-weight:bold;margin-bottom:6px">Party Characters</div>
+              <div id="char-portraits" style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start">
+                <div style="font-size:11px;color:var(--txd)">Loading…</div>
+              </div>
+              <div style="font-size:10px;color:var(--txd);margin-top:4px">Click to select/deselect characters — selected characters' details are added to every image prompt.</div>
+            </div>
+
+            <!-- System prompt -->
+            <div class="field" style="margin:0">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+                <label class="lbl" style="margin:0">Style Prompt <span style="font-weight:normal;color:var(--txd)">(art style / setting — appended after scene + characters)</span></label>
+                <button class="btn sm" onclick="setFRDefault()" style="font-size:10px;flex-shrink:0">🎲 FR Default</button>
+              </div>
+              <textarea id="system-prompt" rows="3" placeholder="e.g. Fantasy illustration, Forgotten Realms, dramatic lighting…"
+                        style="font-size:11px;font-family:inherit"
+                        oninput="saveSystemPrompt()"></textarea>
+            </div>
           </div>
         </div>
 
@@ -174,10 +208,10 @@
           </div>
         </div>
 
-      </div><!-- end builder-editor -->
+      </div><!-- end content wrapper -->
 
-      <!-- Fixed footer bar -->
-      <div style="flex-shrink:0;padding:10px 16px;border-top:1px solid var(--a44);background:var(--bg2);display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <!-- Sticky footer bar -->
+      <div style="position:sticky;bottom:0;padding:10px 16px;border-top:1px solid var(--a44);background:var(--bg2);display:flex;gap:8px;align-items:center;flex-wrap:wrap;z-index:10">
         <button class="btn primary" onclick="saveStory()">💾 Save</button>
         <button class="btn success" id="gen-all-btn" onclick="generateAll()">▶ Generate All</button>
         <button class="btn danger" id="gen-stop-btn" style="display:none" onclick="stopGeneration()">■ Stop</button>
@@ -201,7 +235,8 @@ let genReader   = null;
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 async function init() {
-  await Promise.all([loadCharList(), loadPresets()]);
+  loadSystemPrompt();
+  await Promise.all([loadCharList(), loadPresets(), loadCampaignCtx()]);
   const params    = new URLSearchParams(location.search);
   const fileParam = params.get('file');
   if (fileParam) await loadExistingFile(fileParam);
@@ -579,9 +614,13 @@ function stopGeneration() { if (genReader) { try { genReader.cancel(); } catch {
 
 // ── Build / validate config ───────────────────────────────────────────────────
 function buildConfig() {
+  const systemPrompt    = document.getElementById('system-prompt').value.trim();
+  const selectedCharIdsArr = [...selectedCharIds];
   if (serverType === 'comfyui') {
     return {
       serverType:     'comfyui',
+      systemPrompt,
+      selectedCharIds: selectedCharIdsArr,
       endpoint:       document.getElementById('comfyui-endpoint').value.trim().replace(/\/+$/, '') || 'http://localhost:8188',
       checkpoint:     document.getElementById('comfyui-checkpoint').value,
       negativePrompt: document.getElementById('comfyui-negative').value.trim(),
@@ -594,11 +633,13 @@ function buildConfig() {
     };
   }
   return {
-    serverType: 'openrouter',
-    apiKey:     document.getElementById('or-apikey').value.trim(),
-    model:      document.getElementById('or-model').value.trim(),
-    width:      parseInt(document.getElementById('or-width').value)  || 1024,
-    height:     parseInt(document.getElementById('or-height').value) || 1024,
+    serverType:      'openrouter',
+    systemPrompt,
+    selectedCharIds: selectedCharIdsArr,
+    apiKey:          document.getElementById('or-apikey').value.trim(),
+    model:        document.getElementById('or-model').value.trim(),
+    width:        parseInt(document.getElementById('or-width').value)  || 1024,
+    height:       parseInt(document.getElementById('or-height').value) || 1024,
   };
 }
 
@@ -734,6 +775,113 @@ function previewImg(src) {
   ov.appendChild(img);
   ov.onclick = () => ov.remove();
   document.body.appendChild(ov);
+}
+
+// ── Campaign Context ──────────────────────────────────────────────────────────
+const FR_MONTHS = ['Hammer','Alturiak','Ches','Tarsakh','Mirtul','Kythorn',
+                   'Flamerule','Eleasis','Eleint','Marpenoth','Uktar','Nightal'];
+let campaignChars    = [];        // populated by loadCampaignCtx
+let selectedCharIds = new Set(); // which characters to include in image prompts
+
+function toggleCampaignCtx() {
+  const body  = document.getElementById('ctx-body');
+  const arrow = document.getElementById('ctx-arrow');
+  const open  = body.style.display !== 'none';
+  body.style.display = open ? 'none' : '';
+  arrow.textContent  = open ? '▶' : '▼';
+}
+
+async function loadCampaignCtx() {
+  // Load calendar date
+  try {
+    const r = await fetch('/api/calendar/state');
+    if (r.ok) {
+      const d = await r.json();
+      const monthName = FR_MONTHS[(d.frMonth || 1) - 1] || 'Unknown';
+      const dateStr   = d.frFestival
+        ? `${d.frFestival} (${d.frYear} DR)`
+        : `${monthName} ${d.frDay}, ${d.frYear} DR`;
+      document.getElementById('ctx-date').textContent = `📅 Campaign Date: ${dateStr}`;
+    }
+  } catch {}
+
+  // Load character portraits + details
+  try {
+    const r = await fetch('/api/stories/character-portraits');
+    if (!r.ok) return;
+    campaignChars = await r.json();
+    // All PCs selected by default
+    selectedCharIds = new Set(campaignChars.filter(c => c.charType !== 'npc').map(c => c.id));
+    renderCharPortraits();
+  } catch {}
+}
+
+function toggleCharSel(id) {
+  if (selectedCharIds.has(id)) selectedCharIds.delete(id);
+  else selectedCharIds.add(id);
+  renderCharPortraits();
+}
+
+function renderCharPortraits() {
+  const el = document.getElementById('char-portraits');
+  if (!campaignChars.length) { el.innerHTML = '<div style="font-size:11px;color:var(--txd)">No characters found.</div>'; return; }
+  el.innerHTML = campaignChars.map(c => {
+    const sel     = selectedCharIds.has(c.id);
+    const imgHtml = c.portraitThumb
+      ? `<img src="${esc(c.portraitThumb)}" alt="" style="width:40px;height:40px;object-fit:cover;border-radius:3px;display:block">`
+      : `<div style="width:40px;height:40px;background:var(--bg);border:1px dashed var(--a44);border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--txd)">?</div>`;
+    const label   = [c.species, c.charClass, c.subclass].filter(Boolean).join(' ');
+    const tooltip = [c.name, label, c.appearance ? c.appearance.slice(0, 80) : ''].filter(Boolean).join(' — ');
+    return `<div class="ctx-char-chip${sel ? ' selected' : ''}" onclick="toggleCharSel('${esc(c.id)}')" title="${esc(tooltip)}">
+      <div style="position:relative">
+        ${imgHtml}
+        <div style="position:absolute;top:-4px;right:-4px;width:14px;height:14px;border-radius:50%;background:${sel ? 'var(--ok)' : 'var(--bg3)'};border:1px solid ${sel ? 'var(--ok)' : 'var(--a44)'};display:flex;align-items:center;justify-content:center;font-size:9px;line-height:1">${sel ? '✓' : ''}</div>
+      </div>
+      <div class="ctx-char-name">${esc(c.name)}</div>
+      ${label ? `<div style="font-size:9px;color:var(--txd);text-align:center;max-width:52px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(label)}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function setFRDefault() {
+  const dateEl   = document.getElementById('ctx-date');
+  const dateHint = dateEl && !dateEl.textContent.includes('Loading')
+    ? dateEl.textContent.replace('📅 Campaign Date: ', '') : '';
+  const monthPart = dateHint ? `, ${dateHint}` : '';
+  document.getElementById('system-prompt').value =
+    `Cinematic fantasy illustration, Forgotten Realms D&D 5e${monthPart}, painterly style, dramatic lighting, highly detailed`;
+  saveSystemPrompt();
+}
+
+function saveSystemPrompt() {
+  localStorage.setItem('story-system-prompt', document.getElementById('system-prompt').value);
+}
+
+function loadSystemPrompt() {
+  const saved = localStorage.getItem('story-system-prompt');
+  if (saved !== null) document.getElementById('system-prompt').value = saved;
+}
+
+// ── Auto-create character folders ─────────────────────────────────────────────
+async function autoCreateCharFolders() {
+  const msg = document.getElementById('save-msg');
+  msg.style.color = 'var(--txd)';
+  msg.textContent = 'Creating folders…';
+  const r = await fetch('/api/characters');
+  if (!r.ok) { msg.textContent = 'Failed to load characters.'; return; }
+  const chars = await r.json();
+  if (!chars.length) { msg.textContent = 'No characters found.'; return; }
+  let created = 0, skipped = 0;
+  for (const char of chars) {
+    const resp = await fetch('/api/stories/folders', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: char.name })
+    });
+    if (resp.ok) created++; else skipped++;
+  }
+  msg.style.color = 'var(--ok)';
+  msg.textContent = `✓ ${created} created, ${skipped} skipped`;
+  setTimeout(() => { msg.textContent = ''; msg.style.color = 'var(--ok)'; }, 4000);
+  await loadCharList();
 }
 
 // ── Utils ─────────────────────────────────────────────────────────────────────

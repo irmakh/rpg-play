@@ -1,5 +1,6 @@
 export default function register(app, ctx) {
-  const { sdb, STORIES_DIR, STORY_IMAGES_DIR, path, fs, __dirname, crypto } = ctx;
+  const { sdb, STORIES_DIR, STORY_IMAGES_DIR, path, fs, __dirname, crypto,
+          ldb, idb, DB_PROVIDER } = ctx;
 
   function safeStoryPath(rel) {
     if (!rel) return null;
@@ -142,6 +143,45 @@ export default function register(app, ctx) {
     if (!imgResp.ok) throw new Error(`Failed to download image from OpenRouter (${imgResp.status})`);
     return Buffer.from(await imgResp.arrayBuffer());
   }
+
+  // Character portraits + details for story builder campaign context panel
+  app.get('/api/stories/character-portraits', async (req, res) => {
+    try {
+      let chars = [];
+      if (DB_PROVIDER === 'localdb') {
+        chars = ldb.listCharacters();
+      } else {
+        const result = await idb.query({ characters: {} });
+        chars = result.characters || [];
+      }
+      const portraits = await Promise.all(chars.map(async c => {
+        let portraitThumb = null;
+        try {
+          if (DB_PROVIDER === 'localdb') {
+            const media = ldb.listMedia(c.id);
+            const p = media.find(m => m.isPortrait);
+            if (p) portraitThumb = p.thumbUrl || p.dataUrl || null;
+          } else {
+            const result = await idb.query({ media: { $: { where: { charId: c.id, isPortrait: true } } } });
+            if (result.media?.[0]) portraitThumb = result.media[0].thumbUrl || result.media[0].dataUrl || null;
+          }
+        } catch {}
+        let data = {};
+        try { data = JSON.parse(c.dataJson || '{}'); } catch {}
+        return {
+          id:           c.id,
+          name:         c.name || 'Unnamed',
+          charType:     c.charType || 'pc',
+          portraitThumb,
+          species:      data.species || data.race || '',
+          charClass:    data.class   || '',
+          subclass:     data.subclass || '',
+          appearance:   data.appearance || '',
+        };
+      }));
+      res.json(portraits.sort((a, b) => a.name.localeCompare(b.name)));
+    } catch (e) { res.status(500).json({ error: e.message }); }
+  });
 
   // ComfyUI proxy — auto-falls back to host.docker.internal when localhost is unreachable
   app.get('/api/stories/comfyui/checkpoints', async (req, res) => {
@@ -355,7 +395,8 @@ export default function register(app, ctx) {
 
     const { serverType, endpoint, apiKey, model,
             checkpoint, negativePrompt, steps, cfg, sampler,
-            width, height, customWorkflow, seqIds } = req.body || {};
+            width, height, customWorkflow, seqIds,
+            systemPrompt, selectedCharIds } = req.body || {};
     if (!serverType) return res.status(400).json({ error: 'serverType required' });
     if (serverType === 'comfyui' && !endpoint)
       return res.status(400).json({ error: 'endpoint required for ComfyUI' });
@@ -389,18 +430,47 @@ export default function register(app, ctx) {
     sdb.updateStoryStatus(story.id, 'generating');
     send({ type: 'start', total: sequences.length });
 
+    // Build character context from selected characters only
+    let charContext = '';
+    try {
+      const ids = Array.isArray(selectedCharIds) && selectedCharIds.length ? selectedCharIds : null;
+      let chars = [];
+      if (DB_PROVIDER === 'localdb') {
+        chars = ldb.listCharacters();
+      } else {
+        const r = await idb.query({ characters: {} });
+        chars = r.characters || [];
+      }
+      const targets = ids ? chars.filter(c => ids.includes(c.id)) : chars.filter(c => (c.charType || 'pc') === 'pc');
+      const descs = targets.map(c => {
+        let data = {};
+        try { data = JSON.parse(c.dataJson || '{}'); } catch {}
+        const species    = (data.species || data.race || '').trim();
+        const cls        = [data.class, data.subclass].filter(Boolean).join(' ').trim();
+        const appearance = (data.appearance || '').trim().replace(/\s+/g, ' ').slice(0, 150);
+        const label = [species, cls].filter(Boolean).join(' ');
+        const parts = [c.name || 'Unnamed'];
+        if (label) parts.push(`(${label})`);
+        if (appearance) parts.push(`- ${appearance}`);
+        return parts.join(' ');
+      }).filter(Boolean);
+      if (descs.length) charContext = descs.join('; ');
+    } catch {}
+
     let done = 0;
     for (const seq of sequences) {
       send({ type: 'progress', seqId: seq.id, seqNumber: seq.seq_number, status: 'generating' });
       sdb.updateSequenceStatus(seq.id, 'generating');
       try {
         let buf;
+        // Sequence prompt is highest priority (first), then characters, then style
+        const fullPrompt = [seq.prompt, charContext, systemPrompt].filter(Boolean).join('. ');
         if (serverType === 'comfyui') {
           buf = await generateWithComfyUI(endpoint,
             { checkpoint, negativePrompt, steps, cfg, sampler, width, height, customWorkflow },
-            seq.prompt);
+            fullPrompt);
         } else {
-          buf = await generateWithOpenRouter(apiKey, model, seq.prompt, width, height);
+          buf = await generateWithOpenRouter(apiKey, model, fullPrompt, width, height);
         }
         const filename  = String(seq.seq_number).padStart(3, '0') + '.png';
         fs.writeFileSync(path.join(imageDir, filename), buf);

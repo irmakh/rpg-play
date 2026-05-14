@@ -6,6 +6,9 @@
 <title>Stories</title>
 <link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#1a1a2e">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <script>if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js');</script>
 <link rel="stylesheet" href="/css/dm.css">
 <link rel="stylesheet" href="/css/stories.css">
@@ -35,6 +38,7 @@
       </div>
       <div class="sidebar-bottom">
         <button class="btn" style="font-size:11px" onclick="openNewCharModal()">+ New Character</button>
+        <button class="btn" style="font-size:11px" onclick="autoCreateCharFolders()" title="Create a folder for each character in the party">📁 Auto-create</button>
       </div>
     </div>
 
@@ -129,7 +133,7 @@ function renderStoryList(character) {
       ? `${rec.seq_count} sequence${rec.seq_count !== 1 ? 's' : ''} · ${rec.created_at?.slice(0,10) || ''}`
       : f.filename;
 
-    const viewBtn  = rec && (rec.status === 'complete' || rec.status === 'partial')
+    const viewBtn  = rec
       ? `<a href="/story-viewer.html?id=${rec.id}" class="btn sm" style="white-space:nowrap">👁 View</a>` : '';
     const genLabel = rec && (rec.status === 'complete' || rec.status === 'partial') ? '↺ Re-gen' : '▶ Generate';
     const delBtn   = rec ? `<button class="btn sm danger" onclick="deleteRecord('${rec.id}','${esc(f.name)}')" title="Delete record & images">🗑</button>` : '';
@@ -178,6 +182,26 @@ async function deleteRecord(id, name) {
   await scanFiles();
 }
 
+
+// ── Auto-create character folders ─────────────────────────────────────────────
+async function autoCreateCharFolders() {
+  showStatus('Loading characters…');
+  const r = await fetch('/api/characters');
+  if (!r.ok) { showStatus('Failed to load characters.'); return; }
+  const chars = await r.json();
+  if (!chars.length) { showStatus('No characters found.'); return; }
+  let created = 0, skipped = 0;
+  for (const char of chars) {
+    const resp = await fetch('/api/stories/folders', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: char.name })
+    });
+    const d = await resp.json();
+    if (resp.ok) created++; else skipped++;
+  }
+  showStatus(`Done: ${created} created, ${skipped} already exist.`);
+  setTimeout(() => showStatus(''), 4000);
+  await scanFiles();
+}
 
 // ── Utils ─────────────────────────────────────────────────────────────────────
 function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
