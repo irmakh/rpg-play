@@ -73,12 +73,14 @@
 - Read full goals before starting tasks — don't skim
 - initiative init field stores dex+items only (NOT init-bonus). init-bonus is always added on top in all roll paths (table.js, index.js, server.js token placement). /api/characters/:id/qroll now returns 'ac' field (added to EXTRA_KEYS).
 - server.js refactored into 12 route modules under Application/server/routes/. Each exports register(app, ctx). server.js is a lean entry point (~364 lines). OpenRouter image generation uses /api/v1/chat/completions + modalities:['image'] + reads from message.images[0].image_url.url.
+- pscp uploads run directly via Bash tool when user asks — do not just print commands. Server-side commands (pm2, docker) are still printed for user to run manually.
 
 ## Current Projects
 
 - Character Sheet Application — active development; base features complete, ongoing optimization and feature work
 
+- Stories system: manual comic upload workflow. storiesdb.js (separate SQLite DB). Three screens: stories.html (dashboard), story-builder.html (panel editor with character cast multiselect by portrait), story-viewer.html (grid/strip + lightbox + cast strip). Password gate via POST /api/auth/verify-any accepts DM or any character password.
 ---
 
-*Last updated: 2026-05-13*
+*Last updated: 2026-05-14*
 *This file is the source of truth for persistent facts. Edit directly to update.*
