@@ -7,33 +7,77 @@
 <link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#1a1a2e">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-<meta http-equiv="Pragma" content="no-cache">
-<meta http-equiv="Expires" content="0">
 <script>if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js');</script>
 <link rel="stylesheet" href="/css/dm.css">
 <link rel="stylesheet" href="/css/stories.css">
 </head>
 <body>
 
-<div class="stories-wrap">
+<!-- Stories password gate -->
+<div class="gate" id="stories-gate" style="display:none">
+  <div class="gate-box">
+    <div style="font-size:36px;margin-bottom:10px">📖</div>
+    <h2>Stories</h2>
+    <p>Enter your password to continue.</p>
+    <input type="password" id="gate-pw" placeholder="Password…" autocomplete="off"
+           onkeydown="if(event.key==='Enter')storiesGateSubmit()">
+    <div id="gate-err" style="color:var(--err);font-size:12px;min-height:16px;margin-top:6px"></div>
+    <button class="btn primary" style="width:100%;margin-top:8px" onclick="storiesGateSubmit()">Enter</button>
+  </div>
+</div>
+<script>
+(function(){
+  try {
+    var s = JSON.parse(sessionStorage.getItem('rpgSession') || 'null');
+    if (s && (s.role === 'dm' || s.role === 'character')) return;
+  } catch {}
+  if (sessionStorage.getItem('storiesAuth') === '1') return;
+  document.getElementById('stories-gate').style.display = 'flex';
+  setTimeout(function(){ var el = document.getElementById('gate-pw'); if(el) el.focus(); }, 50);
+})();
+async function storiesGateSubmit() {
+  var pw = document.getElementById('gate-pw').value;
+  var errEl = document.getElementById('gate-err');
+  errEl.textContent = '';
+  if (!pw) { errEl.textContent = 'Enter a password.'; return; }
+  var r = await fetch('/api/auth/verify-any', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password: pw })
+  });
+  if (r.ok) {
+    sessionStorage.setItem('storiesAuth', '1');
+    document.getElementById('stories-gate').style.display = 'none';
+  } else {
+    errEl.textContent = 'Wrong password.';
+    document.getElementById('gate-pw').value = '';
+    document.getElementById('gate-pw').focus();
+  }
+}
+</script>
 
-  <!-- Header -->
+<div class="viewer-wrap">
+
   <div class="stories-hdr">
     <a href="/stories.html" class="btn" style="padding:4px 10px;font-size:11px">← Stories</a>
-    <div style="flex:1;min-width:0">
-      <h1 id="story-title" style="font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Loading…</h1>
-      <div id="story-meta" style="font-size:10px;color:var(--txd);margin-top:1px"></div>
+    <div class="viewer-hdr-info">
+      <div id="story-title" class="viewer-story-title">Loading…</div>
+      <div id="story-meta" class="viewer-story-meta"></div>
     </div>
     <div class="hdr-right">
-      <span id="view-toggle-lbl" style="font-size:11px;color:var(--txd)">Layout:</span>
-      <button class="btn sm" id="toggle-grid" onclick="setLayout('grid')" title="Grid view">⊞ Grid</button>
-      <button class="btn sm" id="toggle-strip" onclick="setLayout('strip')" title="Strip view">≡ Strip</button>
+      <a id="edit-link" href="#" class="btn sm">Edit</a>
+      <div class="layout-toggle">
+        <button id="btn-grid"  class="active" onclick="setLayout('grid')">Grid</button>
+        <button id="btn-strip" onclick="setLayout('strip')">Strip</button>
+      </div>
     </div>
   </div>
 
-  <!-- Story content -->
+  <!-- Cast strip (populated when story has character_ids) -->
+  <div class="viewer-cast-strip" id="cast-strip" style="display:none"></div>
+
   <div class="viewer-body" id="viewer-body">
-    <div class="empty-hint">Loading story…</div>
+    <div class="empty-hint">Loading…</div>
   </div>
 
 </div>
@@ -41,100 +85,125 @@
 <!-- Lightbox -->
 <div class="lightbox" id="lightbox" style="display:none" onclick="closeLightbox()">
   <button class="lightbox-close" onclick="closeLightbox()">✕</button>
-  <img id="lightbox-img" src="" alt="">
+  <img id="lb-img" src="" alt="">
 </div>
 
 <script>
-// ── State ─────────────────────────────────────────────────────────────────────
-let story    = null;
-let layout   = 'grid';
-const PAGE_TS = Date.now();
+let story     = null;
+let layout    = 'grid';
+let portraits = {};  // charId → {name, thumb, species, cls, subclass}
 
-// ── Init ──────────────────────────────────────────────────────────────────────
 async function init() {
   const id = new URLSearchParams(location.search).get('id');
-  if (!id) { document.getElementById('viewer-body').innerHTML = '<div class="empty-hint">No story ID provided.</div>'; return; }
+  if (!id) { setBody('<div class="empty-hint">No story ID provided.</div>'); return; }
 
-  const resp = await fetch('/api/stories/' + id);
-  if (!resp.ok) { document.getElementById('viewer-body').innerHTML = '<div class="empty-hint">Story not found.</div>'; return; }
-  story = await resp.json();
+  const [storyRes, portRes] = await Promise.all([
+    fetch('/api/stories/' + id),
+    fetch('/api/stories/character-portraits'),
+  ]);
 
-  document.title = story.story_name + ' — Story Viewer';
-  document.getElementById('story-title').textContent = story.story_name;
-  document.getElementById('story-meta').textContent =
-    (story.character || 'generic') + ' · ' + story.seq_count + ' sequences · ' + (story.created_at || '').slice(0, 10) + ' · ' + story.status;
+  if (!storyRes.ok) { setBody('<div class="empty-hint">Story not found.</div>'); return; }
+  story = await storyRes.json();
 
+  if (portRes.ok) {
+    const chars = await portRes.json();
+    portraits = Object.fromEntries(chars.map(c => [c.id, c]));
+  }
+
+  document.title = (story.story_name || 'Story') + ' — Viewer';
+  document.getElementById('story-title').textContent = story.story_name || 'Untitled';
+
+  const parts = [`${story.seq_count || 0} panels`, (story.created_at || '').slice(0, 10)].filter(Boolean);
+  document.getElementById('story-meta').textContent = parts.join(' · ');
+
+  document.getElementById('edit-link').href = '/story-builder.html?id=' + id;
+
+  renderCast();
   render();
+}
+
+// ── Cast strip ────────────────────────────────────────────────────────────────
+function renderCast() {
+  const charIds = Array.isArray(story.character_ids) ? story.character_ids : [];
+  const strip   = document.getElementById('cast-strip');
+  if (!charIds.length) { strip.style.display = 'none'; return; }
+
+  const chips = charIds.map(cid => {
+    const c = portraits[cid];
+    if (!c) return '';
+    const sub  = [c.species, c.cls, c.subclass].filter(Boolean).join(' · ');
+    const img  = c.thumb
+      ? `<img src="${esc(c.thumb)}" alt="" class="viewer-cast-img">`
+      : `<div class="viewer-cast-no-img">${esc(c.name.charAt(0).toUpperCase())}</div>`;
+    return `<div class="viewer-cast-card">
+      ${img}
+      <div class="viewer-cast-info">
+        <div class="viewer-cast-name">${esc(c.name)}</div>
+        ${sub ? `<div class="viewer-cast-sub">${esc(sub)}</div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+
+  strip.innerHTML = chips;
+  strip.style.display = chips.trim() ? 'flex' : 'none';
 }
 
 // ── Render ────────────────────────────────────────────────────────────────────
 function render() {
-  const body = document.getElementById('viewer-body');
-  if (!story.sequences || !story.sequences.length) {
-    body.innerHTML = '<div class="empty-hint">This story has no sequences.</div>';
+  const seqs = story.sequences || [];
+  if (!seqs.length) {
+    setBody('<div class="empty-hint">This story has no panels yet.<br><a href="/story-builder.html?id=' + story.id + '" style="color:var(--ac)">Add panels →</a></div>');
     return;
   }
 
-  if (layout === 'grid') renderGrid(body);
-  else renderStrip(body);
+  if (layout === 'grid') renderGrid(seqs);
+  else renderStrip(seqs);
 
-  document.getElementById('toggle-grid').classList.toggle('active', layout === 'grid');
-  document.getElementById('toggle-strip').classList.toggle('active', layout === 'strip');
+  document.getElementById('btn-grid').classList.toggle('active', layout === 'grid');
+  document.getElementById('btn-strip').classList.toggle('active', layout === 'strip');
 }
 
-function renderGrid(body) {
-  body.innerHTML = `<div class="viewer-grid">${story.sequences.map(s => seqCard(s)).join('')}</div>`;
+function renderGrid(seqs) {
+  setBody(`<div class="viewer-grid">${seqs.map((s, i) => panelCard(s, i)).join('')}</div>`);
 }
 
-function renderStrip(body) {
-  body.innerHTML = `<div style="max-width:700px;margin:0 auto;display:flex;flex-direction:column;gap:20px">
-    ${story.sequences.map(s => seqStrip(s)).join('')}
-  </div>`;
+function renderStrip(seqs) {
+  setBody(`<div class="viewer-strip">${seqs.map((s, i) => panelStrip(s, i)).join('')}</div>`);
 }
 
-function seqCard(s) {
+function panelCard(s, idx) {
   const num = String(s.seq_number).padStart(3, '0');
-  if (s.image_path && s.status === 'done') {
+  const cap = (s.caption || s.prompt || '').trim();
+  if (s.image_path) {
     return `<div class="viewer-card">
-      <img src="${esc(s.image_path)}?v=${PAGE_TS}" alt="Scene ${num}" loading="lazy"
-           onclick="openLightbox('${esc(s.image_path)}?v=${PAGE_TS}','${esc(s.prompt)}')">
+      <img src="${esc(s.image_path)}?v=${Date.now()}" alt="Panel ${num}" loading="lazy"
+           onclick="openLightbox(${idx})">
       <div class="viewer-card-cap">
-        <div class="viewer-seq-num">${num}</div>
-        ${esc(s.prompt)}
+        <div class="viewer-panel-num">Panel ${num}</div>
+        ${cap ? `<div class="viewer-caption">${esc(cap)}</div>` : ''}
       </div>
     </div>`;
   }
   return `<div class="viewer-card">
-    <div style="background:var(--bg3);aspect-ratio:1;display:flex;align-items:center;justify-content:center;color:var(--txd);font-size:11px">
-      ${s.status === 'failed' ? '✗ Failed' : s.status === 'generating' ? '⟳ Generating…' : 'Not generated'}
-    </div>
+    <div class="viewer-card-placeholder">No image</div>
     <div class="viewer-card-cap">
-      <div class="viewer-seq-num">${num}</div>
-      ${esc(s.prompt)}
+      <div class="viewer-panel-num">Panel ${num}</div>
+      ${cap ? `<div class="viewer-caption">${esc(cap)}</div>` : ''}
     </div>
   </div>`;
 }
 
-function seqStrip(s) {
+function panelStrip(s, idx) {
   const num = String(s.seq_number).padStart(3, '0');
-  if (s.image_path && s.status === 'done') {
-    return `<div style="display:flex;gap:14px;align-items:flex-start">
-      <img src="${esc(s.image_path)}?v=${PAGE_TS}" alt="Scene ${num}" loading="lazy"
-           onclick="openLightbox('${esc(s.image_path)}?v=${PAGE_TS}','${esc(s.prompt)}')"
-           style="width:260px;flex-shrink:0;border-radius:6px;cursor:zoom-in;object-fit:cover;border:1px solid var(--a44)">
-      <div style="flex:1;padding-top:4px">
-        <div class="viewer-seq-num" style="font-size:12px;margin-bottom:6px">${num}</div>
-        <p style="font-size:13px;line-height:1.6;color:var(--tx)">${esc(s.prompt)}</p>
-      </div>
-    </div>`;
-  }
-  return `<div style="display:flex;gap:14px;align-items:flex-start">
-    <div style="width:260px;flex-shrink:0;aspect-ratio:1;background:var(--bg3);border-radius:6px;display:flex;align-items:center;justify-content:center;color:var(--txd);font-size:11px;border:1px solid var(--a44)">
-      ${s.status === 'failed' ? '✗ Failed' : s.status === 'generating' ? '⟳ Generating…' : 'Not generated'}
-    </div>
-    <div style="flex:1;padding-top:4px">
-      <div class="viewer-seq-num" style="font-size:12px;margin-bottom:6px">${num}</div>
-      <p style="font-size:13px;line-height:1.6;color:var(--tx)">${esc(s.prompt)}</p>
+  const cap = (s.caption || s.prompt || '').trim();
+  return `<div class="viewer-strip-panel">
+    ${s.image_path
+      ? `<img src="${esc(s.image_path)}?v=${Date.now()}" alt="Panel ${num}" loading="lazy"
+              onclick="openLightbox(${idx})">`
+      : `<div class="viewer-strip-placeholder">No image</div>`}
+    <div class="viewer-strip-cap">
+      <div class="viewer-panel-num">Panel ${num}</div>
+      ${cap ? `<div class="viewer-caption">${esc(cap)}</div>` : ''}
     </div>
   </div>`;
 }
@@ -146,19 +215,22 @@ function setLayout(l) {
 }
 
 // ── Lightbox ──────────────────────────────────────────────────────────────────
-function openLightbox(src, caption) {
-  document.getElementById('lightbox-img').src = src;
-  document.getElementById('lightbox-img').alt = caption;
+function openLightbox(idx) {
+  const s = (story.sequences || [])[idx];
+  if (!s || !s.image_path) return;
+  document.getElementById('lb-img').src = s.image_path + '?v=' + Date.now();
+  document.getElementById('lb-img').alt = (s.caption || s.prompt || '');
   document.getElementById('lightbox').style.display = 'flex';
 }
 function closeLightbox() {
   document.getElementById('lightbox').style.display = 'none';
-  document.getElementById('lightbox-img').src = '';
+  document.getElementById('lb-img').src = '';
 }
 
+// ── Utils ─────────────────────────────────────────────────────────────────────
+function setBody(html) { document.getElementById('viewer-body').innerHTML = html; }
+function esc(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
-
-function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
 init();
 </script>

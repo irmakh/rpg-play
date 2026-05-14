@@ -7,207 +7,223 @@
 <link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#1a1a2e">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-<meta http-equiv="Pragma" content="no-cache">
-<meta http-equiv="Expires" content="0">
 <script>if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js');</script>
 <link rel="stylesheet" href="/css/dm.css">
 <link rel="stylesheet" href="/css/stories.css">
 </head>
 <body>
 
+<!-- Stories password gate -->
+<div class="gate" id="stories-gate" style="display:none">
+  <div class="gate-box">
+    <div style="font-size:36px;margin-bottom:10px">📖</div>
+    <h2>Stories</h2>
+    <p>Enter your password to continue.</p>
+    <input type="password" id="gate-pw" placeholder="Password…" autocomplete="off"
+           onkeydown="if(event.key==='Enter')storiesGateSubmit()">
+    <div id="gate-err" style="color:var(--err);font-size:12px;min-height:16px;margin-top:6px"></div>
+    <button class="btn primary" style="width:100%;margin-top:8px" onclick="storiesGateSubmit()">Enter</button>
+  </div>
+</div>
+<script>
+(function(){
+  try {
+    var s = JSON.parse(sessionStorage.getItem('rpgSession') || 'null');
+    if (s && (s.role === 'dm' || s.role === 'character')) return;
+  } catch {}
+  if (sessionStorage.getItem('storiesAuth') === '1') return;
+  document.getElementById('stories-gate').style.display = 'flex';
+  setTimeout(function(){ var el = document.getElementById('gate-pw'); if(el) el.focus(); }, 50);
+})();
+async function storiesGateSubmit() {
+  var pw = document.getElementById('gate-pw').value;
+  var errEl = document.getElementById('gate-err');
+  errEl.textContent = '';
+  if (!pw) { errEl.textContent = 'Enter a password.'; return; }
+  var r = await fetch('/api/auth/verify-any', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password: pw })
+  });
+  if (r.ok) {
+    sessionStorage.setItem('storiesAuth', '1');
+    document.getElementById('stories-gate').style.display = 'none';
+  } else {
+    errEl.textContent = 'Wrong password.';
+    document.getElementById('gate-pw').value = '';
+    document.getElementById('gate-pw').focus();
+  }
+}
+</script>
+
 <div class="stories-wrap">
 
-  <!-- Header -->
   <div class="stories-hdr">
-    <a href="/dm.html" class="btn" style="padding:4px 10px;font-size:11px">← DM Panel</a>
-    <h1>📖 Stories</h1>
+    <a href="/dm.html" class="btn" style="padding:4px 10px;font-size:11px">← Back</a>
+    <h1>Stories</h1>
     <div class="hdr-right">
-      <span id="status-msg" style="font-size:11px;color:var(--txd)"></span>
-      <button class="btn" onclick="scanFiles()" title="Re-scan stories folder">↺ Scan</button>
-      <a href="/story-builder.html" class="btn primary">+ New Story</a>
+      <span id="status-msg" class="status-msg"></span>
+      <select id="char-filter" class="stories-filter" onchange="renderGrid()">
+        <option value="">All characters</option>
+      </select>
+      <button class="btn primary" onclick="openNewModal()">+ New Story</button>
     </div>
   </div>
 
-  <div class="stories-body">
-
-    <!-- Sidebar: character list -->
-    <div class="stories-sidebar">
-      <div class="sidebar-title">Characters</div>
-      <div id="char-list" style="flex:1;overflow-y:auto">
-        <div style="padding:10px;font-size:11px;color:var(--txd)">Loading…</div>
-      </div>
-      <div class="sidebar-bottom">
-        <button class="btn" style="font-size:11px" onclick="openNewCharModal()">+ New Character</button>
-        <button class="btn" style="font-size:11px" onclick="autoCreateCharFolders()" title="Create a folder for each character in the party">📁 Auto-create</button>
-      </div>
+  <div class="stories-main">
+    <div id="story-grid" class="story-grid">
+      <div class="empty-hint">Loading…</div>
     </div>
-
-    <!-- Main: story cards -->
-    <div class="stories-main">
-      <div id="story-list">
-        <div class="empty-hint">Select a character on the left to view stories.</div>
-      </div>
-    </div>
-
   </div>
+
 </div>
 
-<!-- New Character Modal -->
-<div class="modal-overlay" id="new-char-modal" style="display:none">
-  <div class="modal-box" style="max-width:360px;width:96%">
-    <div class="ct">New Character Folder</div>
+<!-- New story modal -->
+<div class="modal-overlay" id="new-modal" style="display:none" onclick="if(event.target===this)closeNewModal()">
+  <div class="modal-box" style="max-width:420px;width:96%">
+    <div class="ct">New Story</div>
     <div class="modal-body">
       <div class="field">
-        <label class="lbl">Character Name</label>
-        <input type="text" id="new-char-name" maxlength="60" placeholder="e.g. Aragorn"
-               onkeydown="if(event.key==='Enter')createCharFolder()">
+        <label class="lbl">Title</label>
+        <input type="text" id="new-title" maxlength="120" placeholder="e.g. The Battle of Neverwinter"
+               onkeydown="if(event.key==='Enter')createStory()">
       </div>
-      <div id="new-char-err" style="color:var(--err);font-size:11px;min-height:14px"></div>
+      <div class="field">
+        <label class="lbl">Description <span style="font-weight:normal;color:var(--txd)">(optional)</span></label>
+        <textarea id="new-desc" rows="2" placeholder="A short summary of this story…"></textarea>
+      </div>
+      <div id="new-err" style="color:var(--err);font-size:11px;min-height:14px"></div>
     </div>
     <div class="modal-btns">
-      <button class="btn" onclick="closeNewCharModal()">Cancel</button>
-      <button class="btn primary" onclick="createCharFolder()">Create</button>
+      <button class="btn" onclick="closeNewModal()">Cancel</button>
+      <button class="btn primary" onclick="createStory()">Create & Edit</button>
     </div>
   </div>
 </div>
 
+<!-- Delete confirm modal -->
+<div class="modal-overlay" id="del-modal" style="display:none" onclick="if(event.target===this)closeDelModal()">
+  <div class="modal-box" style="max-width:360px;width:96%">
+    <div class="ct">Delete Story</div>
+    <div class="modal-body">
+      <p id="del-msg" style="font-size:13px;line-height:1.5;color:var(--tx)"></p>
+    </div>
+    <div class="modal-btns">
+      <button class="btn" onclick="closeDelModal()">Cancel</button>
+      <button class="btn danger" onclick="confirmDelete()">Delete</button>
+    </div>
+  </div>
+</div>
 
 <script>
-// ── State ─────────────────────────────────────────────────────────────────────
-let fileTree    = [];
-let storyRecs   = [];
-let activeChar  = null;
+let stories  = [];
+let deleteId = null;
 
-// ── Init ──────────────────────────────────────────────────────────────────────
 async function init() {
-  await Promise.all([scanFiles(), loadPresets()]);
+  await load();
 }
 
-async function scanFiles() {
-  showStatus('Scanning…');
-  const [treeRes, recsRes] = await Promise.all([
-    fetch('/api/stories/files'),
-    fetch('/api/stories')
-  ]);
-  fileTree  = treeRes.ok  ? await treeRes.json()  : [];
-  storyRecs = recsRes.ok ? await recsRes.json() : [];
-  renderCharList();
-  if (activeChar) renderStoryList(activeChar);
+async function load() {
+  showStatus('Loading…');
+  const r = await fetch('/api/stories');
+  stories  = r.ok ? await r.json() : [];
+  buildCharFilter();
+  renderGrid();
   showStatus('');
 }
 
-// ── Sidebar ───────────────────────────────────────────────────────────────────
-function renderCharList() {
-  const el = document.getElementById('char-list');
-  if (!fileTree.length) { el.innerHTML = '<div style="padding:10px;font-size:11px;color:var(--txd)">No character folders yet.</div>'; return; }
-  el.innerHTML = fileTree.map(c => {
-    const cnt = c.files.length;
-    return `<div class="char-item${activeChar === c.character ? ' active' : ''}" onclick="selectChar('${esc(c.character)}')">
-      ${esc(c.character)}
-      <span class="char-count">(${cnt})</span>
-    </div>`;
-  }).join('');
+// ── Character filter ──────────────────────────────────────────────────────────
+function buildCharFilter() {
+  const chars = [...new Set(stories.map(s => s.character).filter(Boolean))].sort();
+  const sel   = document.getElementById('char-filter');
+  const cur   = sel.value;
+  sel.innerHTML = '<option value="">All characters</option>' +
+    chars.map(c => `<option value="${esc(c)}"${cur === c ? ' selected' : ''}>${esc(c)}</option>`).join('');
 }
 
-function selectChar(name) {
-  activeChar = name;
-  renderCharList();
-  renderStoryList(name);
-}
+// ── Grid ──────────────────────────────────────────────────────────────────────
+function renderGrid() {
+  const grid   = document.getElementById('story-grid');
+  const filter = document.getElementById('char-filter').value;
+  const list   = filter ? stories.filter(s => s.character === filter) : stories;
 
-// ── Story list ────────────────────────────────────────────────────────────────
-function renderStoryList(character) {
-  const el = document.getElementById('story-list');
-  const group = fileTree.find(c => c.character === character);
-  if (!group || !group.files.length) {
-    el.innerHTML = '<div class="empty-hint">No story files in this folder.<br><a href="/story-builder.html" style="color:var(--ac)">Create one →</a></div>';
+  if (!list.length) {
+    grid.innerHTML = `<div class="empty-hint">${
+      filter ? 'No stories for this character.' : 'No stories yet — create your first one!'
+    }</div>`;
     return;
   }
 
-  el.innerHTML = group.files.map(f => {
-    const rec = storyRecs.find(r => r.prompt_file === f.path);
-    const statusBadge = rec
-      ? `<span class="badge ${rec.status}">${rec.status}</span>`
-      : `<span class="badge no-record">not generated</span>`;
-    const meta = rec
-      ? `${rec.seq_count} sequence${rec.seq_count !== 1 ? 's' : ''} · ${rec.created_at?.slice(0,10) || ''}`
-      : f.filename;
-
-    const viewBtn  = rec
-      ? `<a href="/story-viewer.html?id=${rec.id}" class="btn sm" style="white-space:nowrap">👁 View</a>` : '';
-    const genLabel = rec && (rec.status === 'complete' || rec.status === 'partial') ? '↺ Re-gen' : '▶ Generate';
-    const delBtn   = rec ? `<button class="btn sm danger" onclick="deleteRecord('${rec.id}','${esc(f.name)}')" title="Delete record & images">🗑</button>` : '';
-
+  grid.innerHTML = list.map(s => {
+    const cover = s.cover_image
+      ? `<img class="story-cover" src="${esc(s.cover_image)}?v=${Date.now()}" alt="" loading="lazy">`
+      : `<div class="story-cover-empty">📖</div>`;
+    const panels = s.seq_count === 1 ? '1 panel' : `${s.seq_count || 0} panels`;
+    const date   = (s.updated_at || s.created_at || '').slice(0, 10);
     return `<div class="story-card">
-      <div class="story-card-info">
-        <div class="story-card-name">${esc(f.name)}</div>
-        <div class="story-card-meta">${statusBadge} &nbsp;${esc(meta)}</div>
+      <div class="story-cover-wrap">${cover}</div>
+      <div class="story-card-body">
+        <div class="story-card-title">${esc(s.story_name || 'Untitled')}</div>
+        ${s.character ? `<div class="story-card-char">${esc(s.character)}</div>` : ''}
+        <div class="story-card-meta">${panels} · ${date}</div>
+        ${s.description ? `<div class="story-card-desc">${esc(s.description)}</div>` : ''}
       </div>
-      <div class="story-card-actions">
-        ${viewBtn}
-        <a href="/story-builder.html?file=${encodeURIComponent(f.path)}" class="btn sm">✏ Edit</a>
-        <a href="/story-builder.html?file=${encodeURIComponent(f.path)}" class="btn sm primary">${genLabel}</a>
-        ${delBtn}
+      <div class="story-card-foot">
+        <a href="/story-viewer.html?id=${esc(s.id)}" class="btn sm primary">View</a>
+        <a href="/story-builder.html?id=${esc(s.id)}" class="btn sm">Edit</a>
+        <button class="btn sm danger" onclick="deleteStory('${esc(s.id)}','${esc(s.story_name || 'this story')}')">Delete</button>
       </div>
     </div>`;
   }).join('');
 }
 
-// ── New character folder ──────────────────────────────────────────────────────
-function openNewCharModal() {
-  document.getElementById('new-char-name').value = '';
-  document.getElementById('new-char-err').textContent = '';
-  document.getElementById('new-char-modal').style.display = 'flex';
-  setTimeout(() => document.getElementById('new-char-name').focus(), 50);
+// ── New story ─────────────────────────────────────────────────────────────────
+function openNewModal() {
+  document.getElementById('new-title').value = '';
+  document.getElementById('new-desc').value  = '';
+  document.getElementById('new-err').textContent = '';
+  document.getElementById('new-modal').style.display = 'flex';
+  setTimeout(() => document.getElementById('new-title').focus(), 50);
 }
-function closeNewCharModal() { document.getElementById('new-char-modal').style.display = 'none'; }
+function closeNewModal() { document.getElementById('new-modal').style.display = 'none'; }
 
-async function createCharFolder() {
-  const name = document.getElementById('new-char-name').value.trim();
-  if (!name) { document.getElementById('new-char-err').textContent = 'Name is required.'; return; }
-  const resp = await fetch('/api/stories/folders', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name })
+async function createStory() {
+  const title = document.getElementById('new-title').value.trim();
+  if (!title) { document.getElementById('new-err').textContent = 'Title is required.'; return; }
+  const r = await fetch('/api/stories', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      title,
+      description: document.getElementById('new-desc').value.trim()
+    })
   });
-  const d = await resp.json();
-  if (!resp.ok) { document.getElementById('new-char-err').textContent = d.error || 'Failed'; return; }
-  closeNewCharModal();
-  await scanFiles();
-  selectChar(d.name);
+  const d = await r.json();
+  if (!r.ok) { document.getElementById('new-err').textContent = d.error || 'Failed.'; return; }
+  closeNewModal();
+  location.href = '/story-builder.html?id=' + d.id;
 }
 
-// ── Delete record ─────────────────────────────────────────────────────────────
-async function deleteRecord(id, name) {
-  if (!confirm(`Delete story record and all generated images for "${name}"?`)) return;
-  await fetch('/api/stories/' + id, { method: 'DELETE' });
-  await scanFiles();
+// ── Delete story ──────────────────────────────────────────────────────────────
+function deleteStory(id, name) {
+  deleteId = id;
+  document.getElementById('del-msg').textContent =
+    `Delete "${name}" and all its panels and images? This cannot be undone.`;
+  document.getElementById('del-modal').style.display = 'flex';
 }
+function closeDelModal() { document.getElementById('del-modal').style.display = 'none'; deleteId = null; }
 
-
-// ── Auto-create character folders ─────────────────────────────────────────────
-async function autoCreateCharFolders() {
-  showStatus('Loading characters…');
-  const r = await fetch('/api/characters');
-  if (!r.ok) { showStatus('Failed to load characters.'); return; }
-  const chars = await r.json();
-  if (!chars.length) { showStatus('No characters found.'); return; }
-  let created = 0, skipped = 0;
-  for (const char of chars) {
-    const resp = await fetch('/api/stories/folders', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: char.name })
-    });
-    const d = await resp.json();
-    if (resp.ok) created++; else skipped++;
-  }
-  showStatus(`Done: ${created} created, ${skipped} already exist.`);
-  setTimeout(() => showStatus(''), 4000);
-  await scanFiles();
+async function confirmDelete() {
+  if (!deleteId) return;
+  await fetch('/api/stories/' + deleteId, { method: 'DELETE' });
+  closeDelModal();
+  await load();
 }
 
 // ── Utils ─────────────────────────────────────────────────────────────────────
-function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function showStatus(msg) { document.getElementById('status-msg').textContent = msg; }
-
-document.getElementById('new-char-modal').addEventListener('click', function(e){ if(e.target===this) closeNewCharModal(); });
+function esc(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeNewModal(); closeDelModal(); } });
 
 init();
 </script>

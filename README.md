@@ -1,6 +1,6 @@
 # RPG Play — D&D 5e Virtual Tabletop
 
-A self-hosted web application for running D&D 5e sessions. Includes a full character sheet, shared virtual battle map, real-time initiative tracker, monster library, loot manager, merchant shop, and DM tools — all synced live across every connected browser with no external cloud required.
+A self-hosted web application for running D&D 5e sessions. Includes a full character sheet, shared virtual battle map, real-time initiative tracker, monster library, loot manager, merchant shop, music player, story builder, and DM tools — all synced live across every connected browser with no external cloud required.
 
 ---
 
@@ -29,6 +29,7 @@ A self-hosted web application for running D&D 5e sessions. Includes a full chara
 - Real-time chat panel: type free text or use `/r NdS+M [label]` to roll dice (e.g. `/r 2d6+3`, `/r d20 Stealth`)
 - 3D dice animation overlay shown locally when rolling and for any roll broadcast from the table
 - Three themes: Dark Gold, Parchment, Midnight
+- Quick navigation buttons to the Virtual Table and Stories
 
 ### Virtual Table (`/table.html`)
 - Shared battle map with configurable grid overlay
@@ -62,7 +63,7 @@ A self-hosted web application for running D&D 5e sessions. Includes a full chara
 - Start / stop combat, advance turns, previous turn, skip turn
 - Clean Orphans button to remove stale initiative entries without disrupting a running encounter
 - Monster library table: search, filter, add to initiative with a single click; monster identifier shown in initiative rolls in chat
-- Monster info popup: full stat block view inline
+- Monster info popup: full stat block view inline; multi-line actions/traits render with correct newlines
 - Media sharing panel: drag-and-drop image / video upload → shared instantly to the table chat
 - DM chat panel: type free text or use `/r NdS+M [label]` to roll dice; roll broadcasts the 3D animation to all connected screens; **per-message delete** (✕ button, removes from all clients in real time)
 - Data backup: download a full JSON snapshot of all application data (per-section selective export)
@@ -115,6 +116,7 @@ A self-hosted web application for running D&D 5e sessions. Includes a full chara
 
 ### Monster Library (`/monsters.html`) — DM only
 - Full monster stat blocks: abilities, skills, saving throws, senses, CR, HP, AC, speed, traits, actions, legendary actions
+- Multi-line trait and action text renders with correct newlines on both library and DM screens
 - Monster portrait upload
 - Import monsters from XML (D&D Beyond / D&D 5e tools format) — bulk import with non-destructive merge
 - **Single-monster JSON export** with portrait image embedded — Export button per monster on both library and DM screens
@@ -133,7 +135,22 @@ A self-hosted web application for running D&D 5e sessions. Includes a full chara
 - New clients joining mid-session automatically receive the current position and start from there
 - Loading / playing / paused state notifications broadcast to all clients
 
-### Mobile Companion PWA (`/table-console.html`)
+### Stories (`/stories.html`) — password protected
+- Comic-book style story system for documenting campaign moments and session recaps
+- **Story dashboard** — card grid with cover image (first panel), title, cast, panel count, and date; filter by character
+- **Story builder** (`/story-builder.html`) — panel-based editor:
+  - Title and description with auto-save (debounced 1.5 s)
+  - **Character cast multiselect** — pick any defined character by portrait photo; selected characters auto-saved to the story
+  - Per-panel image upload (click to upload or replace); images stored under `/story-images/{storyId}/{seqId}.ext`
+  - Per-panel caption textarea with auto-save on blur
+  - Reorder panels with ▲/▼ buttons; delete with confirmation modal
+- **Story viewer** (`/story-viewer.html`) — two layouts:
+  - **Grid view** — responsive card grid, click any image to open fullscreen lightbox
+  - **Strip view** — vertical single-column comic strip layout
+  - **Cast strip** shown above panels displaying portrait, name, species, and class for each selected character
+- Password gate on all three stories screens — accepts DM password or any character password; automatically bypassed if already logged in via the main login screen
+
+### Mobile Companion PWA (`/console/`)
 - Installable Progressive Web App for phone or tablet — works offline after first load
 - Full session sync with the main table: shows the same initiative order, HP, and state
 - **Actions tab** — quick-access panel for common actions
@@ -150,7 +167,8 @@ A self-hosted web application for running D&D 5e sessions. Includes a full chara
 - **Character tab:** enter your character name and password (setup flow for passwordless characters on first login)
 - **DM tab:** enter the master password to get DM access across all screens
 - Sessions stored in `sessionStorage` — closing the tab logs out; the browser back button does not re-enter protected pages without re-authenticating
-- All 8 HTML pages have auth guards — unauthenticated access redirects to login
+- HTML pages have auth guards — unauthenticated access redirects to login
+- **Stories screens** use a separate password gate (`POST /api/auth/verify-any`) that accepts either the DM password or any character password; automatically bypassed if already logged in
 - **Token ownership enforcement on the table:** players can only move and interact with tokens assigned to their character; DM retains full control
 - Character-role users see their own password / export buttons; DM-only controls remain hidden
 
@@ -170,16 +188,21 @@ A self-hosted web application for running D&D 5e sessions. Includes a full chara
 | Merchant | `/merchant.html` | DM |
 | Loot | `/loot.html` | DM |
 | Music & Sounds | `/playlists.html` | DM |
-| Mobile Companion | `/table-console.html` | All users |
+| Stories | `/stories.html` | Any (password gated) |
+| Story Builder | `/story-builder.html` | Any (password gated) |
+| Story Viewer | `/story-viewer.html` | Any (password gated) |
+| Mobile Companion | `/console/` | All users |
 
 ---
 
 ## Database Modes
 
-| Mode | Description |
-|---|---|
-| `localdb` | SQLite + WebSocket. No cloud required. Best for LAN or self-hosted play. |
-| `instantdb` | Cloud database via [InstantDB](https://www.instantdb.com). Accessible from anywhere. |
+| Mode | Storage | Real-time |
+|---|---|---|
+| `localdb` | SQLite (`better-sqlite3`) | WebSocket |
+| `instantdb` | [InstantDB](https://www.instantdb.com) cloud | SSE |
+
+Set `DB_PROVIDER` in `.env`. All features described here use `localdb` mode.
 
 ---
 
@@ -283,7 +306,7 @@ PORT=443
 
 ## Tech Stack
 
-- **Backend:** Node.js, Express
+- **Backend:** Node.js, Express — split into 12 semantic route modules under `server/routes/`
 - **Database:** SQLite (`better-sqlite3`) for `localdb` mode / [InstantDB](https://www.instantdb.com) for cloud mode
 - **Real-time:** WebSocket (`ws`) for `localdb` mode / Server-Sent Events (SSE) for cloud mode
 - **Frontend:** Vanilla JS, HTML, CSS — no build step, no framework, no bundler
@@ -298,9 +321,12 @@ PORT=443
 ```
 rpg-play/
 ├── Application/
-│   ├── server.js               # Express server, all API routes, WebSocket broadcast
+│   ├── server.js               # Express entry point — loads route modules, shared context
 │   ├── db/
-│   │   └── localdb.js          # SQLite database layer (better-sqlite3)
+│   │   ├── localdb.js          # SQLite database layer (characters, media, tokens, etc.)
+│   │   └── storiesdb.js        # SQLite database layer for stories and sequences
+│   ├── server/
+│   │   └── routes/             # 12 route modules (auth, characters, table, stories, …)
 │   └── public/
 │       ├── index.html          # Character sheet
 │       ├── table.html          # Virtual battle table
@@ -311,13 +337,17 @@ rpg-play/
 │       ├── merchant.html       # Merchant shop manager
 │       ├── loot.html           # Loot manager
 │       ├── playlists.html      # Music & sound player manager
+│       ├── stories.html        # Story dashboard
+│       ├── story-builder.html  # Story editor (panels, cast, images)
+│       ├── story-viewer.html   # Story viewer (grid / strip layouts)
 │       ├── login.html          # Login screen (all users)
-│       ├── table-console.html  # Mobile companion PWA
+│       ├── console/            # Mobile companion PWA
 │       ├── sw.js               # Service worker (PWA offline cache)
+│       ├── story-images/       # Uploaded story panel images (served statically)
 │       ├── js/
 │       │   ├── index/          # 14 modules for the character sheet
 │       │   ├── table/          # 12 modules for the virtual table
-│       │   └── lib/            # Shared utilities (dice engine, chat render, lightbox, calendar, etc.)
+│       │   └── lib/            # Shared utilities (dice engine, chat render, lightbox, etc.)
 │       ├── css/                # Stylesheets
 │       └── img/                # Static images
 ├── renew-cert.sh               # Let's Encrypt renewal script (PM2-aware)
