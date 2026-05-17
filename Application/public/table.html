@@ -35,6 +35,9 @@
   <button class="btn tool-btn" id="btn-tool-ruler" onclick="setTool('ruler')" title="Ruler">📏</button>
   <button class="btn tool-btn" id="btn-tool-ping" onclick="setTool('ping')" title="Ping">📍</button>
   <button class="btn tool-btn" id="btn-tool-draw" onclick="setTool('draw')" title="Draw shapes">✏️</button>
+  <div class="dm-controls" style="display:none">
+    <button class="btn tool-btn" id="btn-tool-multi" onclick="setTool('multi')" title="Multi-select tokens (drag to select area)">⬚ Multi</button>
+  </div>
 
   <div style="display:flex;align-items:center;gap:4px;margin-left:8px;padding-left:8px;border-left:1px solid var(--a44)">
     <span style="font-size:10px;color:var(--txd)">Zoom</span>
@@ -176,6 +179,44 @@
       </div>
     </div>
 
+    <!-- Bulk edit section (DM only, appears when tokens are shift+clicked) -->
+    <div class="lp-section" id="lp-bulk-section" style="display:none">
+      <div class="lp-section-hdr">
+        <span style="font-size:12px;font-weight:bold">🎯 Bulk Edit — <span id="bulk-count">0 selected</span></span>
+        <button class="btn sm" onclick="clearBulkSelection()" title="Clear selection" style="flex-shrink:0">✕ Clear</button>
+      </div>
+      <div class="lp-body open">
+        <!-- Selected token chips -->
+        <div id="bulk-names-list" style="display:flex;flex-wrap:wrap;gap:3px;padding:4px 8px 4px;border-bottom:1px solid var(--a44)"></div>
+        <!-- HP change -->
+        <div style="padding:6px 8px 2px">
+          <div style="font-size:10px;color:var(--txd);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Apply to all</div>
+          <div style="display:flex;gap:4px;align-items:center">
+            <input type="number" id="bulk-amount" value="1" min="1" style="width:52px;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px;padding:3px 5px;font-size:12px">
+            <button class="btn danger sm" onclick="applyBulkHpChange('dmg')">⚔ Damage</button>
+            <button class="btn success sm" onclick="applyBulkHpChange('heal')">💚 Heal</button>
+          </div>
+          <div style="display:flex;gap:3px;padding:4px 0 2px;flex-wrap:wrap">
+            <button class="btn danger sm" onclick="applyBulkQuickDmg(1)">-1</button>
+            <button class="btn danger sm" onclick="applyBulkQuickDmg(5)">-5</button>
+            <button class="btn danger sm" onclick="applyBulkQuickDmg(10)">-10</button>
+            <button class="btn success sm" onclick="applyBulkQuickHeal(1)">+1</button>
+            <button class="btn success sm" onclick="applyBulkQuickHeal(5)">+5</button>
+            <button class="btn success sm" onclick="applyBulkQuickHeal(10)">+10</button>
+          </div>
+        </div>
+        <!-- Conditions -->
+        <div style="border-top:1px solid var(--a44);padding:6px 8px 6px">
+          <div style="font-size:10px;color:var(--txd);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Conditions</div>
+          <div id="bulk-conditions-grid" style="display:flex;flex-wrap:wrap;gap:3px"></div>
+        </div>
+        <!-- Initiative (DM only, monster tokens) -->
+        <div id="bulk-init-row" style="display:none;border-top:1px solid var(--a44);padding:6px 8px 6px">
+          <button class="btn sm" onclick="rollBulkInitiative()" style="width:100%;font-size:12px">🎲 Roll Monster Initiative</button>
+        </div>
+      </div>
+    </div>
+
   </div><!-- /#left-panel -->
 
   <div id="canvas-area">
@@ -249,6 +290,33 @@
       </div>
       <div style="font-size:10px;color:var(--ac);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Tokens</div>
       <button class="btn danger" style="width:100%" onclick="clearAllTokens()">🗑 Clear All Tokens</button>
+    </div>
+  </div>
+</div>
+
+<!-- Monster group initiative modal (DM only) -->
+<div id="group-init-modal" style="position:fixed;inset:0;background:var(--ov);display:none;align-items:center;justify-content:center;z-index:2500" onclick="closeMonsterGroupInitModal()">
+  <div style="background:var(--bg2);border:1px solid var(--a55);border-radius:8px;padding:16px 20px;min-width:240px;max-width:300px" onclick="event.stopPropagation()">
+    <div style="font-weight:bold;font-size:13px;margin-bottom:6px">🎲 Roll Monster Initiative</div>
+    <div id="group-init-desc" style="font-size:11px;color:var(--txd);margin-bottom:10px"></div>
+    <div id="group-init-mode-row" style="margin-bottom:8px">
+      <div style="font-size:10px;color:var(--txd);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Mode</div>
+      <div style="display:flex;gap:4px">
+        <button id="group-init-btn-merged" class="btn sm" onclick="setGroupInitMode('merged')" style="flex:1;font-size:11px">⚔ Merged</button>
+        <button id="group-init-btn-individual" class="btn sm" onclick="setGroupInitMode('individual')" style="flex:1;font-size:11px">🎲 Individual</button>
+      </div>
+    </div>
+    <div style="margin-bottom:12px">
+      <div style="font-size:10px;color:var(--txd);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Roll</div>
+      <div style="display:flex;gap:4px">
+        <button id="group-init-btn-normal" class="btn sm" onclick="setGroupInitRollType('normal')" style="flex:1;font-size:11px">Normal</button>
+        <button id="group-init-btn-adv" class="btn sm" onclick="setGroupInitRollType('adv')" style="flex:1;font-size:11px">Adv</button>
+        <button id="group-init-btn-dis" class="btn sm" onclick="setGroupInitRollType('dis')" style="flex:1;font-size:11px">Dis</button>
+      </div>
+    </div>
+    <div style="display:flex;gap:4px">
+      <button class="btn sm success" onclick="confirmGroupInitRoll()" style="flex:1;font-size:12px">Roll Initiative</button>
+      <button class="btn sm" onclick="closeMonsterGroupInitModal()" style="font-size:12px">Cancel</button>
     </div>
   </div>
 </div>
@@ -438,6 +506,7 @@
 <script src="/js/table/table-realtime.js" defer></script>
 <script src="/js/table/table-initiative.js" defer></script>
 <script src="/js/table/table-chat.js" defer></script>
+<script src="/js/monster-stat-block.js" defer></script>
 <script src="/js/table/table-monsters.js" defer></script>
 <script src="/js/table/table-panel.js" defer></script>
 <script src="/js/table/table-hppanel.js" defer></script>

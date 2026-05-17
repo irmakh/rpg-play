@@ -371,6 +371,7 @@ function renderTokens() {
     const tokLeft = ox + (tok.x || 0) * cs + 2;
     const tokTop  = oy + (tok.y || 0) * cs + 2;
     const isSelected = tok.id === selectedTokenId;
+    const isBulkSelected = bulkTokenIds.has(tok.id);
     const div = document.createElement('div');
     div.className = 'token' + (tok.id === activeTokId ? ' active-turn' : '');
     div.dataset.id = tok.id;
@@ -383,7 +384,7 @@ function renderTokens() {
       (tok.portraitThumb || tok.portrait) ? `background-position:center` : '',
       `border:3px solid ${tokenRingColor(tok.type || 'custom')}`,
       `font-size:${Math.round(Math.max(11, size * 0.28))}px`,
-      isSelected ? `box-shadow:0 0 0 3px #fff,0 0 10px 4px rgba(255,255,255,0.7)` : '',
+      isSelected ? `box-shadow:0 0 0 3px #fff,0 0 10px 4px rgba(255,255,255,0.7)` : isBulkSelected ? `box-shadow:0 0 0 3px #00e5ff,0 0 8px 3px rgba(0,229,255,0.5)` : '',
       tok.visible === false ? 'opacity:0.5' : ''
     ].filter(Boolean).join(';');
     const dn = tokDisplayName(tok);
@@ -513,9 +514,26 @@ function attachTokenEvents(div, tok) {
   div.addEventListener('click', e => {
     if (dragState && dragState.didMove) return;
     if (currentTool === 'select' || currentTool === 'move') {
-      selectToken(tok.id);
-      // openHpPanel internally checks isMyToken — only opens for own token or DM
-      openHpPanel(tok);
+      if (e.shiftKey && isDM()) {
+        // Shift+click: toggle token in bulk selection, hide single-token panel
+        if (bulkTokenIds.has(tok.id)) {
+          bulkTokenIds.delete(tok.id);
+        } else {
+          bulkTokenIds.add(tok.id);
+        }
+        closeHpPanel();
+        renderTokens();
+        renderBulkPanel();
+        renderHpTable();
+      } else {
+        // Normal click: clear bulk, single select
+        if (bulkTokenIds.size > 0) {
+          bulkTokenIds.clear();
+          renderBulkPanel();
+        }
+        selectToken(tok.id);
+        openHpPanel(tok);
+      }
     }
   });
 }
@@ -621,13 +639,30 @@ function setTool(name) {
   document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
   const btn = document.getElementById('btn-tool-' + name);
   if (btn) btn.classList.add('active');
-  overlayCanvas.style.cursor = name === 'ruler' || name === 'draw' ? 'crosshair' : name === 'ping' ? 'cell' : name === 'pan' ? 'grab' : 'default';
+  overlayCanvas.style.cursor = (name === 'ruler' || name === 'draw' || name === 'multi') ? 'crosshair' : name === 'ping' ? 'cell' : name === 'pan' ? 'grab' : 'default';
   // Select and move modes: overlay transparent so token divs receive pointer events
   overlayCanvas.style.pointerEvents = (name === 'select' || name === 'move') ? 'none' : 'all';
   if (name !== 'ruler') { rulerState = null; oCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height); }
   if (name !== 'pan') { panState = null; }
   if (name !== 'draw') { drawingState = null; }
+  if (name !== 'multi') { multiSelectState = null; }
   document.getElementById('draw-toolbar').style.display = name === 'draw' ? 'flex' : 'none';
+}
+
+// ── Multi-select rect preview ─────────────────────────────────────────────────
+function renderMultiSelectRect(x1, y1, x2, y2) {
+  oCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+  const rx = Math.min(x1, x2), ry = Math.min(y1, y2);
+  const rw = Math.abs(x2 - x1), rh = Math.abs(y2 - y1);
+  oCtx.save();
+  oCtx.fillStyle = 'rgba(0,229,255,0.08)';
+  oCtx.fillRect(rx, ry, rw, rh);
+  oCtx.strokeStyle = '#00e5ff';
+  oCtx.lineWidth = 1.5;
+  oCtx.setLineDash([5, 3]);
+  oCtx.strokeRect(rx, ry, rw, rh);
+  oCtx.setLineDash([]);
+  oCtx.restore();
 }
 
 // ── Draw tool ─────────────────────────────────────────────────────────────────
@@ -792,6 +827,8 @@ overlayCanvas.addEventListener('mousedown', e => {
     sendPing(grid.x, grid.y);
   } else if (currentTool === 'draw') {
     drawingState = { x1: pos.x, y1: pos.y };
+  } else if (currentTool === 'multi') {
+    multiSelectState = { x1: pos.x, y1: pos.y };
   }
 });
 
@@ -823,6 +860,8 @@ overlayCanvas.addEventListener('mousemove', e => {
   }
   if (currentTool === 'ruler' && rulerState) {
     renderRuler(rulerState.x1, rulerState.y1, pos.x, pos.y);
+  } else if (currentTool === 'multi' && multiSelectState) {
+    renderMultiSelectRect(multiSelectState.x1, multiSelectState.y1, pos.x, pos.y);
   } else if (currentTool === 'draw' && drawingState) {
     const preview = { ...drawMode, x1: drawingState.x1, y1: drawingState.y1, x2: pos.x, y2: pos.y };
     renderDrawPreview(preview);
@@ -883,6 +922,38 @@ overlayCanvas.addEventListener('mouseup', e => {
   if (currentTool === 'ruler') {
     rulerState = null;
     oCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+  } else if (currentTool === 'multi' && multiSelectState) {
+    const pos = getCanvasPos(e);
+    const x1 = Math.min(multiSelectState.x1, pos.x), x2 = Math.max(multiSelectState.x1, pos.x);
+    const y1 = Math.min(multiSelectState.y1, pos.y), y2 = Math.max(multiSelectState.y1, pos.y);
+    multiSelectState = null;
+    oCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+    // Only commit if drag was meaningful (> 4px in each dimension)
+    if (x2 - x1 > 4 || y2 - y1 > 4) {
+      const cs = tableState.cellSize || 50;
+      const ox = tableState.offsetX || 0, oy = tableState.offsetY || 0;
+      if (!e.shiftKey) bulkTokenIds.clear();
+      let added = 0;
+      for (const tok of tokens) {
+        if (!tok.visible && !isDM()) continue;
+        const sizeMult = tok.tokenSize || 1;
+        const size = Math.round(sizeMult * cs - 4);
+        const tokLeft = ox + (tok.x || 0) * cs + 2;
+        const tokTop  = oy + (tok.y || 0) * cs + 2;
+        const cx = tokLeft + size / 2;
+        const cy = tokTop + size / 2;
+        if (cx >= x1 && cx <= x2 && cy >= y1 && cy <= y2) {
+          bulkTokenIds.add(tok.id);
+          added++;
+        }
+      }
+      if (added > 0 || !e.shiftKey) {
+        closeHpPanel();
+        renderTokens();
+        renderBulkPanel();
+        renderHpTable();
+      }
+    }
   } else if (currentTool === 'draw' && drawingState) {
     const pos = getCanvasPos(e);
     const dx = pos.x - drawingState.x1, dy = pos.y - drawingState.y1;

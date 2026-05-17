@@ -1,4 +1,4 @@
-const CACHE = 'rpg-v29';
+const CACHE = 'rpg-v36';
 
 const STATIC = [
   // Core pages
@@ -20,6 +20,7 @@ const STATIC = [
   '/css/table.css',
   '/css/console/table-console.css',
   // Shared JS libs
+  '/js/monster-stat-block.js',
   '/js/lib/esc.js',
   '/js/lib/chat-render.js',
   '/js/lib/dnd-data.js',

@@ -111,7 +111,11 @@ function _refreshHpPanel(tok) {
     if (isDM()) {
       initRow.style.display = '';
       const hasEntry = !!initData.entries.find(e => e.id === tok.initiativeId);
-      initBtn.textContent = hasEntry ? '🎲 Reroll Initiative' : '🎲 Roll Initiative';
+      if (tok.type === 'monster') {
+        initBtn.textContent = '🎲 Roll Monster Initiative';
+      } else {
+        initBtn.textContent = hasEntry ? '🎲 Reroll Initiative' : '🎲 Roll Initiative';
+      }
     } else {
       initRow.style.display = 'none';
     }
@@ -180,7 +184,11 @@ async function saveEditLabel() {
 function rollTokenInitiative() {
   const tok = tokens.find(t => t.id === selectedTokenId);
   if (!tok || !isDM()) return;
-  _startMonsterInitRoll(tok);
+  if (tok.type === 'monster') {
+    openGroupInitModal(tok, null);
+  } else {
+    _startMonsterInitRoll(tok);
+  }
 }
 
 function rollMonsterInitiativeFromPanel() {
@@ -237,6 +245,164 @@ function _startMonsterInitRoll(tok) {
   const lbl = document.getElementById('adv-label');
   if (lbl) lbl.textContent = 'Roll: Initiative';
   document.getElementById('adv-modal').style.display = 'flex';
+}
+
+let _groupInitTok = null;
+let _groupInitTokenIds = [];
+let _groupInitMode = 'merged';
+let _groupInitRollType = 'normal';
+
+function _rollD20(rollType) {
+  const a = Math.ceil(Math.random() * 20);
+  if (rollType === 'normal') return a;
+  const b = Math.ceil(Math.random() * 20);
+  return rollType === 'adv' ? Math.max(a, b) : Math.min(a, b);
+}
+
+function _groupInitDexMod(tok) {
+  if (!tok || !tok.linkedId) return 0;
+  const mon = _monsterList.find(m => m.id === tok.linkedId);
+  if (mon?.data?.dex) return Math.floor((parseInt(mon.data.dex) - 10) / 2);
+  return 0;
+}
+
+function setGroupInitMode(mode) {
+  _groupInitMode = mode;
+  _updateGroupInitUI();
+}
+
+function setGroupInitRollType(type) {
+  _groupInitRollType = type;
+  _updateGroupInitUI();
+}
+
+function _updateGroupInitUI() {
+  for (const m of ['merged', 'individual']) {
+    const btn = document.getElementById(`group-init-btn-${m}`);
+    if (!btn) continue;
+    const active = _groupInitMode === m;
+    btn.style.background = active ? 'var(--ac)' : '';
+    btn.style.color = active ? '#fff' : '';
+    btn.style.borderColor = active ? 'var(--ac)' : '';
+  }
+  for (const t of ['normal', 'adv', 'dis']) {
+    const btn = document.getElementById(`group-init-btn-${t}`);
+    if (!btn) continue;
+    const active = _groupInitRollType === t;
+    btn.style.background = active ? 'var(--ac)' : '';
+    btn.style.color = active ? '#fff' : '';
+    btn.style.borderColor = active ? 'var(--ac)' : '';
+  }
+}
+
+function openGroupInitModal(tok, forcedTokenIds) {
+  if (!isDM()) return;
+  let targetIds;
+  if (forcedTokenIds != null) {
+    targetIds = [...forcedTokenIds];
+  } else if (tok && tok.linkedId) {
+    targetIds = tokens.filter(t => t.linkedId === tok.linkedId && t.type === 'monster').map(t => t.id);
+  } else {
+    targetIds = tok ? [tok.id] : [];
+  }
+  if (!targetIds.length) return;
+
+  _groupInitTok = tok || tokens.find(t => t.id === targetIds[0]);
+  _groupInitTokenIds = targetIds;
+  _groupInitMode = 'merged';
+  _groupInitRollType = 'normal';
+
+  const desc = document.getElementById('group-init-desc');
+  if (desc) {
+    if (forcedTokenIds != null) {
+      desc.textContent = `${targetIds.length} monster${targetIds.length !== 1 ? 's' : ''} selected.`;
+    } else if (tok) {
+      const baseName = tok.label ? tok.name.slice(0, tok.name.length - tok.label.length).trimEnd() : tok.name;
+      desc.textContent = targetIds.length === 1
+        ? `Rolling for ${baseName}.`
+        : `${targetIds.length} ${baseName} on the map.`;
+    }
+  }
+
+  const modeRow = document.getElementById('group-init-mode-row');
+  if (modeRow) modeRow.style.display = targetIds.length > 1 ? '' : 'none';
+
+  _updateGroupInitUI();
+  document.getElementById('group-init-modal').style.display = 'flex';
+}
+
+function rollBulkInitiative() {
+  if (!isDM() || bulkTokenIds.size === 0) return;
+  const monsterToks = [...bulkTokenIds]
+    .map(id => tokens.find(t => t.id === id))
+    .filter(t => t && t.type === 'monster');
+  if (monsterToks.length === 0) { showToast('No monster tokens selected.', true); return; }
+  openGroupInitModal(monsterToks[0], monsterToks.map(t => t.id));
+}
+
+function closeMonsterGroupInitModal() {
+  document.getElementById('group-init-modal').style.display = 'none';
+  _groupInitTok = null;
+  _groupInitTokenIds = [];
+}
+
+async function confirmGroupInitRoll() {
+  const mode = _groupInitMode;
+  const rollType = _groupInitRollType;
+  const tokenIds = [..._groupInitTokenIds];
+  closeMonsterGroupInitModal();
+  if (!isDM()) return;
+
+  const targetToks = tokenIds.map(id => tokens.find(t => t.id === id)).filter(Boolean);
+  if (!targetToks.length) return;
+
+  if (mode === 'merged') {
+    // One shared d20 + reference token's dex mod → same total for all
+    const refTok = _groupInitTok || targetToks[0];
+    const d20 = _rollD20(rollType);
+    const roll = d20 + _groupInitDexMod(refTok);
+    for (const tok of targetToks) await _applyMonsterInitRoll(tok, roll);
+    showToast(`Initiative ${roll} set for all ${targetToks.length} tokens.`);
+  } else {
+    // Individual: separate d20 + each token's own dex mod
+    for (const tok of targetToks) {
+      const d20 = _rollD20(rollType);
+      await _applyMonsterInitRoll(tok, d20 + _groupInitDexMod(tok));
+    }
+    showToast(`Individual initiative rolled for ${targetToks.length} tokens.`);
+  }
+
+  const selTok = tokens.find(t => t.id === selectedTokenId);
+  if (selTok && tokenIds.includes(selectedTokenId)) _refreshHpPanel(selTok);
+}
+
+async function _applyMonsterInitRoll(tok, roll) {
+  const existingEntry = initData.entries.find(e => e.id === tok.initiativeId);
+  try {
+    if (existingEntry) {
+      await fetch(`/api/initiative/${tok.initiativeId}/roll`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'X-Master-Password': masterPw },
+        body: JSON.stringify({ roll })
+      });
+    } else {
+      const res = await fetch('/api/initiative/add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Master-Password': masterPw },
+        body: JSON.stringify({ name: tok.name, roll, monsterId: tok.linkedId || '' })
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.id) {
+        await fetch(`/api/table/tokens/${tok.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', 'X-Master-Password': masterPw },
+          body: JSON.stringify({ initiativeId: data.id })
+        });
+        patchToken(tok.id, { initiativeId: data.id });
+      }
+    }
+  } catch {}
 }
 
 function updateHpPanel(tok) {
@@ -382,11 +548,12 @@ function renderHpTable() {
     const controllerHtml = ownerChar && ownerChar.name !== tokDisplayName(tok)
       ? `<div style="font-size:9px;color:var(--ac);margin-top:1px">⚔ ${esc(ownerChar.name)}</div>`
       : '';
-    const rowStyle = `display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid var(--sep)${isCur ? ';background:var(--a22);margin:0 -10px;padding-left:10px;padding-right:10px' : ''}${canOpenPanel ? ';cursor:pointer' : ''}`;
+    const isBulk = isDM() && bulkTokenIds.has(tok.id);
+    const rowStyle = `display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid var(--sep)${isCur ? ';background:var(--a22);margin:0 -10px;padding-left:10px;padding-right:10px' : ''}${canOpenPanel ? ';cursor:pointer' : ''}${isBulk ? ';border-left:3px solid #00e5ff;padding-left:5px' : ''}`;
     const hpNumStr = showNums
       ? `<span style="font-weight:bold;color:${col}">${cur}</span><span style="color:var(--txd)">/${max}</span>${temp > 0 ? `<span style="color:#aaddff;font-size:10px"> +${temp}</span>` : ''}`
       : '';
-    const clickAttr = canOpenPanel ? `onclick="openHpPanel(tokens.find(t=>t.id==='${tok.id}'))"` : '';
+    const clickAttr = canOpenPanel ? `onclick="hpTrackerRowClick('${tok.id}', event)"` : '';
     const activeConds = parseConditions(tok.conditions);
     const condsHtml = activeConds.length > 0
       ? `<div style="display:flex;flex-wrap:wrap;gap:2px;margin-top:2px" onclick="event.stopPropagation()">
@@ -410,4 +577,137 @@ function renderHpTable() {
       <div style="font-size:11px;min-width:44px;text-align:right;flex-shrink:0;line-height:1.3">${hpNumStr}</div>
     </div>`;
   }).join('');
+}
+
+// ── Bulk selection (DM only) ──────────────────────────────────────────────────
+function hpTrackerRowClick(id, event) {
+  const tok = tokens.find(t => t.id === id);
+  if (!tok) return;
+  if (event.shiftKey && isDM()) {
+    if (bulkTokenIds.has(id)) {
+      bulkTokenIds.delete(id);
+    } else {
+      bulkTokenIds.add(id);
+    }
+    closeHpPanel();
+    renderTokens();
+    renderBulkPanel();
+    renderHpTable();
+  } else {
+    if (bulkTokenIds.size > 0) {
+      bulkTokenIds.clear();
+      renderBulkPanel();
+    }
+    openHpPanel(tok);
+  }
+}
+
+function clearBulkSelection() {
+  bulkTokenIds.clear();
+  renderBulkPanel();
+  renderTokens();
+  renderHpTable();
+}
+
+function bulkDeselectToken(id) {
+  bulkTokenIds.delete(id);
+  renderBulkPanel();
+  renderTokens();
+  renderHpTable();
+}
+
+function renderBulkPanel() {
+  const section = document.getElementById('lp-bulk-section');
+  if (!section) return;
+  if (bulkTokenIds.size === 0 || !isDM()) {
+    section.style.display = 'none';
+    return;
+  }
+  section.style.display = '';
+  const selected = [...bulkTokenIds].map(id => tokens.find(t => t.id === id)).filter(Boolean);
+  document.getElementById('bulk-count').textContent = `${selected.length} token${selected.length !== 1 ? 's' : ''} selected`;
+
+  const namesList = document.getElementById('bulk-names-list');
+  if (namesList) {
+    namesList.innerHTML = selected.map(tok =>
+      `<span style="font-size:10px;background:var(--bg3);border:1px solid #00e5ff44;border-radius:2px;padding:1px 5px;cursor:pointer;display:inline-flex;align-items:center;gap:3px" onclick="bulkDeselectToken('${tok.id}')" title="Remove from selection">${esc(tokDisplayName(tok))} <span style="color:var(--txd);font-size:9px">✕</span></span>`
+    ).join('');
+  }
+
+  const condGrid = document.getElementById('bulk-conditions-grid');
+  if (condGrid) {
+    condGrid.innerHTML = '';
+    for (const c of CONDITIONS) {
+      const count = selected.filter(tok => parseConditions(tok.conditions).includes(c)).length;
+      const isAll = count === selected.length && count > 0;
+      const isSome = count > 0 && !isAll;
+      const btn = document.createElement('button');
+      btn.className = 'cond-btn' + (isAll ? ' active' : isSome ? ' partial' : '');
+      btn.textContent = COND_ABBREV[c];
+      btn.title = c + (count > 0 ? ` (${count}/${selected.length})` : '');
+      btn.onclick = () => bulkToggleCondition(c);
+      condGrid.appendChild(btn);
+    }
+  }
+
+  const initRow = document.getElementById('bulk-init-row');
+  if (initRow) {
+    const hasMonsters = selected.some(t => t.type === 'monster');
+    initRow.style.display = hasMonsters ? '' : 'none';
+  }
+}
+
+function applyBulkHpChange(mode) {
+  if (bulkTokenIds.size === 0) return;
+  const amount = Math.max(0, parseInt(document.getElementById('bulk-amount').value) || 0);
+  if (amount === 0) return;
+  for (const id of bulkTokenIds) {
+    const tok = tokens.find(t => t.id === id);
+    if (!tok) continue;
+    let fields;
+    if (mode === 'dmg') {
+      let remaining = amount;
+      const newTemp = Math.max(0, (tok.hpTemp || 0) - remaining);
+      remaining = Math.max(0, remaining - (tok.hpTemp || 0));
+      fields = { hpCurrent: Math.max(0, (tok.hpCurrent || 0) - remaining), hpTemp: newTemp };
+    } else {
+      fields = { hpCurrent: Math.min(tok.hpMax || 0, (tok.hpCurrent || 0) + amount) };
+    }
+    patchToken(id, fields);
+    const tid = id, f = fields;
+    _tokQ.run(async () => {
+      try { await fetch(`/api/table/tokens/${tid}`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(f) }); } catch {}
+    });
+  }
+  renderHpTable();
+  renderTokens();
+  const selTok = tokens.find(t => t.id === selectedTokenId);
+  if (selTok && bulkTokenIds.has(selectedTokenId)) _refreshHpPanel(selTok);
+}
+
+function applyBulkQuickDmg(n) { document.getElementById('bulk-amount').value = n; applyBulkHpChange('dmg'); }
+function applyBulkQuickHeal(n) { document.getElementById('bulk-amount').value = n; applyBulkHpChange('heal'); }
+
+function bulkToggleCondition(name) {
+  if (bulkTokenIds.size === 0) return;
+  const selected = [...bulkTokenIds].map(id => tokens.find(t => t.id === id)).filter(Boolean);
+  const count = selected.filter(tok => parseConditions(tok.conditions).includes(name)).length;
+  const addToAll = count < selected.length;
+  for (const tok of selected) {
+    const active = parseConditions(tok.conditions);
+    const next = addToAll
+      ? (active.includes(name) ? active : [...active, name])
+      : active.filter(c => c !== name);
+    const condStr = JSON.stringify(next);
+    patchToken(tok.id, { conditions: condStr });
+    const tid = tok.id;
+    _tokQ.run(async () => {
+      try { await fetch(`/api/table/tokens/${tid}`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify({ conditions: condStr }) }); } catch {}
+    });
+  }
+  renderTokens();
+  renderBulkPanel();
+  renderHpTable();
+  const selTok = tokens.find(t => t.id === selectedTokenId);
+  if (selTok && bulkTokenIds.has(selectedTokenId)) _refreshHpPanel(selTok);
 }

@@ -139,6 +139,7 @@ input:focus,select:focus{outline:none;border-color:var(--ac)}
 .cond-btn{padding:2px 5px;font-size:10px;border-radius:3px;cursor:pointer;border:1px solid var(--a55);background:var(--bg3);color:var(--txd);font-weight:bold}
 .cond-btn:hover{border-color:var(--ac);color:var(--ac)}
 .cond-btn.active{background:rgba(255,140,0,.25);border-color:rgba(255,140,0,.8);color:#ffa500}
+.cond-btn.partial{background:rgba(255,140,0,.1);border-color:rgba(255,140,0,.4);color:#cc8800}
 @keyframes pulse-ring{
   0%,100%{box-shadow:0 0 0 3px rgba(200,160,74,.4),0 0 12px 4px rgba(200,160,74,.2)}
   50%{box-shadow:0 0 0 5px rgba(200,160,74,.8),0 0 20px 8px rgba(200,160,74,.4)}

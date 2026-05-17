@@ -216,59 +216,7 @@ export default function register(app, ctx) {
       if (!name || !String(name).trim()) return res.status(400).json({ error: 'Name required' });
       if (!['character','monster','npc','custom'].includes(type)) return res.status(400).json({ error: 'Invalid type' });
 
-      let resolvedInitId = String(initiativeId);
-      if (!resolvedInitId) {
-        let initBonus = 0;
-        try {
-          if ((type === 'character' || type === 'npc') && linkedId) {
-            const char = await getCharacter(String(linkedId));
-            if (char) {
-              let cdata = {};
-              try { cdata = JSON.parse(char.dataJson || '{}'); } catch {}
-              initBonus = (parseInt(cdata['init']) || 0) + (parseInt(cdata['init-bonus']) || 0);
-            }
-          } else if (type === 'monster' && linkedId) {
-            const mon = DB_PROVIDER === 'localdb' ? ldb.getMonster(String(linkedId)) : (await idb.query({ monsters: { $: { where: { id: String(linkedId) } } } })).monsters?.[0];
-            if (mon) {
-              let mdata = {};
-              try { mdata = JSON.parse(mon.dataJson || '{}'); } catch {}
-              initBonus = Math.floor(((parseInt(mdata.dex) || 10) - 10) / 2);
-            }
-          }
-        } catch {}
-        const d20 = Math.ceil(Math.random() * 20);
-        const roll = d20 + initBonus;
-        const initEntryId = genId();
-        const initFields = {
-          name: String(name).trim(), roll,
-          charId: (type === 'character' || type === 'npc') ? String(linkedId) : '',
-          monsterId: type === 'monster' ? String(linkedId) : '',
-          createdAt: new Date().toISOString()
-        };
-        if (DB_PROVIDER === 'localdb') {
-          ldb.createInitEntry(initEntryId, initFields);
-        } else {
-          await idb.transact([idb.tx.initiativeEntries[initEntryId].update(initFields)]);
-        }
-        resolvedInitId = initEntryId;
-        broadcast('initiative', { action: 'roll' });
-        {
-          const chatSender = type === 'monster' ? String(label || name).trim() : String(name).trim();
-          const chatEntry = {
-            id: genId(), sender: chatSender, dice: '1d20', results: [d20],
-            modifier: initBonus, total: roll, label: 'Initiative',
-            dmOnly: type === 'monster',
-            timestamp: new Date().toISOString()
-          };
-          if (DB_PROVIDER === 'localdb') {
-            ldb.appendChatLog(chatEntry);
-          } else {
-            chatLog.push(chatEntry);
-            if (chatLog.length > CHAT_MAX) chatLog.shift();
-          }
-          broadcast('chat', chatEntry);
-        }
-      }
+      const resolvedInitId = String(initiativeId);
 
       const newId = genId();
       const token = {
