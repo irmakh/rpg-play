@@ -159,6 +159,35 @@ Document Claude-specific mistakes here (not script bugs—those go in goals):
 
 ---
 
+### **6a. Frontend Release Process**
+
+Every time frontend JS or CSS files change and are deployed to the server, two version numbers **must be bumped together** to bust client-side caches:
+
+| File | What to change |
+|---|---|
+| `Application/server.js` | `const FRONTEND_VERSION = N` → `N+1` |
+| `Application/public/sw.js` | `const CACHE = 'rpg-vN'` → `'rpg-v(N+1)'` |
+
+**How it works:**
+- The server middleware in `server.js` injects `?v=N` into every `src` and `href` attribute on every HTML page at request time.
+- JS and CSS files are served with `Cache-Control: public, max-age=31536000, immutable` — they are cached forever in the browser by URL.
+- When the version bumps, the URL changes (`file.js?v=29` → `file.js?v=30`), so browsers fetch the new file.
+- HTML pages are served with `Cache-Control: no-store`, so they are never cached and always deliver the current version numbers.
+- `sw.js` version controls the PWA offline cache. It must stay in sync with `FRONTEND_VERSION`.
+
+**Steps for every frontend release:**
+1. Make code changes to JS/CSS files
+2. Bump `FRONTEND_VERSION` in `server.js` by 1
+3. Bump `CACHE` in `public/sw.js` to match (e.g. `rpg-v29` → `rpg-v30`)
+4. Upload all changed files to the server via pscp
+5. Upload `server.js` and `public/sw.js` via pscp
+6. Restart the server process (`pm2 restart dnd` or `docker-compose restart`)
+7. Hard-refresh one browser tab to confirm new version is loaded
+
+**Rule: `FRONTEND_VERSION` in `server.js` and the number in `sw.js` `CACHE` must always be equal.**
+
+---
+
 ### **7. First Run Initialization**
 
 **On first session in a new environment, check if memory infrastructure exists. If not, create it:**

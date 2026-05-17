@@ -70,6 +70,7 @@ function startSSE() {
       }
     },
     chat: (entry) => {
+      if (entry.dmOnly && (typeof isDM !== 'function' || !isDM())) return;
       appendChatEntry(entry);
       scrollChatLog();
       if (!chatOpen) {

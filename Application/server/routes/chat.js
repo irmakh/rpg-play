@@ -60,12 +60,16 @@ export default function register(app, ctx) {
 
   // ── Chat / Dice ───────────────────────────────────────────────────────────────
   app.get('/api/chat', (req, res) => {
-    if (DB_PROVIDER === 'localdb') return res.json(ldb.listChatLog());
-    res.json(chatLog);
+    const isMaster = masterAuth(req);
+    if (DB_PROVIDER === 'localdb') {
+      const all = ldb.listChatLog();
+      return res.json(isMaster ? all : all.filter(e => !e.dmOnly));
+    }
+    res.json(isMaster ? chatLog : chatLog.filter(e => !e.dmOnly));
   });
 
   app.post('/api/chat', (req, res) => {
-    const { sender, dice, results, modifier, total, label, type, message, description } = req.body;
+    const { sender, dice, results, modifier, total, label, type, message, description, dmOnly } = req.body;
     let entry;
     if (type === 'text') {
       if (!sender || !message)
@@ -89,6 +93,7 @@ export default function register(app, ctx) {
         total: parseInt(total),
         label: label ? String(label).slice(0, 60) : null,
         description: description ? String(description).slice(0, 200) : null,
+        dmOnly: dmOnly === true,
         timestamp: new Date().toISOString()
       };
     }

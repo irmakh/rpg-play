@@ -514,7 +514,7 @@ async function clearChat() {
 
 async function loadChat() {
   try {
-    const res = await fetch('/api/chat');
+    const res = await fetch('/api/chat', { headers: { 'X-Master-Password': masterPw } });
     if (!res.ok) return;
     const entries = await res.json();
     const log = document.getElementById('chat-log');

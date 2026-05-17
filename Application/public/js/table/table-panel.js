@@ -219,7 +219,7 @@ function rollInitiativeFromPanel() {
 async function confirmRoll(type) {
   if (!rollPending) return;
   document.getElementById('adv-modal').style.display = 'none';
-  const { label, modifier, afterRoll } = rollPending;
+  const { label, modifier, afterRoll, dmOnlyChat, skipDiceBroadcast } = rollPending;
   rollPending = null;
   const charId = getActiveCharLinkedId();
   const r1 = Math.ceil(Math.random() * 20);
@@ -232,10 +232,12 @@ async function confirmRoll(type) {
   // For adv/dis show both dice; usedIdx identifies the kept die
   const dieResults = type !== 'norm' ? [r1, r2] : [r1];
   const usedIdx    = type === 'adv' ? (r2 > r1 ? 1 : 0) : type === 'dis' ? (r2 < r1 ? 1 : 0) : 0;
-  _selfRollIds.add(rollId);
-  _broadcastDiceRoll(rollId, 20, dieResults, modifier, total, chatLabel, duration, usedIdx);
+  if (!skipDiceBroadcast) {
+    _selfRollIds.add(rollId);
+    _broadcastDiceRoll(rollId, 20, dieResults, modifier, total, chatLabel, duration, usedIdx);
+  }
   await showDiceAnimation(20, dieResults, modifier, total, chatLabel, duration, usedIdx);
-  await postToChat({ sender: getChatSender(), dice: '1d20', results: [used], modifier, total, label: chatLabel });
+  await postToChat({ sender: getChatSender(), dice: '1d20', results: [used], modifier, total, label: chatLabel, ...(dmOnlyChat ? { dmOnly: true } : {}) });
   const detail = type !== 'norm' ? `d20(${r1}, ${r2} → ${used})${modifier !== 0 ? (modifier > 0 ? ' + ' : ' − ') + Math.abs(modifier) : ''}` : `d20(${r1})${modifier !== 0 ? (modifier > 0 ? ' + ' : ' − ') + Math.abs(modifier) : ''}`;
   _pushRollToChar(charId, { label: chatLabel, type, detail, total, isCrit: used === 20, isFail: used === 1, isDamage: false, time: new Date().toISOString() });
   if (afterRoll) afterRoll(total);

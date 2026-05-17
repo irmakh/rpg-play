@@ -232,6 +232,57 @@ export default function register(app, ctx) {
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
   });
 
+  // POST /api/initiative/roll — player (or DM for a char) submits their roll; upserts by charId
+  app.post('/api/initiative/roll', async (req, res) => {
+    try {
+      const { name, roll, charId } = req.body || {};
+      if (!name || roll === undefined) return res.status(400).json({ error: 'name and roll required' });
+      let existingId = null;
+      if (charId) {
+        const all = DB_PROVIDER === 'localdb' ? ldb.listInitEntries()
+          : (await idb.query({ initiativeEntries: {} })).initiativeEntries || [];
+        const existing = all.find(e => e.charId === String(charId));
+        if (existing) existingId = existing.id;
+      }
+      if (existingId) {
+        if (DB_PROVIDER === 'localdb') {
+          ldb.updateInitEntry(existingId, { roll: parseInt(roll), name: String(name).trim() });
+        } else {
+          await idb.transact([idb.tx.initiativeEntries[existingId].update({ roll: parseInt(roll), name: String(name).trim() })]);
+        }
+        broadcast('initiative', { action: 'edit' });
+        return res.json({ id: existingId, ok: true });
+      }
+      const newId = genId();
+      const fields = { name: String(name).trim(), roll: parseInt(roll), charId: charId || '', monsterId: '', createdAt: new Date().toISOString() };
+      if (DB_PROVIDER === 'localdb') {
+        ldb.createInitEntry(newId, fields);
+      } else {
+        await idb.transact([idb.tx.initiativeEntries[newId].update(fields)]);
+      }
+      broadcast('initiative', { action: 'roll' });
+      res.json({ id: newId, ok: true });
+    } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
+  });
+
+  // POST /api/initiative/add — DM-only, creates a monster initiative entry
+  app.post('/api/initiative/add', async (req, res) => {
+    try {
+      if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
+      const { name, roll, monsterId } = req.body || {};
+      if (!name || roll === undefined) return res.status(400).json({ error: 'name and roll required' });
+      const newId = genId();
+      const fields = { name: String(name).trim(), roll: parseInt(roll), charId: '', monsterId: monsterId || '', createdAt: new Date().toISOString() };
+      if (DB_PROVIDER === 'localdb') {
+        ldb.createInitEntry(newId, fields);
+      } else {
+        await idb.transact([idb.tx.initiativeEntries[newId].update(fields)]);
+      }
+      broadcast('initiative', { action: 'roll' });
+      res.json({ id: newId, ok: true });
+    } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
+  });
+
   app.post('/api/initiative/cleanup', async (req, res) => {
     try {
       if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });

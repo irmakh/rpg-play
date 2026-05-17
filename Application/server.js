@@ -230,13 +230,49 @@ const ALLOWED_MIME = new Set(['image/jpeg','image/png','image/gif','image/webp',
 const SHARED_MEDIA_MIME = new Set(['image/jpeg','image/png','image/gif','image/webp','video/mp4','video/webm','audio/mpeg','audio/ogg','audio/wav','audio/x-wav','audio/wave','audio/vnd.wave','audio/mp4','audio/webm']);
 const MAX_MEDIA_BYTES = 25 * 1024 * 1024;
 
+// ── Frontend version ─────────────────────────────────────────────────────────
+// Bump this number whenever frontend JS or CSS files change.
+// Also bump CACHE in public/sw.js to the same value.
+// Both must always match. See deployment notes in CLAUDE.md.
+const FRONTEND_VERSION = 29;
+
 // ── Express app ───────────────────────────────────────────────────────────────
 const app = express();
 app.use(express.json({ limit: '200mb' }));
 app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads'), {
   maxAge: '5m', etag: true, lastModified: true,
 }));
-app.use(express.static(path.join(__dirname, 'public')));
+
+// Inject ?v=N into all local .js and .css references in HTML pages so
+// browsers always load fresh assets after a version bump.
+// HTML itself is served with no-store so it is never stale.
+app.use((req, res, next) => {
+  if (!req.path.endsWith('.html')) return next();
+  const filePath = path.join(__dirname, 'public', req.path);
+  fs.readFile(filePath, 'utf8', (err, html) => {
+    if (err) return next();
+    const versioned = html.replace(
+      /((?:src|href)=")(\/?[^"?#]+\.(js|css))(")/gi,
+      (_, attr, url, _ext, close) => {
+        if (/^(https?:)?\/\//i.test(url)) return `${attr}${url}${close}`;
+        return `${attr}${url}?v=${FRONTEND_VERSION}${close}`;
+      }
+    );
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-store');
+    res.send(versioned);
+  });
+});
+
+// JS and CSS are safe to cache long-term — their URLs include ?v=N which changes on every release
+app.use(express.static(path.join(__dirname, 'public'), {
+  setHeaders(res, filePath) {
+    const ext = path.extname(filePath);
+    if (ext === '.js' || ext === '.css') {
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    }
+  },
+}));
 app.get('/gaston.xml', (req, res) => res.sendFile(path.join(__dirname, 'gaston.xml')));
 
 // ── Config endpoint ───────────────────────────────────────────────────────────

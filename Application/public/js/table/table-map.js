@@ -456,7 +456,7 @@ function selectToken(id) {
 function moveSelectedToken(key) {
   const tok = tokens.find(t => t.id === selectedTokenId);
   if (!tok) return;
-  const canMove = isMyToken(tok) && (!initData.currentId || tok.id === getActiveTurnTokenId());
+  const canMove = isDM() || isMyToken(tok);
   if (!canMove) return;
   const dx = key === 'ArrowLeft' ? -1 : key === 'ArrowRight' ? 1 : 0;
   const dy = key === 'ArrowUp'   ? -1 : key === 'ArrowDown'  ? 1 : 0;
@@ -503,7 +503,7 @@ async function deleteSelectedToken() {
 function attachTokenEvents(div, tok) {
   div.addEventListener('mousedown', e => {
     if (currentTool !== 'move') return;
-    const canMove = isMyToken(tok) && (!initData.currentId || tok.id === getActiveTurnTokenId());
+    const canMove = isDM() || isMyToken(tok);
     if (!canMove) return;
     e.preventDefault();
     e.stopPropagation();

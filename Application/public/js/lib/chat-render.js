@@ -5,6 +5,7 @@ function scrollChatLog() {
 }
 
 function appendChatEntry(e) {
+  if (e.dmOnly && (typeof isDM !== 'function' || !isDM())) return;
   const log = document.getElementById('chat-log');
   if (!log) return;
   const rawTs = e.timestamp || '';

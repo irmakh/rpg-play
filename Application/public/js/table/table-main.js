@@ -74,7 +74,7 @@ window.addEventListener('load', async () => {
   initMusicPlayer();
 
   // Load chat history in background — non-blocking so map and SSE start immediately
-  fetch('/api/chat')
+  fetch('/api/chat', { headers: isDM() ? { 'X-Master-Password': masterPw } : {} })
     .then(r => r.ok ? r.json() : [])
     .then(entries => { entries.forEach(appendChatEntry); scrollChatLog(); })
     .catch(() => {});

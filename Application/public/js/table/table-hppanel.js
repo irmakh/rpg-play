@@ -201,6 +201,8 @@ function _startMonsterInitRoll(tok) {
   rollPending = {
     label: 'Initiative',
     modifier: dexMod,
+    dmOnlyChat: true,
+    skipDiceBroadcast: true,
     afterRoll: async (total) => {
       try {
         if (existingEntry) {

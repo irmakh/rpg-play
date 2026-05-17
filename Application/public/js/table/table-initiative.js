@@ -3,7 +3,12 @@ function renderInitiativeTracker(showBadge) {
   const list = document.getElementById('init-tracker-list');
   if (!list) return;
   const allEntries = initData.entries || [];
-  const visibleEntries = isDM() ? allEntries : allEntries.filter(e => !e.monsterId || !!initData.currentId);
+  const visibleEntries = isDM() ? allEntries : allEntries.filter(e => {
+    if (!e.monsterId) return true;
+    if (!!initData.currentId) return true;
+    const tok = tokens.find(t => t.initiativeId === e.id);
+    return tok ? !!tok.assignedCharId : false;
+  });
   const sorted = [...visibleEntries].sort((a, b) => (b.roll || 0) - (a.roll || 0));
   if (sorted.length === 0) {
     list.innerHTML = '<div class="init-empty-msg">No combatants yet.</div>';

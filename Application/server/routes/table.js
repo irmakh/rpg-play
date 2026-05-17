@@ -256,7 +256,9 @@ export default function register(app, ctx) {
           const chatSender = type === 'monster' ? String(label || name).trim() : String(name).trim();
           const chatEntry = {
             id: genId(), sender: chatSender, dice: '1d20', results: [d20],
-            modifier: initBonus, total: roll, label: 'Initiative', timestamp: new Date().toISOString()
+            modifier: initBonus, total: roll, label: 'Initiative',
+            dmOnly: type === 'monster',
+            timestamp: new Date().toISOString()
           };
           if (DB_PROVIDER === 'localdb') {
             ldb.appendChatLog(chatEntry);
