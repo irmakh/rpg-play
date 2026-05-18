@@ -60,6 +60,9 @@ export function makeLdb() {
   }
 
   // ── characters ─────────────────────────────────────────────────────────────
+  function listCharacters() {
+    return db.prepare('SELECT * FROM characters ORDER BY name').all();
+  }
   function getCharacter(id) {
     return db.prepare('SELECT * FROM characters WHERE id = ?').get(id) || null;
   }
@@ -70,6 +73,18 @@ export function makeLdb() {
   function updateCharacter(id, fields) {
     dynUpdate('characters', id, fields);
   }
+  function deleteCharacter(id) {
+    db.prepare('DELETE FROM characters WHERE id = ?').run(id);
+  }
+  function getLinkedTokens(charId) {
+    return db.prepare('SELECT * FROM table_tokens WHERE linkedId = ?').all(charId).map(normTok);
+  }
+  // ── media (stubs — media endpoints not covered in this test suite) ─────────
+  function listMedia() { return []; }
+  function createMedia() {}
+  function setPortrait() {}
+  function getMediaById() { return null; }
+  function deleteMedia() {}
 
   // ── initiative ─────────────────────────────────────────────────────────────
   function listInitEntries() {
@@ -162,7 +177,9 @@ export function makeLdb() {
 
   return {
     // characters
-    getCharacter, createCharacter, updateCharacter,
+    listCharacters, getCharacter, createCharacter, updateCharacter, deleteCharacter, getLinkedTokens,
+    // media stubs
+    listMedia, createMedia, setPortrait, getMediaById, deleteMedia,
     // initiative
     listInitEntries, getInitEntry, createInitEntry, updateInitEntry, deleteInitEntry,
     listOrphanMonsterInitEntries, clearInitEntries, getInitState, setInitState, getInitEntry_byCharId,
