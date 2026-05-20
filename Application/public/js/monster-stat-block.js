@@ -2,6 +2,11 @@
 // Single source of truth used by dm.js, monsters.js, and table-monsters.js.
 // Depends on global `esc` (lib/esc.js or per-page definition).
 
+function getMonsterProfBonus(cr) {
+  const v = (cr && typeof cr === 'object') ? parseFloat(cr.cr) : parseFloat(cr);
+  return isNaN(v) ? 2 : v < 5 ? 2 : v < 9 ? 3 : v < 13 ? 4 : v < 17 ? 5 : v < 21 ? 6 : v < 25 ? 7 : v < 29 ? 8 : 9;
+}
+
 function parseEntry(s) {
   const escaped = String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   return escaped.replace(/\{@(\w+)\s([^}]*)\}/g, (_,tag,content) => {
@@ -57,6 +62,16 @@ function renderMonsterStatBlock(data) {
   html+='<div style="margin:3px 0"><span style="color:var(--ac);font-weight:bold">HP</span> '+esc(String(hpStr))+'</div>';
   html+='<div style="margin:3px 0"><span style="color:var(--ac);font-weight:bold">Speed</span> '+esc(speedStr)+'</div>';
   html+='<div style="margin:3px 0"><span style="color:var(--ac);font-weight:bold">Challenge</span> '+esc(String(cr))+'</div>';
+  const prof=getMonsterProfBonus(data.cr);
+  html+='<div style="margin:3px 0"><span style="color:var(--ac);font-weight:bold">Proficiency Bonus</span> +'+prof+'</div>';
+  const _dexMod=Math.floor(((data.dex||10)-10)/2);
+  const _hasInitProf=!!(data.initiative&&data.initiative.proficiency);
+  const _manualInit=data.initBonus||0;
+  const _totalInit=_dexMod+(_hasInitProf?prof:0)+_manualInit;
+  const _initParts=['DEX '+(_dexMod>=0?'+':'')+_dexMod];
+  if(_hasInitProf)_initParts.push('Prof +'+prof);
+  if(_manualInit!==0)_initParts.push('Mod '+(_manualInit>=0?'+':'')+_manualInit);
+  html+='<div style="margin:3px 0"><span style="color:var(--ac);font-weight:bold">Initiative</span> '+(_totalInit>=0?'+':'')+_totalInit+' <span style="font-size:10px;color:var(--txd)">('+_initParts.join(', ')+')</span></div>';
   html+=HR+'<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:4px;text-align:center;margin:6px 0">';
   for(let i=0;i<6;i++){const sc=scores[i];const val=data[sc]||10;const m=Math.floor((val-10)/2);html+='<div style="background:var(--bg3);border-radius:3px;padding:4px 2px"><div style="font-size:9px;color:var(--ac);text-transform:uppercase;font-weight:bold">'+snames[i]+'</div><div style="font-size:13px;font-weight:bold">'+val+'</div><div style="font-size:10px;color:var(--txd)">'+(m>=0?'+':'')+m+'</div></div>';}
   html+='</div>'+HR;
@@ -65,6 +80,8 @@ function renderMonsterStatBlock(data) {
   if(immuneStr)html+='<div style="margin:3px 0"><span style="color:var(--ac);font-weight:bold">Damage Immunities</span> '+esc(immuneStr)+'</div>';
   if(resistStr)html+='<div style="margin:3px 0"><span style="color:var(--ac);font-weight:bold">Resistances</span> '+esc(resistStr)+'</div>';
   if(condImmStr)html+='<div style="margin:3px 0"><span style="color:var(--ac);font-weight:bold">Condition Immunities</span> '+esc(condImmStr)+'</div>';
+  const vulnStr=[].concat(data.vulnerable||[]).map(i=>typeof i==='string'?i:[].concat(i.vulnerable||[]).join('/')).join(', ');
+  if(vulnStr)html+='<div style="margin:3px 0"><span style="color:var(--ac);font-weight:bold">Damage Vulnerabilities</span> '+esc(vulnStr)+'</div>';
   if(sensesStr)html+='<div style="margin:3px 0"><span style="color:var(--ac);font-weight:bold">Senses</span> '+esc(sensesStr)+'</div>';
   html+='<div style="margin:3px 0"><span style="color:var(--ac);font-weight:bold">Languages</span> '+esc(langStr)+'</div>';
   const scGroups={};for(const sc of(data.spellcasting||[])){const k=(sc.displayAs||'trait').toLowerCase();(scGroups[k]||(scGroups[k]=[])).push(sc);}

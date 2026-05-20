@@ -85,12 +85,10 @@ function getSpeedStr(data) {
 
 function getInitBonus(data) {
   const dexMod = Math.floor(((data.dex || 10) - 10) / 2);
-  if (data.initiative && data.initiative.proficiency) {
-    const crVal = (data.cr && typeof data.cr === 'object') ? parseFloat(data.cr.cr) : parseFloat(data.cr);
-    const prof = isNaN(crVal) ? 2 : crVal < 5 ? 2 : crVal < 9 ? 3 : crVal < 13 ? 4 : crVal < 17 ? 5 : crVal < 21 ? 6 : crVal < 25 ? 7 : crVal < 29 ? 8 : 9;
-    return dexMod + prof;
-  }
-  return dexMod;
+  let bonus = dexMod;
+  if (data.initiative && data.initiative.proficiency) bonus += getMonsterProfBonus(data.cr);
+  if (data.initBonus) bonus += data.initBonus;
+  return bonus;
 }
 
 function renderTable() {
@@ -156,9 +154,17 @@ function openInitModal(monsterId) {
   const m = monsters.find(x => x.id === monsterId);
   if (!m) return;
   pendingInitMonster = m;
-  const bonus = getInitBonus(m.data || {});
+  const d = m.data || {};
+  const dexMod = Math.floor(((d.dex || 10) - 10) / 2);
+  const hasProf = !!(d.initiative && d.initiative.proficiency);
+  const prof = getMonsterProfBonus(d.cr);
+  const manualBonus = d.initBonus || 0;
+  const bonus = getInitBonus(d);
+  const parts = ['DEX ' + (dexMod >= 0 ? '+' : '') + dexMod];
+  if (hasProf) parts.push('Prof +' + prof);
+  if (manualBonus !== 0) parts.push('Mod ' + (manualBonus >= 0 ? '+' : '') + manualBonus);
   document.getElementById('init-modal-title').textContent = 'Add to Initiative: ' + m.name;
-  document.getElementById('init-modal-desc').textContent = 'Will roll d20 + initiative bonus and add to tracker.';
+  document.getElementById('init-modal-desc').textContent = 'd20 ' + (bonus >= 0 ? '+' : '-') + ' ' + Math.abs(bonus) + ' (' + parts.join(', ') + ')';
   document.getElementById('init-name-override').value = m.name;
   document.getElementById('init-bonus-val').value = bonus;
   document.getElementById('init-modal-err').textContent = '';
@@ -274,7 +280,7 @@ function efFormatProfMap(obj) {
 
 function efFormatDmgList(list) {
   if (!list || !list.length) return '';
-  return [].concat(list).map(i => typeof i === 'string' ? i : [].concat(i.immune || i.resist || i.conditionImmune || []).join('/')).join(', ');
+  return [].concat(list).map(i => typeof i === 'string' ? i : [].concat(i.immune || i.resist || i.conditionImmune || i.vulnerable || []).join('/')).join(', ');
 }
 
 function addEditRow(containerId) {
@@ -361,10 +367,11 @@ function openAddMonsterModal() {
   _setEfPortraitUI(null);
   // Clear all fields
   ['ef-name','ef-cr','ef-type','ef-alignment','ef-source','ef-hp-formula',
-   'ef-saves','ef-skills','ef-immune','ef-resist','ef-condimm','ef-senses','ef-languages'].forEach(id => efSet(id, ''));
+   'ef-saves','ef-skills','ef-immune','ef-resist','ef-condimm','ef-vuln','ef-senses','ef-languages'].forEach(id => efSet(id, ''));
   ['ef-ac','ef-hp-avg','ef-speed-walk','ef-speed-fly','ef-speed-swim','ef-speed-climb','ef-speed-burrow',
-   'ef-str','ef-dex','ef-con','ef-int','ef-wis','ef-cha','ef-passive'].forEach(id => efSet(id, ''));
+   'ef-str','ef-dex','ef-con','ef-int','ef-wis','ef-cha','ef-passive','ef-init-bonus'].forEach(id => efSet(id, ''));
   document.getElementById('ef-size').value = 'M';
+  document.getElementById('ef-init-prof').checked = false;
   ['ef-traits','ef-actions','ef-bonus','ef-reactions','ef-legendary'].forEach(id => { document.getElementById(id).innerHTML = ''; });
   document.getElementById('edit-modal-title').textContent = 'Add Monster';
   document.getElementById('edit-err').textContent = '';
@@ -405,9 +412,12 @@ function openEditMonsterModal(monsterId) {
   efSet('ef-immune', efFormatDmgList(d.immune));
   efSet('ef-resist', efFormatDmgList(d.resist));
   efSet('ef-condimm', efFormatDmgList(d.conditionImmune));
+  efSet('ef-vuln', efFormatDmgList(d.vulnerable));
   efSet('ef-senses', (d.senses || []).join(', '));
   efSet('ef-passive', d.passive);
   efSet('ef-languages', (d.languages || []).join(', '));
+  efSet('ef-init-bonus', d.initBonus || '');
+  document.getElementById('ef-init-prof').checked = d.initiative?.proficiency === true;
   // Dynamic sections — merge spellcasting entries by displayAs into the matching section
   const scByKey = {};
   for (const sc of (d.spellcasting || [])) {
@@ -489,12 +499,23 @@ async function submitEditMonster() {
   if (resist) data.resist = resist; else delete data.resist;
   const condImm = efParseCsvList(document.getElementById('ef-condimm').value);
   if (condImm) data.conditionImmune = condImm; else delete data.conditionImmune;
+  const vuln = efParseCsvList(document.getElementById('ef-vuln').value);
+  if (vuln) data.vulnerable = vuln; else delete data.vulnerable;
   const senses = efParseCsvList(document.getElementById('ef-senses').value);
   if (senses) data.senses = senses; else delete data.senses;
   const passive = parseInt(document.getElementById('ef-passive').value);
   if (!isNaN(passive)) data.passive = passive; else delete data.passive;
   const langs = efParseCsvList(document.getElementById('ef-languages').value);
   if (langs) data.languages = langs; else delete data.languages;
+  const initBonusVal = parseInt(document.getElementById('ef-init-bonus').value) || 0;
+  if (initBonusVal !== 0) data.initBonus = initBonusVal; else delete data.initBonus;
+  const initProf = document.getElementById('ef-init-prof').checked;
+  if (initProf) {
+    data.initiative = { ...(data.initiative || {}), proficiency: true };
+  } else if (data.initiative && data.initiative.proficiency) {
+    delete data.initiative.proficiency;
+    if (!Object.keys(data.initiative).length) delete data.initiative;
+  }
 
   // Dynamic sections
   const trait = efReadSection('ef-traits'); if (trait.length) data.trait = trait; else delete data.trait;
