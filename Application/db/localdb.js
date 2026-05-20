@@ -149,6 +149,7 @@ try { db.exec(`ALTER TABLE table_tokens ADD COLUMN portraitThumb TEXT`); } catch
 try { db.exec(`ALTER TABLE table_tokens ADD COLUMN ac INTEGER`); } catch {}
 try { db.exec(`ALTER TABLE table_tokens ADD COLUMN assignedCharId TEXT DEFAULT ''`); } catch {}
 try { db.exec(`ALTER TABLE playlists ADD COLUMN sounds TEXT DEFAULT '[]'`); } catch {}
+try { db.exec(`ALTER TABLE table_tokens ADD COLUMN customPortrait INTEGER DEFAULT 0`); } catch {}
 
 // Singleton IDs (match server.js constants)
 const SHOP_CONFIG_ID  = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';

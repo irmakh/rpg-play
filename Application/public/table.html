@@ -158,6 +158,18 @@
           <button id="hp-init-btn" class="btn sm" onclick="rollTokenInitiative()" style="width:100%;font-size:12px">🎲 Roll Initiative</button>
           <button class="btn sm" onclick="openEditLabel()" style="width:100%;font-size:12px;margin-top:4px">✏ Edit Identifier</button>
         </div>
+        <!-- Token portrait (DM only, monster tokens) -->
+        <div id="hp-portrait-row" style="display:none;border-top:1px solid var(--a44);padding:6px 8px">
+          <div style="font-size:10px;color:var(--txd);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Token Portrait</div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <img id="hp-portrait-preview" style="width:40px;height:40px;border-radius:50%;object-fit:cover;border:1px solid var(--a44);display:none" alt="">
+            <div style="display:flex;flex-direction:column;gap:4px;flex:1">
+              <button class="btn sm" onclick="openTokenPortraitUpload()" style="font-size:11px">📷 Upload Portrait</button>
+              <button id="hp-portrait-reset-btn" class="btn sm" onclick="removeTokenCustomPortrait()" style="font-size:11px;display:none">↩ Reset to Default</button>
+            </div>
+          </div>
+          <input type="file" id="hp-portrait-input" accept="image/*" style="display:none" onchange="onTokenPortraitChosen(this)">
+        </div>
         <!-- Edit label inline -->
         <div id="hp-label-row" style="display:none;border-top:1px solid var(--a44);padding:6px 8px">
           <div style="font-size:10px;color:var(--txd);margin-bottom:4px">Identifier (shown to players)</div>

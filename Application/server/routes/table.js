@@ -5,7 +5,7 @@ export default function register(app, ctx) {
     ldb, idb, DB_PROVIDER, genId,
     masterAuth,
     getCharacter,
-    saveUploadFile, deleteUploadFile,
+    processImageSizes, saveUploadFile, deleteUploadFile,
     mediaDb, _mediaGet, _mapUpsert,
     broadcast,
     crypto, path, fs, __dirname,
@@ -427,6 +427,56 @@ export default function register(app, ctx) {
       broadcast('table', { action: 'token-removed', id: req.params.id });
       if (initiativeBroadcastNeeded) broadcast('initiative', { action: 'delete' });
       res.json({ ok: true });
+    } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
+  });
+
+  app.post('/api/table/tokens/:id/portrait', express.json({ limit: '12mb' }), async (req, res) => {
+    try {
+      if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
+      const { dataUrl } = req.body || {};
+      if (typeof dataUrl !== 'string' || (dataUrl !== '' && !dataUrl.match(/^data:image\//)))
+        return res.status(400).json({ error: 'Image data URL required' });
+      const tok = DB_PROVIDER === 'localdb' ? ldb.getTableToken(req.params.id) : (await idb.query({ tableTokens: { $: { where: { id: req.params.id } } } })).tableTokens?.[0];
+      if (!tok) return res.status(404).json({ error: 'Not found' });
+
+      let portrait = null, portraitThumb = null, customPortrait = 0;
+
+      if (dataUrl === '') {
+        // Clearing custom portrait — delete custom files and restore monster portrait
+        deleteUploadFile(tok.portrait);
+        deleteUploadFile(tok.portraitThumb);
+        // Restore from linked monster if present
+        if (tok.linkedId && DB_PROVIDER === 'localdb') {
+          const mon = ldb.getMonster(tok.linkedId);
+          if (mon) {
+            let d = {};
+            try { d = JSON.parse(mon.dataJson || '{}'); } catch {}
+            portrait = d.portrait || null;
+            portraitThumb = d.portraitThumb || null;
+          }
+        }
+        customPortrait = 0;
+      } else {
+        // Upload new custom portrait
+        const mimeMatch = dataUrl.match(/^data:(image\/[^;]+);base64,(.+)$/s);
+        if (!mimeMatch) return res.status(400).json({ error: 'Invalid image format' });
+        deleteUploadFile(tok.portrait);
+        deleteUploadFile(tok.portraitThumb);
+        const buffer = Buffer.from(mimeMatch[2], 'base64');
+        const urls = await processImageSizes(mimeMatch[1], buffer, 'tokens', req.params.id);
+        portrait = urls.original;
+        portraitThumb = urls.thumb;
+        customPortrait = 1;
+      }
+
+      const update = { portrait, portraitThumb, customPortrait };
+      if (DB_PROVIDER === 'localdb') {
+        ldb.updateTableToken(req.params.id, update);
+      } else {
+        await idb.transact([idb.tx.tableTokens[req.params.id].update(update)]);
+      }
+      broadcast('table', { action: 'token-updated', token: { ...tok, ...update } });
+      res.json({ ok: true, portrait, portraitThumb });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
   });
 

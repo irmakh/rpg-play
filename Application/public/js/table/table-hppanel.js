@@ -120,6 +120,21 @@ function _refreshHpPanel(tok) {
       initRow.style.display = 'none';
     }
   }
+  // Token portrait upload — DM only, monster tokens
+  const portraitRow = document.getElementById('hp-portrait-row');
+  const portraitPreview = document.getElementById('hp-portrait-preview');
+  const portraitResetBtn = document.getElementById('hp-portrait-reset-btn');
+  if (portraitRow) {
+    if (isDM() && tok.type === 'monster') {
+      portraitRow.style.display = '';
+      const img = tok.portraitThumb || tok.portrait || '';
+      if (img && portraitPreview) { portraitPreview.src = img; portraitPreview.style.display = ''; }
+      else if (portraitPreview) { portraitPreview.src = ''; portraitPreview.style.display = 'none'; }
+      if (portraitResetBtn) portraitResetBtn.style.display = tok.customPortrait ? '' : 'none';
+    } else {
+      portraitRow.style.display = 'none';
+    }
+  }
   // Token assignment — DM only
   const assignRow = document.getElementById('hp-assign-row');
   const assignSel = document.getElementById('hp-assign-sel');
@@ -135,6 +150,62 @@ function _refreshHpPanel(tok) {
       assignRow.style.display = 'none';
     }
   }
+}
+
+function openTokenPortraitUpload() {
+  document.getElementById('hp-portrait-input')?.click();
+}
+
+function onTokenPortraitChosen(input) {
+  const file = input.files[0];
+  if (!file) return;
+  input.value = '';
+  const tok = tokens.find(t => t.id === selectedTokenId);
+  if (!tok) return;
+  const reader = new FileReader();
+  reader.onload = async e => {
+    const dataUrl = e.target.result;
+    const preview = document.getElementById('hp-portrait-preview');
+    if (preview) { preview.src = dataUrl; preview.style.display = ''; }
+    try {
+      const res = await fetch(`/api/table/tokens/${tok.id}/portrait`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Master-Password': masterPw },
+        body: JSON.stringify({ dataUrl })
+      });
+      if (!res.ok) { showToast('Portrait upload failed.', true); return; }
+      const data = await res.json();
+      patchToken(tok.id, { portrait: data.portrait, portraitThumb: data.portraitThumb, customPortrait: 1 });
+      renderTokens();
+      const resetBtn = document.getElementById('hp-portrait-reset-btn');
+      if (resetBtn) resetBtn.style.display = '';
+    } catch { showToast('Connection error.', true); }
+  };
+  reader.readAsDataURL(file);
+}
+
+async function removeTokenCustomPortrait() {
+  const tok = tokens.find(t => t.id === selectedTokenId);
+  if (!tok || !isDM()) return;
+  try {
+    const res = await fetch(`/api/table/tokens/${tok.id}/portrait`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Master-Password': masterPw },
+      body: JSON.stringify({ dataUrl: '' })
+    });
+    if (!res.ok) { showToast('Failed to reset portrait.', true); return; }
+    const data = await res.json();
+    patchToken(tok.id, { portrait: data.portrait, portraitThumb: data.portraitThumb, customPortrait: 0 });
+    renderTokens();
+    const preview = document.getElementById('hp-portrait-preview');
+    if (preview) {
+      const img = data.portraitThumb || data.portrait || '';
+      if (img) { preview.src = img; preview.style.display = ''; }
+      else { preview.src = ''; preview.style.display = 'none'; }
+    }
+    const resetBtn = document.getElementById('hp-portrait-reset-btn');
+    if (resetBtn) resetBtn.style.display = 'none';
+  } catch { showToast('Connection error.', true); }
 }
 
 async function toggleTokenVisibility() {
@@ -199,16 +270,12 @@ function rollMonsterInitiativeFromPanel() {
 }
 
 function _startMonsterInitRoll(tok) {
-  let dexMod = 0;
-  if (tok.linkedId) {
-    const mon = _monsterList.find(m => m.id === tok.linkedId);
-    if (mon?.data?.dex) dexMod = Math.floor((parseInt(mon.data.dex) - 10) / 2);
-  }
+  const initBonus = _groupInitDexMod(tok);
   const existingEntry = initData.entries.find(e => e.id === tok.initiativeId);
   const tokId = tok.id, tokName = tok.name, tokLinkedId = tok.linkedId, tokInitId = tok.initiativeId;
   rollPending = {
     label: 'Initiative',
-    modifier: dexMod,
+    modifier: initBonus,
     dmOnlyChat: true,
     skipDiceBroadcast: true,
     afterRoll: async (total) => {
@@ -262,8 +329,13 @@ function _rollD20(rollType) {
 function _groupInitDexMod(tok) {
   if (!tok || !tok.linkedId) return 0;
   const mon = _monsterList.find(m => m.id === tok.linkedId);
-  if (mon?.data?.dex) return Math.floor((parseInt(mon.data.dex) - 10) / 2);
-  return 0;
+  if (!mon) return 0;
+  const d = mon.data || {};
+  const dexMod = d.dex ? Math.floor((parseInt(d.dex) - 10) / 2) : 0;
+  let bonus = dexMod;
+  if (d.initiative && d.initiative.proficiency) bonus += getMonsterProfBonus(d.cr);
+  if (d.initBonus) bonus += d.initBonus;
+  return bonus;
 }
 
 function setGroupInitMode(mode) {
