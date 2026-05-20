@@ -92,6 +92,12 @@ export default function register(app, ctx) {
       } else {
         await idb.transact([idb.tx.monsters[req.params.id].update(update)]);
       }
+      const broadcastName = update.name || existing.name;
+      const broadcastCr = update.cr || existing.cr;
+      const broadcastDataJson = update.dataJson || existing.dataJson;
+      let broadcastData = {};
+      try { broadcastData = JSON.parse(broadcastDataJson || '{}'); } catch {}
+      broadcast('monsters', { action: 'updated', id: req.params.id, name: broadcastName, cr: broadcastCr, data: broadcastData });
       res.json({ ok: true });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
   });
@@ -136,14 +142,14 @@ export default function register(app, ctx) {
       const newPortrait = data.portrait || null;
       const newPortraitThumb = data.portraitThumb || null;
       if (DB_PROVIDER === 'localdb') {
-        const linked = ldb.getLinkedTokens(req.params.id).filter(t => t.type === 'monster');
+        const linked = ldb.getLinkedTokens(req.params.id).filter(t => t.type === 'monster' && !t.customPortrait);
         for (const tok of linked) {
           ldb.updateTableToken(tok.id, { portrait: newPortrait, portraitThumb: newPortraitThumb });
           broadcast('table', { action: 'token-updated', token: { ...tok, portrait: newPortrait, portraitThumb: newPortraitThumb } });
         }
       } else {
         const tokRes = await idb.query({ tableTokens: { $: { where: { linkedId: req.params.id } } } });
-        const linked = (tokRes.tableTokens || []).filter(t => t.type === 'monster');
+        const linked = (tokRes.tableTokens || []).filter(t => t.type === 'monster' && !t.customPortrait);
         if (linked.length) {
           await idb.transact(linked.map(t => idb.tx.tableTokens[t.id].update({ portrait: newPortrait, portraitThumb: newPortraitThumb })));
           for (const tok of linked) {

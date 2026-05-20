@@ -158,7 +158,10 @@ function renderMonsterFullStats(data, tok) {
   html+=rSection(data.trait,'Traits');
   html+='<div style="margin-top:8px"><a href="/monsters.html" target="_blank" style="color:var(--ac);font-size:10px">📖 Full view →</a></div>';
   html+='</div>';
-  const dexMod=Math.floor(((data.dex||10)-10)/2);const initStr=(dexMod>=0?'+':'')+dexMod;
+  const dexMod=Math.floor(((data.dex||10)-10)/2);
+  const initProfBonus=(data.initiative&&data.initiative.proficiency===true)?getMonsterProfBonus(data.cr):0;
+  const initTotal=dexMod+initProfBonus+(data.initBonus||0);
+  const initStr=(initTotal>=0?'+':'')+initTotal;
   return `<div style="padding:2px 0 4px;display:flex;align-items:center;justify-content:space-between">
     <span style="font-size:12px;color:#ff9999;font-weight:bold">${esc(data.name||'Monster')}${tok&&tok.label?` <span style="color:var(--txd);font-weight:normal;font-size:11px">[${esc(tok.label)}]</span>`:''}</span>
     <div style="display:flex;gap:4px">
@@ -177,9 +180,12 @@ function renderMonsterFullStats(data, tok) {
 }
 
 // ── Monster info modal (full stat block popup for DM) ─────────────────────────
+let _infoModalMonsterId = null;
+
 function showMonsterInfoModal(linkedId) {
   const mon = _monsterList.find(m => m.id === linkedId);
   if (!mon) return;
+  _infoModalMonsterId = linkedId;
   document.getElementById('monster-info-table-title').textContent = mon.name || 'Monster';
   document.getElementById('monster-info-table-body').innerHTML = renderMonsterStatBlock(mon.data || {});
   document.getElementById('monster-info-modal').style.display = 'flex';
@@ -187,4 +193,5 @@ function showMonsterInfoModal(linkedId) {
 
 function closeMonsterInfoTableModal() {
   document.getElementById('monster-info-modal').style.display = 'none';
+  _infoModalMonsterId = null;
 }

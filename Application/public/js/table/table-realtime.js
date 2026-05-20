@@ -112,6 +112,18 @@ function startSSE() {
         // If the add-token modal is open, refresh its monster tab
         const modal = document.getElementById('add-token-modal');
         if (modal && modal.style.display !== 'none') populateAddTokenModal(_charList);
+      } else if (d.action === 'updated') {
+        const mon = _monsterList.find(m => m.id === d.id);
+        if (mon) { mon.name = d.name; mon.cr = d.cr; mon.data = d.data || {}; }
+        // Refresh side panel if it's showing a token linked to this monster
+        const sideTok = _sideQrollTokenId ? tokens.find(t => t.id === _sideQrollTokenId) : null;
+        if (sideTok?.linkedId === d.id) { _sideQrollTokenId = null; loadSideQroll(); }
+        // Refresh stat block modal if it's open for this monster
+        const infoModal = document.getElementById('monster-info-modal');
+        if (infoModal && infoModal.style.display !== 'none' && _infoModalMonsterId === d.id) {
+          document.getElementById('monster-info-table-title').textContent = d.name || 'Monster';
+          document.getElementById('monster-info-table-body').innerHTML = renderMonsterStatBlock(d.data || {});
+        }
       }
     },
     sound: (d) => { handleSoundEvent(d); },
