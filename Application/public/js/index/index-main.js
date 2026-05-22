@@ -5,6 +5,8 @@ document.querySelectorAll('[data-key^="sk-prof-"], [data-key^="sk-exp-"], [data-
 document.querySelector('[data-key="profbonus"]')?.addEventListener('input', recalcAll);
 document.querySelector('[data-key="sp-ability"]')?.addEventListener('input', recalcAll);
 document.querySelector('[data-key="init-bonus"]')?.addEventListener('input', recalcAll);
+document.querySelector('[data-key="ac-bonus"]')?.addEventListener('input', recalcAll);
+document.querySelector('[data-key="speed-bonus"]')?.addEventListener('input', recalcAll);
 document.querySelector('[data-key="level"]')?.addEventListener('input', () => { recalcProfBonus(); recalcAll(); recalcPreparedCount(); });
 
 // ── Keyboard shortcuts ────────────────────────────────────────────────────────

@@ -68,16 +68,17 @@ function recalcAll() {
     if (initEl) initEl.value = (base >= 0 ? '+' : '') + base;
   }
 
-  // Auto-calc Speed: base speed + equipped item speed bonuses
+  // Auto-calc Speed: base speed + equipped item speed bonuses + manual bonus
   {
-    const speedBonus = items.filter(i => i.equipped).reduce((s, i) => s + (parseInt(i.speedBonus) || 0), 0);
+    const itemSpeedBonus = items.filter(i => i.equipped).reduce((s, i) => s + (parseInt(i.speedBonus) || 0), 0);
+    const manualSpeedBonus = parseInt(document.querySelector('[data-key="speed-bonus"]')?.value) || 0;
     const baseEl = document.querySelector('[data-key="speed-base"]');
     const speedEl = document.querySelector('[data-key="speed"]');
     const base = parseInt(baseEl?.value) || 30;
-    if (speedEl) speedEl.value = (base + speedBonus) + ' ft';
+    if (speedEl) speedEl.value = (base + itemSpeedBonus + manualSpeedBonus) + ' ft';
   }
 
-  // Auto-calc AC: equipped armor + DEX mod + item bonuses
+  // Auto-calc AC: equipped armor + DEX mod + item bonuses + manual bonus
   {
     const dexMod = getMod('dex');
     const equipped = items.filter(i => i.equipped);
@@ -93,8 +94,9 @@ function recalcAll() {
       baseAC = (armor.acBase || 10) + dexMod;
     }
     const flatBonus = equipped.reduce((s, i) => s + (parseInt(i.acBonus) || 0), 0);
+    const manualAcBonus = parseInt(document.querySelector('[data-key="ac-bonus"]')?.value) || 0;
     const acEl = document.querySelector('[data-key="ac"]');
-    if (acEl && document.activeElement !== acEl) acEl.value = baseAC + flatBonus;
+    if (acEl && document.activeElement !== acEl) acEl.value = baseAC + flatBonus + manualAcBonus;
   }
 }
 

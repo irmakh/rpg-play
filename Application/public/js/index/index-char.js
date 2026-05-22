@@ -486,6 +486,7 @@ function deleteCharacter() {
     try {
       const headers = {};
       if (charPasswords[currentCharId]) headers['X-Character-Password'] = charPasswords[currentCharId];
+      else if (indexMasterPw()) headers['X-Character-Password'] = indexMasterPw();
       await fetch(`/api/characters/${currentCharId}`, { method: 'DELETE', headers });
       delete charPasswords[currentCharId];
       delete charHasPassword[currentCharId];
@@ -617,9 +618,11 @@ function characterToXML(d) {
 
   p('  <combat>');
   p(`    <ac>${xe(d.ac)}</ac>`);
+  p(`    <ac_bonus>${xe(d['ac-bonus'])}</ac_bonus>`);
   p(`    <initiative>${xe(d.init)}</initiative>
     <initiative_bonus>${xe(d['init-bonus'])}</initiative_bonus>`);
   p(`    <speed>${xe(d.speed)}</speed>`);
+  p(`    <speed_bonus>${xe(d['speed-bonus'])}</speed_bonus>`);
   p(`    <hp_current>${xe(d.hpcur)}</hp_current>`);
   p(`    <hp_max>${xe(d.hpmax)}</hp_max>`);
   p(`    <hp_temp>${xe(d.hptemp)}</hp_temp>`);
@@ -794,7 +797,7 @@ function parseCreatorFormat(doc) {
   d['prof-tools'] = get('tool').split(',').map(s=>s.trim()).filter(s=>s).join(', ');
   d['prof-armor'] = ''; d['prof-wpn'] = ''; d.languages = '';
 
-  d.ac = '10'; d.init = '+0'; d['init-bonus'] = '0'; d.speed = '30 ft';
+  d.ac = '10'; d['ac-bonus'] = '0'; d.init = '+0'; d['init-bonus'] = '0'; d.speed = '30 ft'; d['speed-bonus'] = '0';
   d._inspire = false; d.ds0=d.ds1=d.ds2=d.df0=d.df1=d.df2 = false;
 
   const bs = get('backstory'), ap = get('appearance');
@@ -833,7 +836,9 @@ function xmlToCharacterData(xmlText) {
     d['sk-'+i] = el.textContent.trim();
   });
 
-  d.ac=get('combat > ac'); d.init=get('combat > initiative'); d['init-bonus']=get('combat > initiative_bonus')||'0'; d.speed=get('combat > speed');
+  d.ac=get('combat > ac'); d['ac-bonus']=get('combat > ac_bonus')||'0';
+  d.init=get('combat > initiative'); d['init-bonus']=get('combat > initiative_bonus')||'0';
+  d.speed=get('combat > speed'); d['speed-bonus']=get('combat > speed_bonus')||'0';
   d.hpcur=get('combat > hp_current'); d.hpmax=get('combat > hp_max'); d.hptemp=get('combat > hp_temp');
   d.hd=get('combat > hit_dice'); d.hdspent=get('combat > hit_dice_spent');
   d.pp=get('combat > passive_perception'); d._inspire=get('combat > inspiration')==='true';

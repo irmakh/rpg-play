@@ -148,9 +148,9 @@
         <!-- Combat -->
         <div class="card"><div class="ct">Combat</div><div class="cb">
           <div class="g3">
-            <div class="field"><label class="lbl">Armor Class</label><input type="number" data-key="ac" class="big"></div>
+            <div class="field"><label class="lbl">Armor Class</label><input type="number" data-key="ac" class="big"><div style="display:flex;align-items:center;gap:4px;margin-top:3px"><label class="lbl" style="margin:0;white-space:nowrap">Bonus</label><input type="number" data-key="ac-bonus" style="width:100%;text-align:center" placeholder="0"></div></div>
             <div class="field"><label class="lbl">Initiative</label><div class="rollable-field"><input type="text" data-key="init" class="big" readonly title="Click to roll Initiative — auto-calculated"><button class="edit-btn" style="pointer-events:none;opacity:0.3">🎲</button></div><div style="display:flex;align-items:center;gap:4px;margin-top:3px"><label class="lbl" style="margin:0;white-space:nowrap">Bonus</label><input type="number" data-key="init-bonus" style="width:100%;text-align:center" placeholder="0"></div></div>
-            <div class="field"><label class="lbl">Speed</label><input type="text" data-key="speed" class="big" readonly title="Auto-calculated: base + item bonuses"><input type="hidden" data-key="speed-base" value="30"></div>
+            <div class="field"><label class="lbl">Speed</label><input type="text" data-key="speed" class="big" readonly title="Auto-calculated: base + item bonuses + bonus"><input type="hidden" data-key="speed-base" value="30"><div style="display:flex;align-items:center;gap:4px;margin-top:3px"><label class="lbl" style="margin:0;white-space:nowrap">Bonus</label><input type="number" data-key="speed-bonus" style="width:100%;text-align:center" placeholder="0"></div></div>
           </div>
           <div class="g3" style="margin-top:8px">
             <div class="field"><label class="lbl">HP Current</label><input type="number" data-key="hpcur" class="big"></div>
