@@ -670,6 +670,8 @@ function hpTrackerRowClick(id, event) {
       bulkTokenIds.clear();
       renderBulkPanel();
     }
+    selectToken(id);
+    panToToken(id);
     openHpPanel(tok);
   }
 }

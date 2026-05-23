@@ -454,6 +454,20 @@ function selectToken(id) {
   loadSideQroll();
 }
 
+function panToToken(id) {
+  const tok = tokens.find(t => t.id === id);
+  if (!tok || !canvasArea) return;
+  const cs = tableState.cellSize || 50;
+  const scale = zoomPct / 100;
+  const pixX = ((tableState.offsetX || 0) + (tok.x || 0) * cs + cs / 2) * scale;
+  const pixY = ((tableState.offsetY || 0) + (tok.y || 0) * cs + cs / 2) * scale;
+  canvasArea.scrollTo({
+    left: pixX - canvasArea.clientWidth / 2,
+    top:  pixY - canvasArea.clientHeight / 2,
+    behavior: 'smooth'
+  });
+}
+
 function moveSelectedToken(key) {
   const tok = tokens.find(t => t.id === selectedTokenId);
   if (!tok) return;
