@@ -417,7 +417,7 @@ function renderTokens() {
     if (conds.length > 0) {
       condDiv = document.createElement('div');
       condDiv.className = 'token-conditions';
-      condDiv.innerHTML = conds.map(c => `<span title="${c}">${COND_ABBREV[c] || c.slice(0,2).toUpperCase()}</span>`).join('');
+      condDiv.innerHTML = conds.map(c => `<span title="${c}">${COND_ABBREV[c] || c.slice(0,3).toUpperCase()}</span>`).join('');
     }
 
     attachTokenEvents(div, tok);

@@ -631,7 +631,7 @@ function renderHpTable() {
       ? `<div style="display:flex;flex-wrap:wrap;gap:2px;margin-top:2px" onclick="event.stopPropagation()">
           ${activeConds.map(c => `<a href="https://5e.tools/conditionsdiseases.html#${encodeURIComponent(c.toLowerCase())}_xphb" target="_blank" rel="noopener"
               style="font-size:9px;font-weight:bold;background:rgba(255,140,0,.2);border:1px solid rgba(255,140,0,.6);color:#ffa500;border-radius:2px;padding:0 3px;line-height:13px;text-decoration:none;white-space:nowrap"
-              title="${esc(c)}">${esc(COND_ABBREV[c] || c.slice(0,2).toUpperCase())}</a>`).join('')}
+              title="${esc(c)}">${esc(COND_ABBREV[c] || c.slice(0,3).toUpperCase())}</a>`).join('')}
         </div>`
       : '';
     return `<div style="${rowStyle}" ${clickAttr}>

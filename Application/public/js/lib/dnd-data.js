@@ -19,12 +19,13 @@ const SAVE_KEYS  = ['str','dex','con','int','wis','cha'];
 
 // D&D 5e conditions
 const CONDITIONS = [
-  'Blinded','Charmed','Deafened','Exhaustion','Frightened','Grappled',
+  'Blinded','Charmed','Deafened','Exhaustion','Fly','Frightened','Grappled',
   'Incapacitated','Invisible','Paralyzed','Petrified','Poisoned',
   'Prone','Restrained','Stunned','Unconscious'
 ];
 const COND_ABBREV = {
-  Blinded:'BL', Charmed:'CH', Deafened:'DF', Exhaustion:'EX', Frightened:'FR',
-  Grappled:'GR', Incapacitated:'IC', Invisible:'IV', Paralyzed:'PA', Petrified:'PT',
-  Poisoned:'PO', Prone:'PR', Restrained:'RS', Stunned:'ST', Unconscious:'UC'
+  Blinded:'BLD', Charmed:'CHR', Deafened:'DEF', Exhaustion:'EXH', Fly:'FLY',
+  Frightened:'FRI', Grappled:'GRP', Incapacitated:'INC', Invisible:'INV',
+  Paralyzed:'PAR', Petrified:'PET', Poisoned:'POI', Prone:'PRN',
+  Restrained:'RST', Stunned:'STN', Unconscious:'UNC'
 };
