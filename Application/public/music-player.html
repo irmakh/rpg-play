@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Now Playing</title>
+  <style>
+    :root {
+      --bg2: #221e19; --ac: #c8a04a; --tx: #e8dcc8; --txd: #8a7a60;
+      --a44: rgba(200,160,74,.27); --a55: rgba(200,160,74,.4);
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: var(--bg2); color: var(--tx);
+      font-family: system-ui, -apple-system, sans-serif; font-size: 12px;
+      overflow: hidden; padding: 10px 14px;
+      display: flex; flex-direction: column; gap: 8px;
+      height: 100vh; justify-content: center;
+      border: 1px solid var(--a44);
+    }
+    .row { display: flex; align-items: center; gap: 7px; }
+    #now-state { font-size: 10px; color: var(--txd); white-space: nowrap; flex-shrink: 0; }
+    #now-name  { color: var(--tx); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    #pos       { font-size: 10px; color: var(--ac); white-space: nowrap; min-width: 26px; text-align: right; flex-shrink: 0; }
+    #dur       { font-size: 10px; color: var(--txd); white-space: nowrap; min-width: 26px; flex-shrink: 0; }
+    #vol-label { font-size: 10px; color: var(--txd); flex-shrink: 0; }
+    #vol-pct   { font-size: 10px; color: var(--ac); min-width: 28px; text-align: right; flex-shrink: 0; }
+    input[type=range] { cursor: pointer; accent-color: var(--ac); }
+    #vol { width: 70px; }
+  </style>
+</head>
+<body>
+  <audio id="audio" style="display:none"></audio>
+
+  <div class="row">
+    <span id="now-state" style="color:var(--txd)">Loading…</span>
+    <span style="color:var(--ac);flex-shrink:0">🎵</span>
+    <span id="now-name">—</span>
+  </div>
+
+  <div class="row">
+    <span id="pos">0:00</span>
+    <span style="font-size:10px;color:var(--txd)">/</span>
+    <span id="dur">0:00</span>
+    <span id="vol-label" style="margin-left:6px">Vol</span>
+    <input type="range" id="vol" min="0" max="100" value="100">
+    <span id="vol-pct">100%</span>
+  </div>
+
+  <script src="/js/lib/realtime.js"></script>
+  <script>
+    const audio    = document.getElementById('audio');
+    const nameEl   = document.getElementById('now-name');
+    const stateEl  = document.getElementById('now-state');
+    const posEl    = document.getElementById('pos');
+    const durEl    = document.getElementById('dur');
+    const volEl    = document.getElementById('vol');
+    const volPctEl = document.getElementById('vol-pct');
+
+    let _dur = 0;
+    let _tick = null;
+
+    function fmt(s) {
+      if (!isFinite(s) || s < 0) return '0:00';
+      const m = Math.floor(s / 60), sec = Math.floor(s % 60);
+      return m + ':' + String(sec).padStart(2, '0');
+    }
+
+    function startTick() {
+      if (_tick) return;
+      _tick = setInterval(() => {
+        posEl.textContent = fmt(audio.currentTime);
+        const d = isFinite(audio.duration) ? audio.duration : _dur;
+        if (d) durEl.textContent = fmt(d);
+      }, 500);
+    }
+    function stopTick() { clearInterval(_tick); _tick = null; }
+
+    function setVol(v) {
+      audio.volume = v / 100;
+      volPctEl.textContent = v + '%';
+      localStorage.setItem('localVolume', v);
+    }
+    volEl.oninput = () => setVol(parseInt(volEl.value));
+
+    const savedVol = localStorage.getItem('localVolume');
+    if (savedVol !== null) { volEl.value = savedVol; setVol(parseInt(savedVol)); }
+
+    function applyPlay(name, url, position, duration) {
+      nameEl.textContent = name || '—';
+      stateEl.textContent = 'Now playing:';
+      if (duration) { _dur = duration; durEl.textContent = fmt(duration); }
+
+      if (url) {
+        const fullUrl = new URL(url, location.origin).href;
+        if (audio.src !== fullUrl) {
+          if (position > 0) {
+            audio.addEventListener('loadedmetadata', () => { audio.currentTime = position; }, { once: true });
+          }
+          audio.src = url;
+        } else if (position > 0 && Math.abs(audio.currentTime - position) > 1) {
+          audio.currentTime = position;
+        }
+        audio.play().then(() => startTick()).catch(() => {});
+      }
+    }
+
+    // BroadcastChannel — receive init from main page
+    const bc = new BroadcastChannel('music-popup');
+
+    bc.onmessage = (e) => {
+      const d = e.data;
+      // Table page loaded — close this popup so it can take over audio
+      if (d.type === 'dismiss') { window.close(); return; }
+      if (d.type !== 'init') return;
+
+      nameEl.textContent = d.name || '—';
+      _dur = d.duration || 0;
+      if (d.duration) durEl.textContent = fmt(d.duration);
+      if (d.volume != null) { volEl.value = d.volume; setVol(d.volume); }
+
+      if (d.url && d.playing) {
+        applyPlay(d.name, d.url, d.position || 0, d.duration);
+      } else if (d.name) {
+        stateEl.textContent = 'Paused:';
+        nameEl.textContent = d.name;
+      } else {
+        stateEl.textContent = 'Nothing playing';
+      }
+    };
+
+    // Tell main page we're ready
+    bc.postMessage({ type: 'ready' });
+
+    // Connect to server realtime for ongoing DM commands
+    connectRealtime({
+      sound: (d) => {
+        if (d.action === 'play') {
+          applyPlay(d.name, d.url, d.position ?? 0, d.duration);
+        } else if (d.action === 'pause') {
+          audio.pause(); stopTick();
+          stateEl.textContent = 'Paused:';
+        } else if (d.action === 'stop') {
+          audio.pause(); audio.src = ''; stopTick();
+          nameEl.textContent = '—'; stateEl.textContent = 'Stopped';
+          posEl.textContent = '0:00'; durEl.textContent = '0:00'; _dur = 0;
+        } else if (d.action === 'seek') {
+          audio.currentTime = d.position ?? 0;
+        } else if (d.action === 'duration') {
+          _dur = d.duration ?? 0;
+          durEl.textContent = fmt(_dur);
+        }
+      }
+    });
+
+    // Notify main page on close
+    window.addEventListener('beforeunload', () => {
+      bc.postMessage({ type: 'closed' });
+      bc.close();
+    });
+  </script>
+</body>
+</html>

@@ -11,6 +11,11 @@ let _musicLoopMode         = 'none';
 let _musicSeeking          = false;
 let _musicProgressTick     = null;
 
+// Popup state — audio moves to popup window when open
+let _musicPopupWin         = null;
+let _musicPopupTimer       = null;
+let _musicPopupBc          = null;
+
 // ── Time helpers ──────────────────────────────────────────────────────────────
 function fmtTime(s) {
   if (!isFinite(s) || s < 0) return '0:00';
@@ -58,38 +63,8 @@ function updateDurationDisplay(dur) {
   if (msk && dur) msk.max = dur;
 }
 
-// ── Init (called by table-auth.js after role is known) ────────────────────────
-function initMusicPlayer() {
-  const audioEl = document.getElementById('bg-music');
-  if (!audioEl) return;
-
-  // Restore each client's own local volume preference
-  const savedVol = localStorage.getItem('localVolume');
-  if (savedVol !== null) {
-    const slider = document.getElementById('local-vol-slider');
-    if (slider) slider.value = savedVol;
-    const pct = document.getElementById('local-vol-pct');
-    if (pct) pct.textContent = savedVol + '%';
-    audioEl.volume = parseFloat(savedVol) / 100;
-  }
-
-  if (sessionRole === 'dm') {
-    const btn = document.getElementById('btn-music');
-    if (btn) btn.style.display = '';
-    fetchMusicPlaylists();
-    // DM reports duration to server when track metadata is known
-    audioEl.addEventListener('loadedmetadata', () => {
-      if (isFinite(audioEl.duration) && audioEl.duration > 0) {
-        musicSendControl({ action: 'duration', duration: audioEl.duration });
-      }
-    });
-  } else {
-    // Players can see the seek bar but cannot interact with it
-    const sk = document.getElementById('now-playing-seek');
-    if (sk) { sk.style.pointerEvents = 'none'; sk.style.cursor = 'default'; }
-  }
-
-  // Resume state from server on connect
+// ── Resume audio from server state (extracted for reuse) ──────────────────────
+function _resumeAudioFromServer(audioEl) {
   fetch('/api/sound/state').then(r => r.json()).then(st => {
     _musicLoopMode        = st.loopMode || 'none';
     _musicCurrentTrackIdx = st.trackIndex ?? 0;
@@ -124,12 +99,73 @@ function initMusicPlayer() {
         updateNowPlaying(st.name, 'paused');
       }
     }
-
   }).catch(() => {});
+}
+
+// ── Init (called by table-auth.js after role is known) ────────────────────────
+function initMusicPlayer() {
+  const audioEl = document.getElementById('bg-music');
+  if (!audioEl) return;
+
+  // Synchronous UI setup — independent of popup state
+  const savedVol = localStorage.getItem('localVolume');
+  if (savedVol !== null) {
+    const slider = document.getElementById('local-vol-slider');
+    if (slider) slider.value = savedVol;
+    const pct = document.getElementById('local-vol-pct');
+    if (pct) pct.textContent = savedVol + '%';
+    audioEl.volume = parseFloat(savedVol) / 100;
+  }
+  if (sessionRole === 'dm') {
+    const btn = document.getElementById('btn-music');
+    if (btn) btn.style.display = '';
+    fetchMusicPlaylists();
+    audioEl.addEventListener('loadedmetadata', () => {
+      if (isFinite(audioEl.duration) && audioEl.duration > 0) {
+        musicSendControl({ action: 'duration', duration: audioEl.duration });
+      }
+    });
+  } else {
+    const sk = document.getElementById('now-playing-seek');
+    if (sk) { sk.style.pointerEvents = 'none'; sk.style.cursor = 'default'; }
+  }
+
+  // Dismiss any open popup — it closes itself and this page takes over audio
+  new BroadcastChannel('music-popup').postMessage({ type: 'dismiss' });
+
+  _resumeAudioFromServer(audioEl);
 }
 
 // ── SSE handler (called by table-realtime.js for 'sound' channel) ─────────────
 function handleSoundEvent(d) {
+  // Popup owns the audio — only update local state vars, let popup handle playback
+  if (_musicPopupWin && !_musicPopupWin.closed) {
+    if (d.action === 'play') {
+      _musicCurrentName     = d.name;
+      _musicCurrentTrackIdx = d.trackIndex ?? 0;
+      _musicPlaying         = true;
+      if (d.duration) _musicDuration = d.duration;
+      if (sessionRole === 'dm' && d.playlistId) {
+        const sel = document.getElementById('music-pl-sel');
+        if (sel && sel.value !== d.playlistId) { sel.value = d.playlistId; loadMusicPlaylist(); }
+        renderMusicTrackList(d.trackIndex);
+      }
+    } else if (d.action === 'pause') {
+      _musicPlaying = false;
+    } else if (d.action === 'stop') {
+      _musicCurrentName = null; _musicPlaying = false;
+      _musicCurrentTrackIdx = 0; _musicDuration = 0;
+      if (sessionRole === 'dm') renderMusicTrackList(null);
+    } else if (d.action === 'duration') {
+      _musicDuration = d.duration ?? 0;
+    } else if (d.action === 'loopMode') {
+      _musicLoopMode = d.loopMode || 'none';
+      updateLoopBtns(_musicLoopMode);
+      applyLoopToAudio(_musicLoopMode);
+    }
+    return;
+  }
+
   const audioEl = document.getElementById('bg-music');
   if (!audioEl) return;
 
@@ -351,6 +387,96 @@ function musicSendControl(body) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-Master-Password': masterPw },
     body: JSON.stringify(body),
+  }).catch(() => {});
+}
+
+// ── Popup player ──────────────────────────────────────────────────────────────
+function openMusicPopup() {
+  if (_musicPopupWin && !_musicPopupWin.closed) {
+    _musicPopupWin.focus();
+    return;
+  }
+
+  const audioEl   = document.getElementById('bg-music');
+  const currentPos = audioEl ? audioEl.currentTime : 0;
+  const currentVol = audioEl ? Math.round(audioEl.volume * 100) : 100;
+
+  _musicPopupWin = window.open(
+    '/music-player.html', 'music-player',
+    'width=400,height=90,resizable=yes,scrollbars=no,toolbar=no,menubar=no,location=no,status=no'
+  );
+
+
+  if (_musicPopupBc) _musicPopupBc.close();
+  _musicPopupBc = new BroadcastChannel('music-popup');
+
+  _musicPopupBc.onmessage = (e) => {
+    const d = e.data;
+    if (d.type === 'ready') {
+      _musicPopupBc.postMessage({
+        type:     'init',
+        url:      audioEl?.src || '',
+        position: currentPos,
+        name:     _musicCurrentName,
+        playing:  _musicPlaying,
+        volume:   currentVol,
+        loopMode: _musicLoopMode,
+        duration: _musicDuration,
+      });
+    } else if (d.type === 'closed') {
+      _onMusicPopupClosed();
+    }
+  };
+
+  // Pause main audio and hide bar while popup is active
+  if (audioEl && _musicPlaying) {
+    audioEl.pause();
+    stopProgressTick();
+  }
+  updateNowPlaying(null, null);
+
+  // Fallback poll in case beforeunload message is missed
+  _musicPopupTimer = setInterval(() => {
+    if (_musicPopupWin && _musicPopupWin.closed) _onMusicPopupClosed();
+  }, 1000);
+}
+
+function _onMusicPopupClosed() {
+  if (!_musicPopupWin && !_musicPopupTimer) return;
+  clearInterval(_musicPopupTimer);
+  _musicPopupTimer = null;
+  if (_musicPopupBc) { _musicPopupBc.close(); _musicPopupBc = null; }
+  _musicPopupWin = null;
+
+  // Re-sync audio from server state
+  fetch('/api/sound/state').then(r => r.json()).then(st => {
+    _musicLoopMode        = st.loopMode || 'none';
+    _musicCurrentTrackIdx = st.trackIndex ?? 0;
+    updateLoopBtns(_musicLoopMode);
+    applyLoopToAudio(_musicLoopMode);
+    if (st.duration) updateDurationDisplay(st.duration);
+
+    if (st.url) {
+      _musicCurrentName = st.name;
+      const audioEl = document.getElementById('bg-music');
+      if (st.isPlaying) {
+        const pos = st.currentPosition ?? 0;
+        if (audioEl) {
+          if (pos > 0) {
+            audioEl.addEventListener('loadedmetadata', () => { audioEl.currentTime = pos; }, { once: true });
+          }
+          audioEl.src = st.url;
+          audioEl.play()
+            .then(() => updateNowPlaying(_musicCurrentName, 'playing'))
+            .catch(() => updateNowPlaying(_musicCurrentName, 'paused'));
+        }
+        _musicPlaying = true;
+        updateMusicBtn(true);
+        startProgressTick();
+      } else {
+        updateNowPlaying(st.name, 'paused');
+      }
+    }
   }).catch(() => {});
 }
 
