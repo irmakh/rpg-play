@@ -172,6 +172,7 @@
           <span id="adv-scenario-name" class="adv-scenario"></span>
           <span id="adv-char-name-header" class="adv-char-sub"></span>
         </div>
+        <!-- Desktop: all action buttons visible -->
         <div class="adv-header-right">
           <span id="adv-model-badge" class="model-badge" title="Current model"></span>
           <button class="btn-ghost small" id="btn-summary" title="View or generate adventure summary">📋 Summary</button>
@@ -179,6 +180,18 @@
           <button class="btn-ghost small" id="btn-regenerate" title="Delete last DM response and try again">↻ Retry</button>
           <button class="btn-ghost small" id="btn-rest">🌙 Rest</button>
           <button class="btn-ghost small" id="btn-end-session">End Session</button>
+        </div>
+        <!-- Mobile: overflow menu -->
+        <div class="adv-overflow-wrap">
+          <button class="icon-btn" id="btn-header-overflow" aria-label="More options">&#8942;</button>
+          <div class="adv-overflow-dropdown" id="adv-overflow-dropdown">
+            <button class="overflow-item" data-for="btn-summary">📋 Summary</button>
+            <button class="overflow-item" data-for="btn-change-model">⚙ Change Model</button>
+            <button class="overflow-item" data-for="btn-regenerate">↻ Retry</button>
+            <button class="overflow-item" data-for="btn-rest">🌙 Rest</button>
+            <div class="overflow-separator"></div>
+            <button class="overflow-item overflow-danger" data-for="btn-end-session">⏹ End Session</button>
+          </div>
         </div>
       </div>
 
@@ -192,6 +205,7 @@
       </div>
     </div>
 
+    <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
   </div>
 </div>
 

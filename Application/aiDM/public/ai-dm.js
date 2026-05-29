@@ -525,16 +525,53 @@ function updateHPBar(cur, max) {
 }
 
 // ── Sidebar toggle ────────────────────────────────────────────────────────────
-document.getElementById('btn-toggle-sidebar').addEventListener('click', () => {
-  state.sidebarOpen = !state.sidebarOpen;
-  document.getElementById('char-sidebar').classList.toggle('hidden', !state.sidebarOpen);
+function setSidebarOpen(open) {
+  state.sidebarOpen = open;
+  const sidebar  = document.getElementById('char-sidebar');
+  const backdrop = document.getElementById('sidebar-backdrop');
+  if (window.innerWidth < 900) {
+    sidebar.classList.toggle('open', open);
+    backdrop.classList.toggle('active', open);
+  } else {
+    sidebar.classList.toggle('hidden', !open);
+    sidebar.classList.remove('open');
+    backdrop.classList.remove('active');
+  }
+}
+document.getElementById('btn-toggle-sidebar').addEventListener('click', () => setSidebarOpen(!state.sidebarOpen));
+document.getElementById('sidebar-backdrop').addEventListener('click', () => setSidebarOpen(false));
+
+// Close sidebar overlay when viewport resizes to desktop
+window.addEventListener('resize', () => {
+  if (window.innerWidth >= 900) {
+    document.getElementById('char-sidebar').classList.remove('open');
+    document.getElementById('sidebar-backdrop').classList.remove('active');
+  }
 });
+
+// ── Mobile overflow menu ──────────────────────────────────────────────────────
+(function () {
+  const overflowBtn = document.getElementById('btn-header-overflow');
+  const overflowDd  = document.getElementById('adv-overflow-dropdown');
+  overflowBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    overflowDd.classList.toggle('open');
+  });
+  document.addEventListener('click', () => overflowDd.classList.remove('open'));
+  overflowDd.querySelectorAll('.overflow-item[data-for]').forEach(item => {
+    item.addEventListener('click', e => {
+      e.stopPropagation();
+      overflowDd.classList.remove('open');
+      document.getElementById(item.dataset.for)?.click();
+    });
+  });
+})();
 
 // ── UI busy state — block actions while AI is generating ──────────────────────
 function setAdventureUIBusy(busy) {
   const overlay = document.getElementById('adv-busy-overlay');
   if (overlay) overlay.style.display = busy ? 'flex' : 'none';
-  ['btn-rest','btn-end-session','btn-summary','btn-change-model','btn-regenerate','btn-adv-back']
+  ['btn-rest','btn-end-session','btn-summary','btn-change-model','btn-regenerate','btn-adv-back','btn-header-overflow']
     .forEach(id => { const el = document.getElementById(id); if (el) el.disabled = busy; });
 }
 
