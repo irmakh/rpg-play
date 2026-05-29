@@ -43,18 +43,19 @@ function fmtMod(val) {
 
 // ── Helper: roll dice notation "2d6", "1d20", etc. ───────────────────────────
 function rollDice(notation) {
-  const m = notation.match(/^(\d+)d(\d+)$/i);
-  if (!m) return 0;
+  const m = notation.match(/^(\d+)d(\d+)([+-]\d+)?$/i);
+  if (!m) return { total: 0, rolls: [], sides: 0, count: 0, flat: 0 };
   const count = parseInt(m[1]);
   const sides = parseInt(m[2]);
-  let total = 0;
+  const flat  = m[3] ? parseInt(m[3]) : 0;
+  let total = flat;
   const rolls = [];
   for (let i = 0; i < count; i++) {
     const r = Math.floor(Math.random() * sides) + 1;
     rolls.push(r);
     total += r;
   }
-  return { total, rolls, sides, count };
+  return { total, rolls, sides, count, flat };
 }
 
 // ── API helpers ───────────────────────────────────────────────────────────────

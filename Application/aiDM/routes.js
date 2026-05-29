@@ -566,10 +566,16 @@ Return ONLY the JSON object. No markdown code fences. No explanation.`
       let charData = {};
       try { charData = JSON.parse(char.dataJson || '{}'); } catch {}
 
-      // Load scenario
+      // Load scenario — check built-in index first, then custom DB scenarios
       const scenariosPath = nodePath.join(__dirname, 'scenarios', 'index.json');
-      const scenarios = JSON.parse(fs.readFileSync(scenariosPath, 'utf8'));
-      const scenario = scenarios.find(s => s.id === scenarioId);
+      const builtin = JSON.parse(fs.readFileSync(scenariosPath, 'utf8'));
+      let scenario = builtin.find(s => s.id === scenarioId);
+      if (!scenario) {
+        const custom = aidb.listCustomScenarios().find(s => s.id === scenarioId);
+        if (custom) {
+          scenario = { ...custom, tags: JSON.parse(custom.tags || '[]'), isCustom: true };
+        }
+      }
       if (!scenario) return res.status(404).json({ error: 'Scenario not found' });
 
       // Persist config
