@@ -135,6 +135,21 @@ A self-hosted web application for running D&D 5e sessions. Includes a full chara
 - New clients joining mid-session automatically receive the current position and start from there
 - Loading / playing / paused state notifications broadcast to all clients
 
+### AI Dungeon Master (`/ai-dm`) — players only
+- Text-based D&D 5e adventure in the Forgotten Realms, powered by a local LM Studio model or any free OpenRouter model
+- Select your existing character — the full stat block (ability scores, skills, saving throws, AC, speed, HP, weapons, prepared spells, equipment, features) is fed to the AI as context
+- Choose from built-in scenarios or create custom ones (manually or AI-generated from keywords)
+- **Streaming DM responses** — text appears token by token with a loading overlay that blocks other actions during generation
+- **Dice rolls embedded in DM text** — click to roll with your character's actual modifiers; advantage/disadvantage supported; roll buttons from old messages are disabled on resume so you cannot re-roll
+- **Option buttons** — the DM presents numbered choices as clickable buttons; "Write my own" option always available
+- **Short rest** — spend hit dice to recover HP (d(class die) + CON modifier per die, min 1 per die, capped at max HP)
+- **Long rest** — restore HP, all spell slots, all hit dice, reset death saves; spell preparation screen after rest (class-appropriate prep limits for Cleric/Druid/Wizard/Paladin/Artificer)
+- **Adventure summary** — manually or automatically summarise the session history (triggers at 20 exchanges); summary is injected into AI context to compress old messages and keep within context window limits; displayed in a modal with a ✓ badge
+- **Session management** — view ended adventure logs, continue ended sessions, delete sessions
+- **Model switching** — change AI provider or model mid-session; retry button to regenerate the last DM response
+- **Seamless navigation** from the character sheet: "⚔ AI DM" button (hidden for DM sessions); character auth is passed automatically so no second password prompt
+- Sessions persist in a separate SQLite database (`aiDM/aiDM.db`); scenario customisation persisted per instance
+
 ### Stories (`/stories.html`) — password protected
 - Comic-book style story system for documenting campaign moments and session recaps
 - **Story dashboard** — card grid with cover image (first panel), title, cast, panel count, and date; filter by character
@@ -191,6 +206,7 @@ A self-hosted web application for running D&D 5e sessions. Includes a full chara
 | Stories | `/stories.html` | Any (password gated) |
 | Story Builder | `/story-builder.html` | Any (password gated) |
 | Story Viewer | `/story-viewer.html` | Any (password gated) |
+| AI Dungeon Master | `/ai-dm` | Players |
 | Mobile Companion | `/console/` | All users |
 
 ---

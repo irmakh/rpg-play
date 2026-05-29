@@ -182,6 +182,9 @@ function _applySessionUI() {
   adminBtns.forEach(b => b.style.display = isChar ? 'none' : '');
   const sel = document.getElementById('char-select');
   if (sel) sel.style.display = isChar ? 'none' : '';
+  // Hide AI DM button for DM sessions (AI adventures are per-character, not for DM)
+  const aiDmBtn = document.getElementById('btn-ai-dm');
+  if (aiDmBtn) aiDmBtn.style.display = indexIsDM() ? 'none' : '';
   // Show logout button
   const logoutBtn = document.getElementById('char-logout-btn');
   if (logoutBtn) logoutBtn.style.display = '';
@@ -953,6 +956,19 @@ function openFeats5e() {
   val.split('\n').map(s => s.trim()).filter(s => s).forEach(feat => {
     window.open('https://5e.tools/feats.html#' + feat.toLowerCase() + '_xphb', '_blank');
   });
+}
+
+// ── AI DM handoff ─────────────────────────────────────────────────────────────
+function goToAIDM() {
+  const charId   = currentCharId;
+  const password = charId ? (charPasswords[charId] || '') : '';
+  const charName = charId ? (document.getElementById('char-title')?.textContent || '') : '';
+  if (charId) {
+    localStorage.setItem('aiDmHandoff', JSON.stringify({
+      charId, charName, password, ts: Date.now()
+    }));
+  }
+  location.href = '/ai-dm';
 }
 
 // ── Theme ─────────────────────────────────────────────────────────────────────

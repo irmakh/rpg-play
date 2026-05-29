@@ -1,0 +1,47 @@
+[
+  {
+    "id": "baldurs_gate_docks",
+    "name": "Shadows at the Docks",
+    "location": "Baldur's Gate — Lower City",
+    "difficulty": "Medium",
+    "tags": ["investigation", "urban", "intrigue"],
+    "description": "Strange lights flicker beneath the docks at night. Sailors have gone missing, and the Flaming Fist refuses to investigate — or has been paid not to. Smugglers, cultists, or something older may be at work beneath the city.",
+    "hook": "You arrive in Baldur's Gate seeking work or passage. A weathered halfling named Mira Cask finds you at the Wide — the city's sprawling market — and offers fifty gold pieces to discover what took her brother from the Lower Docks three nights ago. She suspects it's not the first disappearance. She suspects it won't be the last."
+  },
+  {
+    "id": "waterdeep_road",
+    "name": "Blood on the Trade Way",
+    "location": "The Trade Way — South of Waterdeep",
+    "difficulty": "Easy",
+    "tags": ["combat", "wilderness", "escort"],
+    "description": "A merchant caravan bound for Waterdeep needs a skilled escort. The road has grown dangerous — bandit attacks, ambushes in the mist, and a dying guard's last words suggest something coordinated. Someone is hunting this caravan specifically.",
+    "hook": "You've signed on as a guard for Aldric Bren, a nervous spice merchant with more gold than sense. Three days out from Waterdeep, his lead wagon lurches to a halt. The two scouts who rode ahead haven't returned. From the ridge above, you can just make out shapes moving through the morning fog."
+  },
+  {
+    "id": "undermountain_descent",
+    "name": "Descent into Undermountain",
+    "location": "Waterdeep — The Yawning Portal Inn",
+    "difficulty": "Hard",
+    "tags": ["dungeon", "exploration", "treasure"],
+    "description": "The Yawning Portal's legendary well drops ninety feet into Undermountain — the vast, magically warped dungeon carved by the mad mage Halaster Blackcloak beneath Waterdeep. Adventurers descend seeking glory and treasure. Not all come out. Those who do change.",
+    "hook": "At the Yawning Portal, a drunk scholar named Yovani presses a torn map fragment into your hand before slumping unconscious onto the bar. The map — drawn in what looks uncomfortably like blood — marks a chamber on Undermountain's first level with three words: 'Still alive. Help.' The bucket creaks. Torchlight flickers below. Do you go down?"
+  },
+  {
+    "id": "neverwinter_intrigue",
+    "name": "The Merchant's Secret",
+    "location": "Neverwinter — The Protector's Enclave",
+    "difficulty": "Medium",
+    "tags": ["intrigue", "urban", "social"],
+    "description": "A powerful merchant controls Neverwinter's grain supply — and something sinister festers in his accounts. A city official needs evidence before the next council vote. But the merchant's enforcers are watching, and the walls have ears.",
+    "hook": "Lord Protector's aide Seyne Arkin meets you discreetly in a back corner of the Hall of Justice, her voice barely above a whisper. A merchant named Tobias Kreel has been fixing grain prices through the winter, profiting while citizens starve. But Arkin suspects darker dealings: shipments that arrive only at night, dockhands who refuse to speak about what they carry, a ledger that was burned last month. She needs someone inside Kreel's warehouse — and she's willing to pay well for what they find."
+  },
+  {
+    "id": "cloakwood_druids",
+    "name": "The Heartwood Bleeds",
+    "location": "Cloakwood — Ancient Grove",
+    "difficulty": "Medium",
+    "tags": ["wilderness", "mystery", "nature"],
+    "description": "Something ancient and wrong has awakened in the Cloakwood. The druids who have protected this forest for a thousand years are being driven from their sacred groves. The trees are dying from the inside. And whatever is spreading through the roots, it's growing faster.",
+    "hook": "An injured druid collapses at the gates of Beregost just before dawn. She is feverish, her skin traced with black veins spreading from a wound on her palm. She carries the waxen seal of the Cloakwood Circle — the oldest druidic order in the region. Through labored breath she tells you the Heartwood oak has gone silent, that her brothers and sisters are dead or fled, that something beneath the earth is eating the forest. And then, with strange certainty, she says your name was the last word the elder tree spoke before it fell silent."
+  }
+]

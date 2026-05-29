@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Dungeon Master</title>
+  <link rel="stylesheet" href="/ai-dm/assets/ai-dm.css">
+</head>
+<body>
+
+<!-- ── Screen: Character Selection ─────────────────────────────────────────── -->
+<div id="screen-select" class="screen active">
+  <div class="select-header">
+    <div class="logo-wrap">
+      <span class="logo-icon">⚔️</span>
+      <div>
+        <h1>AI Dungeon Master</h1>
+        <p class="logo-sub">A text adventure in the Forgotten Realms</p>
+      </div>
+    </div>
+    <button class="icon-btn" id="btn-settings" title="AI Settings">⚙</button>
+  </div>
+
+  <div class="select-body">
+    <h2 class="section-title">Choose Your Character</h2>
+    <div id="char-list" class="char-grid">
+      <div class="loading-msg">Loading characters…</div>
+    </div>
+
+    <div id="recent-sessions-wrap" style="display:none">
+      <h2 class="section-title">Recent Adventures</h2>
+      <div id="recent-sessions" class="session-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Screen: Password Prompt ─────────────────────────────────────────────── -->
+<div id="screen-password" class="screen">
+  <div class="modal-card" style="max-width:380px;margin:auto;margin-top:20vh">
+    <h2>🔒 Character Password</h2>
+    <p id="pw-char-name" style="color:var(--gold);margin-bottom:16px"></p>
+    <input type="password" id="pw-input" class="text-input" placeholder="Enter character password" autocomplete="current-password">
+    <div id="pw-error" class="error-msg" style="display:none">Wrong password. Try again.</div>
+    <div class="btn-row" style="margin-top:16px">
+      <button class="btn-ghost" id="pw-cancel">Cancel</button>
+      <button class="btn-primary" id="pw-submit">Continue →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Screen: New Adventure Setup ─────────────────────────────────────────── -->
+<div id="screen-setup" class="screen">
+  <div class="setup-header">
+    <button class="icon-btn" id="setup-back">←</button>
+    <h2>New Adventure</h2>
+    <span id="setup-char-name" class="gold-text"></span>
+  </div>
+
+  <div class="setup-body">
+    <!-- AI Provider -->
+    <div class="setup-section">
+      <h3>AI Provider</h3>
+      <div class="provider-tabs">
+        <button class="provider-tab active" data-provider="lmstudio">LM Studio (Local)</button>
+        <button class="provider-tab" data-provider="openrouter">OpenRouter (Free Models)</button>
+      </div>
+
+      <div id="prov-lmstudio" class="provider-panel active">
+        <label class="field-label">LM Studio URL</label>
+        <input type="text" id="lm-url" class="text-input" value="http://localhost:1234" placeholder="http://localhost:1234">
+      </div>
+
+      <div id="prov-openrouter" class="provider-panel" style="display:none">
+        <label class="field-label">OpenRouter API Key</label>
+        <input type="password" id="or-apikey" class="text-input" placeholder="sk-or-…  (leave blank to list free models without auth)">
+      </div>
+
+      <div class="model-row">
+        <div style="flex:1">
+          <label class="field-label">Model</label>
+          <select id="model-select" class="select-input">
+            <option value="">— load models —</option>
+          </select>
+        </div>
+        <button class="btn-ghost" id="btn-load-models" style="margin-top:22px">↻ Load</button>
+      </div>
+      <div id="models-error" class="error-msg" style="display:none"></div>
+    </div>
+
+    <!-- Scenario selection -->
+    <div class="setup-section">
+      <div class="scenario-header-row">
+        <h3>Choose a Scenario</h3>
+        <button class="btn-ghost small" id="btn-new-scenario">＋ New Scenario</button>
+      </div>
+      <div id="scenario-grid" class="scenario-grid">
+        <div class="loading-msg">Loading scenarios…</div>
+      </div>
+    </div>
+
+    <div class="btn-row" style="margin-top:24px">
+      <button class="btn-primary large" id="btn-start-adventure" disabled>⚔ Begin Adventure</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Screen: Adventure Chat ───────────────────────────────────────────────── -->
+<div id="screen-adventure" class="screen">
+  <!-- Busy overlay shown while AI is generating -->
+  <div id="adv-busy-overlay" class="adv-busy-overlay" style="display:none">
+    <div class="adv-busy-inner">
+      <div class="busy-spinner"></div>
+      <span class="busy-label">Dungeon Master is thinking…</span>
+    </div>
+  </div>
+  <div class="adv-layout">
+
+    <!-- Sidebar: character stats -->
+    <aside id="char-sidebar" class="char-sidebar">
+      <div class="sidebar-portrait-wrap">
+        <img id="sb-portrait" src="" alt="" class="sidebar-portrait" style="display:none">
+        <div class="sb-name-wrap">
+          <span id="sb-char-name" class="sb-char-name"></span>
+          <span id="sb-class-level" class="sb-class-level"></span>
+        </div>
+      </div>
+
+      <div class="hp-bar-wrap">
+        <div class="hp-labels">
+          <span>HP</span>
+          <span id="sb-hp-text">—</span>
+        </div>
+        <div class="hp-bar"><div id="sb-hp-fill" class="hp-fill"></div></div>
+      </div>
+
+      <div class="stat-grid-mini">
+        <div class="stat-box-mini"><div class="stat-val" id="sb-ac">—</div><div class="stat-lbl">AC</div></div>
+        <div class="stat-box-mini"><div class="stat-val" id="sb-speed">—</div><div class="stat-lbl">Speed</div></div>
+        <div class="stat-box-mini"><div class="stat-val" id="sb-pp">—</div><div class="stat-lbl">Perc.</div></div>
+        <div class="stat-box-mini"><div class="stat-val" id="sb-init">—</div><div class="stat-lbl">Init</div></div>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">Ability Scores</div>
+        <div class="ability-grid">
+          <div class="ability-box"><div class="ab-score" id="ab-str">10</div><div class="ab-mod" id="abm-str">+0</div><div class="ab-lbl">STR</div></div>
+          <div class="ability-box"><div class="ab-score" id="ab-dex">10</div><div class="ab-mod" id="abm-dex">+0</div><div class="ab-lbl">DEX</div></div>
+          <div class="ability-box"><div class="ab-score" id="ab-con">10</div><div class="ab-mod" id="abm-con">+0</div><div class="ab-lbl">CON</div></div>
+          <div class="ability-box"><div class="ab-score" id="ab-int">10</div><div class="ab-mod" id="abm-int">+0</div><div class="ab-lbl">INT</div></div>
+          <div class="ability-box"><div class="ab-score" id="ab-wis">10</div><div class="ab-mod" id="abm-wis">+0</div><div class="ab-lbl">WIS</div></div>
+          <div class="ability-box"><div class="ab-score" id="ab-cha">10</div><div class="ab-mod" id="abm-cha">+0</div><div class="ab-lbl">CHA</div></div>
+        </div>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">Skills</div>
+        <div id="skill-list" class="skill-list"></div>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">Saving Throws</div>
+        <div id="save-list" class="skill-list"></div>
+      </div>
+    </aside>
+
+    <!-- Main: chat area -->
+    <div class="adv-main">
+      <div class="adv-header">
+        <button class="icon-btn" id="btn-adv-back" title="Back to character select">←</button>
+        <button class="icon-btn" id="btn-toggle-sidebar" title="Toggle character sheet">☰</button>
+        <div class="adv-title">
+          <span id="adv-scenario-name" class="adv-scenario"></span>
+          <span id="adv-char-name-header" class="adv-char-sub"></span>
+        </div>
+        <div class="adv-header-right">
+          <span id="adv-model-badge" class="model-badge" title="Current model"></span>
+          <button class="btn-ghost small" id="btn-summary" title="View or generate adventure summary">📋 Summary</button>
+          <button class="btn-ghost small" id="btn-change-model" title="Switch AI model mid-session">⚙ Model</button>
+          <button class="btn-ghost small" id="btn-regenerate" title="Delete last DM response and try again">↻ Retry</button>
+          <button class="btn-ghost small" id="btn-rest">🌙 Rest</button>
+          <button class="btn-ghost small" id="btn-end-session">End Session</button>
+        </div>
+      </div>
+
+      <div id="chat-window" class="chat-window">
+        <div id="chat-messages" class="chat-messages"></div>
+      </div>
+
+      <div class="chat-input-area">
+        <textarea id="chat-input" class="chat-textarea" placeholder="What do you do? Describe your action…" rows="3"></textarea>
+        <button class="btn-primary" id="btn-send">Send</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── Settings Modal ───────────────────────────────────────────────────────── -->
+<div id="modal-settings" class="modal-overlay" style="display:none">
+  <div class="modal-card" style="max-width:480px">
+    <div class="modal-header">
+      <h3>AI Settings</h3>
+      <button class="icon-btn" id="settings-close">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="color:var(--muted);margin-bottom:12px;font-size:13px">Settings are saved automatically and used as defaults for new adventures.</p>
+      <label class="field-label">Default Provider</label>
+      <select id="cfg-provider" class="select-input">
+        <option value="lmstudio">LM Studio (Local)</option>
+        <option value="openrouter">OpenRouter (Free Models)</option>
+      </select>
+      <label class="field-label" style="margin-top:12px">LM Studio URL</label>
+      <input type="text" id="cfg-lm-url" class="text-input" placeholder="http://localhost:1234">
+      <label class="field-label" style="margin-top:12px">OpenRouter API Key</label>
+      <input type="password" id="cfg-apikey" class="text-input" placeholder="sk-or-…">
+      <div id="cfg-apikey-status" style="font-size:12px;color:var(--muted);margin-top:4px"></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn-ghost" id="settings-cancel">Cancel</button>
+      <button class="btn-primary" id="settings-save">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── End Session Confirm Modal ────────────────────────────────────────────── -->
+<div id="modal-end-confirm" class="modal-overlay" style="display:none">
+  <div class="modal-card" style="max-width:360px">
+    <h3>End this session?</h3>
+    <p style="color:var(--muted);margin:12px 0">The adventure will be saved and you can read the history, but you won't be able to continue this session. To restart, begin a new adventure.</p>
+    <div class="btn-row">
+      <button class="btn-ghost" id="end-cancel">Keep Playing</button>
+      <button class="btn-danger" id="end-confirm">End Session</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Rest Modal ───────────────────────────────────────────────────────────── -->
+<div id="modal-rest" class="modal-overlay" style="display:none">
+  <div class="modal-card rest-modal-card">
+    <div class="modal-header">
+      <h3>🌙 Take a Rest</h3>
+      <button class="icon-btn" id="rest-close">✕</button>
+    </div>
+
+    <div class="rest-tabs">
+      <button class="rest-tab active" data-rest="short">⏱ Short Rest</button>
+      <button class="rest-tab" data-rest="long">🌙 Long Rest</button>
+    </div>
+
+    <!-- Short Rest panel -->
+    <div id="rest-short-panel" class="rest-panel">
+      <div class="rest-stat-row">
+        <div class="rest-stat"><div class="rest-stat-val" id="sr-hp">—</div><div class="rest-stat-lbl">HP</div></div>
+        <div class="rest-stat"><div class="rest-stat-val" id="sr-hd">—</div><div class="rest-stat-lbl">Hit Dice Left</div></div>
+        <div class="rest-stat"><div class="rest-stat-val" id="sr-con">—</div><div class="rest-stat-lbl">CON Mod</div></div>
+      </div>
+      <p class="rest-desc" id="sr-formula"></p>
+      <div class="roll-track">
+        <div class="roll-track-label">HP to gain: <strong id="sr-total">+0</strong></div>
+        <div id="sr-roll-log" class="roll-log"></div>
+      </div>
+      <div class="btn-row" style="margin-top:10px;justify-content:flex-start;gap:8px">
+        <button class="btn-primary" id="sr-roll-btn">🎲 Roll 1 Hit Die</button>
+        <button class="btn-ghost" id="sr-clear-btn">Clear</button>
+      </div>
+      <p style="color:var(--muted);font-size:12px;margin-top:10px">Cannot exceed HP maximum. Cannot spend more hit dice than remaining.</p>
+    </div>
+
+    <!-- Long Rest panel -->
+    <div id="rest-long-panel" class="rest-panel" style="display:none">
+      <div class="lr-summary">
+        <div class="lr-item">✅ HP restored to maximum</div>
+        <div class="lr-item" id="lr-slots-line">✅ All spell slots restored</div>
+        <div class="lr-item">✅ All hit dice restored</div>
+        <div class="lr-item">✅ Death saves reset</div>
+      </div>
+
+      <div id="lr-spell-section" style="display:none;margin-top:14px">
+        <div class="sidebar-section-title">Prepare Spells After Rest</div>
+        <p class="rest-desc" id="lr-prep-hint"></p>
+        <div id="lr-spell-list" class="lr-spell-list"></div>
+      </div>
+    </div>
+
+    <div class="rest-footer">
+      <button class="btn-ghost" id="rest-cancel">Cancel</button>
+      <button class="btn-primary" id="rest-apply">Take Short Rest</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Change Model Modal ────────────────────────────────────────────────────── -->
+<div id="modal-change-model" class="modal-overlay" style="display:none">
+  <div class="modal-card" style="max-width:480px">
+    <div class="modal-header">
+      <h3>Change Model</h3>
+      <button class="icon-btn" id="cm-close">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="color:var(--muted);font-size:13px;margin-bottom:14px">Switch the AI model for this session. The adventure history is kept — the new model will pick up from where the last one left off.</p>
+      <div class="provider-tabs">
+        <button class="provider-tab" data-cm-provider="lmstudio">LM Studio (Local)</button>
+        <button class="provider-tab" data-cm-provider="openrouter">OpenRouter (Free Models)</button>
+      </div>
+      <div id="cm-prov-lmstudio" class="provider-panel" style="margin-top:10px">
+        <label class="field-label">LM Studio URL</label>
+        <input type="text" id="cm-lm-url" class="text-input" placeholder="http://localhost:1234">
+      </div>
+      <div id="cm-prov-openrouter" class="provider-panel" style="margin-top:10px;display:none">
+        <label class="field-label">OpenRouter API Key</label>
+        <input type="password" id="cm-apikey" class="text-input" placeholder="sk-or-… (leave blank to use saved key)">
+      </div>
+      <div class="model-row">
+        <div style="flex:1">
+          <label class="field-label">Model</label>
+          <select id="cm-model-select" class="select-input">
+            <option value="">— click Load to fetch models —</option>
+          </select>
+        </div>
+        <button class="btn-ghost" id="cm-load-models" style="margin-top:22px">↻ Load</button>
+      </div>
+      <div id="cm-models-error" class="error-msg" style="display:none"></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn-ghost" id="cm-cancel">Cancel</button>
+      <button class="btn-primary" id="cm-save">Apply</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── New Scenario Modal ────────────────────────────────────────────────────── -->
+<div id="modal-new-scenario" class="modal-overlay" style="display:none">
+  <div class="modal-card ns-modal-card">
+    <div class="modal-header">
+      <h3>✦ New Scenario</h3>
+      <button class="icon-btn" id="ns-close">✕</button>
+    </div>
+    <div class="ns-modal-body">
+      <div class="ns-ai-section">
+        <label class="field-label">Generate with AI — describe keywords or a theme</label>
+        <div class="ns-gen-row">
+          <input type="text" id="ns-keywords" class="text-input" placeholder="e.g. ancient ruins, undead horde, cursed relic, rival guild…">
+          <button class="btn-ghost" id="ns-generate-btn">✨ Generate</button>
+        </div>
+        <div id="ns-gen-status" class="ns-gen-status"></div>
+      </div>
+      <div class="ns-divider">— or fill in manually —</div>
+
+      <label class="field-label">Scenario Name <span class="ns-req">*</span></label>
+      <input type="text" id="ns-name" class="text-input" placeholder="The Shattered Crown of Netheril">
+
+      <label class="field-label" style="margin-top:10px">Location</label>
+      <input type="text" id="ns-location" class="text-input" placeholder="Sword Coast — near Neverwinter">
+
+      <label class="field-label" style="margin-top:10px">Difficulty</label>
+      <select id="ns-difficulty" class="select-input">
+        <option value="Easy">Easy</option>
+        <option value="Medium" selected>Medium</option>
+        <option value="Hard">Hard</option>
+      </select>
+
+      <label class="field-label" style="margin-top:10px">Description <span class="ns-req">*</span></label>
+      <textarea id="ns-description" class="text-input ns-textarea" placeholder="Describe the adventure premise and setting in 2–3 sentences…" rows="3"></textarea>
+
+      <label class="field-label" style="margin-top:10px">Opening Hook <span class="ns-req">*</span></label>
+      <textarea id="ns-hook" class="text-input ns-textarea" placeholder="How does the character get pulled into this adventure?" rows="2"></textarea>
+
+      <div id="ns-save-error" class="error-msg" style="display:none;margin-top:8px"></div>
+    </div>
+    <div class="btn-row" style="margin-top:16px">
+      <button class="btn-ghost" id="ns-cancel">Cancel</button>
+      <button class="btn-primary" id="ns-save">Save Scenario</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Session Detail Modal ──────────────────────────────────────────────────── -->
+<div id="modal-session-detail" class="modal-overlay" style="display:none">
+  <div class="modal-card sd-modal-card">
+    <div class="modal-header">
+      <div>
+        <h3 id="sd-title">Adventure Log</h3>
+        <div id="sd-meta" class="sd-meta"></div>
+      </div>
+      <button class="icon-btn" id="sd-close">✕</button>
+    </div>
+    <div id="sd-messages" class="sd-messages"></div>
+    <div class="btn-row" style="margin-top:16px;align-items:center">
+      <button class="btn-danger small" id="sd-delete">🗑 Delete</button>
+      <div style="flex:1"></div>
+      <button class="btn-ghost" id="sd-cancel">Close</button>
+      <button class="btn-primary" id="sd-continue">▶ Continue Adventure</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Summary Modal ─────────────────────────────────────────────────────────── -->
+<div id="modal-summary" class="modal-overlay" style="display:none">
+  <div class="modal-card" style="max-width:640px;display:flex;flex-direction:column;max-height:85vh">
+    <div class="modal-header">
+      <h3>📋 Adventure Summary</h3>
+      <button class="icon-btn" id="sum-close">✕</button>
+    </div>
+    <p id="sum-status" class="sum-status"></p>
+    <div id="sum-text" class="summary-box"></div>
+    <div class="btn-row" style="margin-top:16px">
+      <button class="btn-ghost" id="sum-cancel">Close</button>
+      <button class="btn-primary" id="sum-generate">✨ Generate Summary</button>
+    </div>
+  </div>
+</div>
+
+<script src="/ai-dm/assets/ai-dm.js"></script>
+</body>
+</html>
