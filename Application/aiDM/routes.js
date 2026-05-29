@@ -113,11 +113,25 @@ function buildCharacterContext(charName, data) {
 }
 
 // ── Build AI system prompt ────────────────────────────────────────────────────
-function buildSystemPrompt(charName, charData, scenario) {
+function buildSystemPrompt(charName, charData, scenario, language = 'English') {
   const charContext = buildCharacterContext(charName, charData);
 
-  return `You are an experienced Dungeon Master running a D&D 5.5e (2024 Player's Handbook) text-based adventure set in the Forgotten Realms. You are creative, descriptive, and fair. You follow the rules and create an immersive experience.
+  const languageBlock = language === 'Turkish' ? `
+## DİL GEREKSİNİMİ — ZORUNLU / LANGUAGE REQUIREMENT — MANDATORY
 
+**Tüm yanıtlarını TÜRKÇE yazmalısın.** Bu kesinlikle değiştirilemez.
+- Anlatı metni, NPC diyalogları, sahne tanımlamaları ve seçeneklerin tamamı Türkçe olmalı
+- Oyun mekaniği kısaltmaları olduğu gibi kalır: HP, AC, STR, DEX, CON, INT, WIS, CHA
+- Zar sözdizimi değişmez: [[ROLL:...]]
+- Seçenek okları: → ardından Türkçe metin
+- Tek bir İngilizce cümle bile yazma — yalnızca Türkçe
+- Emin olmadığın terimleri Türkçeleştir veya kulağa doğal gelen şekilde kullan; İngilizce'ye dönme
+
+---
+` : '';
+
+  return `You are an experienced Dungeon Master running a D&D 5.5e (2024 Player's Handbook) text-based adventure set in the Forgotten Realms. You are creative, descriptive, and fair. You follow the rules and create an immersive experience.
+${languageBlock}
 ## CRITICAL RESPONSE FORMAT
 
 **Start every response directly with narrative prose.** Never begin with:
@@ -408,7 +422,7 @@ function buildAIMessages(session, allMessages) {
 }
 
 // ── Version — bump this whenever aiDM JS/CSS files change ────────────────────
-const AIDM_VERSION = 6;
+const AIDM_VERSION = 7;
 
 // ── Main route registration ───────────────────────────────────────────────────
 export default function register(app, ctx) {
@@ -599,7 +613,7 @@ Return ONLY the JSON object. No markdown code fences. No explanation.`
   // Create a new session
   app.post('/api/ai-dm/sessions', async (req, res) => {
     try {
-      const { characterId, scenarioId, provider, model, lmStudioUrl, apiKey } = req.body || {};
+      const { characterId, scenarioId, provider, model, lmStudioUrl, apiKey, language } = req.body || {};
       if (!characterId) return res.status(400).json({ error: 'characterId required' });
       if (!scenarioId)  return res.status(400).json({ error: 'scenarioId required' });
       if (!model)       return res.status(400).json({ error: 'model required' });
@@ -636,6 +650,9 @@ Return ONLY the JSON object. No markdown code fences. No explanation.`
       // Resolve API key (from request or stored config)
       const resolvedApiKey = apiKey || aidb.getConfig('apiKey', '');
 
+      // Validate language
+      const resolvedLanguage = language === 'Turkish' ? 'Turkish' : 'English';
+
       // Create session
       const sessionId = crypto.randomUUID();
       aidb.createSession(sessionId, {
@@ -647,10 +664,11 @@ Return ONLY the JSON object. No markdown code fences. No explanation.`
         provider: provider || 'lmstudio',
         model,
         lmStudioUrl: lmStudioUrl || 'http://localhost:1234',
+        language: resolvedLanguage,
       });
 
       // Build system prompt and save as first message
-      const systemPrompt = buildSystemPrompt(char.name, charData, scenario);
+      const systemPrompt = buildSystemPrompt(char.name, charData, scenario, resolvedLanguage);
       aidb.addMessage(crypto.randomUUID(), sessionId, 'system', systemPrompt);
 
       res.json({ sessionId, scenarioName: scenario.name, characterName: char.name });
@@ -704,6 +722,7 @@ Return ONLY the JSON object. No markdown code fences. No explanation.`
           startedAt: session.startedAt,
           summary: session.summary || '',
           summarizedUpTo: session.summarizedUpTo || '',
+          language: session.language || 'English',
         },
         messages,
         rollData,

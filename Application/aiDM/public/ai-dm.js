@@ -22,6 +22,7 @@ let state = {
   model:          '',
   apiKey:         '',
   selectedScenario: null,
+  language:       'English',
   sidebarOpen:    true,
   sending:        false,
   sessionEnded:   false,
@@ -226,7 +227,9 @@ async function openSetupScreen() {
   if (!state.selectedChar) return;
   document.getElementById('setup-char-name').textContent = state.selectedChar.name;
   state.selectedScenario = null;
+  state.language = 'English';
   document.querySelectorAll('.scenario-card').forEach(c => c.classList.remove('selected'));
+  document.querySelectorAll('.lang-tab').forEach(t => t.classList.toggle('active', t.dataset.lang === 'English'));
   document.getElementById('btn-start-adventure').disabled = true;
 
   // Load saved config
@@ -256,6 +259,13 @@ function setProviderUI(provider) {
 
 document.querySelectorAll('.provider-tab').forEach(t => {
   t.addEventListener('click', () => setProviderUI(t.dataset.provider));
+});
+
+document.querySelectorAll('.lang-tab').forEach(t => {
+  t.addEventListener('click', () => {
+    state.language = t.dataset.lang;
+    document.querySelectorAll('.lang-tab').forEach(x => x.classList.toggle('active', x === t));
+  });
 });
 
 document.getElementById('setup-back').addEventListener('click', () => showScreen('screen-select'));
@@ -384,6 +394,7 @@ async function startAdventure() {
         model,
         lmStudioUrl: state.lmStudioUrl,
         apiKey:      state.apiKey || undefined,
+        language:    state.language,
       }),
     });
     state.sessionId   = result.sessionId;
@@ -412,6 +423,7 @@ async function openAdventureScreen(sessionId) {
     state.rollData    = rollData;
     state.sessionEnded = session.status === 'ended';
     state.model = session.model;
+    state.language = session.language || 'English';
     state.currentSummary = session.summary || '';
     updateSummaryBadge();
 
@@ -422,6 +434,15 @@ async function openAdventureScreen(sessionId) {
     document.getElementById('adv-scenario-name').textContent = session.scenarioName;
     document.getElementById('adv-char-name-header').textContent = state.selectedChar?.name || session.characterName;
     document.getElementById('adv-model-badge').textContent = session.model.split('/').pop();
+
+    // Language badge — only show when non-English
+    const langBadge = document.getElementById('adv-language-badge');
+    if (state.language === 'Turkish') {
+      langBadge.textContent = '🇹🇷 TR';
+      langBadge.style.display = '';
+    } else {
+      langBadge.style.display = 'none';
+    }
 
     // Render history — only enable rolls on the last DM message if player hasn't replied yet
     const msgContainer = document.getElementById('chat-messages');

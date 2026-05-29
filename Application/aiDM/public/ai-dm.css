@@ -226,6 +226,9 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
 }
 .provider-tab.active { border-color: var(--gold); color: var(--gold); background: var(--bg4); }
 
+.lang-tab { background: var(--bg3); border: 1px solid var(--border); color: var(--muted); padding: 8px 14px; border-radius: 6px; font-size: 13px; flex: 1; text-align: center; min-height: 40px; }
+.lang-tab.active { border-color: var(--gold); color: var(--gold); background: var(--bg4); }
+
 .provider-panel { padding: 0; }
 
 .model-row { display: flex; gap: 10px; align-items: flex-end; margin-top: 12px; }
@@ -373,6 +376,7 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
 /* Desktop header buttons — hidden on mobile by default */
 .adv-header-right { display: none; align-items: center; gap: 8px; flex-shrink: 0; }
 .model-badge { font-size: 11px; color: var(--muted); background: var(--bg3); padding: 3px 7px; border-radius: 10px; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lang-badge { color: var(--gold); border: 1px solid var(--gold-dim); max-width: unset; }
 
 /* ── Mobile Overflow Menu ─────────────────────────────────────────────────── */
 .adv-overflow-wrap { position: relative; flex-shrink: 0; }

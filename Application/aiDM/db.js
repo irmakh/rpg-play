@@ -53,11 +53,12 @@ db.exec(`
 // Migrate: add summary columns if not present
 try { db.exec('ALTER TABLE sessions ADD COLUMN summary TEXT DEFAULT ""'); } catch {}
 try { db.exec('ALTER TABLE sessions ADD COLUMN summarizedUpTo TEXT DEFAULT ""'); } catch {}
+try { db.exec('ALTER TABLE sessions ADD COLUMN language TEXT DEFAULT "English"'); } catch {}
 
 export function createSession(id, fields) {
   db.prepare(`INSERT INTO sessions
-    (id, characterId, characterName, characterSnapshot, scenarioId, scenarioName, provider, model, lmStudioUrl, startedAt)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+    (id, characterId, characterName, characterSnapshot, scenarioId, scenarioName, provider, model, lmStudioUrl, language, startedAt)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
     .run(
       id,
       fields.characterId,
@@ -68,6 +69,7 @@ export function createSession(id, fields) {
       fields.provider       || 'lmstudio',
       fields.model          || '',
       fields.lmStudioUrl    || 'http://localhost:1234',
+      fields.language       || 'English',
       new Date().toISOString()
     );
 }
