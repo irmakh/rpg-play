@@ -118,6 +118,26 @@ function buildSystemPrompt(charName, charData, scenario) {
 
   return `You are an experienced Dungeon Master running a D&D 5.5e (2024 Player's Handbook) text-based adventure set in the Forgotten Realms. You are creative, descriptive, and fair. You follow the rules and create an immersive experience.
 
+## CRITICAL RESPONSE FORMAT
+
+**Start every response directly with narrative prose.** Never begin with:
+- "As your Dungeon Master…" / "As the DM…" / "As an AI…"
+- "I'll begin…" / "I will start…" / "Let me describe…" / "Allow me to…"
+- "Of course!" / "Sure!" / "Certainly!" / "Great!" / "Absolutely!"
+- Any meta-commentary, acknowledgment, or explanation of what you're about to do
+
+**Every response must contain 2–5 sentences of vivid, immersive narrative prose.** Never give one-line or one-sentence responses.
+
+**Use present tense, second person:** "You see…", "You hear…", "The guard steps forward…"
+
+**When presenting choices:** place them at the very end, each on its own line prefixed with →:
+→ [Choice A]
+→ [Choice B]
+
+**Never include:** raw JSON, code blocks, markdown headers (## or ###), or out-of-character parenthetical notes.
+
+---
+
 ${charContext}
 
 ---
@@ -218,7 +238,8 @@ async function fetchModels(provider, lmStudioUrl, apiKey) {
 }
 
 // ── Call AI provider (streaming) ──────────────────────────────────────────────
-async function callAIStream(provider, model, lmStudioUrl, apiKey, messages, res) {
+// Inner: assumes SSE headers already set. Writes tokens, returns full content.
+async function streamAITokens(provider, model, lmStudioUrl, apiKey, messages, res) {
   let endpoint, headers;
   if (provider === 'lmstudio') {
     const base = (lmStudioUrl || 'http://localhost:1234').replace(/\/$/, '');
@@ -241,12 +262,7 @@ async function callAIStream(provider, model, lmStudioUrl, apiKey, messages, res)
     throw new Error(`AI provider error ${aiRes.status}: ${errText.slice(0, 200)}`);
   }
 
-  // Stream SSE back to the client
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-  res.flushHeaders();
-
+  const safeWrite = (data) => { try { res.write(data); } catch {} };
   const reader = aiRes.body.getReader();
   const decoder = new TextDecoder();
   let buffer = '';
@@ -257,7 +273,7 @@ async function callAIStream(provider, model, lmStudioUrl, apiKey, messages, res)
     if (done) break;
     buffer += decoder.decode(value, { stream: true });
     const lines = buffer.split('\n');
-    buffer = lines.pop(); // keep incomplete line in buffer
+    buffer = lines.pop();
 
     for (const line of lines) {
       if (!line.startsWith('data: ')) continue;
@@ -268,25 +284,58 @@ async function callAIStream(provider, model, lmStudioUrl, apiKey, messages, res)
         const content = obj.choices?.[0]?.delta?.content || '';
         if (content) {
           fullContent += content;
-          res.write(`data: ${JSON.stringify({ type: 'token', content })}\n\n`);
+          safeWrite(`data: ${JSON.stringify({ type: 'token', content })}\n\n`);
         }
       } catch {}
     }
   }
 
-  // Flush remaining buffer
   if (buffer.startsWith('data: ')) {
     const data = buffer.slice(6).trim();
     if (data && data !== '[DONE]') {
       try {
         const obj = JSON.parse(data);
         const content = obj.choices?.[0]?.delta?.content || '';
-        if (content) { fullContent += content; res.write(`data: ${JSON.stringify({ type: 'token', content })}\n\n`); }
+        if (content) { fullContent += content; safeWrite(`data: ${JSON.stringify({ type: 'token', content })}\n\n`); }
       } catch {}
     }
   }
 
   return fullContent;
+}
+
+// Outer: sets SSE headers then streams. Used by /regenerate.
+async function callAIStream(provider, model, lmStudioUrl, apiKey, messages, res) {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+  return streamAITokens(provider, model, lmStudioUrl, apiKey, messages, res);
+}
+
+// ── Response validation ───────────────────────────────────────────────────────
+function validateDMResponse(text) {
+  const t = text.trim();
+  if (t.length < 80) return { valid: false, reason: 'too_short' };
+  if (/^(i'?m sorry|i am sorry|sorry,|as an ai|i cannot|i can'?t|i apologize)/i.test(t))
+    return { valid: false, reason: 'refusal' };
+  if (/^(as (your |the |a )?dungeon master|as (the |your )?dm\b|i'?ll (begin|start)|i will (begin|start)|of course!|certainly!|sure[,!]|great[,!]|absolutely[,!])/i.test(t))
+    return { valid: false, reason: 'meta_commentary' };
+  if (t.startsWith('{') || t.startsWith('[') || t.startsWith('```'))
+    return { valid: false, reason: 'invalid_format' };
+  return { valid: true };
+}
+
+function scoreResponse(text) {
+  const t = text.trim();
+  if (!t) return -1000;
+  let score = Math.min(t.length, 600);
+  if (t.length >= 100) score += 50;
+  if (t.length >= 200) score += 50;
+  if (/i'?m sorry|i cannot|as an ai/i.test(t)) score -= 300;
+  if (/^(as (your |the )?dungeon master|i'?ll begin)/i.test(t)) score -= 100;
+  if (t.startsWith('{') || t.startsWith('[')) score -= 500;
+  return score;
 }
 
 // ── Non-streaming AI call (for summaries) ─────────────────────────────────────
@@ -359,7 +408,7 @@ function buildAIMessages(session, allMessages) {
 }
 
 // ── Version — bump this whenever aiDM JS/CSS files change ────────────────────
-const AIDM_VERSION = 4;
+const AIDM_VERSION = 6;
 
 // ── Main route registration ───────────────────────────────────────────────────
 export default function register(app, ctx) {
@@ -662,7 +711,7 @@ Return ONLY the JSON object. No markdown code fences. No explanation.`
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
   });
 
-  // Send a message (streaming SSE response)
+  // Send a message (streaming SSE response with validation + retry)
   app.post('/api/ai-dm/sessions/:id/message', async (req, res) => {
     const { content } = req.body || {};
     if (!content?.trim()) return res.status(400).json({ error: 'content required' });
@@ -672,7 +721,6 @@ Return ONLY the JSON object. No markdown code fences. No explanation.`
       if (!session) return res.status(404).json({ error: 'Session not found' });
       if (session.status === 'ended') return res.status(400).json({ error: 'Session ended' });
 
-      // Verify character
       const char = await getCharacter(session.characterId);
       if (char && char.passwordHash) {
         const pw = req.headers['x-character-password'];
@@ -680,55 +728,85 @@ Return ONLY the JSON object. No markdown code fences. No explanation.`
           return res.status(401).json({ locked: true });
       }
 
-      // Save user message
       const userMsgId = crypto.randomUUID();
       aidb.addMessage(userMsgId, session.id, 'user', content.trim());
 
-      // Build message history for AI (uses summary to compress old context)
       const allMessages = aidb.getMessages(session.id);
       const aiMessages = buildAIMessages(session, allMessages);
-
-      // Get API key
       const apiKey = aidb.getConfig('apiKey', '');
 
-      // Stream AI response
-      let fullContent = '';
-      try {
-        fullContent = await callAIStream(
-          session.provider,
-          session.model,
-          session.lmStudioUrl,
-          apiKey,
-          aiMessages,
-          res
-        );
-      } catch (streamErr) {
-        if (!res.headersSent) {
-          return res.status(502).json({ error: streamErr.message });
+      // Set up SSE before any attempt
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+      res.flushHeaders();
+
+      const sendEvent = (obj) => { try { res.write(`data: ${JSON.stringify(obj)}\n\n`); } catch {} };
+
+      let clientClosed = false;
+      req.on('close', () => { clientClosed = true; });
+
+      const MAX_ATTEMPTS = 5;
+      let savedContent = '';
+      let bestContent = '';
+      let bestScore = -Infinity;
+
+      for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+        if (clientClosed) break;
+        sendEvent({ type: 'attempt_start', attempt, max: MAX_ATTEMPTS });
+
+        let fullContent = '';
+        try {
+          if (attempt === 1) {
+            // First attempt: stream tokens live so user sees response typing
+            fullContent = await streamAITokens(session.provider, session.model, session.lmStudioUrl, apiKey, aiMessages, res);
+          } else {
+            // Retries: non-streaming so we validate before showing
+            fullContent = await callAINonStream(session.provider, session.model, session.lmStudioUrl, apiKey, aiMessages);
+          }
+        } catch (err) {
+          sendEvent({ type: 'error', error: err.message });
+          break;
         }
-        res.write(`data: ${JSON.stringify({ type: 'error', error: streamErr.message })}\n\n`);
-        res.end();
-        return;
+
+        const score = scoreResponse(fullContent);
+        if (score > bestScore) { bestScore = score; bestContent = fullContent; }
+
+        const validation = validateDMResponse(fullContent);
+        if (validation.valid) {
+          if (attempt > 1) sendEvent({ type: 'response_burst', content: fullContent });
+          sendEvent({ type: 'attempt_accepted', attempt });
+          savedContent = fullContent;
+          break;
+        } else {
+          sendEvent({ type: 'attempt_rejected', attempt, reason: validation.reason });
+          if (attempt === MAX_ATTEMPTS) {
+            // All attempts exhausted — send best response we got
+            sendEvent({ type: 'response_burst', content: bestContent });
+            sendEvent({ type: 'best_effort', attempt });
+            savedContent = bestContent;
+          }
+        }
       }
 
-      // Save assistant response
-      if (fullContent) {
-        aidb.addMessage(crypto.randomUUID(), session.id, 'assistant', fullContent);
+      // Save to DB (even if client disconnected — user msg was already saved)
+      const toSave = savedContent || bestContent;
+      if (toSave) aidb.addMessage(crypto.randomUUID(), session.id, 'assistant', toSave);
+
+      // Auto-summarize
+      if (!clientClosed) {
+        const freshSession = aidb.getSession(req.params.id);
+        const convCount = aidb.getMessages(session.id).filter(m => m.role !== 'system').length;
+        if (convCount >= AUTO_SUMMARY_THRESHOLD && !freshSession.summarizedUpTo) {
+          generateSummaryForSession(freshSession, aidb.getMessages(session.id), apiKey).catch(() => {});
+        }
       }
 
-      // Auto-summarize: fire-and-forget after threshold is reached
-      const freshSession = aidb.getSession(req.params.id);
-      const convCount = aidb.getMessages(session.id).filter(m => m.role !== 'system').length;
-      if (convCount >= AUTO_SUMMARY_THRESHOLD && !freshSession.summarizedUpTo) {
-        generateSummaryForSession(freshSession, aidb.getMessages(session.id), apiKey).catch(() => {});
-      }
-
-      res.write('data: [DONE]\n\n');
-      res.end();
+      try { res.write('data: [DONE]\n\n'); res.end(); } catch {}
     } catch (err) {
       console.error(err);
       if (!res.headersSent) res.status(500).json({ error: err.message });
-      else { res.write(`data: ${JSON.stringify({ type: 'error', error: err.message })}\n\n`); res.end(); }
+      else { try { res.write(`data: ${JSON.stringify({ type: 'error', error: err.message })}\n\n`); res.end(); } catch {} }
     }
   });
 

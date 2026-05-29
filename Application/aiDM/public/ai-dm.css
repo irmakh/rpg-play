@@ -32,6 +32,10 @@ html, body {
   -webkit-text-size-adjust: 100%;
 }
 
+/* Lock body scroll when adventure screen is active (prevents mobile browsers
+   from scrolling the page body and hiding the header when chat is long) */
+body.adv-active { overflow: hidden; }
+
 /* ── Screens ──────────────────────────────────────────────────────────────── */
 .screen { display: none; min-height: 100vh; }
 .screen.active { display: flex; flex-direction: column; }
@@ -266,8 +270,10 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
 .diff-Hard { background: var(--red-dim); color: #f87171; }
 
 /* ── Adventure Screen ─────────────────────────────────────────────────────── */
-#screen-adventure.active { display: block; height: 100vh; overflow: hidden; position: relative; }
-.adv-layout { display: flex; height: 100vh; position: relative; overflow: hidden; }
+/* 100dvh (dynamic viewport height) shrinks when the soft keyboard opens,
+   keeping the header visible. Falls back to 100vh on older browsers. */
+#screen-adventure.active { display: block; height: 100vh; height: 100dvh; overflow: hidden; position: relative; }
+.adv-layout { display: flex; height: 100vh; height: 100dvh; position: relative; overflow: hidden; }
 
 /* ── Sidebar ──────────────────────────────────────────────────────────────── */
 .char-sidebar {
@@ -640,11 +646,15 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
 .option-custom-btn:hover { border-color: var(--muted); color: var(--text); }
 
 /* ── DM typing indicator ──────────────────────────────────────────────────── */
-.msg-typing .msg-content { display: flex; gap: 5px; align-items: center; height: 22px; }
+.msg-typing .msg-content { display: flex; gap: 8px; align-items: center; min-height: 28px; flex-wrap: wrap; }
+.typing-dots { display: flex; gap: 5px; align-items: center; }
 .typing-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); animation: typing-pulse 1.2s ease-in-out infinite; }
 .typing-dot:nth-child(2) { animation-delay: 0.2s; }
 .typing-dot:nth-child(3) { animation-delay: 0.4s; }
 @keyframes typing-pulse { 0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); } 40% { opacity: 1; transform: scale(1); } }
+.retry-text { font-size: 12px; color: var(--muted); font-style: italic; }
+.btn-stop-retry { margin-left: 4px; padding: 2px 10px; font-size: 11px; background: transparent; border: 1px solid var(--border); border-radius: 4px; color: var(--muted); cursor: pointer; line-height: 1.6; transition: border-color 0.15s, color 0.15s; white-space: nowrap; }
+.btn-stop-retry:hover { border-color: var(--red, #c04040); color: var(--red, #c04040); }
 
 /* ── New Scenario Modal ───────────────────────────────────────────────────── */
 .ns-modal-card { display: flex; flex-direction: column; }

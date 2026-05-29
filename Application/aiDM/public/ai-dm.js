@@ -80,6 +80,8 @@ function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   const el = document.getElementById(id);
   if (el) el.classList.add('active');
+  // Lock body scroll on adventure screen so the header can't be pushed off-screen
+  document.body.classList.toggle('adv-active', id === 'screen-adventure');
 }
 
 // ── Character selection screen ────────────────────────────────────────────────
@@ -852,13 +854,23 @@ function formatRollMessage(result, roll, dcVal) {
 
 // ── Typing indicator ──────────────────────────────────────────────────────────
 function showTypingIndicator() {
+  removeTypingIndicator();
   const div = document.createElement('div');
   div.className = 'msg msg-dm msg-typing';
   div.id = 'typing-indicator';
-  div.innerHTML = `<div class="msg-label">Dungeon Master</div><div class="msg-content"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>`;
+  div.innerHTML = `<div class="msg-label">Dungeon Master</div><div class="msg-content"><span class="typing-dots"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></span><span class="retry-text" style="display:none"></span><button class="btn-stop-retry" id="btn-stop-retry" title="Stop and use current response">⏹ Stop</button></div>`;
   document.getElementById('chat-messages').appendChild(div);
   scrollChatBottom();
   return div;
+}
+
+function updateTypingAttempt(attempt, max) {
+  const el = document.getElementById('typing-indicator');
+  if (!el) return;
+  el.querySelector('.typing-dots').style.display = 'none';
+  const textEl = el.querySelector('.retry-text');
+  textEl.style.display = '';
+  textEl.textContent = `Trying again… (${attempt}/${max})`;
 }
 
 function removeTypingIndicator() {
@@ -866,7 +878,7 @@ function removeTypingIndicator() {
   if (el) el.remove();
 }
 
-// ── Streaming message ─────────────────────────────────────────────────────────
+// ── Streaming message (with retry validation) ─────────────────────────────────
 async function sendMessage(text) {
   if (state.sending || state.sessionEnded) return;
   state.sending = true;
@@ -877,13 +889,57 @@ async function sendMessage(text) {
   inputEl.disabled = true;
   sendBtn.disabled = true;
 
-  const typingEl = showTypingIndicator();
+  showTypingIndicator();
+
+  const abortCtrl = new AbortController();
+  let userStopped = false;
+
+  // Wire stop button
+  const wireStopBtn = () => {
+    const btn = document.getElementById('btn-stop-retry');
+    if (btn) btn.onclick = () => { userStopped = true; abortCtrl.abort(); };
+  };
+  wireStopBtn();
+
+  let msgDiv = null;
+  let contentEl = null;
+  let accumulated = '';
+  let lastCompleteContent = '';
+  let finalized = false;
+
+  const createDMBubble = () => {
+    const div = document.createElement('div');
+    div.className = 'msg msg-dm';
+    div.innerHTML = `<div class="msg-label">Dungeon Master</div><div class="msg-content"></div>`;
+    document.getElementById('chat-messages').appendChild(div);
+    return div;
+  };
+
+  const finalizeBubble = (div, content) => {
+    if (!div || finalized) return;
+    finalized = true;
+    const { cleanText, rolls } = parseRollRequests(content);
+    const el = div.querySelector('.msg-content');
+    if (el) el.innerHTML = formatDMText(cleanText);
+    if (rolls.length > 0 && !state.sessionEnded) {
+      const rollWrap = document.createElement('div');
+      rollWrap.className = 'roll-request-wrap';
+      rolls.forEach(roll => rollWrap.appendChild(createRollButton(roll)));
+      div.appendChild(rollWrap);
+    }
+    if (!state.sessionEnded) {
+      const options = parseOptions(cleanText);
+      if (options.length >= 2) div.appendChild(buildOptionButtons(options));
+    }
+    scrollChatBottom();
+  };
 
   try {
     const res = await fetch(`/api/ai-dm/sessions/${state.sessionId}/message`, {
       method: 'POST',
       headers: authHeaders(),
       body: JSON.stringify({ content: text }),
+      signal: abortCtrl.signal,
     });
 
     if (!res.ok) {
@@ -891,20 +947,9 @@ async function sendMessage(text) {
       throw new Error(err.error || `HTTP ${res.status}`);
     }
 
-    removeTypingIndicator();
-
-    // Read the SSE stream
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
     let buffer = '';
-    let accumulated = '';
-
-    // Create the DM message bubble
-    const msgDiv = document.createElement('div');
-    msgDiv.className = 'msg msg-dm';
-    msgDiv.innerHTML = `<div class="msg-label">Dungeon Master</div><div class="msg-content"></div>`;
-    const contentEl = msgDiv.querySelector('.msg-content');
-    document.getElementById('chat-messages').appendChild(msgDiv);
 
     while (true) {
       const { done, value } = await reader.read();
@@ -916,39 +961,81 @@ async function sendMessage(text) {
       for (const line of lines) {
         if (!line.startsWith('data: ')) continue;
         const data = line.slice(6).trim();
-        if (data === '[DONE]') continue;
+        if (data === '[DONE]') {
+          if (!finalized && msgDiv) finalizeBubble(msgDiv, accumulated);
+          continue;
+        }
         try {
           const obj = JSON.parse(data);
-          if (obj.type === 'token' && obj.content) {
+
+          if (obj.type === 'attempt_start') {
+            if (obj.attempt > 1) {
+              // Clear current bubble — this attempt failed, retrying
+              if (msgDiv) { msgDiv.remove(); msgDiv = null; finalized = false; }
+              accumulated = '';
+              showTypingIndicator();
+              wireStopBtn();
+              updateTypingAttempt(obj.attempt, obj.max);
+            }
+
+          } else if (obj.type === 'token' && obj.content) {
+            if (!msgDiv) {
+              removeTypingIndicator();
+              msgDiv = createDMBubble();
+              contentEl = msgDiv.querySelector('.msg-content');
+            }
             accumulated += obj.content;
             const { cleanText } = parseRollRequests(accumulated);
             contentEl.innerHTML = formatDMText(cleanText);
             scrollChatBottom();
+
+          } else if (obj.type === 'attempt_rejected') {
+            // Save this attempt's content as fallback, then clear for retry
+            lastCompleteContent = accumulated;
+            accumulated = '';
+            if (msgDiv) { msgDiv.remove(); msgDiv = null; finalized = false; }
+
+          } else if (obj.type === 'response_burst') {
+            // A retry produced a valid (or best-effort) response — show it all at once
+            removeTypingIndicator();
+            if (msgDiv) { msgDiv.remove(); finalized = false; }
+            msgDiv = createDMBubble();
+            contentEl = msgDiv.querySelector('.msg-content');
+            accumulated = obj.content;
+            const { cleanText } = parseRollRequests(accumulated);
+            contentEl.innerHTML = formatDMText(cleanText);
+            scrollChatBottom();
+
+          } else if (obj.type === 'attempt_accepted' || obj.type === 'best_effort') {
+            finalizeBubble(msgDiv, accumulated);
+
           } else if (obj.type === 'error') {
-            contentEl.innerHTML = `<span style="color:var(--red)">Error: ${esc(obj.error)}</span>`;
+            removeTypingIndicator();
+            if (msgDiv) {
+              msgDiv.querySelector('.msg-content').innerHTML = `<span style="color:var(--red)">Error: ${esc(obj.error)}</span>`;
+            } else {
+              appendSystemNote(`Error: ${esc(obj.error)}`);
+            }
           }
         } catch {}
       }
     }
 
-    // Final pass: strip roll tags, add roll buttons + option buttons
-    const { cleanText, rolls } = parseRollRequests(accumulated);
-    contentEl.innerHTML = formatDMText(cleanText);
-    if (rolls.length > 0 && !state.sessionEnded) {
-      const rollWrap = document.createElement('div');
-      rollWrap.className = 'roll-request-wrap';
-      rolls.forEach(roll => rollWrap.appendChild(createRollButton(roll)));
-      msgDiv.appendChild(rollWrap);
-    }
-    if (!state.sessionEnded) {
-      const options = parseOptions(cleanText);
-      if (options.length >= 2) msgDiv.appendChild(buildOptionButtons(options));
-    }
-    scrollChatBottom();
-
   } catch (e) {
     removeTypingIndicator();
-    appendSystemNote(`Error: ${e.message}`);
+    if (e.name === 'AbortError' || userStopped) {
+      // User stopped — finalize with whatever we have
+      const useContent = accumulated || lastCompleteContent;
+      if (useContent) {
+        if (!msgDiv) { msgDiv = createDMBubble(); finalized = false; }
+        finalizeBubble(msgDiv, useContent);
+      } else if (msgDiv) {
+        finalizeBubble(msgDiv, '');
+      }
+    } else {
+      if (msgDiv) msgDiv.remove();
+      appendSystemNote(`Error: ${e.message}`);
+    }
   } finally {
     state.sending = false;
     setAdventureUIBusy(false);

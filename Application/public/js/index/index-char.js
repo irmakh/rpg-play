@@ -963,11 +963,13 @@ function goToAIDM() {
   const charId   = currentCharId;
   const password = charId ? (charPasswords[charId] || '') : '';
   const charName = charId ? (document.getElementById('char-title')?.textContent || '') : '';
-  if (charId) {
-    localStorage.setItem('aiDmHandoff', JSON.stringify({
-      charId, charName, password, ts: Date.now()
-    }));
-  }
+  try {
+    if (charId) {
+      localStorage.setItem('aiDmHandoff', JSON.stringify({
+        charId, charName, password, ts: Date.now()
+      }));
+    }
+  } catch {}
   location.href = '/ai-dm';
 }
 
