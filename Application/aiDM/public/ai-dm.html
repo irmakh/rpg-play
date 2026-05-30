@@ -62,7 +62,8 @@
       <h3>AI Provider</h3>
       <div class="provider-tabs">
         <button class="provider-tab active" data-provider="lmstudio">LM Studio (Local)</button>
-        <button class="provider-tab" data-provider="openrouter">OpenRouter (Free Models)</button>
+        <button class="provider-tab" data-provider="openrouter">OpenRouter (Free)</button>
+        <button class="provider-tab" data-provider="openai">ChatGPT (OpenAI)</button>
       </div>
 
       <div id="prov-lmstudio" class="provider-panel active">
@@ -73,6 +74,11 @@
       <div id="prov-openrouter" class="provider-panel" style="display:none">
         <label class="field-label">OpenRouter API Key</label>
         <input type="password" id="or-apikey" class="text-input" placeholder="sk-or-…  (leave blank to list free models without auth)">
+      </div>
+
+      <div id="prov-openai" class="provider-panel" style="display:none">
+        <label class="field-label">OpenAI API Key</label>
+        <input type="password" id="openai-apikey" class="text-input" placeholder="sk-…">
       </div>
 
       <div class="model-row">
@@ -232,12 +238,16 @@
       <select id="cfg-provider" class="select-input">
         <option value="lmstudio">LM Studio (Local)</option>
         <option value="openrouter">OpenRouter (Free Models)</option>
+        <option value="openai">ChatGPT (OpenAI)</option>
       </select>
       <label class="field-label" style="margin-top:12px">LM Studio URL</label>
       <input type="text" id="cfg-lm-url" class="text-input" placeholder="http://localhost:1234">
       <label class="field-label" style="margin-top:12px">OpenRouter API Key</label>
       <input type="password" id="cfg-apikey" class="text-input" placeholder="sk-or-…">
       <div id="cfg-apikey-status" style="font-size:12px;color:var(--muted);margin-top:4px"></div>
+      <label class="field-label" style="margin-top:12px">OpenAI API Key</label>
+      <input type="password" id="cfg-openai-apikey" class="text-input" placeholder="sk-…">
+      <div id="cfg-openai-apikey-status" style="font-size:12px;color:var(--muted);margin-top:4px"></div>
     </div>
     <div class="btn-row">
       <button class="btn-ghost" id="settings-cancel">Cancel</button>
@@ -324,7 +334,8 @@
       <p style="color:var(--muted);font-size:13px;margin-bottom:14px">Switch the AI model for this session. The adventure history is kept — the new model will pick up from where the last one left off.</p>
       <div class="provider-tabs">
         <button class="provider-tab" data-cm-provider="lmstudio">LM Studio (Local)</button>
-        <button class="provider-tab" data-cm-provider="openrouter">OpenRouter (Free Models)</button>
+        <button class="provider-tab" data-cm-provider="openrouter">OpenRouter (Free)</button>
+        <button class="provider-tab" data-cm-provider="openai">ChatGPT (OpenAI)</button>
       </div>
       <div id="cm-prov-lmstudio" class="provider-panel" style="margin-top:10px">
         <label class="field-label">LM Studio URL</label>
@@ -333,6 +344,10 @@
       <div id="cm-prov-openrouter" class="provider-panel" style="margin-top:10px;display:none">
         <label class="field-label">OpenRouter API Key</label>
         <input type="password" id="cm-apikey" class="text-input" placeholder="sk-or-… (leave blank to use saved key)">
+      </div>
+      <div id="cm-prov-openai" class="provider-panel" style="margin-top:10px;display:none">
+        <label class="field-label">OpenAI API Key</label>
+        <input type="password" id="cm-openai-apikey" class="text-input" placeholder="sk-… (leave blank to use saved key)">
       </div>
       <div class="model-row">
         <div style="flex:1">

@@ -31,6 +31,7 @@
 - - **Calendar (Calendar of Harptos)** — DM calendar at events.html (DM-only, password-gated); player calendar tab in index.html. Tenday (3×10) grid display. Festival days: Midwinter, Greengrass, Midsummer, Shieldmeet (leap years), Highharvestide, The Feast of the Moon. DM sets current campaign date (day-by-day or jump). Events have title, description, FR date, public/DM-only flag, event type. SSE broadcasts calendar-updated on changes.
 - table.html/table.css/table.js: left sidebar layout (240px #left-panel) — Initiative, Chat, Token/HP sections. No floating panels. Both sidebars have toolbar toggle buttons.
 - table.js has been split into 12 modules under Application/public/js/table/ (commit e4bc4b9). The monolithic file no longer exists. table.html loads the 12 files in order via defer script tags.
+- OpenAI (ChatGPT) added as third AI DM provider (session 54). Key stored as openaiApiKey (separate from openrouterApiKey). Provider tab added in setup, settings modal, change-model modal. Curated model list: gpt-4.1-mini (default), gpt-4.1, gpt-4.1-nano, gpt-4o, gpt-4o-mini, o4-mini, o3-mini.
 
 ## Key Facts — App Stack
 
@@ -82,5 +83,5 @@
 - Stories system: manual comic upload workflow. storiesdb.js (separate SQLite DB). Three screens: stories.html (dashboard), story-builder.html (panel editor with character cast multiselect by portrait), story-viewer.html (grid/strip + lightbox + cast strip). Password gate via POST /api/auth/verify-any accepts DM or any character password.
 ---
 
-*Last updated: 2026-05-14*
+*Last updated: 2026-05-30*
 *This file is the source of truth for persistent facts. Edit directly to update.*

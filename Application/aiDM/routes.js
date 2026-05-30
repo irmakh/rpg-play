@@ -287,6 +287,17 @@ async function fetchModels(provider, lmStudioUrl, apiKey) {
     });
     return models.map(m => ({ id: m.id, name: m.name || m.id })).sort((a, b) => a.name.localeCompare(b.name));
   }
+  if (provider === 'openai') {
+    return [
+      { id: 'gpt-4.1-mini', name: 'GPT-4.1 Mini' },
+      { id: 'gpt-4.1', name: 'GPT-4.1' },
+      { id: 'gpt-4.1-nano', name: 'GPT-4.1 Nano' },
+      { id: 'gpt-4o', name: 'GPT-4o' },
+      { id: 'gpt-4o-mini', name: 'GPT-4o Mini' },
+      { id: 'o4-mini', name: 'o4-mini' },
+      { id: 'o3-mini', name: 'o3-mini' },
+    ];
+  }
   throw new Error('Unknown provider');
 }
 
@@ -298,6 +309,12 @@ async function streamAITokens(provider, model, lmStudioUrl, apiKey, messages, re
     const base = (lmStudioUrl || 'http://localhost:1234').replace(/\/$/, '');
     endpoint = `${base}/v1/chat/completions`;
     headers = { 'Content-Type': 'application/json' };
+  } else if (provider === 'openai') {
+    endpoint = 'https://api.openai.com/v1/chat/completions';
+    headers = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    };
   } else {
     endpoint = 'https://openrouter.ai/api/v1/chat/completions';
     headers = {
@@ -399,6 +416,12 @@ async function callAINonStream(provider, model, lmStudioUrl, apiKey, messages, o
     const base = (lmStudioUrl || 'http://localhost:1234').replace(/\/$/, '');
     endpoint = `${base}/v1/chat/completions`;
     headers = { 'Content-Type': 'application/json' };
+  } else if (provider === 'openai') {
+    endpoint = 'https://api.openai.com/v1/chat/completions';
+    headers = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    };
   } else {
     endpoint = 'https://openrouter.ai/api/v1/chat/completions';
     headers = {
@@ -475,8 +498,14 @@ function buildAIMessages(session, allMessages) {
   return allMessages.map(m => ({ role: m.role, content: m.content }));
 }
 
+// ── API key helper — OpenAI uses a separate stored key ────────────────────────
+function getApiKeyForProvider(provider) {
+  if (provider === 'openai') return aidb.getConfig('openaiApiKey', '');
+  return aidb.getConfig('apiKey', '');
+}
+
 // ── Version — bump this whenever aiDM JS/CSS files change ────────────────────
-const AIDM_VERSION = 8;
+const AIDM_VERSION = 9;
 
 // ── Main route registration ───────────────────────────────────────────────────
 export default function register(app, ctx) {
@@ -646,19 +675,21 @@ Return ONLY the JSON object. No markdown code fences. No explanation.`
   // ── Config ────────────────────────────────────────────────────────────────
   app.get('/api/ai-dm/config', (req, res) => {
     res.json({
-      provider:    aidb.getConfig('provider', 'openrouter'),
-      lmStudioUrl: aidb.getConfig('lmStudioUrl', 'http://localhost:1234'),
-      model:       aidb.getConfig('model', ''),
-      hasApiKey:   !!aidb.getConfig('apiKey', ''),
+      provider:     aidb.getConfig('provider', 'openrouter'),
+      lmStudioUrl:  aidb.getConfig('lmStudioUrl', 'http://localhost:1234'),
+      model:        aidb.getConfig('model', ''),
+      hasApiKey:    !!aidb.getConfig('apiKey', ''),
+      hasOpenAIKey: !!aidb.getConfig('openaiApiKey', ''),
     });
   });
 
   app.post('/api/ai-dm/config', (req, res) => {
-    const { provider, lmStudioUrl, model, apiKey } = req.body || {};
-    if (provider)    aidb.setConfig('provider',    provider);
-    if (lmStudioUrl) aidb.setConfig('lmStudioUrl', lmStudioUrl);
-    if (model)       aidb.setConfig('model',       model);
-    if (apiKey !== undefined) aidb.setConfig('apiKey', apiKey);
+    const { provider, lmStudioUrl, model, apiKey, openaiApiKey } = req.body || {};
+    if (provider)                aidb.setConfig('provider',    provider);
+    if (lmStudioUrl)             aidb.setConfig('lmStudioUrl', lmStudioUrl);
+    if (model)                   aidb.setConfig('model',       model);
+    if (apiKey !== undefined)    aidb.setConfig('apiKey',      apiKey);
+    if (openaiApiKey !== undefined) aidb.setConfig('openaiApiKey', openaiApiKey);
     res.json({ ok: true });
   });
 
@@ -699,10 +730,13 @@ Return ONLY the JSON object. No markdown code fences. No explanation.`
       if (provider)    aidb.setConfig('provider', provider);
       if (lmStudioUrl) aidb.setConfig('lmStudioUrl', lmStudioUrl);
       if (model)       aidb.setConfig('model', model);
-      if (apiKey)      aidb.setConfig('apiKey', apiKey);
+      if (apiKey) {
+        if (provider === 'openai') aidb.setConfig('openaiApiKey', apiKey);
+        else aidb.setConfig('apiKey', apiKey);
+      }
 
       // Resolve API key (from request or stored config)
-      const resolvedApiKey = apiKey || aidb.getConfig('apiKey', '');
+      const resolvedApiKey = apiKey || getApiKeyForProvider(provider || 'lmstudio');
 
       // Validate language
       const resolvedLanguage = language === 'Turkish' ? 'Turkish' : 'English';
@@ -806,7 +840,7 @@ Return ONLY the JSON object. No markdown code fences. No explanation.`
 
       const allMessages = aidb.getMessages(session.id);
       const aiMessages = buildAIMessages(session, allMessages);
-      const apiKey = aidb.getConfig('apiKey', '');
+      const apiKey = getApiKeyForProvider(session.provider);
 
       // Set up SSE before any attempt
       res.setHeader('Content-Type', 'text/event-stream');
@@ -963,7 +997,10 @@ Return ONLY the JSON object. No markdown code fences. No explanation.`
       if (provider)    aidb.setConfig('provider',    provider);
       if (model)       aidb.setConfig('model',       model);
       if (lmStudioUrl) aidb.setConfig('lmStudioUrl', lmStudioUrl);
-      if (apiKey)      aidb.setConfig('apiKey',      apiKey);
+      if (apiKey) {
+        if ((provider || session.provider) === 'openai') aidb.setConfig('openaiApiKey', apiKey);
+        else aidb.setConfig('apiKey', apiKey);
+      }
       res.json({ ok: true, model, provider: provider || session.provider });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
   });
@@ -990,7 +1027,7 @@ Return ONLY the JSON object. No markdown code fences. No explanation.`
       const allMessages = aidb.getMessages(session.id);
       const aiMessages = buildAIMessages(session, allMessages);
 
-      const apiKey = aidb.getConfig('apiKey', '');
+      const apiKey = getApiKeyForProvider(session.provider);
 
       let fullContent = '';
       try {
@@ -1063,7 +1100,7 @@ Return ONLY the JSON object. No markdown code fences. No explanation.`
           return res.status(401).json({ locked: true });
       }
       const allMessages = aidb.getMessages(session.id);
-      const apiKey = aidb.getConfig('apiKey', '');
+      const apiKey = getApiKeyForProvider(session.provider);
       await generateSummaryForSession(session, allMessages, apiKey);
       const updated = aidb.getSession(req.params.id);
       res.json({ ok: true, summary: updated.summary || '', summarizedUpTo: updated.summarizedUpTo || '' });

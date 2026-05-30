@@ -239,7 +239,8 @@ async function openSetupScreen() {
     state.lmStudioUrl = cfg.lmStudioUrl || 'http://localhost:1234';
     state.model       = cfg.model       || '';
     document.getElementById('lm-url').value = state.lmStudioUrl;
-    if (cfg.hasApiKey) document.getElementById('or-apikey').placeholder = '(saved)';
+    if (cfg.hasApiKey)    document.getElementById('or-apikey').placeholder    = '(saved)';
+    if (cfg.hasOpenAIKey) document.getElementById('openai-apikey').placeholder = '(saved)';
     setProviderUI(state.provider);
   } catch {}
 
@@ -250,8 +251,9 @@ async function openSetupScreen() {
 function setProviderUI(provider) {
   state.provider = provider;
   document.querySelectorAll('.provider-tab').forEach(t => t.classList.toggle('active', t.dataset.provider === provider));
-  document.getElementById('prov-lmstudio').style.display  = provider === 'lmstudio'   ? '' : 'none';
+  document.getElementById('prov-lmstudio').style.display   = provider === 'lmstudio'   ? '' : 'none';
   document.getElementById('prov-openrouter').style.display = provider === 'openrouter' ? '' : 'none';
+  document.getElementById('prov-openai').style.display     = provider === 'openai'     ? '' : 'none';
   document.getElementById('model-select').innerHTML = '<option value="">— click Load to fetch models —</option>';
   state.model = '';
   checkStartReady();
@@ -283,11 +285,13 @@ async function loadModels() {
   sel.innerHTML = '<option>Loading…</option>';
 
   try {
-    const lmUrl = document.getElementById('lm-url').value.trim();
-    const apiKey = document.getElementById('or-apikey').value.trim();
+    const lmUrl       = document.getElementById('lm-url').value.trim();
+    const apiKey      = document.getElementById('or-apikey').value.trim();
+    const openaiKey   = document.getElementById('openai-apikey').value.trim();
     const params = new URLSearchParams({ provider: state.provider });
-    if (state.provider === 'lmstudio') params.set('lmStudioUrl', lmUrl || 'http://localhost:1234');
-    if (state.provider === 'openrouter' && apiKey) params.set('apiKey', apiKey);
+    if (state.provider === 'lmstudio')              params.set('lmStudioUrl', lmUrl || 'http://localhost:1234');
+    if (state.provider === 'openrouter' && apiKey)  params.set('apiKey', apiKey);
+    if (state.provider === 'openai' && openaiKey)   params.set('apiKey', openaiKey);
 
     const models = await apiFetch(`/api/ai-dm/models?${params}`);
     sel.innerHTML = '';
@@ -371,14 +375,16 @@ function checkStartReady() {
 document.getElementById('btn-start-adventure').addEventListener('click', startAdventure);
 
 async function startAdventure() {
-  const model = document.getElementById('model-select').value;
-  const lmUrl = document.getElementById('lm-url').value.trim();
-  const apiKey = document.getElementById('or-apikey').value.trim();
+  const model     = document.getElementById('model-select').value;
+  const lmUrl     = document.getElementById('lm-url').value.trim();
+  const apiKey    = document.getElementById('or-apikey').value.trim();
+  const openaiKey = document.getElementById('openai-apikey').value.trim();
   if (!model || !state.selectedScenario) return;
 
   state.model = model;
-  if (state.provider === 'lmstudio') state.lmStudioUrl = lmUrl || 'http://localhost:1234';
-  if (state.provider === 'openrouter' && apiKey) state.apiKey = apiKey;
+  if (state.provider === 'lmstudio')              state.lmStudioUrl = lmUrl || 'http://localhost:1234';
+  if (state.provider === 'openrouter' && apiKey)  state.apiKey = apiKey;
+  if (state.provider === 'openai' && openaiKey)   state.apiKey = openaiKey;
 
   const btn = document.getElementById('btn-start-adventure');
   btn.disabled = true;
@@ -1124,6 +1130,7 @@ document.getElementById('btn-settings').addEventListener('click', async () => {
     document.getElementById('cfg-provider').value = cfg.provider || 'lmstudio';
     document.getElementById('cfg-lm-url').value = cfg.lmStudioUrl || 'http://localhost:1234';
     document.getElementById('cfg-apikey-status').textContent = cfg.hasApiKey ? 'API key is saved. Enter a new one to replace it.' : '';
+    document.getElementById('cfg-openai-apikey-status').textContent = cfg.hasOpenAIKey ? 'OpenAI key is saved. Enter a new one to replace it.' : '';
   } catch {}
   document.getElementById('modal-settings').style.display = 'flex';
 });
@@ -1131,13 +1138,19 @@ document.getElementById('btn-settings').addEventListener('click', async () => {
 document.getElementById('settings-close').addEventListener('click', () => { document.getElementById('modal-settings').style.display = 'none'; });
 document.getElementById('settings-cancel').addEventListener('click', () => { document.getElementById('modal-settings').style.display = 'none'; });
 document.getElementById('settings-save').addEventListener('click', async () => {
-  const provider = document.getElementById('cfg-provider').value;
-  const lmUrl   = document.getElementById('cfg-lm-url').value.trim();
-  const apiKey  = document.getElementById('cfg-apikey').value.trim();
+  const provider    = document.getElementById('cfg-provider').value;
+  const lmUrl       = document.getElementById('cfg-lm-url').value.trim();
+  const apiKey      = document.getElementById('cfg-apikey').value.trim();
+  const openaiKey   = document.getElementById('cfg-openai-apikey').value.trim();
   try {
     await apiFetch('/api/ai-dm/config', {
       method: 'POST',
-      body: JSON.stringify({ provider, lmStudioUrl: lmUrl, apiKey: apiKey || undefined }),
+      body: JSON.stringify({
+        provider,
+        lmStudioUrl:  lmUrl,
+        apiKey:       apiKey || undefined,
+        openaiApiKey: openaiKey || undefined,
+      }),
     });
     document.getElementById('modal-settings').style.display = 'none';
   } catch (e) { alert(`Error saving: ${e.message}`); }
@@ -1154,8 +1167,9 @@ let cmProvider = 'lmstudio';
 function setCmProviderUI(provider) {
   cmProvider = provider;
   document.querySelectorAll('[data-cm-provider]').forEach(t => t.classList.toggle('active', t.dataset.cmProvider === provider));
-  document.getElementById('cm-prov-lmstudio').style.display  = provider === 'lmstudio'   ? '' : 'none';
-  document.getElementById('cm-prov-openrouter').style.display = provider === 'openrouter' ? '' : 'none';
+  document.getElementById('cm-prov-lmstudio').style.display   = provider === 'lmstudio'   ? '' : 'none';
+  document.getElementById('cm-prov-openrouter').style.display  = provider === 'openrouter' ? '' : 'none';
+  document.getElementById('cm-prov-openai').style.display      = provider === 'openai'     ? '' : 'none';
   document.getElementById('cm-model-select').innerHTML = '<option value="">— click Load —</option>';
   document.getElementById('cm-models-error').style.display = 'none';
 }
@@ -1188,11 +1202,13 @@ document.getElementById('cm-load-models').addEventListener('click', async () => 
   btn.textContent = '…';
   sel.innerHTML = '<option>Loading…</option>';
   try {
-    const lmUrl  = document.getElementById('cm-lm-url').value.trim();
-    const apiKey = document.getElementById('cm-apikey').value.trim();
+    const lmUrl     = document.getElementById('cm-lm-url').value.trim();
+    const apiKey    = document.getElementById('cm-apikey').value.trim();
+    const openaiKey = document.getElementById('cm-openai-apikey').value.trim();
     const params = new URLSearchParams({ provider: cmProvider });
-    if (cmProvider === 'lmstudio')   params.set('lmStudioUrl', lmUrl || 'http://localhost:1234');
-    if (cmProvider === 'openrouter' && apiKey) params.set('apiKey', apiKey);
+    if (cmProvider === 'lmstudio')              params.set('lmStudioUrl', lmUrl || 'http://localhost:1234');
+    if (cmProvider === 'openrouter' && apiKey)  params.set('apiKey', apiKey);
+    if (cmProvider === 'openai' && openaiKey)   params.set('apiKey', openaiKey);
     const models = await apiFetch(`/api/ai-dm/models?${params}`);
     sel.innerHTML = '';
     if (!models.length) {
@@ -1217,9 +1233,10 @@ document.getElementById('cm-load-models').addEventListener('click', async () => 
 });
 
 document.getElementById('cm-save').addEventListener('click', async () => {
-  const model  = document.getElementById('cm-model-select').value;
-  const lmUrl  = document.getElementById('cm-lm-url').value.trim();
-  const apiKey = document.getElementById('cm-apikey').value.trim();
+  const model     = document.getElementById('cm-model-select').value;
+  const lmUrl     = document.getElementById('cm-lm-url').value.trim();
+  const apiKey    = document.getElementById('cm-apikey').value.trim();
+  const openaiKey = document.getElementById('cm-openai-apikey').value.trim();
   if (!model) { alert('Please select a model first.'); return; }
 
   const saveBtn = document.getElementById('cm-save');
@@ -1231,15 +1248,17 @@ document.getElementById('cm-save').addEventListener('click', async () => {
       body: JSON.stringify({
         provider:    cmProvider,
         model,
-        lmStudioUrl: cmProvider === 'lmstudio' ? (lmUrl || 'http://localhost:1234') : undefined,
-        apiKey:      cmProvider === 'openrouter' && apiKey ? apiKey : undefined,
+        lmStudioUrl: cmProvider === 'lmstudio'   ? (lmUrl || 'http://localhost:1234') : undefined,
+        apiKey:      cmProvider === 'openrouter'  && apiKey    ? apiKey    :
+                     cmProvider === 'openai'      && openaiKey ? openaiKey : undefined,
       }),
     });
     // Update local state
-    state.provider    = cmProvider;
-    state.model       = model;
-    if (cmProvider === 'lmstudio') state.lmStudioUrl = lmUrl || 'http://localhost:1234';
+    state.provider = cmProvider;
+    state.model    = model;
+    if (cmProvider === 'lmstudio')             state.lmStudioUrl = lmUrl || 'http://localhost:1234';
     if (cmProvider === 'openrouter' && apiKey) state.apiKey = apiKey;
+    if (cmProvider === 'openai' && openaiKey)  state.apiKey = openaiKey;
     document.getElementById('adv-model-badge').textContent = model.split('/').pop();
     document.getElementById('modal-change-model').style.display = 'none';
     appendSystemNote(`Model changed to ${model}.`);
