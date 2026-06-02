@@ -72,6 +72,7 @@ window.addEventListener('load', async () => {
   fetchDrawings();
   startSSE();
   initMusicPlayer();
+  initChatDragDrop();
 
   // Load chat history in background — non-blocking so map and SSE start immediately
   fetch('/api/chat', { headers: isDM() ? { 'X-Master-Password': masterPw } : {} })

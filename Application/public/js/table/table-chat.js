@@ -1,3 +1,90 @@
+// ── Chat image upload ─────────────────────────────────────────────────────────
+function _setChatUploading(thumbObjectUrl) {
+  const bar   = document.getElementById('chat-upload-bar');
+  const thumb = document.getElementById('chat-upload-thumb');
+  const input = document.getElementById('chat-input');
+  const send  = document.getElementById('chat-send-btn');
+  const label = document.getElementById('chat-img-label');
+  if (thumb && thumbObjectUrl) { thumb.src = thumbObjectUrl; thumb.style.display = ''; }
+  if (bar)   bar.style.display = '';
+  if (input) input.disabled = true;
+  if (send)  send.disabled  = true;
+  if (label) { label.style.opacity = '0.4'; label.style.pointerEvents = 'none'; }
+}
+
+function _clearChatUploading(thumbObjectUrl) {
+  const bar   = document.getElementById('chat-upload-bar');
+  const thumb = document.getElementById('chat-upload-thumb');
+  const input = document.getElementById('chat-input');
+  const send  = document.getElementById('chat-send-btn');
+  const label = document.getElementById('chat-img-label');
+  const fileInput = document.getElementById('chat-img-input');
+  if (bar)   bar.style.display = 'none';
+  if (thumb) { thumb.src = ''; }
+  if (input) input.disabled = false;
+  if (send)  send.disabled  = false;
+  if (label) { label.style.opacity = ''; label.style.pointerEvents = ''; }
+  if (fileInput) fileInput.value = '';
+  if (thumbObjectUrl) URL.revokeObjectURL(thumbObjectUrl);
+}
+
+async function uploadChatImage(file) {
+  if (!file || !file.type.startsWith('image/')) return;
+  if (file.size > 10 * 1024 * 1024) { alert('Image too large (max 10 MB)'); return; }
+  const thumbUrl = URL.createObjectURL(file);
+  _setChatUploading(thumbUrl);
+  try {
+    const dataUrl = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = e => resolve(e.target.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+    const res = await fetch('/api/chat/image', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dataUrl, sender: getChatSender() })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      alert('Failed to send image: ' + (err.error || res.status));
+    }
+  } catch { alert('Failed to send image.'); }
+  finally { _clearChatUploading(thumbUrl); }
+}
+
+function handleChatImageFile(file) {
+  if (file) uploadChatImage(file);
+}
+
+function initChatDragDrop() {
+  const bar = document.getElementById('chat-bar');
+  if (!bar) return;
+  let dragCounter = 0;
+  bar.addEventListener('dragenter', e => {
+    if (!e.dataTransfer.types.includes('Files')) return;
+    e.preventDefault();
+    dragCounter++;
+    bar.classList.add('chat-drop-over');
+  });
+  bar.addEventListener('dragleave', () => {
+    dragCounter--;
+    if (dragCounter <= 0) { dragCounter = 0; bar.classList.remove('chat-drop-over'); }
+  });
+  bar.addEventListener('dragover', e => {
+    if (!e.dataTransfer.types.includes('Files')) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+  });
+  bar.addEventListener('drop', e => {
+    e.preventDefault();
+    dragCounter = 0;
+    bar.classList.remove('chat-drop-over');
+    const file = e.dataTransfer.files[0];
+    if (file) uploadChatImage(file);
+  });
+}
+
 // ── Chat panel ────────────────────────────────────────────────────────────────
 function chatToggle() {
   const body = document.getElementById('chat-body-wrap');

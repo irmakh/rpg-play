@@ -100,6 +100,15 @@ input:focus,select:focus{outline:none;border-color:var(--ac)}
 .chat-input:focus{outline:none;border-color:var(--ac)}
 .chat-send-btn{flex-shrink:0;padding:4px 10px}
 .chat-new-badge{background:var(--err);color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;margin-left:6px;font-weight:bold}
+#chat-bar.chat-drop-over{border-top-color:var(--ac);outline:2px dashed var(--ac);outline-offset:-2px}
+#chat-bar.chat-drop-over .chat-log::after{content:'Drop image to share';position:sticky;bottom:0;display:block;text-align:center;padding:8px;color:var(--ac);font-size:11px;pointer-events:none}
+/* upload progress bar */
+#chat-upload-bar{padding:4px 0 2px}
+#chat-upload-bar .chat-upload-info{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--txd);margin-bottom:4px}
+#chat-upload-bar .chat-upload-info img{width:32px;height:32px;object-fit:cover;border-radius:3px;flex-shrink:0;border:1px solid var(--a44)}
+.chat-upload-track{height:3px;background:var(--bg4);border-radius:2px;overflow:hidden}
+.chat-upload-fill{height:100%;width:35%;background:var(--ac);border-radius:2px;animation:chat-upslide 1.1s ease-in-out infinite}
+@keyframes chat-upslide{0%{transform:translateX(-200%)}100%{transform:translateX(350%)}}
 
 /* ── Advantage modal ── */
 #adv-modal{align-items:center;justify-content:center}

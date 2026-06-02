@@ -278,10 +278,18 @@
   <div class="lp-body open" id="chat-body-wrap">
     <div class="chat-log" id="chat-log"></div>
   </div>
-  <div class="chat-roller">
+  <div class="chat-roller" id="chat-roller">
+    <div id="chat-upload-bar" style="display:none">
+      <div class="chat-upload-info">
+        <img id="chat-upload-thumb" src="" alt="">
+        <span>Uploading image…</span>
+      </div>
+      <div class="chat-upload-track"><div class="chat-upload-fill"></div></div>
+    </div>
     <div class="chat-input-row">
       <input type="text" id="chat-input" class="chat-input" placeholder="Message or /r 2d6+5…" autocomplete="off" onkeydown="if(event.key==='Enter')sendChatInput()">
-      <button class="dice-btn chat-send-btn" onclick="sendChatInput()">Send</button>
+      <label class="dice-btn chat-img-btn" id="chat-img-label" title="Share image" style="cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0 7px">📎<input type="file" id="chat-img-input" accept="image/*" style="display:none" onchange="handleChatImageFile(this.files[0])"></label>
+      <button class="dice-btn chat-send-btn" id="chat-send-btn" onclick="sendChatInput()">Send</button>
     </div>
   </div>
 </div>

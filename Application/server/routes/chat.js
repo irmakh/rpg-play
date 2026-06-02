@@ -58,6 +58,42 @@ export default function register(app, ctx) {
     res.send(item.data);
   });
 
+  // ── Chat Image Upload (all users) ────────────────────────────────────────────
+  app.post('/api/chat/image', async (req, res) => {
+    try {
+      const { dataUrl, sender } = req.body || {};
+      if (!dataUrl || !sender) return res.status(400).json({ error: 'dataUrl and sender required' });
+      const mimeMatch = dataUrl.match(/^data:([^;]+);base64,([A-Za-z0-9+/=]+)$/);
+      if (!mimeMatch) return res.status(400).json({ error: 'Invalid data URL' });
+      const mimeType = mimeMatch[1].toLowerCase();
+      if (!IMAGE_MIME.has(mimeType)) return res.status(400).json({ error: 'Images only' });
+      const b64 = mimeMatch[2];
+      if (Math.ceil(b64.length * 0.75) > 10 * 1024 * 1024) return res.status(413).json({ error: 'Image too large (max 10 MB)' });
+      const mediaId = genId();
+      const buffer = Buffer.from(b64, 'base64');
+      const urls = await processImageSizes(mimeType, buffer, 'media', mediaId);
+      insertSharedMedia(mediaId, mimeType, Buffer.from('FILE:' + urls.original));
+      const entry = {
+        id: genId(),
+        sender: String(sender).slice(0, 40),
+        type: 'media',
+        mediaId,
+        mimeType,
+        mediumUrl: urls.medium,
+        caption: null,
+        timestamp: new Date().toISOString()
+      };
+      if (DB_PROVIDER === 'localdb') {
+        ldb.appendChatLog(entry);
+      } else {
+        chatLog.push(entry);
+        if (chatLog.length > CHAT_MAX) chatLog.shift();
+      }
+      broadcast('chat', entry);
+      res.json({ ok: true, mediaId });
+    } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
+  });
+
   // ── Chat / Dice ───────────────────────────────────────────────────────────────
   app.get('/api/chat', (req, res) => {
     const isMaster = masterAuth(req);
