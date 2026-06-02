@@ -525,6 +525,7 @@ export default function register(app, ctx) {
         ...m,
         fogRegions: (() => { try { return JSON.parse(m.fogRegions || '[]'); } catch { return []; } })(),
         hiddenItems: (() => { try { return JSON.parse(m.hiddenItems || '[]'); } catch { return []; } })(),
+        preparedTokens: (() => { try { return JSON.parse(m.preparedTokens || '[]'); } catch { return []; } })(),
         hasImage: !!mediaDb.prepare('SELECT id FROM shared_media WHERE id = ?').get('prep-map-' + m.id),
       }));
       res.json(maps);
@@ -559,6 +560,7 @@ export default function register(app, ctx) {
       if (body.mapHeight !== undefined) fields.mapHeight = parseInt(body.mapHeight) || 0;
       if (body.fogRegions !== undefined) fields.fogRegions = JSON.stringify(Array.isArray(body.fogRegions) ? body.fogRegions : []);
       if (body.hiddenItems !== undefined) fields.hiddenItems = JSON.stringify(Array.isArray(body.hiddenItems) ? body.hiddenItems : []);
+      if (body.preparedTokens !== undefined) fields.preparedTokens = JSON.stringify(Array.isArray(body.preparedTokens) ? body.preparedTokens : []);
       if (Object.keys(fields).length === 0) return res.json({ ok: true });
       if (DB_PROVIDER === 'localdb') {
         ldb.updatePreparedMap(req.params.id, fields);
@@ -672,7 +674,60 @@ export default function register(app, ctx) {
       broadcast('table', { action: 'map-updated' });
       broadcast('table', { action: 'fog-updated', fogRegions });
       broadcast('table', { action: 'items-updated', hiddenItems });
-      res.json({ ok: true });
+
+      // Clear all existing tokens and initiative before placing prepared tokens
+      if (DB_PROVIDER === 'localdb') {
+        ldb.clearTableTokens();
+        ldb.clearInitEntries();
+        ldb.setInitState('');
+      } else {
+        const clearResult = await idb.query({ tableTokens: {}, initiativeEntries: {}, initiativeState: {} });
+        const clearTxns = [
+          ...(clearResult.tableTokens || []).map(t => idb.tx.tableTokens[t.id].delete()),
+          ...(clearResult.initiativeEntries || []).map(e => idb.tx.initiativeEntries[e.id].delete()),
+          ...(clearResult.initiativeState || []).map(s => idb.tx.initiativeState[s.id].delete()),
+        ];
+        if (clearTxns.length > 0) await idb.transact(clearTxns);
+      }
+      broadcast('table', { action: 'tokens-cleared' });
+      broadcast('initiative', { action: 'clear' });
+
+      // Place prepared tokens onto the table
+      const preparedTokens = (() => { try { return JSON.parse(map.preparedTokens || '[]'); } catch { return []; } })();
+      for (const pt of preparedTokens) {
+        const tokenId = genId();
+        const token = {
+          name: String(pt.name || 'Token').trim(),
+          type: ['monster','npc','character','custom'].includes(pt.type) ? pt.type : 'custom',
+          linkedId: String(pt.linkedId || ''),
+          assignedCharId: '',
+          x: parseInt(pt.x) || 0,
+          y: parseInt(pt.y) || 0,
+          color: String(pt.color || '#888888'),
+          hpCurrent: parseInt(pt.hpMax) || 0,
+          hpMax: parseInt(pt.hpMax) || 0,
+          hpTemp: 0,
+          speed: parseInt(pt.speed) || 30,
+          initiativeId: '',
+          movedFt: 0,
+          visible: pt.visibleToPlayers !== false,
+          tokenSize: Math.max(1, Math.min(4, parseInt(pt.tokenSize) || 1)),
+          portrait: typeof pt.portrait === 'string' ? pt.portrait : null,
+          portraitThumb: typeof pt.portraitThumb === 'string' ? pt.portraitThumb : null,
+          label: String(pt.label || '').slice(0, 20),
+          conditions: '[]',
+          ac: pt.ac != null ? (parseInt(pt.ac) || null) : null,
+          createdAt: new Date().toISOString(),
+        };
+        if (DB_PROVIDER === 'localdb') {
+          ldb.createTableToken(tokenId, token);
+        } else {
+          await idb.transact([idb.tx.tableTokens[tokenId].update({ id: tokenId, ...token })]);
+        }
+        broadcast('table', { action: 'token-added', token: { id: tokenId, ...token } });
+      }
+
+      res.json({ ok: true, tokensPlaced: preparedTokens.length });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
   });
 }

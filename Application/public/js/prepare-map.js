@@ -3,11 +3,19 @@
 let masterPw = '';
 let currentMapId = null;
 let maps = [];
-let prepState = { name: '', cellSize: 50, offsetX: 0, offsetY: 0, mapWidth: 0, mapHeight: 0, fogRegions: [], hiddenItems: [] };
+let prepState = { name: '', cellSize: 50, offsetX: 0, offsetY: 0, mapWidth: 0, mapHeight: 0, fogRegions: [], hiddenItems: [], preparedTokens: [] };
 let drawMode = false;
 let drawState = null;
 let placeItemMode = false;
-let _pendingClone = null; // item data waiting for user to draw its position
+let _pendingClone = null;
+let tokenPlacementMode = false;
+let pendingTokenConfig = null;
+let pmMonsterList = [];
+let pmMonsterLoaded = false;
+let pmSelectedMonsterId = null;
+let pmCurrentTab = 'monster';
+let _editTokenIndex = null;
+let pmPortraitDataUrl = null;
 let saveTimer = null;
 let viewScale = 1;
 
@@ -145,11 +153,13 @@ function selectMap(id) {
     mapWidth: m.mapWidth || 0,
     mapHeight: m.mapHeight || 0,
     fogRegions: Array.isArray(m.fogRegions) ? JSON.parse(JSON.stringify(m.fogRegions)) : [],
-    hiddenItems: Array.isArray(m.hiddenItems) ? JSON.parse(JSON.stringify(m.hiddenItems)) : []
+    hiddenItems: Array.isArray(m.hiddenItems) ? JSON.parse(JSON.stringify(m.hiddenItems)) : [],
+    preparedTokens: Array.isArray(m.preparedTokens) ? JSON.parse(JSON.stringify(m.preparedTokens)) : [],
   };
   drawMode = false;
   drawState = null;
   placeItemMode = false;
+  cancelTokenPlacement();
   renderMapList();
   renderEditor();
 }
@@ -194,6 +204,7 @@ function renderEditor() {
   refreshCanvases();
   renderFogList();
   renderItemList();
+  renderTokenList();
 }
 
 // Compute fit scale and resize canvases to fill the canvas area.
@@ -282,6 +293,39 @@ function renderPrepFog() {
       fCtx.fillText(item.label, px + 2, py + ih - 3);
     }
   }
+  // Render prepared tokens
+  for (const tok of (prepState.preparedTokens || [])) {
+    const ts = Math.max(1, tok.tokenSize || 1);
+    const tx = ox + tok.x * cs + (cs * ts) / 2;
+    const ty = oy + tok.y * cs + (cs * ts) / 2;
+    const r = (cs * ts) / 2 * 0.72;
+    const hidden = tok.visibleToPlayers === false;
+    fCtx.beginPath();
+    fCtx.arc(tx, ty, r, 0, Math.PI * 2);
+    fCtx.fillStyle = tok.color || '#cc3333';
+    fCtx.globalAlpha = hidden ? 0.45 : 0.9;
+    fCtx.fill();
+    fCtx.globalAlpha = 1;
+    if (hidden) fCtx.setLineDash([3, 2]);
+    fCtx.strokeStyle = hidden ? 'rgba(255,255,255,.45)' : 'rgba(255,255,255,.8)';
+    fCtx.lineWidth = hidden ? 1 : 1.5;
+    fCtx.stroke();
+    fCtx.setLineDash([]);
+    const lbl = (tok.label || tok.name || '?').charAt(0).toUpperCase();
+    const fontSize = Math.round(Math.min(r * 0.9, 12));
+    fCtx.globalAlpha = hidden ? 0.6 : 1;
+    fCtx.fillStyle = '#fff';
+    fCtx.font = `bold ${fontSize}px sans-serif`;
+    fCtx.textAlign = 'center';
+    fCtx.textBaseline = 'middle';
+    fCtx.fillText(lbl, tx, ty);
+    fCtx.globalAlpha = 1;
+    fCtx.textAlign = 'start';
+    fCtx.textBaseline = 'alphabetic';
+    fCtx.fillStyle = hidden ? 'rgba(200,160,74,0.55)' : 'rgba(255,200,100,0.95)';
+    fCtx.font = `${Math.max(7, Math.round(cs * 0.15))}px sans-serif`;
+    fCtx.fillText(tok.name.slice(0, 14), ox + tok.x * cs + 2, oy + (tok.y + ts) * cs - 3);
+  }
 }
 
 function renderFogList() {
@@ -366,6 +410,7 @@ function toggleDrawMode() {
   drawMode = !drawMode;
   const btn = document.getElementById('btn-draw-fog');
   const hint = document.getElementById('draw-hint');
+  if (drawMode && tokenPlacementMode) cancelTokenPlacement();
   if (drawMode && placeItemMode) {
     placeItemMode = false;
     const pb = document.getElementById('btn-place-item');
@@ -391,6 +436,7 @@ function togglePlaceItemMode() {
   placeItemMode = !placeItemMode;
   const btn = document.getElementById('btn-place-item');
   const hint = document.getElementById('place-hint');
+  if (placeItemMode && tokenPlacementMode) cancelTokenPlacement();
   if (placeItemMode && drawMode) {
     drawMode = false;
     const db2 = document.getElementById('btn-draw-fog');
@@ -430,7 +476,7 @@ function pixelToGrid(e) {
 // Use pointer events + setPointerCapture so the drag continues even when
 // the mouse leaves the canvas boundary (fixes "restarts draw" on remote).
 drawCvs.addEventListener('pointerdown', e => {
-  if (!drawMode && !placeItemMode) return;
+  if (!drawMode && !placeItemMode && !tokenPlacementMode) return;
   e.preventDefault();
   drawCvs.setPointerCapture(e.pointerId);
   const { gx, gy } = pixelToGrid(e);
@@ -438,6 +484,7 @@ drawCvs.addEventListener('pointerdown', e => {
 });
 
 drawCvs.addEventListener('pointermove', e => {
+  if (tokenPlacementMode) return; // no drag preview for token placement
   if ((!drawMode && !placeItemMode) || !drawState) return;
   const { gx, gy } = pixelToGrid(e);
   const minX = Math.min(drawState.startGX, gx);
@@ -458,6 +505,13 @@ drawCvs.addEventListener('pointermove', e => {
 });
 
 drawCvs.addEventListener('pointerup', e => {
+  if (tokenPlacementMode && drawState) {
+    const { gx, gy } = pixelToGrid(e);
+    drawState = null;
+    dCtx.clearRect(0, 0, drawCvs.width, drawCvs.height);
+    _placePrepToken(gx, gy);
+    return;
+  }
   if ((!drawMode && !placeItemMode) || !drawState) return;
   const { gx, gy } = pixelToGrid(e);
   const minX = Math.min(drawState.startGX, gx);
@@ -496,9 +550,9 @@ drawCvs.addEventListener('pointerup', e => {
 });
 
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape' && placeItemMode && _pendingClone) {
-    _pendingClone = null;
-    togglePlaceItemMode(); // exits place mode and resets hint
+  if (e.key === 'Escape') {
+    if (tokenPlacementMode) { cancelTokenPlacement(); }
+    if (placeItemMode && _pendingClone) { _pendingClone = null; togglePlaceItemMode(); }
   }
 });
 
@@ -529,7 +583,8 @@ async function saveMap() {
     offsetX: prepState.offsetX,
     offsetY: prepState.offsetY,
     fogRegions: prepState.fogRegions,
-    hiddenItems: prepState.hiddenItems
+    hiddenItems: prepState.hiddenItems,
+    preparedTokens: prepState.preparedTokens,
   };
   try {
     const res = await fetch(`/api/prepared-maps/${currentMapId}`, {
@@ -580,15 +635,32 @@ async function deleteMap() {
   } catch { showStatus('Error deleting map', true); }
 }
 
-async function loadToTable() {
+function loadToTable() {
   if (!currentMapId) return;
+  const count = prepState.preparedTokens.length;
+  const note = document.getElementById('load-confirm-tok-note');
+  if (note) {
+    note.textContent = count > 0
+      ? `${count} prepared token${count !== 1 ? 's' : ''} from this map will be placed.`
+      : 'This map has no prepared tokens — the table will be empty after loading.';
+  }
+  document.getElementById('load-confirm-modal').style.display = 'flex';
+}
+
+function closeLoadConfirmModal() {
+  document.getElementById('load-confirm-modal').style.display = 'none';
+}
+
+async function confirmLoadToTable() {
+  closeLoadConfirmModal();
   try {
     const res = await fetch(`/api/prepared-maps/${currentMapId}/load-to-table`, {
       method: 'POST',
       headers: { 'X-Master-Password': masterPw }
     });
     if (!res.ok) { showStatus('Load to table failed', true); return; }
-    showStatus('Map loaded to table!', false);
+    const data = await res.json();
+    showStatus(`Map loaded! ${data.tokensPlaced || 0} token(s) placed.`, false);
   } catch { showStatus('Error loading to table', true); }
 }
 
@@ -691,36 +763,358 @@ async function handleImportFile(input) {
 // ── Image upload ──
 async function handleImageUpload(input) {
   if (!currentMapId || !input.files[0]) return;
-  const imgStatus = document.getElementById('img-status');
-  imgStatus.textContent = 'Uploading…';
-  const reader = new FileReader();
-  reader.onload = async e => {
-    const dataUrl = e.target.result;
-    const img = new Image();
-    img.onload = async () => {
-      try {
-        const res = await fetch(`/api/prepared-maps/${currentMapId}/image`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Master-Password': masterPw },
-          body: JSON.stringify({ dataUrl, mapWidth: img.naturalWidth, mapHeight: img.naturalHeight })
-        });
-        if (!res.ok) { imgStatus.textContent = 'Upload failed'; return; }
-        imgStatus.textContent = '';
-        prepState.mapWidth = img.naturalWidth;
-        prepState.mapHeight = img.naturalHeight;
-        const idx = maps.findIndex(m => m.id === currentMapId);
-        if (idx >= 0) {
-          maps[idx].hasImage = true;
-          maps[idx].mapWidth = prepState.mapWidth;
-          maps[idx].mapHeight = prepState.mapHeight;
-          renderMapList();
-        }
-        renderEditor();
-      } catch { imgStatus.textContent = 'Upload error'; }
-    };
-    img.src = dataUrl;
-  };
-  reader.readAsDataURL(input.files[0]);
-  // reset so same file can be re-uploaded
+  const file = input.files[0];
   input.value = '';
+  const overlay = document.getElementById('pm-upload-overlay');
+  const imgBtn  = document.getElementById('pm-img-btn');
+  const imgStatus = document.getElementById('img-status');
+  if (overlay) overlay.style.display = 'flex';
+  if (imgBtn)  imgBtn.disabled = true;
+  imgStatus.textContent = '';
+  try {
+    const dataUrl = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = e => resolve(e.target.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+    const img = await new Promise((resolve, reject) => {
+      const i = new Image();
+      i.onload = () => resolve(i);
+      i.onerror = reject;
+      i.src = dataUrl;
+    });
+    const res = await fetch(`/api/prepared-maps/${currentMapId}/image`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Master-Password': masterPw },
+      body: JSON.stringify({ dataUrl, mapWidth: img.naturalWidth, mapHeight: img.naturalHeight })
+    });
+    if (!res.ok) { imgStatus.textContent = 'Upload failed'; showStatus('Image upload failed', true); return; }
+    prepState.mapWidth = img.naturalWidth;
+    prepState.mapHeight = img.naturalHeight;
+    const idx = maps.findIndex(m => m.id === currentMapId);
+    if (idx >= 0) {
+      maps[idx].hasImage = true;
+      maps[idx].mapWidth = prepState.mapWidth;
+      maps[idx].mapHeight = prepState.mapHeight;
+      renderMapList();
+    }
+    renderEditor();
+    showStatus('Map image uploaded', false);
+  } catch { imgStatus.textContent = 'Upload error'; showStatus('Upload error', true); }
+  finally {
+    if (overlay) overlay.style.display = 'none';
+    if (imgBtn)  imgBtn.disabled = false;
+  }
+}
+
+// ── Prepared Tokens ──────────────────────────────────────────────────────────
+async function loadPmMonsters() {
+  if (pmMonsterLoaded) return;
+  const listEl = document.getElementById('pm-mon-list');
+  try {
+    const res = await fetch('/api/monsters', { headers: { 'X-Master-Password': masterPw } });
+    if (res.ok) pmMonsterList = await res.json();
+    pmMonsterLoaded = true;
+  } catch {}
+  pmRenderMonsterList('');
+}
+
+function pmRenderMonsterList(query) {
+  const el = document.getElementById('pm-mon-list');
+  if (!el) return;
+  const q = (query || '').toLowerCase().trim();
+  const list = q ? pmMonsterList.filter(m => m.name.toLowerCase().includes(q)) : pmMonsterList;
+  if (!pmMonsterLoaded) { el.innerHTML = '<div style="padding:8px;font-size:11px;color:var(--txd)">Loading…</div>'; return; }
+  if (!list.length) { el.innerHTML = '<div style="padding:8px;font-size:11px;color:var(--txd)">No monsters found.</div>'; return; }
+  el.innerHTML = list.slice(0, 60).map(m =>
+    `<div onclick="pmSelectMonster('${esc(m.id)}')" data-mid="${esc(m.id)}"
+      style="padding:5px 8px;border-bottom:1px solid var(--sep);font-size:11px;cursor:pointer;display:flex;align-items:center;gap:6px">
+      <span style="flex:1">${esc(m.name)}</span>
+      <span style="font-size:10px;color:var(--txd)">CR ${esc(String(m.cr||'?'))}</span>
+    </div>`
+  ).join('');
+  if (pmSelectedMonsterId) {
+    const row = el.querySelector(`[data-mid="${CSS.escape(pmSelectedMonsterId)}"]`);
+    if (row) row.style.background = 'var(--a22)';
+    const mon = pmMonsterList.find(m => m.id === pmSelectedMonsterId);
+    if (mon) {
+      const sel = document.getElementById('pm-mon-selected');
+      if (sel && sel.textContent !== `✓ ${mon.name}`) { sel.textContent = `✓ ${mon.name}`; sel.style.color = 'var(--ok)'; }
+    }
+  }
+}
+
+function pmFilterMonsters(query) { pmRenderMonsterList(query); }
+
+function pmSelectMonster(id) {
+  pmSelectedMonsterId = id;
+  const mon = pmMonsterList.find(m => m.id === id);
+  if (!mon) return;
+  document.querySelectorAll('#pm-mon-list [data-mid]').forEach(r => r.style.background = '');
+  const row = document.querySelector(`#pm-mon-list [data-mid="${CSS.escape(id)}"]`);
+  if (row) row.style.background = 'var(--a22)';
+  const sel = document.getElementById('pm-mon-selected');
+  if (sel) { sel.textContent = `✓ ${mon.name}`; sel.style.color = 'var(--ok)'; }
+  const d = mon.data || {};
+  const hp = (d.hp?.average) ?? (typeof d.hp === 'number' ? d.hp : 10);
+  const spd = d.speed?.walk || (typeof d.speed === 'string' ? parseInt(d.speed) : null) || 30;
+  const rawAc = [].concat(d.ac || [])[0];
+  const monAc = typeof rawAc === 'number' ? rawAc : (rawAc?.ac ?? null);
+  const hpEl = document.getElementById('pm-tok-hp');
+  const spdEl = document.getElementById('pm-tok-speed');
+  const acEl  = document.getElementById('pm-tok-ac');
+  if (hpEl) hpEl.value = hp;
+  if (spdEl) spdEl.value = spd;
+  if (acEl)  acEl.value = monAc != null ? monAc : '';
+}
+
+function pmSwitchTab(tab) {
+  pmCurrentTab = tab;
+  document.getElementById('pm-tab-monster').style.display = tab === 'monster' ? '' : 'none';
+  document.getElementById('pm-tab-custom').style.display  = tab === 'custom'  ? '' : 'none';
+  const colorEl = document.getElementById('pm-tok-color');
+  if (colorEl) colorEl.value = tab === 'monster' ? '#cc3333' : '#888888';
+}
+
+function openPmTokModal(editIdx) {
+  if (!currentMapId) { showStatus('Select a map first', true); return; }
+  _editTokenIndex = (typeof editIdx === 'number') ? editIdx : null;
+  const isEdit = _editTokenIndex !== null;
+  const tok = isEdit ? prepState.preparedTokens[_editTokenIndex] : null;
+
+  const titleEl = document.getElementById('pm-tok-modal-title');
+  if (titleEl) titleEl.textContent = isEdit ? 'Edit Token' : 'Add Prepared Token';
+  const confirmBtn = document.getElementById('pm-tok-confirm-btn');
+  if (confirmBtn) confirmBtn.textContent = isEdit ? '💾 Save Changes' : '📍 Place on Map';
+
+  pmPortraitDataUrl = null;
+
+  if (isEdit && tok) {
+    pmCurrentTab = tok.type === 'monster' ? 'monster' : 'custom';
+    pmSelectedMonsterId = tok.type === 'monster' ? (tok.linkedId || null) : null;
+    document.getElementById('pm-tab-monster').style.display = pmCurrentTab === 'monster' ? '' : 'none';
+    document.getElementById('pm-tab-custom').style.display  = pmCurrentTab === 'custom'  ? '' : 'none';
+    if (pmCurrentTab === 'monster') {
+      const iEl = document.getElementById('pm-tok-identifier'); if (iEl) iEl.value = tok.label || '';
+      const hpEl = document.getElementById('pm-tok-hp'); if (hpEl) hpEl.value = tok.hpMax || 10;
+      const spdEl = document.getElementById('pm-tok-speed'); if (spdEl) spdEl.value = tok.speed || 30;
+      const acEl = document.getElementById('pm-tok-ac'); if (acEl) acEl.value = tok.ac != null ? tok.ac : '';
+      const sel = document.getElementById('pm-mon-selected');
+      if (sel) { sel.textContent = 'Loading…'; sel.style.color = 'var(--txd)'; }
+      const search = document.getElementById('pm-mon-search'); if (search) search.value = '';
+    } else {
+      const nameEl = document.getElementById('pm-tok-custom-name'); if (nameEl) nameEl.value = tok.name || '';
+      const hpEl = document.getElementById('pm-tok-custom-hp'); if (hpEl) hpEl.value = tok.hpMax || 10;
+      const spdEl = document.getElementById('pm-tok-custom-speed'); if (spdEl) spdEl.value = tok.speed || 30;
+    }
+    const colorEl = document.getElementById('pm-tok-color'); if (colorEl) colorEl.value = tok.color || '#cc3333';
+    const sizeEl  = document.getElementById('pm-tok-size');  if (sizeEl)  sizeEl.value  = String(tok.tokenSize || 1);
+    const visEl   = document.getElementById('pm-tok-visible');
+    if (visEl) { visEl.checked = tok.visibleToPlayers !== false; }
+    _updateVisibleLbl();
+    if (tok.portrait) { pmPortraitDataUrl = tok.portrait; _setPmPortraitPreview(tok.portrait); }
+    else { _clearPmPortraitPreview(); }
+  } else {
+    pmSelectedMonsterId = null;
+    pmCurrentTab = 'monster';
+    document.getElementById('pm-tab-monster').style.display = '';
+    document.getElementById('pm-tab-custom').style.display  = 'none';
+    const sel = document.getElementById('pm-mon-selected');
+    if (sel) { sel.textContent = 'No monster selected'; sel.style.color = 'var(--txd)'; }
+    const search = document.getElementById('pm-mon-search'); if (search) search.value = '';
+    ['pm-tok-identifier','pm-tok-custom-name'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    const hpEl = document.getElementById('pm-tok-hp'); if (hpEl) hpEl.value = 10;
+    const spdEl = document.getElementById('pm-tok-speed'); if (spdEl) spdEl.value = 30;
+    const acEl = document.getElementById('pm-tok-ac'); if (acEl) acEl.value = '';
+    const colorEl = document.getElementById('pm-tok-color'); if (colorEl) colorEl.value = '#cc3333';
+    const sizeEl  = document.getElementById('pm-tok-size');  if (sizeEl)  sizeEl.value  = '1';
+    const visEl   = document.getElementById('pm-tok-visible'); if (visEl) visEl.checked = true;
+    _updateVisibleLbl();
+    _clearPmPortraitPreview();
+  }
+  document.getElementById('pm-tok-modal').style.display = 'flex';
+  loadPmMonsters();
+}
+
+function closePmTokModal() {
+  document.getElementById('pm-tok-modal').style.display = 'none';
+  _editTokenIndex = null;
+  pmPortraitDataUrl = null;
+}
+
+function _updateVisibleLbl() {
+  const cb  = document.getElementById('pm-tok-visible');
+  const lbl = document.getElementById('pm-tok-visible-lbl');
+  if (!lbl) return;
+  const on = cb ? cb.checked : true;
+  lbl.textContent = on ? '👁 Visible' : '🚫 Hidden';
+  lbl.style.color = on ? 'var(--ok)' : 'var(--txd)';
+}
+
+function _setPmPortraitPreview(src) {
+  const img   = document.getElementById('pm-portrait-img');
+  const empty = document.getElementById('pm-portrait-empty');
+  const clrBtn = document.getElementById('pm-portrait-clear-btn');
+  if (img)   { img.src = src; img.style.display = 'block'; }
+  if (empty) empty.style.display = 'none';
+  if (clrBtn) clrBtn.style.display = '';
+}
+
+function _clearPmPortraitPreview() {
+  const img   = document.getElementById('pm-portrait-img');
+  const empty = document.getElementById('pm-portrait-empty');
+  const clrBtn = document.getElementById('pm-portrait-clear-btn');
+  if (img)   { img.src = ''; img.style.display = 'none'; }
+  if (empty) empty.style.display = '';
+  if (clrBtn) clrBtn.style.display = 'none';
+}
+
+function clearPmPortrait() {
+  pmPortraitDataUrl = null;
+  _clearPmPortraitPreview();
+}
+
+async function handlePmPortraitUpload(input) {
+  const file = input.files[0];
+  input.value = '';
+  if (!file) return;
+  try {
+    const dataUrl = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = e => resolve(e.target.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+    pmPortraitDataUrl = await _resizePmPortrait(dataUrl, 128);
+    _setPmPortraitPreview(pmPortraitDataUrl);
+  } catch { showStatus('Portrait upload failed', true); }
+}
+
+function _resizePmPortrait(dataUrl, maxSize) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      const ratio = Math.min(maxSize / img.naturalWidth, maxSize / img.naturalHeight, 1);
+      const nw = Math.round(img.naturalWidth * ratio);
+      const nh = Math.round(img.naturalHeight * ratio);
+      const cvs = document.createElement('canvas');
+      cvs.width = nw; cvs.height = nh;
+      cvs.getContext('2d').drawImage(img, 0, 0, nw, nh);
+      resolve(cvs.toDataURL('image/jpeg', 0.82));
+    };
+    img.onerror = () => resolve(null);
+    img.src = dataUrl;
+  });
+}
+
+function pmConfirmToken() {
+  const visibleToPlayers = document.getElementById('pm-tok-visible')?.checked !== false;
+  let config;
+  if (pmCurrentTab === 'monster') {
+    const mon = pmMonsterList.find(m => m.id === pmSelectedMonsterId);
+    if (!mon) { showStatus('Select a monster first', true); return; }
+    const letters = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+    let identifier = (document.getElementById('pm-tok-identifier')?.value || '').trim();
+    if (!identifier) identifier = letters[Math.floor(Math.random() * letters.length)] + (Math.floor(Math.random() * 9) + 1);
+    const hp  = parseInt(document.getElementById('pm-tok-hp')?.value) || 10;
+    const spd = parseInt(document.getElementById('pm-tok-speed')?.value) || 30;
+    const acRaw = (document.getElementById('pm-tok-ac')?.value || '').trim();
+    const ac = acRaw !== '' ? (parseInt(acRaw) || null) : null;
+    const portrait = pmPortraitDataUrl || mon.data?.portrait || null;
+    const portraitThumb = pmPortraitDataUrl ? null : (mon.data?.portraitThumb || null);
+    config = {
+      id: genId(), name: `${mon.name} ${identifier}`, label: identifier,
+      type: 'monster', linkedId: mon.id,
+      hpCurrent: hp, hpMax: hp, speed: spd, ac, visibleToPlayers,
+      color: document.getElementById('pm-tok-color')?.value || '#cc3333',
+      tokenSize: parseInt(document.getElementById('pm-tok-size')?.value) || 1,
+      portrait, portraitThumb,
+    };
+  } else {
+    const name = (document.getElementById('pm-tok-custom-name')?.value || '').trim();
+    if (!name) { showStatus('Name is required', true); return; }
+    const hp  = parseInt(document.getElementById('pm-tok-custom-hp')?.value) || 10;
+    const spd = parseInt(document.getElementById('pm-tok-custom-speed')?.value) || 30;
+    config = {
+      id: genId(), name, label: '', type: 'custom', linkedId: '',
+      hpCurrent: hp, hpMax: hp, speed: spd, ac: null, visibleToPlayers,
+      color: document.getElementById('pm-tok-color')?.value || '#888888',
+      tokenSize: parseInt(document.getElementById('pm-tok-size')?.value) || 1,
+      portrait: pmPortraitDataUrl || null, portraitThumb: null,
+    };
+  }
+  if (_editTokenIndex !== null) {
+    const existing = prepState.preparedTokens[_editTokenIndex];
+    prepState.preparedTokens[_editTokenIndex] = { ...config, id: existing.id, x: existing.x, y: existing.y };
+    closePmTokModal();
+    renderPrepFog();
+    renderTokenList();
+    debounceSave();
+  } else {
+    closePmTokModal();
+    enterTokenPlacementMode(config);
+  }
+}
+
+function enterTokenPlacementMode(config) {
+  if (drawMode) toggleDrawMode();
+  if (placeItemMode) togglePlaceItemMode();
+  tokenPlacementMode = true;
+  pendingTokenConfig = config;
+  drawCvs.style.pointerEvents = 'all';
+  const hint = document.getElementById('pm-tok-place-hint');
+  if (hint) hint.style.display = '';
+  const cancelBtn = document.getElementById('pm-cancel-place-btn');
+  if (cancelBtn) cancelBtn.style.display = '';
+  showStatus(`Click on map to place ${config.name}`, false);
+}
+
+function cancelTokenPlacement() {
+  tokenPlacementMode = false;
+  pendingTokenConfig = null;
+  if (!drawMode && !placeItemMode) drawCvs.style.pointerEvents = 'none';
+  const hint = document.getElementById('pm-tok-place-hint');
+  if (hint) hint.style.display = 'none';
+  const cancelBtn = document.getElementById('pm-cancel-place-btn');
+  if (cancelBtn) cancelBtn.style.display = 'none';
+}
+
+function _placePrepToken(gx, gy) {
+  if (!pendingTokenConfig) return;
+  prepState.preparedTokens.push({ ...pendingTokenConfig, x: gx, y: gy });
+  cancelTokenPlacement();
+  renderPrepFog();
+  renderTokenList();
+  debounceSave();
+}
+
+function deleteToken(i) {
+  prepState.preparedTokens.splice(i, 1);
+  renderPrepFog();
+  renderTokenList();
+  debounceSave();
+}
+
+function renderTokenList() {
+  const el = document.getElementById('pm-token-list');
+  if (!el) return;
+  const countEl = document.getElementById('pm-tok-count');
+  const count = prepState.preparedTokens.length;
+  if (countEl) countEl.textContent = count > 0 ? `(${count})` : '';
+  if (!count) {
+    el.innerHTML = '<div style="font-size:11px;color:var(--txd);padding:4px 0">No tokens yet. Click + Add Token above.</div>';
+    return;
+  }
+  el.innerHTML = prepState.preparedTokens.map((tok, i) => {
+    const hidden = tok.visibleToPlayers === false;
+    return `<div style="display:flex;align-items:center;gap:4px;padding:3px 0;border-bottom:1px solid var(--sep)">
+      <div style="width:11px;height:11px;border-radius:50%;background:${esc(tok.color)};flex-shrink:0;border:1px solid rgba(255,255,255,.3);${hidden ? 'opacity:0.4' : ''}"></div>
+      <span style="flex:1;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(tok.name)}">${esc(tok.name)}</span>
+      <span title="${hidden ? 'Hidden from players' : 'Visible to players'}" style="font-size:10px;flex-shrink:0;${hidden ? 'color:var(--txd)' : 'color:var(--ok)'}">${hidden ? '🚫' : '👁'}</span>
+      <span style="font-size:10px;color:var(--txd);flex-shrink:0">${tok.x},${tok.y}</span>
+      <button class="btn sm" onclick="openPmTokModal(${i})" style="padding:1px 5px;font-size:10px;flex-shrink:0" title="Edit">✏</button>
+      <button class="btn danger sm" onclick="deleteToken(${i})" style="padding:1px 5px;font-size:10px;flex-shrink:0">✕</button>
+    </div>`;
+  }).join('');
 }

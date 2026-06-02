@@ -111,3 +111,4 @@ tr:hover td{background:var(--a22)}
 .chat-media-img{max-width:100%;border-radius:4px;margin-top:4px;cursor:pointer;display:block}
 .chat-media-video{max-width:100%;border-radius:4px;margin-top:4px;display:block}
 .chat-media-audio{width:100%;margin-top:4px;display:block}
+@keyframes chat-upslide{0%{transform:translateX(-200%)}100%{transform:translateX(350%)}}

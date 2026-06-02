@@ -139,6 +139,22 @@
         </div>
       </div>
 
+      <!-- Tokens section -->
+      <div class="sb-section">
+        <div class="sb-section-hdr" onclick="toggleSbSection('tokens')">
+          <span>Tokens <span id="pm-tok-count" style="font-size:9px;color:var(--txd);font-weight:normal"></span></span>
+          <span id="sb-sec-tokens-arrow">▶</span>
+        </div>
+        <div id="sb-sec-tokens" style="display:none" class="sb-section-body">
+          <div style="display:flex;gap:4px;align-items:center;margin-bottom:5px;flex-wrap:wrap">
+            <button class="btn" style="flex:1;font-size:11px;padding:2px 6px" onclick="openPmTokModal()">+ Add Token</button>
+            <button class="btn danger" id="pm-cancel-place-btn" style="display:none;font-size:11px;padding:2px 6px" onclick="cancelTokenPlacement()">✕ Cancel</button>
+          </div>
+          <div id="pm-tok-place-hint" style="display:none;font-size:10px;color:var(--ac);margin-bottom:4px">Click on map to place</div>
+          <div id="pm-token-list"></div>
+        </div>
+      </div>
+
       <!-- Hidden Items section -->
       <div class="sb-section" id="sb-items-section" style="flex:1;display:flex;flex-direction:column;min-height:0">
         <div class="sb-section-hdr" onclick="toggleSbSection('items')">
@@ -170,7 +186,7 @@
         <input type="text" id="map-name" placeholder="Map name…" oninput="debounceSave()"
           style="width:180px;padding:3px 7px;font-size:12px;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px">
         <button class="btn" onclick="exportMap()" title="Export this map to a file">⬇ Export</button>
-        <button class="btn" onclick="document.getElementById('map-img-input').click()">📷 Image</button>
+        <button class="btn" id="pm-img-btn" onclick="document.getElementById('map-img-input').click()">📷 Image</button>
         <input type="file" id="map-img-input" accept="image/*" style="display:none" onchange="handleImageUpload(this)">
         <span id="img-status" style="font-size:11px;color:var(--txd)"></span>
         <div style="flex:1"></div>
@@ -181,6 +197,10 @@
 
       <!-- Canvas area -->
       <div id="pm-canvas-area">
+        <div id="pm-upload-overlay" style="display:none;position:absolute;inset:0;background:rgba(0,0,0,.65);z-index:10;align-items:center;justify-content:center;flex-direction:column;gap:12px;pointer-events:all">
+          <div style="color:var(--ac);font-size:14px;font-weight:bold">Uploading map image…</div>
+          <div style="width:220px;height:4px;background:rgba(255,255,255,.15);border-radius:2px;overflow:hidden"><div style="height:100%;width:35%;background:var(--ac);border-radius:2px;animation:chat-upslide 1.1s ease-in-out infinite"></div></div>
+        </div>
         <div id="editor-placeholder">← Open the panel to select or create a map</div>
         <div id="editor-wrap">
           <img id="prep-map-img" alt="" style="display:none;pointer-events:none">
@@ -216,6 +236,109 @@
 
   </div><!-- /pm-body -->
 </div><!-- /main-content -->
+
+<!-- Token config modal -->
+<div id="pm-tok-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:3000;align-items:center;justify-content:center">
+  <div style="background:var(--bg2);border:1px solid var(--ac);border-radius:8px;width:310px;max-width:96vw;max-height:92vh;display:flex;flex-direction:column;overflow:hidden">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--a44);flex-shrink:0">
+      <span id="pm-tok-modal-title" style="font-weight:bold;font-size:13px">Add Prepared Token</span>
+      <button class="btn sm" onclick="closePmTokModal()">✕</button>
+    </div>
+    <div style="padding:12px;overflow-y:auto;flex:1">
+      <!-- Portrait upload -->
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--a44)">
+        <div id="pm-portrait-preview" onclick="document.getElementById('pm-portrait-input').click()"
+          style="width:46px;height:46px;border-radius:50%;background:var(--bg3);border:2px solid var(--a44);overflow:hidden;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:20px;position:relative"
+          title="Upload portrait">
+          <img id="pm-portrait-img" src="" alt="" style="width:100%;height:100%;object-fit:cover;display:none;position:absolute;inset:0">
+          <span id="pm-portrait-empty">🖼</span>
+        </div>
+        <div>
+          <div style="font-size:9px;color:var(--txd);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px">Portrait</div>
+          <div style="display:flex;gap:4px">
+            <button class="btn sm" style="font-size:10px;padding:2px 7px" onclick="document.getElementById('pm-portrait-input').click()">📷 Upload</button>
+            <button id="pm-portrait-clear-btn" class="btn sm danger" style="font-size:10px;padding:2px 7px;display:none" onclick="clearPmPortrait()">✕ Clear</button>
+          </div>
+        </div>
+        <input type="file" id="pm-portrait-input" accept="image/*" style="display:none" onchange="handlePmPortraitUpload(this)">
+      </div>
+      <!-- Tabs -->
+      <div style="display:flex;gap:4px;margin-bottom:10px">
+        <button class="btn sm" id="pm-tab-btn-monster" onclick="pmSwitchTab('monster')" style="flex:1;font-size:11px">Monster</button>
+        <button class="btn sm" id="pm-tab-btn-custom" onclick="pmSwitchTab('custom')" style="flex:1;font-size:11px">Custom</button>
+      </div>
+      <!-- Monster tab -->
+      <div id="pm-tab-monster">
+        <input type="text" id="pm-mon-search" placeholder="Search monsters…" oninput="pmFilterMonsters(this.value)"
+          style="width:100%;box-sizing:border-box;padding:4px 8px;font-size:11px;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px;margin-bottom:4px">
+        <div id="pm-mon-list" style="max-height:140px;overflow-y:auto;border:1px solid var(--a44);border-radius:3px;background:var(--bg3)">
+          <div style="padding:8px;font-size:11px;color:var(--txd)">Loading monsters…</div>
+        </div>
+        <div id="pm-mon-selected" style="font-size:11px;margin-top:5px;color:var(--txd)">No monster selected</div>
+        <div style="display:flex;gap:4px;align-items:center;margin-top:6px">
+          <label style="font-size:10px;color:var(--txd);white-space:nowrap;flex-shrink:0">Identifier:</label>
+          <input type="text" id="pm-tok-identifier" placeholder="A1, B2…" maxlength="6"
+            style="width:56px;padding:3px 6px;font-size:11px;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px">
+          <span style="font-size:10px;color:var(--txd)">(shown to players)</span>
+        </div>
+        <div style="display:flex;gap:5px;margin-top:8px">
+          <div style="flex:1"><label style="font-size:9px;color:var(--ac);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:2px">HP Max</label>
+            <input type="number" id="pm-tok-hp" value="10" min="1" style="width:100%;padding:3px 5px;font-size:11px;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px"></div>
+          <div style="flex:1"><label style="font-size:9px;color:var(--ac);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:2px">AC</label>
+            <input type="number" id="pm-tok-ac" value="" placeholder="—" style="width:100%;padding:3px 5px;font-size:11px;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px"></div>
+          <div style="flex:1"><label style="font-size:9px;color:var(--ac);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:2px">Speed</label>
+            <input type="number" id="pm-tok-speed" value="30" min="0" style="width:100%;padding:3px 5px;font-size:11px;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px"></div>
+        </div>
+      </div>
+      <!-- Custom tab -->
+      <div id="pm-tab-custom" style="display:none">
+        <div style="margin-bottom:6px">
+          <label style="font-size:9px;color:var(--ac);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:2px">Name</label>
+          <input type="text" id="pm-tok-custom-name" placeholder="Token name…"
+            style="width:100%;box-sizing:border-box;padding:4px 8px;font-size:11px;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px">
+        </div>
+        <div style="display:flex;gap:5px">
+          <div style="flex:1"><label style="font-size:9px;color:var(--ac);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:2px">HP Max</label>
+            <input type="number" id="pm-tok-custom-hp" value="10" min="1" style="width:100%;padding:3px 5px;font-size:11px;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px"></div>
+          <div style="flex:1"><label style="font-size:9px;color:var(--ac);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:2px">Speed</label>
+            <input type="number" id="pm-tok-custom-speed" value="30" min="0" style="width:100%;padding:3px 5px;font-size:11px;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px"></div>
+        </div>
+      </div>
+      <!-- Common -->
+      <div style="display:flex;gap:8px;align-items:center;margin-top:10px">
+        <label style="font-size:9px;color:var(--ac);text-transform:uppercase;letter-spacing:.5px">Color</label>
+        <input type="color" id="pm-tok-color" value="#cc3333" style="width:28px;height:22px;border:none;background:none;cursor:pointer;padding:0;flex-shrink:0">
+        <label style="font-size:9px;color:var(--ac);text-transform:uppercase;letter-spacing:.5px">Size</label>
+        <select id="pm-tok-size" style="flex:1;padding:3px 5px;font-size:11px;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px">
+          <option value="1">1×1</option><option value="2">2×2</option><option value="3">3×3</option><option value="4">4×4</option>
+        </select>
+      </div>
+      <div style="display:flex;align-items:center;gap:7px;margin-top:8px">
+        <input type="checkbox" id="pm-tok-visible" checked onchange="_updateVisibleLbl()" style="width:14px;height:14px;cursor:pointer;flex-shrink:0">
+        <label for="pm-tok-visible" style="font-size:11px;cursor:pointer;user-select:none">Visible to players</label>
+        <span id="pm-tok-visible-lbl" style="font-size:10px;color:var(--ok);margin-left:auto">👁 Visible</span>
+      </div>
+    </div>
+    <div style="padding:10px 14px;border-top:1px solid var(--a44);display:flex;gap:6px;flex-shrink:0">
+      <button class="btn" style="flex:1" onclick="closePmTokModal()">Cancel</button>
+      <button id="pm-tok-confirm-btn" class="btn primary" style="flex:2" onclick="pmConfirmToken()">📍 Place on Map</button>
+    </div>
+  </div>
+</div>
+
+<!-- Load-to-table confirmation modal -->
+<div id="load-confirm-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:4000;align-items:center;justify-content:center">
+  <div style="background:var(--bg2);border:1px solid var(--err);border-radius:8px;width:360px;max-width:96vw;padding:22px 24px">
+    <div style="font-size:15px;font-weight:bold;color:var(--err);margin-bottom:12px">⚠ Load Map to Table</div>
+    <div style="font-size:12px;color:var(--tx);line-height:1.6;margin-bottom:8px">All existing tokens on the table will be <strong>permanently deleted</strong> — including any tokens added directly on the table screen.</div>
+    <div style="font-size:12px;color:var(--tx);line-height:1.6;margin-bottom:6px">Initiative will also be cleared.</div>
+    <div id="load-confirm-tok-note" style="font-size:11px;color:var(--txd);margin-bottom:18px;min-height:16px"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn" onclick="closeLoadConfirmModal()">Cancel</button>
+      <button class="btn danger" onclick="confirmLoadToTable()" style="font-size:12px">🗑 Delete tokens &amp; load map</button>
+    </div>
+  </div>
+</div>
 
 <script src="/js/prepare-map.js" defer></script>
 </body>

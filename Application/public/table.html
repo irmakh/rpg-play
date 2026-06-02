@@ -232,7 +232,11 @@
 
   </div><!-- /#left-panel -->
 
-  <div id="canvas-area">
+  <div id="canvas-area" style="position:relative">
+    <div id="map-loading-overlay" style="display:none;position:absolute;inset:0;background:rgba(0,0,0,.55);z-index:500;align-items:center;justify-content:center;flex-direction:column;gap:12px;pointer-events:none">
+      <div style="color:var(--ac);font-size:13px;font-weight:bold;letter-spacing:.5px">Loading map…</div>
+      <div style="width:200px;height:3px;background:rgba(255,255,255,.12);border-radius:2px;overflow:hidden"><div style="height:100%;width:35%;background:var(--ac);border-radius:2px;animation:chat-upslide 1.1s ease-in-out infinite"></div></div>
+    </div>
     <div id="canvas-content-wrap" style="position:relative;transform-origin:top left;display:inline-block">
       <img id="map-img" alt="" style="position:absolute;top:0;left:0;pointer-events:none;display:none">
       <canvas id="grid-canvas" style="position:absolute;top:0;left:0;pointer-events:none"></canvas>

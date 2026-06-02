@@ -163,6 +163,7 @@ db.prepare("INSERT OR IGNORE INTO shop_config (id, isOpen) VALUES (?, 1)").run(S
 try { db.prepare("ALTER TABLE shop_config ADD COLUMN activeTag TEXT DEFAULT ''").run(); } catch {}
 try { db.prepare("ALTER TABLE shop_items ADD COLUMN spellAtkBonus INTEGER DEFAULT 0").run(); } catch {}
 try { db.prepare("ALTER TABLE shop_items ADD COLUMN spellDcBonus INTEGER DEFAULT 0").run(); } catch {}
+try { db.prepare("ALTER TABLE prepared_maps ADD COLUMN preparedTokens TEXT DEFAULT '[]'").run(); } catch {}
 db.prepare("INSERT OR IGNORE INTO initiative_state (id, currentId) VALUES (?, '')").run(INIT_STATE_ID);
 db.prepare("INSERT OR IGNORE INTO table_state (id) VALUES (?)").run(TABLE_STATE_ID);
 db.prepare("INSERT OR IGNORE INTO events_state (id, dataJson) VALUES (?, '{}')").run(EVENTS_ID);

@@ -4,6 +4,8 @@ function startSSE() {
     table: (d) => {
       switch (d.action) {
         case 'map-updated':
+          showMapLoadingOverlay();
+          fetchAll(); break;
         case 'state-updated':
           fetchAll(); break;
         case 'token-added':
@@ -151,9 +153,12 @@ async function fetchAll() {
     const { w, h } = getCanvasSize();
     resizeCanvases(w, h);
     if (tableState.hasMap) {
+      mapImg.onload  = hideMapLoadingOverlay;
+      mapImg.onerror = hideMapLoadingOverlay;
       mapImg.src = '/api/table/map?' + Date.now();
       mapImg.style.display = '';
     } else {
+      hideMapLoadingOverlay();
       mapImg.src = '';
       mapImg.style.display = 'none';
     }

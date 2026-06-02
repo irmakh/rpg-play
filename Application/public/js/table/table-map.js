@@ -1,3 +1,13 @@
+// ── Map loading overlay ───────────────────────────────────────────────────────
+function showMapLoadingOverlay() {
+  const el = document.getElementById('map-loading-overlay');
+  if (el) el.style.display = 'flex';
+}
+function hideMapLoadingOverlay() {
+  const el = document.getElementById('map-loading-overlay');
+  if (el) el.style.display = 'none';
+}
+
 // ── Canvas setup ──────────────────────────────────────────────────────────────
 const canvasArea    = document.getElementById('canvas-area');
 const canvasWrap    = document.getElementById('canvas-content-wrap');
