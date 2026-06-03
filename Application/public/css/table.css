@@ -15,8 +15,21 @@ body{display:flex;flex-direction:column}
 .draw-tb-label{font-size:11px;color:var(--txd)}
 #draw-color{width:30px;height:22px;border:1px solid var(--a55);border-radius:3px;background:none;cursor:pointer;padding:1px 2px}
 .draw-shape-btn.active,.draw-thick-btn.active{background:var(--ac);color:var(--bg);border-color:var(--ac)}
-#table-wrap{display:flex;flex:1;overflow:hidden}
+#table-wrap{display:flex;flex:1;overflow:hidden;position:relative}
 #canvas-area{flex:1;overflow:auto;position:relative;background:#0a0a14;cursor:crosshair}
+
+/* ── Floating zoom widget ── */
+#zoom-float{position:absolute;bottom:14px;right:calc(240px + 12px);z-index:50;display:flex;align-items:center;gap:5px;background:rgba(10,10,20,.82);border:1px solid rgba(180,140,60,.35);border-radius:8px;padding:5px 10px;backdrop-filter:blur(6px);pointer-events:all}
+#zoom-float button{background:none;border:1px solid rgba(180,140,60,.4);color:var(--ac);border-radius:4px;width:22px;height:22px;cursor:pointer;font-size:14px;line-height:1;padding:0;flex-shrink:0;transition:background .1s,border-color .1s}
+#zoom-float button:hover{background:rgba(200,160,74,.15);border-color:var(--ac)}
+#zoom-float #slider-zoom{width:70px;cursor:pointer;accent-color:var(--ac)}
+#zoom-float #zoom-val{font-size:11px;color:var(--ac);min-width:33px;text-align:right}
+/* Classic theme: side panel always 240px */
+body:not([data-theme="modern"]) #zoom-float{right:calc(240px + 12px)}
+/* Modern theme: panel hidden by default */
+body[data-theme="modern"] #zoom-float{right:12px}
+/* Modern theme: panel open (264px) — shift left */
+body[data-theme="modern"] #table-wrap:has(#side-panel.rp-open) #zoom-float{right:calc(264px + 12px)}
 
 /* ── Left panel ── */
 #left-panel{width:240px;flex-shrink:0;background:var(--bg2);border-right:1px solid var(--a44);overflow-y:auto;display:flex;flex-direction:column;scrollbar-width:thin;scrollbar-color:var(--a44) transparent;font-size:12px}

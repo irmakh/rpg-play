@@ -496,3 +496,21 @@ body[data-theme="modern"] .rp-save-prof .rp-save-val { color: #e0d4a8 }
 .rp-mon-link { padding: 6px 10px; border-top: 1px solid rgba(255,255,255,.04) }
 .rp-mon-link a { color: var(--ac); font-size: 10px; opacity: .55; text-decoration: none }
 .rp-mon-link a:hover { opacity: 1 }
+
+/* ── Floating zoom — modern polish ── */
+body[data-theme="modern"] #zoom-float {
+  background: rgba(9,12,20,.88);
+  border-color: rgba(200,160,74,.2);
+  border-radius: 10px;
+  padding: 5px 10px;
+  box-shadow: 0 4px 20px rgba(0,0,0,.5), 0 0 0 1px rgba(200,160,74,.06);
+  transition: right .18s ease;
+}
+body[data-theme="modern"] #zoom-float button {
+  border-color: rgba(200,160,74,.25);
+  border-radius: 5px;
+}
+body[data-theme="modern"] #zoom-float button:hover {
+  background: rgba(200,160,74,.14);
+  border-color: rgba(200,160,74,.55);
+}

@@ -40,13 +40,6 @@
     <button class="btn tool-btn" id="btn-tool-multi" onclick="setTool('multi')" title="Multi-select tokens (drag to select area)">⬚ Multi</button>
   </div>
 
-  <div style="display:flex;align-items:center;gap:4px;margin-left:8px;padding-left:8px;border-left:1px solid var(--a44)">
-    <span style="font-size:10px;color:var(--txd)">Zoom</span>
-    <button id="btn-zoom-out" style="background:none;border:1px solid var(--a55);color:var(--ac);border-radius:3px;width:20px;height:20px;cursor:pointer;font-size:13px;line-height:1;padding:0">−</button>
-    <input type="range" id="slider-zoom" min="50" max="200" value="100" style="width:70px;vertical-align:middle;cursor:pointer">
-    <button id="btn-zoom-in" style="background:none;border:1px solid var(--a55);color:var(--ac);border-radius:3px;width:20px;height:20px;cursor:pointer;font-size:13px;line-height:1;padding:0">+</button>
-    <span id="zoom-val" style="font-size:11px;color:var(--ac);min-width:34px">100%</span>
-  </div>
   <button class="btn tool-btn" onclick="openDiceRollerModal()" title="Dice Roller" style="margin-left:4px">🎲</button>
   <button id="btn-theme-toggle" onclick="toggleTheme()" title="Switch to Modern HUD" style="margin-left:4px">🎨</button>
   <button class="btn tool-btn" id="btn-leftpanel-toggle" onclick="toggleLeftPanel()" title="Toggle left panel" style="margin-left:4px">◀</button>
@@ -328,6 +321,14 @@
     </div><!-- /#rp-token-details -->
 
   </div><!-- /#side-panel -->
+
+  <!-- Floating zoom widget — bottom-right of map -->
+  <div id="zoom-float">
+    <button id="btn-zoom-out" title="Zoom out">−</button>
+    <input type="range" id="slider-zoom" min="50" max="200" value="100" title="Zoom">
+    <button id="btn-zoom-in" title="Zoom in">+</button>
+    <span id="zoom-val">100%</span>
+  </div>
 
 </div><!-- /#table-wrap -->
 
