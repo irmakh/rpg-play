@@ -46,12 +46,12 @@ function initials(name) {
   // Multi-word: show first 3 chars of first word, keeps it readable without overflow
   return words[0].slice(0, 3) || '?';
 }
-// Returns what a given user should see as the token's name.
-// Players see only the identifier for monsters (e.g. "A3"), DM sees full name.
+// Returns the display name for a token. Monsters always show identifier only;
+// full type/name is only visible in the right panel character sheet.
 function tokDisplayName(tok) {
-  if (!isDM() && tok.type === 'monster') {
+  if (tok.type === 'monster') {
     if (tok.label) return tok.label;
-    // Fallback for older tokens without label: show last word (the identifier)
+    // Fallback for older tokens without label: use last word (the auto-generated identifier)
     const parts = String(tok.name || '').trim().split(' ');
     return parts[parts.length - 1] || tok.name;
   }

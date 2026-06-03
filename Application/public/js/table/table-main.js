@@ -1,3 +1,34 @@
+// ── DM Tools Modal ────────────────────────────────────────────────────────────
+function openDMToolsModal() {
+  const m = document.getElementById('dm-tools-modal');
+  if (m) { m.style.display = 'flex'; renderHpTable(); }
+}
+function closeDMToolsModal() {
+  const m = document.getElementById('dm-tools-modal');
+  if (m) m.style.display = 'none';
+}
+
+// ── Theme toggle ──────────────────────────────────────────────────────────────
+function initTheme() {
+  const theme = localStorage.getItem('tableTheme') || 'modern';
+  document.body.dataset.theme = theme;
+  _updateThemeBtn(theme);
+}
+function toggleTheme() {
+  const current = document.body.dataset.theme || 'classic';
+  const next = current === 'modern' ? 'classic' : 'modern';
+  localStorage.setItem('tableTheme', next);
+  document.body.dataset.theme = next;
+  _updateThemeBtn(next);
+  renderInitiativeTracker(); // switch row style immediately
+}
+function _updateThemeBtn(theme) {
+  const btn = document.getElementById('btn-theme-toggle');
+  if (!btn) return;
+  btn.title = theme === 'modern' ? 'Switch to Classic' : 'Switch to Modern HUD';
+  btn.textContent = theme === 'modern' ? '🖥' : '🎨';
+}
+
 // ── Side panel ────────────────────────────────────────────────────────────────
 function renderSidePanel() {
   const activeTokId = getActiveTurnTokenId();
@@ -21,6 +52,7 @@ function renderSidePanel() {
 // ── Page init ─────────────────────────────────────────────────────────────────
 window.addEventListener('load', async () => {
   _loadSession();
+  initTheme();
   applyDMControls();
   setTool('select'); // initialize pointer-events on overlay canvas
 

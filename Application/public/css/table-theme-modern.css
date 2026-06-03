@@ -1,0 +1,418 @@
+/* ════════════════════════════════════════════════════════════
+   MODERN HUD THEME — inspired by Owlbear Rodeo & D&D Beyond
+   All layout rules are scoped to body[data-theme="modern"]
+════════════════════════════════════════════════════════════ */
+
+/* ── Theme toggle button (always visible, both themes) ── */
+#btn-theme-toggle {
+  background: none;
+  border: 1px solid rgba(200,160,74,.32);
+  color: rgba(200,160,74,.6);
+  border-radius: 5px;
+  padding: 3px 9px;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1.5;
+  transition: border-color .12s, color .12s, background .12s;
+  white-space: nowrap;
+}
+#btn-theme-toggle:hover {
+  border-color: var(--ac);
+  color: var(--ac);
+  background: rgba(200,160,74,.08);
+}
+
+/* ════════════════ MODERN THEME BELOW ════════════════ */
+
+/* ── Vertical tool strip — hidden in classic, shown in modern ── */
+#vtool-strip { display: none }
+
+body[data-theme="modern"] #vtool-strip {
+  display: flex;
+  flex-direction: column;
+  width: 48px;
+  flex-shrink: 0;
+  background: #090c14;
+  border-right: 1px solid rgba(200,160,74,.1);
+  padding: 10px 6px;
+  gap: 4px;
+  align-items: center;
+}
+body[data-theme="modern"] .vtool-btn {
+  width: 36px;
+  height: 36px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #5a6a8a;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  line-height: 1;
+  flex-shrink: 0;
+  transition: background .12s, color .12s, border-color .12s, box-shadow .12s;
+  padding: 0;
+}
+body[data-theme="modern"] .vtool-btn:hover {
+  background: rgba(200,160,74,.1);
+  color: var(--ac);
+  border-color: rgba(200,160,74,.2);
+}
+body[data-theme="modern"] .vtool-btn.active {
+  background: var(--ac);
+  color: #090c14;
+  border-color: var(--ahi);
+  box-shadow: 0 0 12px rgba(200,160,74,.3);
+}
+body[data-theme="modern"] .vtool-sep {
+  width: 22px;
+  height: 1px;
+  background: rgba(255,255,255,.06);
+  flex-shrink: 0;
+  margin: 2px 0;
+}
+
+/* Hide map-tool buttons from the top toolbar in modern mode */
+body[data-theme="modern"] #btn-tool-select,
+body[data-theme="modern"] #btn-tool-move,
+body[data-theme="modern"] #btn-tool-pan,
+body[data-theme="modern"] #btn-tool-ruler,
+body[data-theme="modern"] #btn-tool-ping,
+body[data-theme="modern"] #btn-tool-draw,
+body[data-theme="modern"] #dm-controls-tools { display: none !important }
+
+/* ── Toolbar ── */
+body[data-theme="modern"] #toolbar {
+  min-height: 48px;
+  padding: 6px 14px;
+  background: linear-gradient(180deg, #13192b 0%, #0e1422 100%);
+  border-bottom: 1px solid rgba(200,160,74,.16);
+  gap: 6px;
+}
+body[data-theme="modern"] #toolbar .btn { border-radius: 6px }
+body[data-theme="modern"] #btn-leftpanel-toggle,
+body[data-theme="modern"] #btn-sidepanel-toggle,
+body[data-theme="modern"] #btn-theme-toggle { border-radius: 6px }
+
+/* ── Global button polish ── */
+body[data-theme="modern"] .btn {
+  border-radius: 6px;
+  transition: background .12s, box-shadow .12s, filter .12s;
+}
+body[data-theme="modern"] .btn.primary {
+  background: linear-gradient(135deg, var(--ac) 0%, var(--ahi) 100%);
+  border-color: var(--ahi);
+  box-shadow: 0 2px 10px rgba(200,160,74,.25);
+}
+body[data-theme="modern"] .btn.primary:hover {
+  box-shadow: 0 2px 18px rgba(200,160,74,.45);
+  filter: brightness(1.06);
+}
+body[data-theme="modern"] .dice-btn { border-radius: 5px }
+
+/* ── Left panel — hidden by default, shown when lp-open ── */
+body[data-theme="modern"] #left-panel {
+  width: 0;
+  min-width: 0;
+  flex-shrink: 1;
+  overflow: hidden;
+  border: none;
+  background: #0b0f1c;
+  padding: 0;
+}
+body[data-theme="modern"] #left-panel.lp-open {
+  width: 264px;
+  min-width: 264px;
+  overflow-y: auto;
+  border-right: 1px solid rgba(200,160,74,.08);
+}
+
+/* Section headers — gold left-border accent + subtle dark gradient */
+body[data-theme="modern"] .lp-section-hdr {
+  padding: 10px 14px;
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  background: #0f1424;
+  border-left: 3px solid var(--ac);
+  border-bottom: 1px solid rgba(255,255,255,.04);
+}
+body[data-theme="modern"] .lp-section-hdr:hover { background: #131929 }
+body[data-theme="modern"] .lp-token-hdr {
+  border-left-color: rgba(200,160,74,.35);
+  background: #0c1020;
+}
+body[data-theme="modern"] .lp-token-hdr:hover { background: #0c1020 }
+
+/* ── Initiative tracker — avatar card rows ── */
+body[data-theme="modern"] .init-panel-btns {
+  padding: 8px 10px;
+  gap: 5px;
+  background: #090d18;
+  border-bottom: 1px solid rgba(255,255,255,.04);
+}
+body[data-theme="modern"] #init-tracker-list { max-height: 380px }
+
+body[data-theme="modern"] .init-row {
+  padding: 7px 10px 7px 12px;
+  gap: 8px;
+  border-bottom: 1px solid rgba(255,255,255,.035);
+  border-left: 3px solid transparent;
+  align-items: center;
+  transition: background .12s, border-color .12s;
+}
+body[data-theme="modern"] .init-row:hover {
+  background: rgba(200,160,74,.055);
+  border-left-color: rgba(200,160,74,.25);
+}
+body[data-theme="modern"] .init-row.init-cur {
+  background: rgba(200,160,74,.12);
+  border-left-color: var(--ac);
+}
+body[data-theme="modern"] .init-row.init-viewing {
+  background: rgba(200,160,74,.08);
+  border-left-color: rgba(200,160,74,.55);
+}
+/* Hide classic current-turn arrow — replaced by gold border */
+body[data-theme="modern"] .init-cur-marker { display: none }
+
+/* Portrait avatar */
+body[data-theme="modern"] .init-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 2px solid rgba(200,160,74,.2);
+}
+body[data-theme="modern"] .init-avatar-ph {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  border: 2px solid rgba(200,160,74,.16);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  background: #1a2235;
+  color: rgba(255,255,255,.35);
+}
+/* Active-turn glow on portrait */
+body[data-theme="modern"] .init-cur-portrait {
+  border-color: var(--ac);
+  box-shadow: 0 0 8px rgba(200,160,74,.4);
+}
+/* Name + stats block */
+body[data-theme="modern"] .init-meta { flex: 1; min-width: 0 }
+body[data-theme="modern"] .init-meta-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--tx);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+body[data-theme="modern"] .init-meta-stats {
+  font-size: 10px;
+  color: var(--txd);
+  margin-top: 2px;
+  white-space: nowrap;
+}
+/* Roll number — bigger, bolder */
+body[data-theme="modern"] .init-row-roll {
+  font-size: 18px;
+  font-weight: 700;
+  min-width: 26px;
+  text-align: right;
+  color: var(--ac);
+}
+/* Editable roll input in modern rows */
+body[data-theme="modern"] .init-roll-input {
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  width: 36px !important;
+  color: var(--ac) !important;
+  background: rgba(200,160,74,.08) !important;
+  border-color: rgba(200,160,74,.2) !important;
+  text-align: right;
+}
+
+/* ── HP panel — D&D Beyond style large stat numbers ── */
+body[data-theme="modern"] #hp-cur-display { font-size: 30px !important; line-height: 1 }
+body[data-theme="modern"] #hp-max-display { font-size: 18px !important }
+body[data-theme="modern"] #hp-ac-display  { font-size: 22px !important; font-weight: 700 }
+
+/* ── Right panel ── */
+body[data-theme="modern"] #side-panel {
+  width: 240px;
+  background: #0b0f1c;
+  border-left: 1px solid rgba(200,160,74,.08);
+}
+
+/* ── Quick roll sections ── */
+body[data-theme="modern"] .qroll-section-hdr {
+  letter-spacing: 1.5px;
+  font-size: 9px;
+}
+body[data-theme="modern"] .qroll-row { padding: 5px 12px }
+body[data-theme="modern"] .qroll-val { font-size: 13px }
+
+/* ── Chat bar ── */
+body[data-theme="modern"] #chat-bar { border-top: 1px solid rgba(200,160,74,.18) }
+body[data-theme="modern"] #chat-bar-hdr {
+  padding: 8px 14px;
+  background: #0f1424;
+  border-left: 3px solid var(--ac);
+  letter-spacing: 1.5px;
+  font-size: 11px;
+}
+body[data-theme="modern"] #chat-bar-hdr:hover { background: #131929 }
+body[data-theme="modern"] .chat-entry {
+  border-radius: 7px;
+  padding: 7px 10px;
+  border-left-width: 3px;
+}
+body[data-theme="modern"] .chat-input {
+  border-radius: 18px;
+  padding: 7px 14px;
+  font-size: 12px;
+}
+body[data-theme="modern"] .chat-send-btn,
+body[data-theme="modern"] #chat-img-label { border-radius: 16px }
+
+/* ── Now-playing & draw toolbars ── */
+body[data-theme="modern"] #now-playing-bar {
+  background: #090d1a;
+  border-bottom: 1px solid rgba(200,160,74,.12);
+}
+body[data-theme="modern"] #draw-toolbar {
+  background: #0c1020;
+  border-bottom: 1px solid rgba(200,160,74,.12);
+}
+
+/* ── Canvas area inner shadow ── */
+body[data-theme="modern"] #canvas-area {
+  box-shadow: inset 4px 0 24px rgba(0,0,0,.45),
+              inset -4px 0 24px rgba(0,0,0,.45);
+}
+
+/* ── Right panel — token details (Modern HUD) ── */
+body[data-theme="modern"] #side-panel {
+  width: 264px;
+  background: #0b0f1c;
+  border-left: 1px solid rgba(200,160,74,.08);
+}
+body[data-theme="modern"] #rp-placeholder { color: #3a4a6a }
+body[data-theme="modern"] .rp-action-row {
+  background: #090d18;
+  border-bottom: 1px solid rgba(255,255,255,.04);
+}
+body[data-theme="modern"] .rp-portrait-area {
+  background: linear-gradient(180deg, #0f1424 0%, #0b0f1c 100%);
+  padding: 14px 12px 10px;
+}
+body[data-theme="modern"] #rp-portrait-img {
+  width: 64px;
+  height: 64px;
+  border: 2px solid var(--ac);
+  box-shadow: 0 0 14px rgba(200,160,74,.25);
+}
+body[data-theme="modern"] #rp-portrait-ph {
+  width: 64px;
+  height: 64px;
+  background: #141b30;
+  border: 2px solid rgba(200,160,74,.25);
+  font-size: 26px;
+}
+body[data-theme="modern"] #hp-panel-name { font-size: 14px; color: var(--tx) }
+body[data-theme="modern"] #rp-subtitle { color: #5a7a9a; font-size: 11px }
+body[data-theme="modern"] .rp-stats-row {
+  background: #090d18;
+  border-color: rgba(255,255,255,.04);
+}
+body[data-theme="modern"] .rp-stat-block { padding: 10px 4px }
+body[data-theme="modern"] .rp-stat-cur { font-size: 26px !important }
+body[data-theme="modern"] #hp-ac-display  { font-size: 26px !important; font-weight: 700 }
+body[data-theme="modern"] .rp-stat-lbl { color: #3a4a6a; letter-spacing: 1px }
+body[data-theme="modern"] .rp-stat-divider { background: rgba(200,160,74,.12) }
+
+/* Right panel — ability scores */
+body[data-theme="modern"] .rp-ability-grid { padding: 6px 10px 10px; gap: 5px }
+body[data-theme="modern"] .rp-ability-block {
+  background: #111828;
+  border-color: rgba(200,160,74,.12);
+  border-radius: 5px;
+  padding: 6px 3px;
+}
+body[data-theme="modern"] .rp-ability-name { color: #3a4a6a; font-size: 8px }
+body[data-theme="modern"] .rp-ability-mod { font-size: 16px }
+body[data-theme="modern"] .rp-ability-score { color: #4a6a8a }
+
+/* Right panel — section labels */
+body[data-theme="modern"] #hp-conditions-row,
+body[data-theme="modern"] #hp-edit-area,
+body[data-theme="modern"] #hp-vis-row,
+body[data-theme="modern"] #hp-init-row,
+body[data-theme="modern"] #hp-portrait-row,
+body[data-theme="modern"] #hp-label-row,
+body[data-theme="modern"] #hp-assign-row {
+  border-top-color: rgba(255,255,255,.04);
+}
+
+/* HP panel bigger numbers override (they're now in rp-stats-row) */
+body[data-theme="modern"] #hp-cur-display { font-size: 26px !important; line-height: 1 }
+body[data-theme="modern"] #hp-max-display { font-size: 16px !important }
+
+/* ── DM Tools modal ── */
+body[data-theme="modern"] #dm-tools-modal > div {
+  background: #0d1120;
+  border-color: rgba(200,160,74,.35);
+}
+body[data-theme="modern"] #dm-tools-modal .btn { border-radius: 6px }
+
+/* ── Right panel auto-hide: collapsed by default, expands when rp-open ── */
+body[data-theme="modern"] #side-panel {
+  width: 0;
+  min-width: 0;
+  flex-shrink: 1;
+  overflow: hidden;
+  border: none;
+  background: #0b0f1c;
+  padding: 0;
+}
+body[data-theme="modern"] #side-panel.rp-open {
+  width: 264px;
+  min-width: 264px;
+  overflow-y: auto;
+  border-left: 1px solid rgba(200,160,74,.08);
+}
+
+/* ── Secondary stats row (modern) ── */
+body[data-theme="modern"] .rp-sec-stats { background: #090d18; border-color: rgba(255,255,255,.04) }
+body[data-theme="modern"] .rp-sec-stat { padding: 8px 2px }
+body[data-theme="modern"] .rp-sec-stat[onclick]:hover { background: rgba(200,160,74,.08); cursor: pointer }
+body[data-theme="modern"] .rp-sec-val { font-size: 17px; color: var(--ac) }
+body[data-theme="modern"] .rp-sec-lbl { color: #3a4a6a; font-size: 8px; letter-spacing: .7px }
+body[data-theme="modern"] .rp-sec-divider { background: rgba(200,160,74,.12) }
+
+/* ── Flat section headers (modern, no collapse) ── */
+body[data-theme="modern"] .rp-flat-hdr {
+  background: #0d1120;
+  border-color: rgba(255,255,255,.04);
+  color: rgba(200,160,74,.65);
+  letter-spacing: 1.5px;
+  padding: 6px 10px 4px;
+}
+
+/* ── Skills 2-col grid (modern) ── */
+body[data-theme="modern"] .rp-skill-grid .qroll-row { padding: 3px 10px; font-size: 11px }
+
+/* ── Spell slots (modern) ── */
+body[data-theme="modern"] .rp-spell-slots { padding: 8px 10px; gap: 10px }
+body[data-theme="modern"] .rp-spell-pip { background: var(--ac) }
+body[data-theme="modern"] .rp-spell-pip.used { background: transparent; border-color: rgba(200,160,74,.2) }
+body[data-theme="modern"] .rp-spell-lvl-num { color: rgba(200,160,74,.7) }

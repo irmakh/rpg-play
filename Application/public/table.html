@@ -9,6 +9,7 @@
 <meta name="theme-color" content="#1a1a2e">
 <script>if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js');</script>
 <link rel="stylesheet" href="/css/table.css">
+<link rel="stylesheet" href="/css/table-theme-modern.css">
 </head>
 <body>
 
@@ -21,8 +22,8 @@
   <div class="dm-controls" style="display:none;display:contents">
     <button class="btn primary" id="btn-add-token" onclick="openAddTokenModal()">+ Token</button>
     <button class="btn" id="btn-music" onclick="openMusicModal()" title="Music Player">🎵</button>
-    <button class="btn" onclick="openSettingsModal()" title="Settings">⚙️</button>
   </div>
+  <button class="btn" onclick="openDMToolsModal()" title="Map Tools &amp; HP Overview">🗺</button>
   <button class="btn" onclick="logout()" style="margin-left:4px" title="Logout">
     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;display:inline-block"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
   </button>
@@ -35,7 +36,7 @@
   <button class="btn tool-btn" id="btn-tool-ruler" onclick="setTool('ruler')" title="Ruler">📏</button>
   <button class="btn tool-btn" id="btn-tool-ping" onclick="setTool('ping')" title="Ping">📍</button>
   <button class="btn tool-btn" id="btn-tool-draw" onclick="setTool('draw')" title="Draw shapes">✏️</button>
-  <div class="dm-controls" style="display:none">
+  <div class="dm-controls" id="dm-controls-tools" style="display:none">
     <button class="btn tool-btn" id="btn-tool-multi" onclick="setTool('multi')" title="Multi-select tokens (drag to select area)">⬚ Multi</button>
   </div>
 
@@ -47,6 +48,7 @@
     <span id="zoom-val" style="font-size:11px;color:var(--ac);min-width:34px">100%</span>
   </div>
   <button class="btn tool-btn" onclick="openDiceRollerModal()" title="Dice Roller" style="margin-left:4px">🎲</button>
+  <button id="btn-theme-toggle" onclick="toggleTheme()" title="Switch to Modern HUD" style="margin-left:4px">🎨</button>
   <button class="btn tool-btn" id="btn-leftpanel-toggle" onclick="toggleLeftPanel()" title="Toggle left panel" style="margin-left:4px">◀</button>
   <button class="btn tool-btn" id="btn-sidepanel-toggle" onclick="toggleSidePanel()" title="Toggle right panel" style="margin-left:2px">▶</button>
 </div>
@@ -88,11 +90,10 @@
 
     <!-- Initiative section -->
     <div class="lp-section">
-      <div class="lp-section-hdr" onclick="initTogglePanel()">
+      <div class="lp-section-hdr" style="cursor:default">
         <span>⚔️ Initiative <span id="init-badge" class="chat-new-badge" style="display:none">!</span></span>
-        <span id="init-chevron">▲</span>
       </div>
-      <div class="lp-body" id="init-body-wrap">
+      <div class="lp-body open" id="init-body-wrap">
         <div class="init-panel-btns">
           <div class="dm-controls" style="display:none;display:contents">
             <button class="dice-btn" id="btn-init-start" onclick="startInitiative()" style="display:none">▶ Start</button>
@@ -102,93 +103,6 @@
           <button class="dice-btn" id="btn-init-next" onclick="initSkipTurn()" style="display:none">⏭ Next</button>
         </div>
         <div id="init-tracker-list"><div class="init-empty-msg">No combatants yet.</div></div>
-      </div>
-    </div>
-
-    <!-- Token / HP Edit section (shown when a token is selected) -->
-    <div class="lp-section" id="lp-token-section" style="display:none">
-      <div class="lp-section-hdr lp-token-hdr">
-        <span id="hp-panel-name" style="font-weight:bold;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1"></span>
-        <div style="display:flex;gap:3px;flex-shrink:0;margin-left:6px">
-          <button id="hp-edit-label-btn" class="btn sm" onclick="openEditLabel()" style="display:none" title="Edit identifier">✏</button>
-          <button id="hp-del-btn" class="btn sm danger" onclick="deleteSelectedToken()" style="display:none" title="Delete token">🗑</button>
-          <button class="btn sm" onclick="closeHpPanel()">✕</button>
-        </div>
-      </div>
-      <div class="lp-body open" id="hp-body-wrap">
-        <!-- HP / AC display -->
-        <div style="font-size:12px;padding:6px 10px 2px;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">
-          <span>HP: <strong id="hp-cur-display" style="color:var(--ok)">0</strong>
-            <span style="color:var(--txd)"> / <span id="hp-max-display">0</span></span>
-            <span id="hp-temp-display-wrap" style="display:none"> <span style="color:#aaddff;font-size:11px">(+<span id="hp-temp-display">0</span> temp)</span></span>
-          </span>
-          <span style="color:var(--txd)">AC: <strong id="hp-ac-display" style="color:var(--tx)">—</strong></span>
-        </div>
-        <!-- Damage / Heal / Temp HP (own token or DM only) -->
-        <div id="hp-edit-area">
-        <div style="display:flex;gap:4px;padding:4px 8px;align-items:center">
-          <input type="number" id="hp-amount" value="1" min="1" style="width:52px;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px;padding:3px 5px;font-size:12px">
-          <button class="btn danger sm" onclick="applyHpChange('dmg')">⚔ Damage</button>
-          <button class="btn success sm" onclick="applyHpChange('heal')">💚 Heal</button>
-        </div>
-        <div style="display:flex;gap:4px;padding:0 8px 6px;flex-wrap:wrap">
-          <button class="btn danger sm" onclick="quickDmg(1)">-1</button>
-          <button class="btn danger sm" onclick="quickDmg(5)">-5</button>
-          <button class="btn danger sm" onclick="quickDmg(10)">-10</button>
-          <button class="btn success sm" onclick="quickHeal(1)">+1</button>
-          <button class="btn success sm" onclick="quickHeal(5)">+5</button>
-          <button class="btn success sm" onclick="quickHeal(10)">+10</button>
-        </div>
-        <div style="display:flex;gap:4px;align-items:center;border-top:1px solid var(--a44);padding:6px 8px">
-          <span style="font-size:11px;color:var(--txd);white-space:nowrap">Temp HP:</span>
-          <input type="number" id="hp-temp-input" value="0" min="0" style="width:52px;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px;padding:3px 5px;font-size:12px">
-          <button class="btn sm" onclick="applyTempHp()">Set</button>
-        </div>
-        </div>
-        <!-- Conditions -->
-        <div id="hp-conditions-row" style="border-top:1px solid var(--a44);padding:6px 8px 4px">
-          <div style="font-size:10px;color:var(--txd);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Conditions</div>
-          <div id="hp-conditions-grid" style="display:flex;flex-wrap:wrap;gap:3px"></div>
-        </div>
-        <!-- Visibility toggle (DM only) -->
-        <div id="hp-vis-row" style="display:none;border-top:1px solid var(--a44);padding:6px 8px">
-          <button id="hp-vis-btn" class="btn sm" onclick="toggleTokenVisibility()" style="width:100%;font-size:12px"></button>
-        </div>
-        <!-- Initiative roll + edit label (DM only) -->
-        <div id="hp-init-row" style="display:none;border-top:1px solid var(--a44);padding:6px 8px">
-          <button id="hp-init-btn" class="btn sm" onclick="rollTokenInitiative()" style="width:100%;font-size:12px">🎲 Roll Initiative</button>
-          <button class="btn sm" onclick="openEditLabel()" style="width:100%;font-size:12px;margin-top:4px">✏ Edit Identifier</button>
-        </div>
-        <!-- Token portrait (DM only, monster tokens) -->
-        <div id="hp-portrait-row" style="display:none;border-top:1px solid var(--a44);padding:6px 8px">
-          <div style="font-size:10px;color:var(--txd);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Token Portrait</div>
-          <div style="display:flex;align-items:center;gap:8px">
-            <img id="hp-portrait-preview" style="width:40px;height:40px;border-radius:50%;object-fit:cover;border:1px solid var(--a44);display:none" alt="">
-            <div style="display:flex;flex-direction:column;gap:4px;flex:1">
-              <button class="btn sm" onclick="openTokenPortraitUpload()" style="font-size:11px">📷 Upload Portrait</button>
-              <button id="hp-portrait-reset-btn" class="btn sm" onclick="removeTokenCustomPortrait()" style="font-size:11px;display:none">↩ Reset to Default</button>
-            </div>
-          </div>
-          <input type="file" id="hp-portrait-input" accept="image/*" style="display:none" onchange="onTokenPortraitChosen(this)">
-        </div>
-        <!-- Edit label inline -->
-        <div id="hp-label-row" style="display:none;border-top:1px solid var(--a44);padding:6px 8px">
-          <div style="font-size:10px;color:var(--txd);margin-bottom:4px">Identifier (shown to players)</div>
-          <div style="display:flex;gap:4px">
-            <input id="hp-label-input" type="text" style="flex:1;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px;padding:3px 6px;font-size:12px" placeholder="e.g. A3" onkeydown="if(event.key==='Enter')saveEditLabel();else if(event.key==='Escape')cancelEditLabel();">
-            <button class="btn sm success" onclick="saveEditLabel()">Save</button>
-            <button class="btn sm" onclick="cancelEditLabel()">✕</button>
-          </div>
-        </div>
-        <!-- Token assignment (DM only) -->
-        <div id="hp-assign-row" style="display:none;border-top:1px solid var(--a44);padding:6px 8px">
-          <div style="font-size:10px;color:var(--txd);margin-bottom:4px">Assign to character</div>
-          <div style="display:flex;gap:4px">
-            <select id="hp-assign-sel" style="flex:1;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px;padding:3px 6px;font-size:12px"></select>
-            <button class="btn sm success" onclick="saveTokenAssignment()">Assign</button>
-            <button id="hp-unassign-btn" class="btn sm" onclick="unassignToken()" style="display:none">Unassign</button>
-          </div>
-        </div>
       </div>
     </div>
 
@@ -232,6 +146,35 @@
 
   </div><!-- /#left-panel -->
 
+  <!-- ── Vertical Tool Strip (Modern HUD theme only) ─────────────────────── -->
+  <div id="vtool-strip">
+    <button class="vtool-btn" data-mstrip-tool="select" onclick="setTool('select')" title="Select">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><path d="M1.5 1L6 12.5l2-4.5 4.5-2z"/></svg>
+    </button>
+    <button class="vtool-btn" data-mstrip-tool="move" onclick="setTool('move')" title="Move tokens">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M12 3v18M3 12h18"/></svg>
+    </button>
+    <button class="vtool-btn" data-mstrip-tool="pan" onclick="setTool('pan')" title="Pan map">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></svg>
+    </button>
+    <div class="vtool-sep"></div>
+    <button class="vtool-btn" data-mstrip-tool="ruler" onclick="setTool('ruler')" title="Ruler">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 8.5L8.5 2l13.5 13.5L15.5 22z"/><line x1="6.5" y1="12" x2="8.5" y2="10"/><line x1="10" y1="15.5" x2="12" y2="13.5"/><line x1="13.5" y1="19" x2="15.5" y2="17"/></svg>
+    </button>
+    <button class="vtool-btn" data-mstrip-tool="ping" onclick="setTool('ping')" title="Ping location">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+    </button>
+    <button class="vtool-btn" data-mstrip-tool="draw" onclick="setTool('draw')" title="Draw shapes">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+    </button>
+    <div class="dm-controls" style="display:none">
+      <div class="vtool-sep"></div>
+      <button class="vtool-btn" data-mstrip-tool="multi" onclick="setTool('multi')" title="Multi-select (drag area)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="4 2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+      </button>
+    </div>
+  </div>
+
   <div id="canvas-area" style="position:relative">
     <div id="map-loading-overlay" style="display:none;position:absolute;inset:0;background:rgba(0,0,0,.55);z-index:500;align-items:center;justify-content:center;flex-direction:column;gap:12px;pointer-events:none">
       <div style="color:var(--ac);font-size:13px;font-weight:bold;letter-spacing:.5px">Loading map…</div>
@@ -251,25 +194,140 @@
     </div>
   </div>
 
+  <!-- ── Right Panel — Token Details ───────────────────────────────────────── -->
   <div id="side-panel">
-    <div style="font-size:10px;color:var(--ac);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Movement</div>
-    <div id="movement-display" style="font-size:14px;font-weight:bold;margin-bottom:10px">— ft</div>
-    <div style="font-size:10px;color:var(--ac);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Active</div>
-    <div id="active-token-info" style="font-size:11px;color:var(--txd);margin-bottom:10px">None</div>
-    <div style="font-size:10px;color:var(--ac);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;margin-top:10px">Hit Points</div>
-    <div id="hp-tracker-list" style="margin-bottom:10px"></div>
-    <div id="side-qroll-wrap" style="border-top:1px solid var(--a44);padding-top:8px">
+
+    <!-- Empty state — shown when no token is selected -->
+    <div id="rp-placeholder">
+      <div style="font-size:34px;opacity:.2;margin-bottom:10px">⚔</div>
+      <div style="font-size:12px;line-height:1.6">Select a token<br>to see details</div>
+    </div>
+
+    <!-- Token details — shown when a token is selected -->
+    <div id="rp-token-details" style="display:none">
+
+      <!-- Action buttons row -->
+      <div class="rp-action-row">
+        <button id="hp-edit-label-btn" class="btn sm" onclick="openEditLabel()" style="display:none" title="Edit identifier">✏</button>
+        <button id="hp-del-btn" class="btn sm danger" onclick="deleteSelectedToken()" style="display:none" title="Delete token">🗑</button>
+        <button class="btn sm" onclick="closeHpPanel()">✕</button>
+      </div>
+
+      <!-- Portrait + name / subtitle -->
+      <div class="rp-portrait-area">
+        <div id="rp-portrait-wrap">
+          <img id="rp-portrait-img" style="width:56px;height:56px;border-radius:50%;object-fit:cover;border:2px solid var(--ac);display:none" alt="">
+          <div id="rp-portrait-ph" style="width:56px;height:56px;border-radius:50%;background:var(--bg3);border:2px solid var(--a44);display:flex;align-items:center;justify-content:center;font-size:22px">⚔</div>
+        </div>
+        <div style="min-width:0;flex:1">
+          <div id="hp-panel-name" style="font-weight:bold;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--tx)"></div>
+          <div id="rp-subtitle" style="font-size:10px;color:var(--txd);margin-top:2px;line-height:1.4"></div>
+        </div>
+      </div>
+
+      <!-- Big stats: HP / AC / Speed -->
+      <div class="rp-stats-row">
+        <div class="rp-stat-block">
+          <div class="rp-stat-nums">
+            <span id="hp-cur-display" class="rp-stat-cur" style="color:var(--ok)">0</span><span class="rp-stat-sep">/</span><span id="hp-max-display" class="rp-stat-max">0</span>
+          </div>
+          <div id="hp-temp-display-wrap" style="display:none;font-size:9px;color:#aaddff;text-align:center;margin-bottom:1px">+<span id="hp-temp-display">0</span> temp</div>
+          <div class="rp-stat-lbl">HIT POINTS</div>
+        </div>
+        <div class="rp-stat-divider"></div>
+        <div class="rp-stat-block">
+          <div class="rp-stat-nums">
+            <span id="hp-ac-display" class="rp-stat-cur">—</span>
+          </div>
+          <div class="rp-stat-lbl">AC</div>
+        </div>
+        <div class="rp-stat-divider" id="rp-speed-div"></div>
+        <div class="rp-stat-block" id="rp-speed-block">
+          <div class="rp-stat-nums">
+            <span id="rp-speed-val" class="rp-stat-cur">30</span><span class="rp-stat-sep" style="font-size:10px">ft</span>
+          </div>
+          <div class="rp-stat-lbl">SPEED</div>
+        </div>
+      </div>
+
+      <!-- Conditions -->
+      <div id="hp-conditions-row" style="border-top:1px solid var(--a44);padding:6px 8px 4px">
+        <div style="font-size:10px;color:var(--txd);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Conditions</div>
+        <div id="hp-conditions-grid" style="display:flex;flex-wrap:wrap;gap:3px"></div>
+      </div>
+
+      <!-- Damage / Heal / Temp HP (own token or DM only) -->
+      <div id="hp-edit-area">
+        <div style="display:flex;gap:4px;padding:5px 8px;align-items:center;border-top:1px solid var(--a44)">
+          <input type="number" id="hp-amount" value="1" min="1" style="width:52px;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px;padding:3px 5px;font-size:12px">
+          <button class="btn danger sm" onclick="applyHpChange('dmg')">⚔ Damage</button>
+          <button class="btn success sm" onclick="applyHpChange('heal')">💚 Heal</button>
+        </div>
+        <div style="display:flex;gap:4px;padding:0 8px 5px;flex-wrap:wrap">
+          <button class="btn danger sm" onclick="quickDmg(1)">-1</button>
+          <button class="btn danger sm" onclick="quickDmg(5)">-5</button>
+          <button class="btn danger sm" onclick="quickDmg(10)">-10</button>
+          <button class="btn success sm" onclick="quickHeal(1)">+1</button>
+          <button class="btn success sm" onclick="quickHeal(5)">+5</button>
+          <button class="btn success sm" onclick="quickHeal(10)">+10</button>
+        </div>
+        <div style="display:flex;gap:4px;align-items:center;border-top:1px solid var(--a44);padding:5px 8px">
+          <span style="font-size:11px;color:var(--txd);white-space:nowrap">Temp HP:</span>
+          <input type="number" id="hp-temp-input" value="0" min="0" style="width:52px;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px;padding:3px 5px;font-size:12px">
+          <button class="btn sm" onclick="applyTempHp()">Set</button>
+        </div>
+      </div>
+
+      <!-- Visibility toggle (DM only) -->
+      <div id="hp-vis-row" style="display:none;border-top:1px solid var(--a44);padding:6px 8px">
+        <button id="hp-vis-btn" class="btn sm" onclick="toggleTokenVisibility()" style="width:100%;font-size:12px"></button>
+      </div>
+
+      <!-- Initiative roll + edit label (DM only) -->
+      <div id="hp-init-row" style="display:none;border-top:1px solid var(--a44);padding:6px 8px">
+        <button id="hp-init-btn" class="btn sm" onclick="rollTokenInitiative()" style="width:100%;font-size:12px">🎲 Roll Initiative</button>
+        <button class="btn sm" onclick="openEditLabel()" style="width:100%;font-size:12px;margin-top:4px">✏ Edit Identifier</button>
+      </div>
+
+      <!-- Token portrait upload (DM only, monster tokens) -->
+      <div id="hp-portrait-row" style="display:none;border-top:1px solid var(--a44);padding:6px 8px">
+        <div style="font-size:10px;color:var(--txd);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Token Portrait</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <img id="hp-portrait-preview" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:1px solid var(--a44);display:none" alt="">
+          <div style="display:flex;flex-direction:column;gap:4px;flex:1">
+            <button class="btn sm" onclick="openTokenPortraitUpload()" style="font-size:11px">📷 Upload Portrait</button>
+            <button id="hp-portrait-reset-btn" class="btn sm" onclick="removeTokenCustomPortrait()" style="font-size:11px;display:none">↩ Reset to Default</button>
+          </div>
+        </div>
+        <input type="file" id="hp-portrait-input" accept="image/*" style="display:none" onchange="onTokenPortraitChosen(this)">
+      </div>
+
+      <!-- Edit label inline -->
+      <div id="hp-label-row" style="display:none;border-top:1px solid var(--a44);padding:6px 8px">
+        <div style="font-size:10px;color:var(--txd);margin-bottom:4px">Identifier (shown to players)</div>
+        <div style="display:flex;gap:4px">
+          <input id="hp-label-input" type="text" style="flex:1;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px;padding:3px 6px;font-size:12px" placeholder="e.g. A3" onkeydown="if(event.key==='Enter')saveEditLabel();else if(event.key==='Escape')cancelEditLabel();">
+          <button class="btn sm success" onclick="saveEditLabel()">Save</button>
+          <button class="btn sm" onclick="cancelEditLabel()">✕</button>
+        </div>
+      </div>
+
+      <!-- Token assignment (DM only) -->
+      <div id="hp-assign-row" style="display:none;border-top:1px solid var(--a44);padding:6px 8px">
+        <div style="font-size:10px;color:var(--txd);margin-bottom:4px">Assign to character</div>
+        <div style="display:flex;gap:4px">
+          <select id="hp-assign-sel" style="flex:1;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px;padding:3px 6px;font-size:12px"></select>
+          <button class="btn sm success" onclick="saveTokenAssignment()">Assign</button>
+          <button id="hp-unassign-btn" class="btn sm" onclick="unassignToken()" style="display:none">Unassign</button>
+        </div>
+      </div>
+
+      <!-- Character / Monster sheet content -->
       <div id="side-qroll-content"></div>
-    </div>
-    <div id="fog-panel" style="display:none;border-top:1px solid var(--a44);padding-top:8px;margin-top:8px">
-      <div style="font-size:10px;color:var(--ac);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Fog Regions</div>
-      <div id="fog-region-list"></div>
-    </div>
-    <div id="items-panel" style="display:none;border-top:1px solid var(--a44);padding-top:8px;margin-top:8px">
-      <div style="font-size:10px;color:var(--ac);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Hidden Items</div>
-      <div id="items-list"></div>
-    </div>
-  </div>
+
+    </div><!-- /#rp-token-details -->
+
+  </div><!-- /#side-panel -->
 
 </div><!-- /#table-wrap -->
 
@@ -298,23 +356,57 @@
   </div>
 </div>
 
-<!-- Settings Modal (DM only) -->
-<div id="settings-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:2000;align-items:center;justify-content:center">
-  <div style="background:var(--bg2);border:1px solid var(--ac);border-radius:8px;width:340px;max-width:96vw;display:flex;flex-direction:column">
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--a44)">
-      <span style="font-weight:bold;font-size:14px">⚙️ Settings</span>
-      <button class="btn sm" onclick="closeSettingsModal()">✕</button>
+<!-- DM Tools Modal (replaces settings modal — accessible to all users) -->
+<div id="dm-tools-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:2000;align-items:center;justify-content:center">
+  <div style="background:var(--bg2);border:1px solid var(--ac);border-radius:8px;width:420px;max-width:96vw;max-height:88vh;display:flex;flex-direction:column">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--a44);flex-shrink:0">
+      <span style="font-weight:bold;font-size:14px">🗺 Map &amp; Tokens</span>
+      <button class="btn sm" onclick="closeDMToolsModal()">✕</button>
     </div>
-    <div style="padding:16px">
-      <div style="font-size:10px;color:var(--ac);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Map</div>
-      <div style="display:flex;gap:6px;align-items:center;margin-bottom:16px">
-        <select id="prep-map-sel" style="flex:1;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px;padding:5px 8px;font-size:12px">
-          <option value="">— Select Map —</option>
-        </select>
-        <button class="btn primary" onclick="loadPrepMapToTable()">📂 Load</button>
+    <div style="overflow-y:auto;flex:1;padding:12px 16px">
+
+      <!-- Active turn / movement (all users) -->
+      <div style="margin-bottom:10px">
+        <div style="font-size:10px;color:var(--ac);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Active Turn</div>
+        <div id="active-token-info" style="font-size:12px;color:var(--tx);font-weight:bold;margin-bottom:8px">None</div>
+        <div style="display:flex;align-items:baseline;gap:8px">
+          <div>
+            <div style="font-size:10px;color:var(--ac);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px">Movement</div>
+            <div id="movement-display" style="font-size:18px;font-weight:bold;color:var(--tx)">— ft</div>
+          </div>
+        </div>
       </div>
-      <div style="font-size:10px;color:var(--ac);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Tokens</div>
-      <button class="btn danger" style="width:100%" onclick="clearAllTokens()">🗑 Clear All Tokens</button>
+
+      <!-- HP Overview (all users) -->
+      <div style="border-top:1px solid var(--a44);padding-top:10px;margin-bottom:10px">
+        <div style="font-size:10px;color:var(--ac);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Hit Points — All Tokens</div>
+        <div id="hp-tracker-list"></div>
+      </div>
+
+      <!-- Fog Regions (DM only) -->
+      <div id="fog-panel" style="display:none;border-top:1px solid var(--a44);padding-top:10px;margin-bottom:10px">
+        <div style="font-size:10px;color:var(--ac);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Fog Regions</div>
+        <div id="fog-region-list"></div>
+      </div>
+
+      <!-- Hidden Items (DM only) -->
+      <div id="items-panel" style="display:none;border-top:1px solid var(--a44);padding-top:10px;margin-bottom:10px">
+        <div style="font-size:10px;color:var(--ac);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Hidden Items</div>
+        <div id="items-list"></div>
+      </div>
+
+      <!-- Map Settings (DM only) -->
+      <div class="dm-controls" style="display:none;border-top:1px solid var(--a44);padding-top:10px">
+        <div style="font-size:10px;color:var(--ac);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Map Settings</div>
+        <div style="display:flex;gap:6px;align-items:center;margin-bottom:10px">
+          <select id="prep-map-sel" style="flex:1;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px;padding:5px 8px;font-size:12px">
+            <option value="">— Select Map —</option>
+          </select>
+          <button class="btn primary" onclick="loadPrepMapToTable()">📂 Load</button>
+        </div>
+        <button class="btn danger" style="width:100%" onclick="clearAllTokens()">🗑 Clear All Tokens</button>
+      </div>
+
     </div>
   </div>
 </div>

@@ -3,14 +3,22 @@ async function openHpPanel(tok) {
   // Characters may only open the panel for their own token
   if (!isDM() && !isMyToken(tok)) { closeHpPanel(); return; }
   selectedTokenId = tok.id;
-  // Monsters: use stored AC (set at token creation, doesn't change). Render immediately.
-  // Characters: render immediately with stored AC if present, then update real-time from server.
   _hpPanelAc = tok.ac != null ? tok.ac : null;
-  document.getElementById('lp-token-section').style.display = '';
+
+  // Show right panel token details
+  const details = document.getElementById('rp-token-details');
+  const placeholder = document.getElementById('rp-placeholder');
+  if (details) details.style.display = '';
+  if (placeholder) placeholder.style.display = 'none';
+  const sp = document.getElementById('side-panel');
+  if (sp) { sp.style.display = ''; sp.classList.add('rp-open'); sp.scrollTop = 0; }
+
   _refreshHpPanel(tok);
-  // Scroll left panel so the token section is visible
-  const lp = document.getElementById('left-panel');
-  if (lp) lp.scrollTop = lp.scrollHeight;
+
+  // Trigger character/monster sheet load
+  _sideQrollTokenId = null;
+  loadSideQroll();
+
   if (tok.linkedId) {
     try {
       if (tok.type === 'monster' && tok.ac == null) {
@@ -41,14 +49,36 @@ async function openHpPanel(tok) {
   }
 }
 function closeHpPanel() {
-  document.getElementById('lp-token-section').style.display = 'none';
+  const details = document.getElementById('rp-token-details');
+  const placeholder = document.getElementById('rp-placeholder');
+  if (details) details.style.display = 'none';
+  if (placeholder) placeholder.style.display = '';
   _hpPanelAc = null;
-  // Keep selectedTokenId — token stays selected after closing HP panel
+  const sp = document.getElementById('side-panel');
+  if (sp) sp.classList.remove('rp-open');
 }
 function _refreshHpPanel(tok) {
   const hpPct = (tok.hpMax || 0) > 0 ? Math.max(0, Math.min(1, (tok.hpCurrent || 0) / tok.hpMax)) : 0;
   const acEl = document.getElementById('hp-ac-display');
   if (acEl) acEl.textContent = _hpPanelAc != null ? _hpPanelAc : '—';
+
+  // Portrait in right panel header
+  const rpImg = document.getElementById('rp-portrait-img');
+  const rpPh  = document.getElementById('rp-portrait-ph');
+  const portrait = tok.portraitThumb || tok.portrait || '';
+  if (rpImg && rpPh) {
+    if (portrait) {
+      rpImg.src = portrait; rpImg.style.display = ''; rpPh.style.display = 'none';
+    } else {
+      rpImg.style.display = 'none'; rpPh.style.display = '';
+      rpPh.textContent = tok.type === 'monster' ? '🐉' : '⚔';
+    }
+  }
+
+  // Speed stat
+  const speedVal = document.getElementById('rp-speed-val');
+  if (speedVal) speedVal.textContent = tok.speed || 30;
+
   const hpNameEl = document.getElementById('hp-panel-name');
   if (isDM() && tok.type === 'monster' && tok.label) {
     const baseName = tok.name.slice(0, tok.name.length - tok.label.length).trimEnd() || tok.name;
@@ -167,6 +197,11 @@ function onTokenPortraitChosen(input) {
     const dataUrl = e.target.result;
     const preview = document.getElementById('hp-portrait-preview');
     if (preview) { preview.src = dataUrl; preview.style.display = ''; }
+    // Also update header portrait
+    const rpImg = document.getElementById('rp-portrait-img');
+    const rpPh  = document.getElementById('rp-portrait-ph');
+    if (rpImg) { rpImg.src = dataUrl; rpImg.style.display = ''; }
+    if (rpPh) rpPh.style.display = 'none';
     try {
       const res = await fetch(`/api/table/tokens/${tok.id}/portrait`, {
         method: 'POST',
@@ -197,11 +232,18 @@ async function removeTokenCustomPortrait() {
     const data = await res.json();
     patchToken(tok.id, { portrait: data.portrait, portraitThumb: data.portraitThumb, customPortrait: 0 });
     renderTokens();
+    const newPortrait = data.portraitThumb || data.portrait || '';
     const preview = document.getElementById('hp-portrait-preview');
     if (preview) {
-      const img = data.portraitThumb || data.portrait || '';
-      if (img) { preview.src = img; preview.style.display = ''; }
+      if (newPortrait) { preview.src = newPortrait; preview.style.display = ''; }
       else { preview.src = ''; preview.style.display = 'none'; }
+    }
+    // Also update header portrait
+    const rpImg = document.getElementById('rp-portrait-img');
+    const rpPh  = document.getElementById('rp-portrait-ph');
+    if (rpImg && rpPh) {
+      if (newPortrait) { rpImg.src = newPortrait; rpImg.style.display = ''; rpPh.style.display = 'none'; }
+      else { rpImg.style.display = 'none'; rpPh.style.display = ''; rpPh.textContent = '🐉'; }
     }
     const resetBtn = document.getElementById('hp-portrait-reset-btn');
     if (resetBtn) resetBtn.style.display = 'none';
@@ -690,11 +732,20 @@ function bulkDeselectToken(id) {
   renderHpTable();
 }
 
+function updateLeftPanelVisibility() {
+  const lp = document.getElementById('left-panel');
+  if (!lp) return;
+  const hasInit = (initData.entries || []).length > 0;
+  const hasBulk = isDM() && bulkTokenIds.size > 0;
+  lp.classList.toggle('lp-open', hasInit || hasBulk);
+}
+
 function renderBulkPanel() {
   const section = document.getElementById('lp-bulk-section');
   if (!section) return;
   if (bulkTokenIds.size === 0 || !isDM()) {
     section.style.display = 'none';
+    updateLeftPanelVisibility();
     return;
   }
   section.style.display = '';
@@ -729,6 +780,7 @@ function renderBulkPanel() {
     const hasMonsters = selected.some(t => t.type === 'monster');
     initRow.style.display = hasMonsters ? '' : 'none';
   }
+  updateLeftPanelVisibility();
 }
 
 function applyBulkHpChange(mode) {

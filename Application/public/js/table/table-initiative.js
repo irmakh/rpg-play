@@ -18,13 +18,14 @@ function renderInitiativeTracker(showBadge) {
     const isCur = e.id === initData.currentId;
     const isViewing = e.id === _sideViewInitId;
     const canView = isDM() || !e.monsterId; // players can't click monsters
-    // Resolve the display name: DM sees full name, players see identifier only
+    // All users see only the identifier for monsters (full type shown in right panel only)
     const eTok = e.monsterId ? tokens.find(t => t.initiativeId === e.id) : null;
-    const eDisplayName = (!isDM() && e.monsterId)
+    const eDisplayName = e.monsterId
       ? (eTok ? tokDisplayName(eTok) : (() => { const p = e.name.trim().split(' '); return p[p.length-1]; })())
       : e.name;
+    // DM: identifier is a link to monsters page; full name shown as tooltip
     const nameHtml = (e.monsterId && isDM())
-      ? `<a href="/monsters.html" target="_blank" style="color:inherit;text-decoration:underline dotted;cursor:pointer" title="Open monsters page" onclick="event.stopPropagation()">${esc(e.name)}</a>`
+      ? `<a href="/monsters.html" target="_blank" style="color:inherit;text-decoration:underline dotted;cursor:pointer" title="${esc(e.name)}" onclick="event.stopPropagation()">${esc(eDisplayName)}</a>`
       : esc(eDisplayName);
     const canEdit = isDM() || !e.monsterId; // DM edits all; players edit non-monster entries
     const rollHtml = canEdit
@@ -36,6 +37,41 @@ function renderInitiativeTracker(showBadge) {
       ? `<button class="btn sm danger" style="padding:1px 5px;font-size:11px;line-height:1.2;margin-left:4px" onclick="event.stopPropagation();removeInitEntry('${e.id}')" title="Remove from initiative">✕</button>`
       : '';
     const clickAttr = canView ? `onclick="viewInitEntry('${e.id}')"` : '';
+
+    // ── Modern HUD: avatar card rows ──────────────────────────────────────
+    if (document.body.dataset.theme === 'modern') {
+      const eTokAll = tokens.find(t => t.initiativeId === e.id);
+      const portrait = eTokAll?.portraitThumb || eTokAll?.portrait || null;
+      const cur = eTokAll?.hpCurrent ?? null;
+      const max = eTokAll?.hpMax ?? null;
+      const ac  = eTokAll?.ac ?? null;
+      const showStats = !e.monsterId || isDM();
+      const hpPct = (max > 0 && cur !== null) ? Math.max(0, Math.min(1, cur / max)) : 0;
+      const hpColor = hpBarColor(hpPct);
+      const statParts = [];
+      if (showStats) {
+        if (ac !== null) statParts.push(`AC ${ac}`);
+        if (cur !== null && max !== null) statParts.push(`<span style="color:${hpColor}">${cur}/${max}</span>`);
+      }
+      const statsHtml = statParts.length
+        ? `<div class="init-meta-stats">${statParts.join(' · ')}</div>`
+        : '';
+      const curBorder = isCur ? ' init-cur-portrait' : '';
+      const avatarHtml = portrait
+        ? `<img class="init-avatar${curBorder}" src="${portrait}" alt="">`
+        : `<div class="init-avatar-ph${curBorder}">${e.monsterId ? '🐉' : '⚔'}</div>`;
+      return `<div class="init-row${isCur ? ' init-cur' : ''}${isViewing ? ' init-viewing' : ''}" ${clickAttr}>
+        ${avatarHtml}
+        <div class="init-meta">
+          <div class="init-meta-name">${nameHtml}</div>
+          ${statsHtml}
+        </div>
+        ${rollHtml}
+        ${delHtml}
+      </div>`;
+    }
+
+    // ── Classic row ───────────────────────────────────────────────────────
     return `<div class="init-row${isCur ? ' init-cur' : ''}${isViewing ? ' init-viewing' : ''}" ${clickAttr}>
       <span class="init-cur-marker">${isCur ? '▶' : ''}</span>
       <span class="init-row-name">${nameHtml}</span>
@@ -47,6 +83,7 @@ function renderInitiativeTracker(showBadge) {
     const badge = document.getElementById('init-badge');
     if (badge) badge.style.display = '';
   }
+  if (typeof updateLeftPanelVisibility === 'function') updateLeftPanelVisibility();
 }
 
 function initTogglePanel() {

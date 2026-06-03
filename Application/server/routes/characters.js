@@ -29,13 +29,41 @@ export default function register(app, ctx) {
       if (!char) return res.status(404).json({ error: 'Not found' });
       let data = {};
       try { data = JSON.parse(char.dataJson || '{}'); } catch {}
-      const SKILL_KEYS = Array.from({ length: 18 }, (_, i) => `sk-${i}`);
-      const SAVE_KEYS  = ['save-str','save-dex','save-con','save-int','save-wis','save-cha'];
-      const EXTRA_KEYS = ['init', 'init-bonus', 'sp-atk', 'ac'];
+      const SKILL_KEYS  = Array.from({ length: 18 }, (_, i) => `sk-${i}`);
+      const SAVE_KEYS   = ['save-str','save-dex','save-con','save-int','save-wis','save-cha'];
+      const ABILITY_KEYS = ['str','dex','con','int','wis','cha'];
+      const STAT_KEYS   = ['init','init-bonus','sp-atk','ac','prof-bonus','pb','proficiency','passive-perception','pp','sp-dc'];
+      const META_KEYS   = ['race','race-name','class','class-name','class-1','subclass','subclass-1','level','total-level','char-level'];
+      const SLOT_KEYS   = Array.from({ length: 9 }, (_, i) => [`slot-${i+1}-total`,`slot-${i+1}-used`]).flat();
       const qroll = {};
-      for (const k of [...SKILL_KEYS, ...SAVE_KEYS, ...EXTRA_KEYS]) if (data[k] !== undefined) qroll[k] = data[k];
+      for (const k of [...SKILL_KEYS, ...SAVE_KEYS, ...ABILITY_KEYS, ...STAT_KEYS, ...META_KEYS, ...SLOT_KEYS]) {
+        if (data[k] !== undefined) qroll[k] = data[k];
+      }
       if (data['_weapons'] !== undefined) qroll['_weapons'] = data['_weapons'];
+      if (data['_spells']  !== undefined) qroll['_spells']  = data['_spells'];
       res.json({ id: char.id, name: char.name, data: qroll });
+    } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
+  });
+
+  app.patch('/api/characters/:id/spell-slot', async (req, res) => {
+    try {
+      const charId = req.params.id;
+      const status = await charAuth(charId, req);
+      if (status !== 200) return res.status(status).json({ error: status === 404 ? 'Not found' : 'Unauthorized' });
+      const { level, used } = req.body || {};
+      if (!level || used === undefined) return res.status(400).json({ error: 'level and used required' });
+      const char = await getCharacter(charId);
+      let data = {};
+      try { data = JSON.parse(char.dataJson || '{}'); } catch {}
+      data[`slot-${level}-used`] = Math.max(0, Math.min(parseInt(used) || 0, parseInt(data[`slot-${level}-total`]) || 0));
+      const dataJson = JSON.stringify(data);
+      if (DB_PROVIDER === 'localdb') {
+        ldb.updateCharacter(charId, { dataJson });
+      } else {
+        await idb.transact([idb.tx.characters[charId].update({ dataJson })]);
+      }
+      broadcast('characters', { action: 'updated', id: charId });
+      res.json({ ok: true, used: data[`slot-${level}-used`] });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
   });
 

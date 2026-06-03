@@ -32,10 +32,45 @@ body{display:flex;flex-direction:column}
 .lp-body.open{display:flex}
 
 /* ── Right panel ── */
-#side-panel{width:220px;flex-shrink:0;background:var(--bg2);border-left:1px solid var(--a44);overflow-y:scroll;scrollbar-width:thin;scrollbar-color:var(--a44) transparent;padding:10px;font-size:12px}
+#side-panel{width:240px;flex-shrink:0;background:var(--bg2);border-left:1px solid var(--a44);overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--a44) transparent;font-size:12px;display:flex;flex-direction:column}
 #side-panel::-webkit-scrollbar{width:5px}
 #side-panel::-webkit-scrollbar-thumb{background:var(--a44);border-radius:3px}
 #side-panel::-webkit-scrollbar-track{background:transparent}
+
+/* Right panel — placeholder */
+#rp-placeholder{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;min-height:180px;padding:20px;text-align:center;color:var(--txd)}
+
+/* Right panel — token details */
+#rp-token-details{display:flex;flex-direction:column}
+.rp-action-row{display:flex;align-items:center;justify-content:flex-end;gap:3px;padding:5px 8px;border-bottom:1px solid var(--a44)}
+.rp-portrait-area{display:flex;align-items:center;gap:10px;padding:10px 10px 8px}
+.rp-stats-row{display:flex;align-items:stretch;border-top:1px solid var(--a44);border-bottom:1px solid var(--a44)}
+.rp-stat-block{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 4px;min-width:0}
+.rp-stat-nums{display:flex;align-items:baseline;gap:1px}
+.rp-stat-cur{font-size:22px;font-weight:bold;line-height:1}
+.rp-stat-max{font-size:13px;color:var(--txd)}
+.rp-stat-sep{font-size:13px;color:var(--a55);margin:0 1px}
+.rp-stat-lbl{font-size:9px;color:var(--txd);text-transform:uppercase;letter-spacing:.5px;margin-top:3px;text-align:center}
+.rp-stat-divider{width:1px;background:var(--a44);align-self:stretch;margin:6px 0}
+
+/* Right panel — ability scores grid */
+.rp-ability-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:4px 8px 8px}
+.rp-ability-block{display:flex;flex-direction:column;align-items:center;background:var(--bg3);border-radius:4px;padding:5px 2px;border:1px solid var(--a44)}
+.rp-ability-clickable{cursor:pointer;transition:border-color .1s,background .1s}
+.rp-ability-clickable:hover{border-color:var(--ac);background:var(--bg4)}
+.rp-ability-name{font-size:8px;color:var(--txd);text-transform:uppercase;letter-spacing:.5px;margin-bottom:1px}
+.rp-ability-mod{font-size:15px;font-weight:bold;color:var(--ac);line-height:1.1}
+.rp-ability-score{font-size:10px;color:var(--txd);margin-top:1px}
+.rp-atk-list{display:flex;flex-direction:column}
+.rp-atk-row{display:flex;align-items:center;gap:4px;padding:4px 10px;border-bottom:1px solid var(--a22)}
+.rp-atk-row:last-child{border-bottom:none}
+.rp-atk-name{flex:1;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;color:var(--tx)}
+.rp-atk-name:hover{color:var(--ac)}
+.rp-atk-hit{font-size:12px;font-weight:bold;color:var(--ac);cursor:pointer;padding:2px 6px;border-radius:3px;background:var(--a22);flex-shrink:0}
+.rp-atk-hit:hover{background:var(--a44)}
+.rp-atk-sep{color:var(--txd);font-size:10px;flex-shrink:0}
+.rp-atk-dmg{font-size:11px;color:#ff9966;cursor:pointer;padding:2px 6px;border-radius:3px;background:rgba(255,153,102,.1);flex-shrink:0}
+.rp-atk-dmg:hover{background:rgba(255,153,102,.22)}
 
 /* ── Buttons ── */
 .btn{background:var(--a22);border:1px solid var(--a66);color:var(--ac);padding:4px 12px;border-radius:3px;cursor:pointer;font-size:12px;font-weight:bold;transition:background .1s}
@@ -217,6 +252,39 @@ input:focus,select:focus{outline:none;border-color:var(--ac)}
 .dice-result-sub.show{opacity:1}
 .dice-dismiss-hint{font-size:10px;color:var(--txd);letter-spacing:1px;opacity:0;transition:opacity .35s ease .35s}
 .dice-dismiss-hint.show{opacity:.5}
+
+/* ── Hide number input spinners globally ── */
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+input[type=number]{-moz-appearance:textfield;appearance:textfield}
+
+/* ── Secondary stats row (character sheet) ── */
+.rp-sec-stats{display:flex;align-items:stretch;border-bottom:1px solid var(--a44)}
+.rp-sec-stat{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:6px 2px;min-width:0}
+.rp-sec-val{font-size:16px;font-weight:bold;color:var(--ac);line-height:1;text-align:center}
+.rp-sec-lbl{font-size:8px;color:var(--txd);text-transform:uppercase;letter-spacing:.5px;margin-top:2px;text-align:center;line-height:1.2}
+.rp-sec-divider{width:1px;background:var(--a44);align-self:stretch;margin:5px 0}
+
+/* ── Flat section header (modern HUD, no collapse) ── */
+.rp-flat-hdr{font-size:9px;color:var(--ac);text-transform:uppercase;letter-spacing:.5px;padding:5px 8px 3px;background:var(--a22);border-top:1px solid var(--a44)}
+
+/* ── Skills 2-column grid in modern HUD ── */
+.rp-skill-grid{display:grid;grid-template-columns:1fr 1fr;padding:2px 0}
+.rp-skill-grid .qroll-row{font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:3px 8px}
+.rp-skill-grid .qroll-val{min-width:28px}
+
+/* ── Spell slots ── */
+.rp-spell-slots{display:flex;flex-wrap:wrap;gap:8px;padding:6px 8px 8px}
+.rp-spell-lvl{display:flex;flex-direction:column;align-items:center}
+.rp-spell-lvl-num{font-size:9px;color:var(--ac);font-weight:bold;line-height:1;margin-bottom:3px}
+.rp-spell-pips{display:flex;flex-wrap:wrap;gap:2px;justify-content:center;max-width:34px}
+.rp-spell-pip{width:7px;height:7px;border-radius:50%;background:var(--ac);display:inline-block;flex-shrink:0}
+.rp-spell-pip.used{background:transparent;border:1px solid var(--a55)}
+.rp-save-grid{display:grid;grid-template-columns:repeat(3,1fr);padding:4px 8px 6px}
+.rp-save-cell{display:flex;flex-direction:column;align-items:center;padding:5px 2px;cursor:pointer;border-radius:3px;transition:background .1s}
+.rp-save-cell:hover{background:rgba(255,255,255,.06)}
+.rp-save-val{font-size:14px;font-weight:bold;color:var(--ac);line-height:1}
+.rp-save-name{font-size:8px;color:var(--txd);text-transform:uppercase;letter-spacing:.5px;margin-top:2px}
 
 /* ── Map canvas wrap / fog / zoom ── */
 #canvas-content-wrap{display:inline-block}

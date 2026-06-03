@@ -341,6 +341,68 @@ function clearMapHighlight() {
   oCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
 }
 
+// ── Map context menu (click fog region / hidden item to reveal/hide) ──────────
+let _mapCtxMenu = null;
+
+function _dismissMapCtxMenu() {
+  if (_mapCtxMenu) { _mapCtxMenu.remove(); _mapCtxMenu = null; }
+}
+
+function _showMapCtxMenu(cx, cy, html) {
+  _dismissMapCtxMenu();
+  const div = document.createElement('div');
+  div.style.cssText = 'position:fixed;z-index:9999;background:#0f1424;border:1px solid rgba(200,160,74,.4);border-radius:6px;padding:8px 10px;font-size:12px;color:var(--tx);box-shadow:0 4px 18px rgba(0,0,0,.75);min-width:155px;max-width:220px';
+  div.innerHTML = html;
+  document.body.appendChild(div);
+  _mapCtxMenu = div;
+  const w = div.offsetWidth || 160, h = div.offsetHeight || 90;
+  div.style.left = Math.min(cx + 8, window.innerWidth - w - 8) + 'px';
+  div.style.top  = Math.min(cy - 10, window.innerHeight - h - 8) + 'px';
+  const dismiss = e => { if (!div.contains(e.target)) { _dismissMapCtxMenu(); document.removeEventListener('pointerdown', dismiss, true); } };
+  setTimeout(() => document.addEventListener('pointerdown', dismiss, true), 10);
+}
+
+canvasArea.addEventListener('click', e => {
+  if (!isDM() || currentTool !== 'select') return;
+  if (e.target.closest('.token')) return; // token click — handled separately
+  const pos = getCanvasPos(e);
+  const grid = canvasToGrid(pos.x, pos.y);
+  const gx = grid.x, gy = grid.y;
+
+  for (const r of fogRegions) {
+    if (gx >= r.x && gx < r.x + r.w && gy >= r.y && gy < r.y + r.h) {
+      _showMapCtxMenu(e.clientX, e.clientY,
+        `<div style="font-size:9px;color:rgba(200,160,74,.6);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Fog Region</div>`
+        + `<div style="font-weight:bold;margin-bottom:3px">${esc(r.label || 'Region')}</div>`
+        + `<div style="font-size:10px;margin-bottom:7px;color:${r.visible ? '#88ff88' : 'var(--txd)'}">${r.visible ? '👁 Revealed to players' : '🌫 Hidden from players'}</div>`
+        + (r.visible
+          ? `<button class="btn sm" onclick="_dismissMapCtxMenu();hideFogRegion('${r.id}')" style="width:100%;font-size:11px">🚫 Hide Region</button>`
+          : `<button class="btn sm" onclick="_dismissMapCtxMenu();revealFogRegion('${r.id}')" style="width:100%;font-size:11px;background:var(--ok);color:#000;border-color:var(--ok)">👁 Reveal Region</button>`)
+      );
+      return;
+    }
+  }
+
+  for (const item of hiddenItems) {
+    const iw = item.w || 1, ih = item.h || 1;
+    if (gx >= item.x && gx < item.x + iw && gy >= item.y && gy < item.y + ih) {
+      const icon = ITEM_ICONS[item.type] || '?';
+      _showMapCtxMenu(e.clientX, e.clientY,
+        `<div style="font-size:9px;color:rgba(200,160,74,.6);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">${icon} Hidden Item</div>`
+        + `<div style="font-weight:bold;margin-bottom:3px">${esc(item.label || 'Item')}</div>`
+        + (item.description ? `<div style="font-size:10px;color:var(--txd);margin-bottom:5px;max-height:54px;overflow-y:auto;white-space:pre-wrap;word-break:break-word">${esc(item.description)}</div>` : '')
+        + `<div style="font-size:10px;margin-bottom:7px;color:${item.visible ? '#88ff88' : '#ff8888'}">${item.visible ? '👁 Revealed to players' : '🔴 Hidden from players'}</div>`
+        + (item.visible
+          ? `<button class="btn sm" onclick="_dismissMapCtxMenu();hideItem('${item.id}')" style="width:100%;font-size:11px">🚫 Hide Item</button>`
+          : `<button class="btn sm" onclick="_dismissMapCtxMenu();revealItem('${item.id}')" style="width:100%;font-size:11px;background:var(--ok);color:#000;border-color:var(--ok)">👁 Reveal Item</button>`)
+      );
+      return;
+    }
+  }
+
+  _dismissMapCtxMenu();
+});
+
 // ── Prepared map selector ─────────────────────────────────────────────────────
 async function loadPrepMaps() {
   try {
@@ -398,9 +460,8 @@ function renderTokens() {
       tok.visible === false ? 'opacity:0.5' : ''
     ].filter(Boolean).join(';');
     const dn = tokDisplayName(tok);
-    const isAssignedMonster = tok.type === 'monster' && !!tok.assignedCharId;
-    const showFullInfo = isDM() || tok.type !== 'monster' || isAssignedMonster;
-    if (!tok.portraitThumb && !tok.portrait) div.textContent = showFullInfo ? initials(tok.name) : dn;
+    const showFullInfo = isDM() || tok.type !== 'monster' || !!tok.assignedCharId;
+    if (!tok.portraitThumb && !tok.portrait) div.textContent = initials(dn);
     const hpStr = showFullInfo ? ` | HP: ${tok.hpCurrent||0}/${tok.hpMax||0} | Speed: ${tok.speed||30}ft` : '';
     div.title = `${dn}${hpStr}${tok.id === activeTokId ? ' | YOUR TURN' : ''}`;
 
@@ -663,6 +724,10 @@ function setTool(name) {
   document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
   const btn = document.getElementById('btn-tool-' + name);
   if (btn) btn.classList.add('active');
+  // Sync vertical tool strip (modern theme)
+  document.querySelectorAll('[data-mstrip-tool]').forEach(b => {
+    b.classList.toggle('active', b.dataset.mstripTool === name);
+  });
   overlayCanvas.style.cursor = (name === 'ruler' || name === 'draw' || name === 'multi') ? 'crosshair' : name === 'ping' ? 'cell' : name === 'pan' ? 'grab' : 'default';
   // Select and move modes: overlay transparent so token divs receive pointer events
   overlayCanvas.style.pointerEvents = (name === 'select' || name === 'move') ? 'none' : 'all';

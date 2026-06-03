@@ -1,4 +1,4 @@
-const CACHE = 'rpg-v56';
+const CACHE = 'rpg-v63';
 
 const STATIC = [
   // Core pages
@@ -18,6 +18,7 @@ const STATIC = [
   '/img/icon-512.png',
   // CSS
   '/css/table.css',
+  '/css/table-theme-modern.css',
   '/css/console/table-console.css',
   // Shared JS libs
   '/js/monster-stat-block.js',
