@@ -294,11 +294,36 @@ body[data-theme="modern"] #draw-toolbar {
   border-bottom: 1px solid rgba(200,160,74,.12);
 }
 
-/* ── Canvas area inner shadow ── */
+/* ── Canvas area inner shadow + modern scrollbars ── */
 body[data-theme="modern"] #canvas-area {
   box-shadow: inset 4px 0 24px rgba(0,0,0,.45),
               inset -4px 0 24px rgba(0,0,0,.45);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(200,160,74,.25) rgba(0,0,0,.3);
 }
+body[data-theme="modern"] #canvas-area::-webkit-scrollbar { width: 6px; height: 6px }
+body[data-theme="modern"] #canvas-area::-webkit-scrollbar-thumb {
+  background: rgba(200,160,74,.25);
+  border-radius: 3px;
+}
+body[data-theme="modern"] #canvas-area::-webkit-scrollbar-thumb:hover {
+  background: rgba(200,160,74,.45);
+}
+body[data-theme="modern"] #canvas-area::-webkit-scrollbar-track { background: rgba(0,0,0,.3) }
+body[data-theme="modern"] #canvas-area::-webkit-scrollbar-corner { background: rgba(0,0,0,.3) }
+
+/* ── Chat log modern scrollbars ── */
+body[data-theme="modern"] .chat-log {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(200,160,74,.2) transparent;
+}
+body[data-theme="modern"] .chat-log::-webkit-scrollbar { width: 4px }
+body[data-theme="modern"] .chat-log::-webkit-scrollbar-thumb {
+  background: rgba(200,160,74,.2);
+  border-radius: 2px;
+}
+body[data-theme="modern"] .chat-log::-webkit-scrollbar-thumb:hover { background: rgba(200,160,74,.4) }
+body[data-theme="modern"] .chat-log::-webkit-scrollbar-track { background: transparent }
 
 /* ── Right panel — token details (Modern HUD) ── */
 body[data-theme="modern"] #side-panel {

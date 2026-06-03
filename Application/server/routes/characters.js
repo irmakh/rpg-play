@@ -48,11 +48,14 @@ export default function register(app, ctx) {
   app.patch('/api/characters/:id/spell-slot', async (req, res) => {
     try {
       const charId = req.params.id;
-      const status = await charAuth(charId, req);
-      if (status !== 200) return res.status(status).json({ error: status === 404 ? 'Not found' : 'Unauthorized' });
+      if (!masterAuth(req)) {
+        const status = await charAuth(charId, req);
+        if (status !== 200) return res.status(status).json({ error: status === 404 ? 'Not found' : 'Unauthorized' });
+      }
       const { level, used } = req.body || {};
       if (!level || used === undefined) return res.status(400).json({ error: 'level and used required' });
       const char = await getCharacter(charId);
+      if (!char) return res.status(404).json({ error: 'Not found' });
       let data = {};
       try { data = JSON.parse(char.dataJson || '{}'); } catch {}
       data[`slot-${level}-used`] = Math.max(0, Math.min(parseInt(used) || 0, parseInt(data[`slot-${level}-total`]) || 0));
