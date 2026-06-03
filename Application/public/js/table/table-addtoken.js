@@ -3,6 +3,8 @@ function openAddTokenModal() {
   if (_addTokenBusy) return;
   _pendingTokenLinkedId = null;
   _pendingTokenType = null;
+  const s = document.getElementById('tok-monster-search');
+  if (s) s.value = '';
   switchTokenTab('chars');
   document.getElementById('add-token-modal').style.display = 'flex';
 }
@@ -21,6 +23,39 @@ function switchTokenTab(tab) {
     idRow.style.display = tab === 'monsters' ? 'flex' : 'none';
     if (tab !== 'monsters') document.getElementById('tok-identifier').value = '';
   }
+  const searchWrap = document.getElementById('tok-monster-search-wrap');
+  if (searchWrap) searchWrap.style.display = tab === 'monsters' ? '' : 'none';
+  if (tab === 'monsters') {
+    const s = document.getElementById('tok-monster-search');
+    if (s) { s.value = ''; setTimeout(() => s.focus(), 60); }
+    filterMonsterList('');
+  }
+}
+
+function _monsterRowHtml(m) {
+  const portrait = m.data?.portraitThumb || m.data?.portrait;
+  const thumb = portrait
+    ? `<img loading="lazy" src="${portrait}" style="width:30px;height:30px;border-radius:50%;object-fit:cover;border:1px solid var(--a55);flex-shrink:0">`
+    : `<div style="width:30px;height:30px;border-radius:50%;background:var(--bg3);border:1px solid var(--a55);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--txd)">?</div>`;
+  return `<div class="qroll-row" onclick="selectTokenMonster('${esc(m.id)}','${esc(m.name)}')"
+       style="padding:5px 10px;border-bottom:1px solid var(--sep);display:flex;align-items:center;gap:8px">
+    ${thumb}
+    <span style="flex:1">${esc(m.name)}</span>
+    <span style="font-size:10px;color:var(--txd)">CR ${esc(m.cr||'?')}</span>
+    <button onclick="event.stopPropagation();uploadMonsterPortrait('${esc(m.id)}')"
+            style="background:none;border:none;cursor:pointer;font-size:14px;padding:0 2px;opacity:.6"
+            title="Upload portrait">📷</button>
+  </div>`;
+}
+
+function filterMonsterList(query) {
+  const list = document.getElementById('tok-monsters-list');
+  if (!list) return;
+  const q = (query || '').trim().toLowerCase();
+  const filtered = q ? _monsterList.filter(m => m.name.toLowerCase().includes(q)) : _monsterList;
+  list.innerHTML = filtered.length > 0
+    ? filtered.map(_monsterRowHtml).join('')
+    : `<div style="padding:10px;font-size:11px;color:var(--txd)">${q ? 'No monsters match your search.' : 'No monsters found.'}</div>`;
 }
 
 async function populateAddTokenModal(chars) {
@@ -38,29 +73,12 @@ async function populateAddTokenModal(chars) {
   }
 
   // Monsters tab (load on demand)
-  const monTab = document.getElementById('tok-tab-monsters');
-  if (monTab && isDM()) {
+  if (isDM()) {
     try {
       const mRes = await fetch('/api/monsters', { headers: { 'X-Master-Password': masterPw } });
       if (mRes.ok) {
         _monsterList = await mRes.json();
-        monTab.innerHTML = _monsterList.length > 0
-          ? _monsterList.map(m => {
-              const portrait = m.data?.portraitThumb || m.data?.portrait;
-              const thumb = portrait
-                ? `<img loading="lazy" src="${portrait}" style="width:30px;height:30px;border-radius:50%;object-fit:cover;border:1px solid var(--a55);flex-shrink:0">`
-                : `<div style="width:30px;height:30px;border-radius:50%;background:var(--bg3);border:1px solid var(--a55);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--txd)">?</div>`;
-              return `<div class="qroll-row" onclick="selectTokenMonster('${esc(m.id)}','${esc(m.name)}')"
-                   style="padding:5px 10px;border-bottom:1px solid var(--sep);display:flex;align-items:center;gap:8px">
-                ${thumb}
-                <span style="flex:1">${esc(m.name)}</span>
-                <span style="font-size:10px;color:var(--txd)">CR ${esc(m.cr||'?')}</span>
-                <button onclick="event.stopPropagation();uploadMonsterPortrait('${esc(m.id)}')"
-                        style="background:none;border:none;cursor:pointer;font-size:14px;padding:0 2px;opacity:.6"
-                        title="Upload portrait">📷</button>
-              </div>`;
-            }).join('')
-          : '<div style="padding:10px;font-size:11px;color:var(--txd)">No monsters found.</div>';
+        filterMonsterList('');
       }
     } catch {}
   }
@@ -85,8 +103,8 @@ async function uploadMonsterPortrait(monsterId) {
         // Update local cache so the thumbnail updates immediately
         const mon = _monsterList.find(m => m.id === monsterId);
         if (mon) { if (!mon.data) mon.data = {}; mon.data.portrait = e.target.result; }
-        // Rebuild monster tab HTML
-        await populateAddTokenModal(_charList);
+        const s = document.getElementById('tok-monster-search');
+        filterMonsterList(s ? s.value : '');
         showToast('Portrait saved.');
       } catch { showToast('Upload failed.', true); }
     };
