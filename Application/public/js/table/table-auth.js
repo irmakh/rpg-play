@@ -61,14 +61,8 @@ function cancelDMUnlock() {}
 function submitDMPassword() {}
 function exitDM() { logout(); }
 
-function openSettingsModal() {
-  const m = document.getElementById('settings-modal');
-  if (m) m.style.display = 'flex';
-}
-function closeSettingsModal() {
-  const m = document.getElementById('settings-modal');
-  if (m) m.style.display = 'none';
-}
+function openSettingsModal() { openDMToolsModal(); }
+function closeSettingsModal() { closeDMToolsModal(); }
 
 function toggleLeftPanel() {
   const panel = document.getElementById('left-panel');
