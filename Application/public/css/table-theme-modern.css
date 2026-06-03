@@ -441,3 +441,58 @@ body[data-theme="modern"] .rp-spell-slots { padding: 8px 10px; gap: 10px }
 body[data-theme="modern"] .rp-spell-pip { background: var(--ac) }
 body[data-theme="modern"] .rp-spell-pip.used { background: transparent; border-color: rgba(200,160,74,.2) }
 body[data-theme="modern"] .rp-spell-lvl-num { color: rgba(200,160,74,.7) }
+
+/* ── Monster info — modern HUD ── */
+
+/* Proficient saves: full opacity + star; non-proficient: dimmed */
+body[data-theme="modern"] .rp-save-cell:not(.rp-save-prof) { opacity: .55 }
+body[data-theme="modern"] .rp-save-cell:not(.rp-save-prof):hover { opacity: 1 }
+body[data-theme="modern"] .rp-save-prof .rp-save-val { color: #e0d4a8 }
+.rp-save-star { font-size: 6px; color: var(--ac); opacity: .8; vertical-align: middle; margin-left: 1px }
+
+/* Use button in action rows */
+.rp-mon-use-btn {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  cursor: pointer;
+  flex-shrink: 0;
+  background: rgba(100,150,255,.13);
+  color: #99b0ee;
+  border: 1px solid rgba(100,150,255,.18);
+  user-select: none;
+  line-height: 1.6;
+  transition: background .1s, color .1s;
+}
+.rp-mon-use-btn:hover { background: rgba(100,150,255,.26); color: #ccd8ff }
+
+/* Trait entries */
+.rp-mon-trait {
+  padding: 5px 10px 6px;
+  border-bottom: 1px solid rgba(255,255,255,.03);
+}
+.rp-mon-trait-name {
+  font-size: 11px;
+  color: var(--ac);
+  font-weight: bold;
+  font-style: italic;
+  margin-bottom: 2px;
+}
+.rp-mon-trait-body { font-size: 11px; color: var(--txd); line-height: 1.45 }
+.rp-mon-trait-body p { margin: 0; white-space: pre-wrap }
+
+/* Defenses & Senses section */
+.rp-mon-defense {
+  padding: 5px 10px;
+  font-size: 11px;
+  color: var(--txd);
+  line-height: 1.7;
+  display: flex;
+  flex-direction: column;
+}
+.rp-mon-defense-lbl { color: var(--ac); font-weight: bold }
+
+/* Footer link */
+.rp-mon-link { padding: 6px 10px; border-top: 1px solid rgba(255,255,255,.04) }
+.rp-mon-link a { color: var(--ac); font-size: 10px; opacity: .55; text-decoration: none }
+.rp-mon-link a:hover { opacity: 1 }

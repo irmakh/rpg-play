@@ -111,6 +111,7 @@ function renderMonsterActionsPanel(data, tok) {
 
 
 function renderMonsterFullStats(data, tok) {
+  // ── Shared data ──
   const SZ={T:'Tiny',S:'Small',M:'Medium',L:'Large',H:'Huge',G:'Gargantuan'};
   const AL={L:'Lawful',N:'Neutral',C:'Chaotic',G:'Good',E:'Evil',U:'Unaligned',A:'Any'};
   const size=(data.size||[]).map(s=>SZ[s]||s).join('/');
@@ -123,20 +124,155 @@ function renderMonsterFullStats(data, tok) {
   if(data.speed){if(data.speed.walk)speedParts.push(data.speed.walk+' ft.');if(data.speed.fly)speedParts.push('fly '+data.speed.fly+' ft.');if(data.speed.swim)speedParts.push('swim '+data.speed.swim+' ft.');if(data.speed.climb)speedParts.push('climb '+data.speed.climb+' ft.');}
   const speedStr=speedParts.join(', ')||'—';
   const scores=['str','dex','con','int','wis','cha'],snames=['STR','DEX','CON','INT','WIS','CHA'];
-  const saveStr=data.save?Object.entries(data.save).map(([k,v])=>k[0].toUpperCase()+k.slice(1)+' '+v).join(', '):'';
-  const skillStr=data.skill?Object.entries(data.skill).map(([k,v])=>k[0].toUpperCase()+k.slice(1)+' '+v).join(', '):'';
   const immuneStr=[].concat(data.immune||[]).map(i=>typeof i==='string'?i:[].concat(i.immune||[]).join('/')).join(', ');
   const resistStr=[].concat(data.resist||[]).map(i=>typeof i==='string'?i:[].concat(i.resist||[]).join('/')).join(', ');
   const condImmStr=[].concat(data.conditionImmune||[]).map(i=>typeof i==='string'?i:[].concat(i.conditionImmune||[]).join('/')).join(', ');
   const sensesStr=[...(data.senses||[])].join(', ')+(data.passive?((data.senses||[]).length?', ':'')+'Passive Perception '+data.passive:'');
   const langStr=(data.languages||[]).join(', ')||'—';
-  const HR='<hr style="border:none;border-top:1px solid var(--a44);margin:6px 0">';
+  const hpFrac=(tok.hpMax>0)?(tok.hpCurrent||0)/tok.hpMax:0;
+  const dexMod=Math.floor(((data.dex||10)-10)/2);
+  const initProfBonus=(data.initiative&&data.initiative.proficiency===true)?getMonsterProfBonus(data.cr):0;
+  const initTotal=dexMod+initProfBonus+(data.initBonus||0);
+  const initStr=(initTotal>=0?'+':'')+initTotal;
   function rEntries(entries){return(entries||[]).map(e=>{if(typeof e==='string')return'<p style="margin:2px 0 3px;white-space:pre-wrap">'+parseEntry(e)+'</p>';if(e&&e.type==='list'&&Array.isArray(e.items))return'<ul style="margin:2px 0 3px;padding-left:14px">'+e.items.map(i=>'<li>'+parseEntry(typeof i==='string'?i:(i.name||''))+'</li>').join('')+'</ul>';return'';}).join('');}
+
+  // Set _currentMonsterData for useMonsterAction (needed by both themes)
+  const hasActions=(data.action?.length||0)+(data.bonus?.length||0)+(data.reaction?.length||0)+(data.legendary?.length||0)>0;
+  if(hasActions){
+    _currentMonsterData={name:data.name||'Monster',label:tok?.label||'',action:data.action||[],bonus:data.bonus||[],reaction:data.reaction||[],legendary:data.legendary||[]};
+    if(!_sideOpenSections.has('monster-actions'))_sideOpenSections.add('monster-actions');
+  }
+
+  // ── Modern HUD ──────────────────────────────────────────────────────────────
+  if(document.body.dataset.theme==='modern'){
+    // Action row: Init (primary) + Info button
+    const actionRowHtml=`<div class="rp-action-row">`
+      +(tok?.linkedId?`<button class="btn sm" onclick="showMonsterInfoModal('${esc(tok.linkedId)}')" style="font-size:10px;padding:2px 7px">Info</button>`:'')
+      +`<button class="btn sm primary" onclick="rollMonsterInitiativeFromPanel()" title="Roll Initiative (d20${initStr})" style="font-size:10px;padding:2px 7px">🎲 Init ${initStr}</button>`
+      +`</div>`;
+
+    // Secondary stats bar: CR | Initiative (clickable) | Speed | Passive Perc
+    const walkSpd=data.speed?.walk?data.speed.walk+' ft.':speedStr||'—';
+    const secItems=[
+      {val:String(cr),lbl:'CR'},
+      {val:initStr,lbl:'INITIATIVE',onclick:'rollMonsterInitiativeFromPanel()'},
+      {val:walkSpd,lbl:'SPEED'},
+    ];
+    if(data.passive)secItems.push({val:String(data.passive),lbl:'PASS. PERC'});
+    const secStatsHtml=`<div class="rp-sec-stats">`+secItems.map((s,i)=>
+      (i>0?'<div class="rp-sec-divider"></div>':'')
+      +`<div class="rp-sec-stat"${s.onclick?` onclick="${s.onclick}" style="cursor:pointer"`:''}>`
+      +`<div class="rp-sec-val">${esc(String(s.val))}</div>`
+      +`<div class="rp-sec-lbl">${esc(s.lbl)}</div></div>`
+    ).join('')+`</div>`;
+
+    // Ability grid — same rp-ability-block classes as character sheet
+    const abilityGridHtml=`<div class="rp-ability-grid">`+scores.map((sc,i)=>{
+      const val=data[sc]||10,m=Math.floor((val-10)/2),ms=(m>=0?'+':'')+m;
+      return `<div class="rp-ability-block rp-ability-clickable" onclick="qroll('${snames[i]} Check','${ms}')" title="${snames[i]} Check (d20${ms})">`
+        +`<div class="rp-ability-name">${snames[i]}</div>`
+        +`<div class="rp-ability-mod">${ms}</div>`
+        +`<div class="rp-ability-score">${val}</div></div>`;
+    }).join('')+`</div>`;
+
+    // Save grid — rp-save-grid with proficient saves highlighted
+    const saveGridHtml=`<div class="rp-save-grid">`+scores.map((sc,i)=>{
+      const profVal=data.save&&data.save[sc];
+      const rawMod=Math.floor(((data[sc]||10)-10)/2);
+      const val=profVal||(rawMod>=0?'+'+rawMod:''+rawMod);
+      const prof=!!profVal;
+      return `<div class="rp-save-cell${prof?' rp-save-prof':''}" onclick="qroll('${snames[i]} Save','${val}')" title="${snames[i]} Saving Throw${prof?' (proficient)':''}">`
+        +`<div class="rp-save-val">${val}</div>`
+        +`<div class="rp-save-name">${snames[i]}${prof?'<span class="rp-save-star">★</span>':''}</div></div>`;
+    }).join('')+`</div>`;
+
+    // Skills (only if monster has explicit skill entries)
+    let skillsHtml='';
+    if(data.skill&&Object.keys(data.skill).length){
+      const rows=Object.entries(data.skill).map(([k,v])=>{
+        const lbl=k.charAt(0).toUpperCase()+k.slice(1);
+        return `<div class="qroll-row" onclick="qroll('${lbl}','${v}')">`
+          +`<span>${lbl}</span><span class="qroll-val">${v}</span></div>`;
+      }).join('');
+      skillsHtml=`<div class="rp-flat-hdr">Skills</div><div class="rp-skill-grid">${rows}</div>`;
+    }
+
+    // Actions — flat rp-atk-list, same compact layout as character sheet attacks
+    let actionsHtml='';
+    if(hasActions){
+      const rActItem=(item,section,idx)=>{
+        const entryText=[].concat(item.entries||[]).join(' ');
+        const atkMatch=entryText.match(/\{@hit\s([+-]?\d+)\}/i);
+        const dmgTagMatch=entryText.match(/\{@damage\s+([^}]+)\}/i);
+        const rawDmg=dmgTagMatch?dmgTagMatch[1]:(entryText.match(/\d+d\d+\s*(?:[+-]\s*\d+)?/i)?.[0]||'');
+        const dmgStr=rawDmg.replace(/\s+/g,'');
+        const sn=(item.name||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+        const useBtn=`<span class="rp-mon-use-btn" onclick="useMonsterAction('${section}',${idx})" title="Send to chat">Use</span>`;
+        if(atkMatch){
+          const bonus=parseInt(atkMatch[1]);
+          const atkClick=`qroll('${sn} atk','${bonus}')`;
+          const dmgClick=dmgStr?`rollMonsterDamage('${section}',${idx},'${dmgStr}')`:null;
+          return `<div class="rp-atk-row">`
+            +`<span class="rp-atk-name" onclick="${atkClick}">${parseEntry(item.name||'')}</span>`
+            +`<span class="rp-atk-hit" onclick="${atkClick}">${bonus>=0?'+':''}${bonus}</span>`
+            +(dmgStr?`<span class="rp-atk-sep">·</span><span class="rp-atk-dmg" onclick="${dmgClick}">${esc(dmgStr)}</span>`:'')
+            +useBtn+`</div>`;
+        }
+        return `<div class="rp-atk-row">`
+          +`<span class="rp-atk-name" style="color:var(--ac);font-style:italic">${parseEntry(item.name||'')}</span>`
+          +useBtn+`</div>`;
+      };
+      const rActGroup=(items,title,section)=>{
+        if(!items||!items.length)return'';
+        return `<div class="rp-flat-hdr">${title}</div>`
+          +`<div class="rp-atk-list">${items.map((item,idx)=>rActItem(item,section,idx)).join('')}</div>`;
+      };
+      actionsHtml=rActGroup(data.action,'Actions','action')
+        +rActGroup(data.bonus,'Bonus Actions','bonus')
+        +rActGroup(data.reaction,'Reactions','reaction')
+        +rActGroup(data.legendary,'Legendary Actions','legendary');
+    }
+
+    // Traits
+    let traitsHtml='';
+    if(data.trait&&data.trait.length){
+      traitsHtml=`<div class="rp-flat-hdr">Traits</div>`
+        +data.trait.map(t=>`<div class="rp-mon-trait">`
+          +`<div class="rp-mon-trait-name">${parseEntry(t.name||'')}</div>`
+          +`<div class="rp-mon-trait-body">${rEntries(t.entries)}</div></div>`
+        ).join('');
+    }
+
+    // Defenses, senses, languages
+    let defenseHtml='';
+    const defLines=[];
+    if(immuneStr)defLines.push({lbl:'Immune',val:immuneStr});
+    if(resistStr)defLines.push({lbl:'Resist',val:resistStr});
+    if(condImmStr)defLines.push({lbl:'Cond. Immune',val:condImmStr});
+    if(sensesStr)defLines.push({lbl:'Senses',val:sensesStr});
+    if(langStr&&langStr!=='—')defLines.push({lbl:'Languages',val:langStr});
+    if(defLines.length){
+      defenseHtml=`<div class="rp-flat-hdr">Defenses & Senses</div>`
+        +`<div class="rp-mon-defense">`
+        +defLines.map(l=>`<div><span class="rp-mon-defense-lbl">${esc(l.lbl)}</span> ${esc(l.val)}</div>`).join('')
+        +`</div>`;
+    }
+
+    const linkHtml=tok?.linkedId
+      ?`<div class="rp-mon-link"><a href="/monsters.html" target="_blank">📖 Full stat block →</a></div>`:'';
+
+    return actionRowHtml+secStatsHtml
+      +`<div class="rp-flat-hdr">Abilities</div>`+abilityGridHtml
+      +`<div class="rp-flat-hdr">Saving Throws</div>`+saveGridHtml
+      +skillsHtml+actionsHtml+traitsHtml+defenseHtml+linkHtml;
+  }
+
+  // ── Classic path (unchanged) ─────────────────────────────────────────────────
+  const HR='<hr style="border:none;border-top:1px solid var(--a44);margin:6px 0">';
   function rSection(items,title){if(!items||!items.length)return'';return HR+'<div style="font-size:10px;color:var(--ac);text-transform:uppercase;font-weight:bold;letter-spacing:.5px;margin-bottom:3px">'+title+'</div>'+items.map(item=>'<div style="margin:4px 0"><span style="color:var(--ac);font-weight:bold;font-style:italic">'+parseEntry(item.name||'')+'</span> '+rEntries(item.entries)+'</div>').join('');}
   function rSectionRollable(items,title){if(!items||!items.length)return'';const HR2=HR+'<div style="font-size:10px;color:var(--ac);text-transform:uppercase;font-weight:bold;letter-spacing:.5px;margin-bottom:3px">'+title+'</div>';return HR2+items.map(item=>{const entryText=[].concat(item.entries||[]).join(' ');const atkMatch=entryText.match(/\{@hit\s([+-]?\d+)\}|([+-]\d+)\s+to\s+hit/i);const dmgMatch=entryText.match(/\d+d\d+(?:[+-]\d+)?/i);if(atkMatch){const bonus=parseInt(atkMatch[1]||atkMatch[2]);const dmgStr=dmgMatch?dmgMatch[0]:'';const sn=item.name.replace(/'/g,"\\'");const dmgRow=dmgStr?'<div class="qroll-row" onclick="rollDamageStr(\''+sn+' Dmg\',\''+dmgStr+'\')" style="padding-left:20px;background:rgba(0,0,0,.15)"><span style="font-size:11px;color:var(--txd)">↳ Damage</span><span class="qroll-val" style="color:#ff9966;font-size:13px">'+esc(dmgStr)+'</span></div>':'';return'<div class="qroll-row" onclick="qroll(\''+sn+' atk\',\''+bonus+'\')" title="'+esc(entryText.slice(0,120))+'">'+'<span>'+parseEntry(item.name||'')+'</span>'+'<span class="qroll-val">'+(bonus>=0?'+':'')+bonus+'</span></div>'+dmgRow;}return'<div style="margin:4px 0"><span style="color:var(--ac);font-weight:bold;font-style:italic">'+parseEntry(item.name||'')+'</span> '+rEntries(item.entries)+'</div>';}).join('');}
 
   const actionsPanel = renderMonsterActionsPanel(data, tok);
-  const hpFrac=(tok.hpMax>0)?(tok.hpCurrent||0)/tok.hpMax:0;
   let html='<div style="font-size:11px;line-height:1.5">';
   if(size||typeStr||align)html+='<div style="font-size:10px;font-style:italic;color:var(--txd);margin-bottom:4px">'+esc([size,typeStr,align].filter(Boolean).join(', '))+'</div>';
   html+=HR;
@@ -158,10 +294,6 @@ function renderMonsterFullStats(data, tok) {
   html+=rSection(data.trait,'Traits');
   html+='<div style="margin-top:8px"><a href="/monsters.html" target="_blank" style="color:var(--ac);font-size:10px">📖 Full view →</a></div>';
   html+='</div>';
-  const dexMod=Math.floor(((data.dex||10)-10)/2);
-  const initProfBonus=(data.initiative&&data.initiative.proficiency===true)?getMonsterProfBonus(data.cr):0;
-  const initTotal=dexMod+initProfBonus+(data.initBonus||0);
-  const initStr=(initTotal>=0?'+':'')+initTotal;
   return `<div style="padding:2px 0 4px;display:flex;align-items:center;justify-content:space-between">
     <span style="font-size:12px;color:#ff9999;font-weight:bold">${esc(data.name||'Monster')}${tok&&tok.label?` <span style="color:var(--txd);font-weight:normal;font-size:11px">[${esc(tok.label)}]</span>`:''}</span>
     <div style="display:flex;gap:4px">
