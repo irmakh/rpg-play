@@ -43,8 +43,10 @@ function renderInitiativeTracker(showBadge) {
       const eTokAll = _findInitToken(e);
       const portrait = eTokAll?.portraitThumb || eTokAll?.portrait || null;
       const apiData  = _initCharData[e.id] || null;
-      const cur = apiData?.hpCurrent ?? eTokAll?.hpCurrent ?? null;
-      const max = apiData?.hpMax     ?? eTokAll?.hpMax     ?? null;
+      // Token HP is combat HP (updated by the HP panel); character sheet HP is stale during combat.
+      // Always prefer token HP; fall back to API data only when there is no map token.
+      const cur = eTokAll?.hpCurrent ?? apiData?.hpCurrent ?? null;
+      const max = eTokAll?.hpMax     ?? apiData?.hpMax     ?? null;
       const ac  = apiData?.ac        ?? eTokAll?.ac        ?? null;
       const showStats = !e.monsterId || isDM();
       const hpPct = (max > 0 && cur !== null) ? Math.max(0, Math.min(1, cur / max)) : 0;

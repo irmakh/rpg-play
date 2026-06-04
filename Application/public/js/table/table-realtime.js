@@ -219,9 +219,10 @@ async function _fetchInitCharData() {
       if (!r.ok) return;
       const c = await r.json();
       const d = c.data || {};
+      const rawCur = parseInt(d.hpcur), rawMax = parseInt(d.hpmax);
       next[e.id] = {
-        hpCurrent: parseInt(d.hpcur) || null,
-        hpMax:     parseInt(d.hpmax) || null,
+        hpCurrent: isNaN(rawCur) ? null : rawCur,
+        hpMax:     isNaN(rawMax) ? null : rawMax,
         ac:        d.ac != null && d.ac !== '' ? (parseInt(d.ac) || null) : null,
       };
     } catch {}
