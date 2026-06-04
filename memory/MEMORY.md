@@ -34,6 +34,7 @@
 - OpenAI (ChatGPT) added as third AI DM provider (session 54). Key stored as openaiApiKey (separate from openrouterApiKey). Provider tab added in setup, settings modal, change-model modal. Curated model list: gpt-4.1-mini (default), gpt-4.1, gpt-4.1-nano, gpt-4o, gpt-4o-mini, o4-mini, o3-mini.
 - Initiative system fully rewritten (session 60, FRONTEND_VERSION 85). Endpoints: GET /api/initiative; POST /api/initiative/entries (upsert by charId — players+monsters); PATCH /api/initiative/entries/:id (DM name/roll); PATCH /api/initiative/entries/:id/roll (roll only); DELETE /api/initiative/entries/:id; POST start/next/prev/end/clear/cleanup. Upsert uses ldb.getInitEntryByCharId (precise SQL, charId != '' so never matches monster/empty entries). CRITICAL: roll paths must send the TARGET character's charId, never the active-turn char — rollInitiativeFromPanel derives charId from live _sideQrollTokenId panel token (NOT _sideCharId which lags an async fetch, NOT getActiveTurnTokenId). _startCharInitRoll always POSTs charId. Player roll modal = #init-roll-modal (replaced window.prompt). SSE actions: updated/start/next/prev/end/clear. Old paths (/api/initiative/roll, /add, PUT /:id, PATCH /:id/roll) all removed.
 - Index-page initiative tracker (public/js/index/index-initiative.js, renderInitiativeTracker) masks monster entries for non-DM viewers: shows only the identifier (last word of e.name via initMonsterIdentifier helper) and hides edit/remove buttons on monster rows. DM (indexIsDM()) sees full names + buttons. Mirrors tokDisplayName fallback on the table. FRONTEND_VERSION 87.
+- Character stat real-time sync (AC/HP/speed) between index sheet and table tokens is fully bidirectional over SSE (session 62, FRONTEND_VERSION 88). Server: PUT /api/characters/:id syncs hpCurrent/hpMax/hpTemp/speed/ac to linked tokens + broadcasts token-updated; PUT /api/table/tokens/:id writes HP back to character hpcur/hpmax/hptemp + broadcasts characters updated. AC total lives in character data.ac. Frontend: table-hppanel.js _refreshHpPanel reads live tok.ac; table-realtime.js token-updated re-renders initiative, characters-updated re-fetches _fetchInitCharData when char is in initiative. Index autosaves on edit (debounced) and applies SSE via applyData+recalcAll.
 
 ## Key Facts — App Stack
 
@@ -85,5 +86,5 @@
 - Stories system: manual comic upload workflow. storiesdb.js (separate SQLite DB). Three screens: stories.html (dashboard), story-builder.html (panel editor with character cast multiselect by portrait), story-viewer.html (grid/strip + lightbox + cast strip). Password gate via POST /api/auth/verify-any accepts DM or any character password.
 ---
 
-*Last updated: 2026-06-04*
+*Last updated: 2026-06-05*
 *This file is the source of truth for persistent facts. Edit directly to update.*

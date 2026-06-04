@@ -80,6 +80,8 @@ function load({
         return makeEl();
       },
     },
+    // removeLoot() triggers an autosave; stub it so the unit test stays isolated.
+    scheduleAutoSave: () => {},
     String,
   });
 

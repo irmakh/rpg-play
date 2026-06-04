@@ -62,6 +62,9 @@ function closeHpPanel() {
 }
 function _refreshHpPanel(tok) {
   const hpPct = (tok.hpMax || 0) > 0 ? Math.max(0, Math.min(1, (tok.hpCurrent || 0) / tok.hpMax)) : 0;
+  // Prefer the token's live AC (kept current by SSE token-updated) over the cache
+  // fetched on panel open, so AC changes on the character sheet refresh in real time.
+  if (tok.ac != null) _hpPanelAc = tok.ac;
   const acEl = document.getElementById('hp-ac-display');
   if (acEl) acEl.textContent = _hpPanelAc != null ? _hpPanelAc : '—';
 

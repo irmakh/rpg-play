@@ -187,18 +187,33 @@ describe('PUT /api/characters/:id', () => {
     expect(res.status).toBe(400);
   });
 
-  it('syncs HP to linked table tokens on update', async () => {
+  it('syncs HP, speed and AC to linked table tokens on update', async () => {
     const { app, ldb } = makeApp();
     ldb.createCharacter('c1', { name: 'Fighter', dataJson: '{}', createdAt: new Date().toISOString() });
-    ldb.createTableToken('tok-1', { name: 'Fighter', linkedId: 'c1', hpCurrent: 10, hpMax: 10 });
+    ldb.createTableToken('tok-1', { name: 'Fighter', linkedId: 'c1', hpCurrent: 10, hpMax: 10, ac: 12 });
 
     await request(app).put('/api/characters/c1').send({
-      data: { name: 'Fighter', hpcur: '25', hpmax: '30', hptemp: '0', 'speed-base': '30' }
+      data: { name: 'Fighter', hpcur: '25', hpmax: '30', hptemp: '0', 'speed-base': '40', ac: '18' }
     });
 
     const tok = ldb.getTableToken('tok-1');
     expect(tok.hpCurrent).toBe(25);
     expect(tok.hpMax).toBe(30);
+    expect(tok.speed).toBe(40);
+    expect(tok.ac).toBe(18);
+  });
+
+  it('leaves token AC untouched when the character has no AC value', async () => {
+    const { app, ldb } = makeApp();
+    ldb.createCharacter('c1', { name: 'Rogue', dataJson: '{}', createdAt: new Date().toISOString() });
+    ldb.createTableToken('tok-1', { name: 'Rogue', linkedId: 'c1', hpCurrent: 8, hpMax: 8, ac: 15 });
+
+    await request(app).put('/api/characters/c1').send({
+      data: { name: 'Rogue', hpcur: '8', hpmax: '8', hptemp: '0', 'speed-base': '30' }
+    });
+
+    const tok = ldb.getTableToken('tok-1');
+    expect(tok.ac).toBe(15); // unchanged — no AC in the payload
   });
 
   it('requires correct password for a locked character', async () => {

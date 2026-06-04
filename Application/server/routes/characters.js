@@ -163,7 +163,11 @@ export default function register(app, ctx) {
             newSpeed = parseInt(String(data.speed || '30').replace(/[^0-9]/g, '')) || 30;
           }
           const newHpTemp = Math.max(0, parseInt(data.hptemp) || 0);
+          // data.ac holds the computed total (base + items + bonus). Sync it to the
+          // token so the table HP panel / initiative tracker reflect AC live over SSE.
+          const newAc = data.ac != null && data.ac !== '' ? (parseInt(data.ac) || null) : null;
           const updFields = { hpCurrent: newHpCur, hpMax: newHpMax, hpTemp: newHpTemp, speed: newSpeed };
+          if (newAc != null) updFields.ac = newAc;
           if (DB_PROVIDER === 'localdb') {
             for (const t of linkedTokens) {
               ldb.updateTableToken(t.id, updFields);

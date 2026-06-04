@@ -26,6 +26,14 @@ function load({ masterPw = '', tokens = [], initData = { entries: [], currentId:
     masterPw,
     tokens,
     initData,
+    // getActiveTurnTokenId() resolves the active entry then finds its token via
+    // _findInitToken (defined in table-realtime.js). Inject a faithful copy so the
+    // unit test exercises the real resolution path. It closes over the same `tokens`.
+    _findInitToken: (e) =>
+      tokens.find(t => t.initiativeId === e.id)
+      || (e.charId ? tokens.find(t => t.linkedId === e.charId && t.type !== 'monster') : null)
+      || (!e.monsterId ? tokens.find(t => t.name === e.name && t.type !== 'monster') : null)
+      || null,
     document: {
       getElementById: () => ({
         style: {}, textContent: '', display: '',
@@ -141,8 +149,10 @@ describe('tokDisplayName', () => {
   describe('as DM (masterPw set)', () => {
     const { tokDisplayName } = load({ masterPw: 'secret' });
 
-    it('returns full name for a monster', () => {
-      expect(tokDisplayName({ type: 'monster', name: 'Goblin A3', label: 'A3' })).toBe('Goblin A3');
+    it('returns the identifier (label) for a monster — full name shows only in the right-panel sheet', () => {
+      // Monsters are always masked on the token display, even for the DM; the full
+      // type/name is revealed in the right-panel character sheet, not here.
+      expect(tokDisplayName({ type: 'monster', name: 'Goblin A3', label: 'A3' })).toBe('A3');
     });
 
     it('returns full name for a character', () => {
@@ -261,7 +271,8 @@ describe('getActiveTurnTokenId', () => {
 
   it('returns the token id when a token matches currentId', () => {
     const { getActiveTurnTokenId } = load({
-      initData: { entries: [], currentId: 'init-1' },
+      // currentId points at an initiative entry; the token links to it via initiativeId.
+      initData: { entries: [{ id: 'init-1', charId: '', monsterId: 'm1' }], currentId: 'init-1' },
       tokens: [
         { id: 'tok-A', initiativeId: 'init-2' },
         { id: 'tok-B', initiativeId: 'init-1' },
@@ -291,7 +302,7 @@ describe('getActiveTurnTokenId', () => {
 
   it('returns first matching token when multiple tokens share the same initiativeId', () => {
     const { getActiveTurnTokenId } = load({
-      initData: { entries: [], currentId: 'init-1' },
+      initData: { entries: [{ id: 'init-1', charId: '', monsterId: 'm1' }], currentId: 'init-1' },
       tokens: [
         { id: 'tok-A', initiativeId: 'init-1' },
         { id: 'tok-B', initiativeId: 'init-1' },

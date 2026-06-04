@@ -16,6 +16,8 @@ function startSSE() {
           renderTokens(); renderSidePanel(); renderHpTable(); break;
         case 'token-updated':
           replaceToken(d.token); renderTokens(); renderSidePanel(); renderHpTable();
+          // Initiative HP bars read token HP first — keep them live on any token change.
+          renderInitiativeTracker();
           if (selectedTokenId === d.token.id) updateHpPanel(d.token);
           // Refresh side qroll if it was the active token (HP changed)
           if (d.token.id === getActiveTurnTokenId()) { _sideQrollTokenId = null; loadSideQroll(); }
@@ -72,6 +74,11 @@ function startSSE() {
         _sideQrollTokenId = null;
         loadSideQroll();
       }
+      // If the changed character is in initiative, re-fetch its HP/AC so the
+      // tracker reflects sheet edits live (AC comes from this cache, not the token).
+      const inInitiative = (initData.entries || []).some(e =>
+        e.charId === d.id || _findInitToken(e)?.linkedId === d.id);
+      if (inInitiative) _fetchInitCharData();
     },
     chat: (entry) => {
       if (entry.dmOnly && (typeof isDM !== 'function' || !isDM())) return;
