@@ -186,10 +186,46 @@ async function fetchAll() {
   } catch (err) { console.error(err); }
 }
 
+// Finds the map token for an initiative entry using all available links.
+// No cache lookups — uses live tokens array only.
+function _findInitToken(e) {
+  return tokens.find(t => t.initiativeId === e.id)
+    || (e.charId ? tokens.find(t => t.linkedId === e.charId && t.type !== 'monster') : null)
+    || (!e.monsterId ? tokens.find(t => t.name === e.name && t.type !== 'monster') : null)
+    || null;
+}
+
 async function fetchInitiative() {
   try {
     const res = await fetch('/api/initiative');
     if (!res.ok) return;
     initData = await res.json();
+    _fetchInitCharData();
   } catch {}
+}
+
+// Fetches HP/AC directly from character API for each player initiative entry.
+// Fires in the background — re-renders initiative when done.
+async function _fetchInitCharData() {
+  const playerEntries = (initData.entries || []).filter(e => !e.monsterId);
+  if (!playerEntries.length) { _initCharData = {}; return; }
+  const next = {};
+  await Promise.all(playerEntries.map(async (e) => {
+    const tok = _findInitToken(e);
+    const charId = e.charId || tok?.linkedId || '';
+    if (!charId || tok?.type === 'monster') return;
+    try {
+      const r = await fetch(`/api/characters/${charId}/qroll`);
+      if (!r.ok) return;
+      const c = await r.json();
+      const d = c.data || {};
+      next[e.id] = {
+        hpCurrent: parseInt(d.hpcur) || null,
+        hpMax:     parseInt(d.hpmax) || null,
+        ac:        d.ac != null && d.ac !== '' ? (parseInt(d.ac) || null) : null,
+      };
+    } catch {}
+  }));
+  _initCharData = next;
+  renderInitiativeTracker();
 }

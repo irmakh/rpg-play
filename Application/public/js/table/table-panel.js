@@ -273,10 +273,7 @@ async function loadSideQroll() {
   if (!targetId && _sideViewInitId) {
     const viewEntry = initData.entries?.find(e => e.id === _sideViewInitId);
     if (viewEntry) {
-      const viewTok = tokens.find(t => t.initiativeId === _sideViewInitId)
-        || (viewEntry.charId && !viewEntry.monsterId
-            ? tokens.find(t => t.linkedId === viewEntry.charId && t.type !== 'monster')
-            : null);
+      const viewTok = _findInitToken(viewEntry);
       targetId = viewTok?.id || null;
     } else {
       _sideViewInitId = null; // entry no longer exists

@@ -30,6 +30,7 @@ let shapeEditState = null;     // { mode:'move'|'h1'|'h2', startX, startY, origS
 let _drawPreviewTimer = null;  // throttle for live preview broadcast
 let _sidePrevTokenId = null;   // last token actually rendered in side panel (for section reset detection)
 const _sideOpenSections = new Set(); // tracks which qroll sections the user has expanded
+let _initCharData = {}; // entry id → { hpCurrent, hpMax, ac } fetched fresh from character API
 let chatUnread = 0;
 let fogRegions = [];   // [{ id, label, x, y, w, h, visible }]
 let hiddenItems = [];  // [{ id, label, type, x, y, description, visible }]

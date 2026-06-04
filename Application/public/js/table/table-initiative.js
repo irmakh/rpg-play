@@ -40,12 +40,12 @@ function renderInitiativeTracker(showBadge) {
 
     // ── Modern HUD: avatar card rows ──────────────────────────────────────
     if (document.body.dataset.theme === 'modern') {
-      const eTokAll = tokens.find(t => t.initiativeId === e.id)
-        || (e.charId ? tokens.find(t => t.linkedId === e.charId && t.type !== 'monster') : null);
+      const eTokAll = _findInitToken(e);
       const portrait = eTokAll?.portraitThumb || eTokAll?.portrait || null;
-      const cur = eTokAll?.hpCurrent ?? null;
-      const max = eTokAll?.hpMax ?? null;
-      const ac  = eTokAll?.ac ?? null;
+      const apiData  = _initCharData[e.id] || null;
+      const cur = apiData?.hpCurrent ?? eTokAll?.hpCurrent ?? null;
+      const max = apiData?.hpMax     ?? eTokAll?.hpMax     ?? null;
+      const ac  = apiData?.ac        ?? eTokAll?.ac        ?? null;
       const showStats = !e.monsterId || isDM();
       const hpPct = (max > 0 && cur !== null) ? Math.max(0, Math.min(1, cur / max)) : 0;
       const hpColor = hpBarColor(hpPct);

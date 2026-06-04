@@ -70,13 +70,9 @@ function hpBarColor(pct) {
 }
 function getActiveTurnTokenId() {
   if (!initData.currentId) return null;
-  const byInitId = tokens.find(t => t.initiativeId === initData.currentId);
-  if (byInitId) return byInitId.id;
-  // Player entries: charId → token.linkedId fallback (token placed before initiative was rolled)
   const entry = initData.entries?.find(e => e.id === initData.currentId);
-  if (entry?.charId && !entry.monsterId)
-    return tokens.find(t => t.linkedId === entry.charId && t.type !== 'monster')?.id || null;
-  return null;
+  if (!entry) return null;
+  return _findInitToken(entry)?.id || null;
 }
 function showStatus(msg, isErr) {
   // no status bar on this page, use console
