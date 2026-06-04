@@ -138,13 +138,15 @@ function initMusicPlayer() {
 
 // ── SSE handler (called by table-realtime.js for 'sound' channel) ─────────────
 function handleSoundEvent(d) {
-  // Popup owns the audio — only update local state vars, let popup handle playback
+  // Popup owns the audio — update state vars AND modal UI, but skip audio element
   if (_musicPopupWin && !_musicPopupWin.closed) {
     if (d.action === 'play') {
       _musicCurrentName     = d.name;
       _musicCurrentTrackIdx = d.trackIndex ?? 0;
       _musicPlaying         = true;
-      if (d.duration) _musicDuration = d.duration;
+      if (d.duration) { _musicDuration = d.duration; updateDurationDisplay(d.duration); }
+      updateNowPlaying(d.name, 'playing');
+      updateMusicBtn(true);
       if (sessionRole === 'dm' && d.playlistId) {
         const sel = document.getElementById('music-pl-sel');
         if (sel && sel.value !== d.playlistId) { sel.value = d.playlistId; loadMusicPlaylist(); }
@@ -152,12 +154,18 @@ function handleSoundEvent(d) {
       }
     } else if (d.action === 'pause') {
       _musicPlaying = false;
+      updateMusicBtn(false);
+      updateNowPlaying(_musicCurrentName, 'paused');
     } else if (d.action === 'stop') {
       _musicCurrentName = null; _musicPlaying = false;
       _musicCurrentTrackIdx = 0; _musicDuration = 0;
+      updateMusicBtn(false);
+      updateNowPlaying(null, null);
+      updateDurationDisplay(0);
       if (sessionRole === 'dm') renderMusicTrackList(null);
     } else if (d.action === 'duration') {
       _musicDuration = d.duration ?? 0;
+      updateDurationDisplay(_musicDuration);
     } else if (d.action === 'loopMode') {
       _musicLoopMode = d.loopMode || 'none';
       updateLoopBtns(_musicLoopMode);
@@ -310,9 +318,15 @@ function updateLoopBtns(mode) {
 
 // ── Modal ─────────────────────────────────────────────────────────────────────
 function openMusicModal() {
-  fetchMusicPlaylists().then(() => {
-    document.getElementById('music-modal').style.display = 'flex';
-  });
+  // Sync current playback state immediately before showing
+  updateMusicBtn(_musicPlaying);
+  const nowState = _musicPlaying ? 'playing' : (_musicCurrentName ? 'paused' : null);
+  updateNowPlaying(_musicCurrentName, nowState);
+  updateLoopBtns(_musicLoopMode);
+  if (_musicDuration) updateDurationDisplay(_musicDuration);
+  if (_musicCurrentPl) renderMusicTrackList(_musicCurrentTrackIdx);
+  document.getElementById('music-modal').style.display = 'flex';
+  fetchMusicPlaylists();
 }
 function closeMusicModal() {
   document.getElementById('music-modal').style.display = 'none';
@@ -423,6 +437,19 @@ function openMusicPopup() {
         loopMode: _musicLoopMode,
         duration: _musicDuration,
       });
+    } else if (d.type === 'progress') {
+      // Popup is playing — mirror its position into the modal and now-playing bar
+      if (!_musicSeeking) {
+        const sk = document.getElementById('now-playing-seek');
+        if (sk) { if (d.duration) sk.max = d.duration; sk.value = d.position; }
+        const msk = document.getElementById('music-seek');
+        if (msk) { if (d.duration) msk.max = d.duration; msk.value = d.position; }
+      }
+      const posEl = document.getElementById('now-playing-pos');
+      if (posEl) posEl.textContent = fmtTime(d.position);
+      const mpos = document.getElementById('music-pos');
+      if (mpos) mpos.textContent = fmtTime(d.position);
+      if (d.duration && d.duration !== _musicDuration) updateDurationDisplay(d.duration);
     } else if (d.type === 'closed') {
       _onMusicPopupClosed();
     }

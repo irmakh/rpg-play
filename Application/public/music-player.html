@@ -71,6 +71,7 @@
         posEl.textContent = fmt(audio.currentTime);
         const d = isFinite(audio.duration) ? audio.duration : _dur;
         if (d) durEl.textContent = fmt(d);
+        bc.postMessage({ type: 'progress', position: audio.currentTime, duration: d || _dur });
       }, 500);
     }
     function stopTick() { clearInterval(_tick); _tick = null; }
