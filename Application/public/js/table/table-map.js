@@ -728,14 +728,20 @@ function setTool(name) {
   document.querySelectorAll('[data-mstrip-tool]').forEach(b => {
     b.classList.toggle('active', b.dataset.mstripTool === name);
   });
-  overlayCanvas.style.cursor = (name === 'ruler' || name === 'draw' || name === 'multi') ? 'crosshair' : name === 'ping' ? 'cell' : name === 'pan' ? 'grab' : 'default';
+  overlayCanvas.style.cursor = (name === 'ruler' || name === 'multi') ? 'crosshair' : name === 'draw' ? (drawSubMode === 'select' ? 'default' : 'crosshair') : name === 'ping' ? 'cell' : name === 'pan' ? 'grab' : 'default';
   // Select and move modes: overlay transparent so token divs receive pointer events
   overlayCanvas.style.pointerEvents = (name === 'select' || name === 'move') ? 'none' : 'all';
   if (name !== 'ruler') { rulerState = null; oCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height); }
   if (name !== 'pan') { panState = null; }
-  if (name !== 'draw') { drawingState = null; }
+  if (name !== 'draw') { drawingState = null; selectedShapeId = null; shapeEditState = null; }
   if (name !== 'multi') { multiSelectState = null; }
   document.getElementById('draw-toolbar').style.display = name === 'draw' ? 'flex' : 'none';
+  if (name === 'draw') {
+    document.querySelectorAll('.draw-mode-btn').forEach(b => b.classList.remove('active'));
+    const modeBtn = document.getElementById('draw-submode-' + drawSubMode);
+    if (modeBtn) modeBtn.classList.add('active');
+    updateDrawSelectionUI();
+  }
 }
 
 // ── Multi-select rect preview ─────────────────────────────────────────────────
@@ -764,6 +770,10 @@ function setDrawShape(type) {
 
 function setDrawColor(color) {
   drawMode.color = color;
+  if (drawSubMode === 'select' && selectedShapeId) {
+    const s = drawings.find(sh => sh.id === selectedShapeId);
+    if (s) { s.color = color; renderDrawings(); renderShapeSelection(); patchDrawing(s); }
+  }
 }
 
 function setDrawThickness(n) {
@@ -771,6 +781,133 @@ function setDrawThickness(n) {
   document.querySelectorAll('.draw-thick-btn').forEach(b => b.classList.remove('active'));
   const btn = document.getElementById('draw-thick-' + n);
   if (btn) btn.classList.add('active');
+  if (drawSubMode === 'select' && selectedShapeId) {
+    const s = drawings.find(sh => sh.id === selectedShapeId);
+    if (s) { s.thickness = n; renderDrawings(); renderShapeSelection(); patchDrawing(s); }
+  }
+}
+
+function setDrawSubMode(mode) {
+  drawSubMode = mode;
+  document.querySelectorAll('.draw-mode-btn').forEach(b => b.classList.remove('active'));
+  const btn = document.getElementById('draw-submode-' + mode);
+  if (btn) btn.classList.add('active');
+  if (mode === 'draw') {
+    overlayCanvas.style.cursor = 'crosshair';
+    selectedShapeId = null;
+    shapeEditState = null;
+    oCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+  } else {
+    overlayCanvas.style.cursor = 'default';
+    renderShapeSelection();
+  }
+  updateDrawSelectionUI();
+}
+
+function updateDrawSelectionUI() {
+  const deleteBtn = document.getElementById('draw-delete-selected');
+  const s = selectedShapeId ? drawings.find(sh => sh.id === selectedShapeId) : null;
+  if (deleteBtn) deleteBtn.style.display = (s && drawSubMode === 'select') ? '' : 'none';
+  if (s) {
+    const colorIn = document.getElementById('draw-color');
+    if (colorIn) colorIn.value = s.color || '#ff4444';
+    document.querySelectorAll('.draw-thick-btn').forEach(b => b.classList.remove('active'));
+    const thickBtn = document.getElementById('draw-thick-' + s.thickness);
+    if (thickBtn) thickBtn.classList.add('active');
+  }
+}
+
+// ── Hit testing ───────────────────────────────────────────────────────────────
+function _ptSegDist(px, py, x1, y1, x2, y2) {
+  const dx = x2 - x1, dy = y2 - y1;
+  const lenSq = dx * dx + dy * dy;
+  if (lenSq === 0) return Math.hypot(px - x1, py - y1);
+  const t = Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / lenSq));
+  return Math.hypot(px - x1 - t * dx, py - y1 - t * dy);
+}
+
+function hitTestShape(s, px, py) {
+  const margin = Math.max(s.thickness || 2, 10);
+  if (s.type === 'line') {
+    return _ptSegDist(px, py, s.x1, s.y1, s.x2, s.y2) <= margin;
+  } else if (s.type === 'circle') {
+    const r = Math.sqrt((s.x2 - s.x1) ** 2 + (s.y2 - s.y1) ** 2);
+    const d = Math.hypot(px - s.x1, py - s.y1);
+    return d <= r + margin;
+  } else if (s.type === 'rect') {
+    const x = Math.min(s.x1, s.x2), y = Math.min(s.y1, s.y2);
+    const w = Math.abs(s.x2 - s.x1), h = Math.abs(s.y2 - s.y1);
+    return px >= x - margin && px <= x + w + margin && py >= y - margin && py <= y + h + margin;
+  }
+  return false;
+}
+
+function getShapeAtPoint(px, py) {
+  for (let i = drawings.length - 1; i >= 0; i--) {
+    if (hitTestShape(drawings[i], px, py)) return drawings[i];
+  }
+  return null;
+}
+
+function getHandleAtPoint(s, px, py) {
+  const HANDLE_R = 10;
+  if (Math.hypot(px - s.x1, py - s.y1) <= HANDLE_R) return 'h1';
+  if (Math.hypot(px - s.x2, py - s.y2) <= HANDLE_R) return 'h2';
+  return null;
+}
+
+// ── Selection rendering ───────────────────────────────────────────────────────
+function renderShapeSelection() {
+  oCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+  if (!selectedShapeId || drawSubMode !== 'select') return;
+  const s = drawings.find(sh => sh.id === selectedShapeId);
+  if (!s) return;
+  oCtx.save();
+  oCtx.strokeStyle = '#00e5ff';
+  oCtx.lineWidth = 1.5;
+  oCtx.setLineDash([5, 3]);
+  if (s.type === 'line') {
+    oCtx.beginPath(); oCtx.moveTo(s.x1, s.y1); oCtx.lineTo(s.x2, s.y2); oCtx.stroke();
+  } else if (s.type === 'circle') {
+    const r = Math.sqrt((s.x2 - s.x1) ** 2 + (s.y2 - s.y1) ** 2);
+    oCtx.beginPath(); oCtx.arc(s.x1, s.y1, r, 0, Math.PI * 2); oCtx.stroke();
+  } else if (s.type === 'rect') {
+    const x = Math.min(s.x1, s.x2), y = Math.min(s.y1, s.y2);
+    const w = Math.abs(s.x2 - s.x1), h = Math.abs(s.y2 - s.y1);
+    oCtx.strokeRect(x - 3, y - 3, w + 6, h + 6);
+  }
+  oCtx.setLineDash([]);
+  oCtx.fillStyle = '#00e5ff';
+  oCtx.strokeStyle = '#fff';
+  oCtx.lineWidth = 1.5;
+  for (const [hx, hy] of [[s.x1, s.y1], [s.x2, s.y2]]) {
+    oCtx.beginPath(); oCtx.arc(hx, hy, 6, 0, Math.PI * 2);
+    oCtx.fill(); oCtx.stroke();
+  }
+  oCtx.restore();
+}
+
+// ── Shape save/update/delete ──────────────────────────────────────────────────
+async function patchDrawing(shape) {
+  try {
+    await fetch(`/api/drawings/${shape.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(shape)
+    });
+  } catch {}
+}
+
+async function deleteSelectedShape() {
+  if (!selectedShapeId) return;
+  const id = selectedShapeId;
+  selectedShapeId = null;
+  shapeEditState = null;
+  drawings = drawings.filter(s => s.id !== id);
+  renderDrawings();
+  oCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+  updateDrawSelectionUI();
+  try { await fetch(`/api/drawings/${id}`, { method: 'DELETE' }); } catch {}
 }
 
 function renderShape(ctx, s, alpha = 1) {
@@ -915,7 +1052,30 @@ overlayCanvas.addEventListener('mousedown', e => {
     const grid = canvasToGrid(pos.x, pos.y);
     sendPing(grid.x, grid.y);
   } else if (currentTool === 'draw') {
-    drawingState = { x1: pos.x, y1: pos.y };
+    if (drawSubMode === 'select') {
+      const selShape = selectedShapeId ? drawings.find(s => s.id === selectedShapeId) : null;
+      if (selShape) {
+        const handle = getHandleAtPoint(selShape, pos.x, pos.y);
+        if (handle) {
+          shapeEditState = { mode: handle, startX: pos.x, startY: pos.y, origShape: { ...selShape } };
+          return;
+        }
+      }
+      const hit = getShapeAtPoint(pos.x, pos.y);
+      if (hit) {
+        selectedShapeId = hit.id;
+        shapeEditState = { mode: 'move', startX: pos.x, startY: pos.y, origShape: { ...hit } };
+        updateDrawSelectionUI();
+        renderShapeSelection();
+      } else {
+        selectedShapeId = null;
+        shapeEditState = null;
+        oCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+        updateDrawSelectionUI();
+      }
+    } else {
+      drawingState = { x1: pos.x, y1: pos.y };
+    }
   } else if (currentTool === 'multi') {
     multiSelectState = { x1: pos.x, y1: pos.y };
   }
@@ -951,19 +1111,46 @@ overlayCanvas.addEventListener('mousemove', e => {
     renderRuler(rulerState.x1, rulerState.y1, pos.x, pos.y);
   } else if (currentTool === 'multi' && multiSelectState) {
     renderMultiSelectRect(multiSelectState.x1, multiSelectState.y1, pos.x, pos.y);
-  } else if (currentTool === 'draw' && drawingState) {
-    const preview = { ...drawMode, x1: drawingState.x1, y1: drawingState.y1, x2: pos.x, y2: pos.y };
-    renderDrawPreview(preview);
-    // Throttled live broadcast to other clients
-    if (!_drawPreviewTimer) {
-      _drawPreviewTimer = setTimeout(() => {
-        _drawPreviewTimer = null;
-        fetch('/api/drawings/preview', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ shape: preview })
-        }).catch(() => {});
-      }, 50);
+  } else if (currentTool === 'draw') {
+    if (drawSubMode === 'select') {
+      if (shapeEditState) {
+        const dx = pos.x - shapeEditState.startX, dy = pos.y - shapeEditState.startY;
+        const os = shapeEditState.origShape;
+        const s = drawings.find(sh => sh.id === selectedShapeId);
+        if (s) {
+          if (shapeEditState.mode === 'move') {
+            s.x1 = os.x1 + dx; s.y1 = os.y1 + dy;
+            s.x2 = os.x2 + dx; s.y2 = os.y2 + dy;
+          } else if (shapeEditState.mode === 'h1') {
+            s.x1 = os.x1 + dx; s.y1 = os.y1 + dy;
+          } else {
+            s.x2 = os.x2 + dx; s.y2 = os.y2 + dy;
+          }
+          renderDrawings();
+          renderShapeSelection();
+        }
+      } else {
+        const selShape = selectedShapeId ? drawings.find(s => s.id === selectedShapeId) : null;
+        if (selShape && getHandleAtPoint(selShape, pos.x, pos.y)) {
+          overlayCanvas.style.cursor = 'grab';
+        } else {
+          overlayCanvas.style.cursor = getShapeAtPoint(pos.x, pos.y) ? 'move' : 'default';
+        }
+      }
+    } else if (drawingState) {
+      const preview = { ...drawMode, x1: drawingState.x1, y1: drawingState.y1, x2: pos.x, y2: pos.y };
+      renderDrawPreview(preview);
+      // Throttled live broadcast to other clients
+      if (!_drawPreviewTimer) {
+        _drawPreviewTimer = setTimeout(() => {
+          _drawPreviewTimer = null;
+          fetch('/api/drawings/preview', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ shape: preview })
+          }).catch(() => {});
+        }, 50);
+      }
     }
   }
 });
@@ -1043,17 +1230,27 @@ overlayCanvas.addEventListener('mouseup', e => {
         renderHpTable();
       }
     }
-  } else if (currentTool === 'draw' && drawingState) {
-    const pos = getCanvasPos(e);
-    const dx = pos.x - drawingState.x1, dy = pos.y - drawingState.y1;
-    // Ignore tiny accidental clicks (< 4px)
-    if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
-      const shape = { id: Math.random().toString(36).slice(2), ...drawMode, x1: drawingState.x1, y1: drawingState.y1, x2: pos.x, y2: pos.y };
-      saveDrawing(shape);
-    } else {
-      oCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+  } else if (currentTool === 'draw') {
+    if (drawSubMode === 'select' && shapeEditState) {
+      const pos = getCanvasPos(e);
+      const dx = pos.x - shapeEditState.startX, dy = pos.y - shapeEditState.startY;
+      if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
+        const s = drawings.find(sh => sh.id === selectedShapeId);
+        if (s) patchDrawing(s);
+      }
+      shapeEditState = null;
+    } else if (drawSubMode === 'draw' && drawingState) {
+      const pos = getCanvasPos(e);
+      const dx = pos.x - drawingState.x1, dy = pos.y - drawingState.y1;
+      // Ignore tiny accidental clicks (< 4px)
+      if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
+        const shape = { id: Math.random().toString(36).slice(2), ...drawMode, x1: drawingState.x1, y1: drawingState.y1, x2: pos.x, y2: pos.y };
+        saveDrawing(shape);
+      } else {
+        oCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+      }
+      drawingState = null;
     }
-    drawingState = null;
   }
 });
 

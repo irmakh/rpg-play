@@ -62,6 +62,9 @@
 
 <!-- Draw sub-toolbar (shown when draw tool active) -->
 <div id="draw-toolbar" style="display:none">
+  <button class="btn sm draw-mode-btn active" id="draw-submode-draw" onclick="setDrawSubMode('draw')" title="Draw new shapes">✏ Draw</button>
+  <button class="btn sm draw-mode-btn" id="draw-submode-select" onclick="setDrawSubMode('select')" title="Select, move and edit shapes">↖ Select</button>
+  <span class="draw-tb-sep"></span>
   <span class="draw-tb-label">Shape:</span>
   <button class="btn sm draw-shape-btn active" id="draw-shape-circle" onclick="setDrawShape('circle')">⭕ Circle</button>
   <button class="btn sm draw-shape-btn" id="draw-shape-rect" onclick="setDrawShape('rect')">▭ Rect</button>
@@ -72,6 +75,7 @@
   <button class="btn sm draw-thick-btn active" id="draw-thick-2" onclick="setDrawThickness(2)" title="Thin">—</button>
   <button class="btn sm draw-thick-btn" id="draw-thick-4" onclick="setDrawThickness(4)" title="Medium">━</button>
   <button class="btn sm draw-thick-btn" id="draw-thick-6" onclick="setDrawThickness(6)" title="Thick">▬</button>
+  <button id="draw-delete-selected" class="btn sm danger" onclick="deleteSelectedShape()" style="margin-left:10px;display:none" title="Delete selected shape">🗑 Delete</button>
   <button class="btn sm danger" onclick="clearDrawings()" style="margin-left:10px" title="Clear all drawings">🗑 Clear all</button>
   <span class="draw-tb-label" style="margin-left:auto;opacity:.6">ESC to exit</span>
 </div>

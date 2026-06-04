@@ -373,6 +373,10 @@ export function addDrawing(id, fields) {
   db.prepare('INSERT INTO map_drawings (id, type, x1, y1, x2, y2, color, thickness) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
     .run(id, fields.type || 'line', fields.x1 || 0, fields.y1 || 0, fields.x2 || 0, fields.y2 || 0, fields.color || '#ff4444', fields.thickness || 2);
 }
+export function updateDrawing(id, fields) {
+  db.prepare('UPDATE map_drawings SET type=?, x1=?, y1=?, x2=?, y2=?, color=?, thickness=? WHERE id=?')
+    .run(fields.type || 'line', fields.x1 || 0, fields.y1 || 0, fields.x2 || 0, fields.y2 || 0, fields.color || '#ff4444', fields.thickness || 2, id);
+}
 export function deleteDrawing(id) {
   db.prepare('DELETE FROM map_drawings WHERE id = ?').run(id);
 }

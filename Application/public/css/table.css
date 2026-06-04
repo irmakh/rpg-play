@@ -14,7 +14,8 @@ body{display:flex;flex-direction:column}
 #draw-toolbar{flex-shrink:0;display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:4px 10px;background:var(--bg3);border-bottom:1px solid var(--a44)}
 .draw-tb-label{font-size:11px;color:var(--txd)}
 #draw-color{width:30px;height:22px;border:1px solid var(--a55);border-radius:3px;background:none;cursor:pointer;padding:1px 2px}
-.draw-shape-btn.active,.draw-thick-btn.active{background:var(--ac);color:var(--bg);border-color:var(--ac)}
+.draw-shape-btn.active,.draw-thick-btn.active,.draw-mode-btn.active{background:var(--ac);color:var(--bg);border-color:var(--ac)}
+.draw-tb-sep{width:1px;height:18px;background:var(--a44);margin:0 2px;flex-shrink:0}
 #table-wrap{display:flex;flex:1;overflow:hidden;position:relative}
 #canvas-area{flex:1;overflow:auto;position:relative;background:#0a0a14;cursor:crosshair}
 

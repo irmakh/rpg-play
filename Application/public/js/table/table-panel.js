@@ -469,7 +469,16 @@ async function confirmRoll(type) {
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && document.getElementById('media-lightbox')) { lightboxClose(); return; }
   if (e.key === 'Escape' && placementState) { exitPlacementMode(); return; }
-  if (e.key === 'Escape' && currentTool === 'draw') { drawingState = null; oCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height); setTool('select'); return; }
+  if (e.key === 'Escape' && currentTool === 'draw') {
+    if (drawSubMode === 'select' && selectedShapeId) {
+      selectedShapeId = null; shapeEditState = null;
+      oCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+      if (typeof updateDrawSelectionUI === 'function') updateDrawSelectionUI();
+      return;
+    }
+    drawingState = null; selectedShapeId = null; shapeEditState = null;
+    oCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height); setTool('select'); return;
+  }
   if (e.key === 'Escape' && currentTool === 'multi') { multiSelectState = null; oCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height); return; }
   if (document.getElementById('dm-tools-modal')?.style.display === 'flex') {
     if (e.key === 'Escape') { closeDMToolsModal(); return; }
@@ -507,5 +516,8 @@ document.addEventListener('keydown', e => {
       e.preventDefault();
       deleteSelectedToken();
     }
+  }
+  if (currentTool === 'draw' && drawSubMode === 'select' && selectedShapeId) {
+    if (e.key === 'Delete') { e.preventDefault(); deleteSelectedShape(); }
   }
 });

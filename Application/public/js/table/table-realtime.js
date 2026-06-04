@@ -94,12 +94,24 @@ function startSSE() {
       } else if (d.action === 'preview') {
         // Show another client's in-progress shape on the overlay canvas
         if (currentTool !== 'draw') renderDrawPreview(d.shape);
+      } else if (d.action === 'update') {
+        const idx = drawings.findIndex(s => s.id === d.shape.id);
+        if (idx !== -1) drawings[idx] = d.shape;
+        renderDrawings();
       } else if (d.action === 'remove') {
+        if (selectedShapeId === d.id) {
+          selectedShapeId = null; shapeEditState = null;
+          oCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+          if (typeof updateDrawSelectionUI === 'function') updateDrawSelectionUI();
+        }
         drawings = drawings.filter(s => s.id !== d.id);
         renderDrawings();
       } else if (d.action === 'clear') {
+        selectedShapeId = null; shapeEditState = null;
         drawings = [];
         renderDrawings();
+        oCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+        if (typeof updateDrawSelectionUI === 'function') updateDrawSelectionUI();
       }
     },
     'dice-roll': (d) => {

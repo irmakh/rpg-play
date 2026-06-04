@@ -211,6 +211,16 @@ export default function register(app, ctx) {
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
   });
 
+  app.patch('/api/drawings/:id', (req, res) => {
+    try {
+      const { type, x1, y1, x2, y2, color, thickness } = req.body || {};
+      const shape = { id: req.params.id, type: String(type||'line'), x1: +x1||0, y1: +y1||0, x2: +x2||0, y2: +y2||0, color: String(color||'#ff4444').slice(0,20), thickness: Math.max(1, Math.min(20, +thickness||2)) };
+      if (DB_PROVIDER === 'localdb') ldb.updateDrawing(req.params.id, shape);
+      broadcast('drawing', { action: 'update', shape });
+      res.json({ ok: true });
+    } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
+  });
+
   app.delete('/api/drawings/:id', (req, res) => {
     try {
       if (DB_PROVIDER === 'localdb') ldb.deleteDrawing(req.params.id);
