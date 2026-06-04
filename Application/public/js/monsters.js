@@ -186,7 +186,7 @@ async function submitAddToInit() {
   const roll = d20 + bonus;
   const errEl = document.getElementById('init-modal-err');
   try {
-    const res = await fetch('/api/initiative/add', {
+    const res = await fetch('/api/initiative/entries', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Master-Password': masterPw },
       body: JSON.stringify({ name: nameOverride, roll, monsterId: m.id })

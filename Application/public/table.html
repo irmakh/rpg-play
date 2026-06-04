@@ -92,6 +92,7 @@
       </div>
       <div class="lp-body open" id="init-body-wrap">
         <div class="init-panel-btns">
+          <button class="dice-btn" onclick="openInitRollModal()" title="Roll your initiative">🎲 Roll</button>
           <div class="dm-controls" style="display:none;display:contents">
             <button class="dice-btn" id="btn-init-start" onclick="startInitiative()" style="display:none">▶ Start</button>
             <button class="dice-btn" id="btn-init-end" onclick="endInitiative()" style="display:none">⏹ End</button>
@@ -415,6 +416,26 @@
         <button class="btn danger" style="width:100%" onclick="clearAllTokens()">🗑 Clear All Tokens</button>
       </div>
 
+    </div>
+  </div>
+</div>
+
+<!-- Player initiative roll modal -->
+<div id="init-roll-modal" style="position:fixed;inset:0;background:var(--ov);display:none;align-items:center;justify-content:center;z-index:2500" onclick="closeInitRollModal()">
+  <div style="background:var(--bg2);border:1px solid var(--a55);border-radius:8px;padding:16px 20px;min-width:220px;max-width:280px" onclick="event.stopPropagation()">
+    <div style="font-weight:bold;font-size:13px;margin-bottom:12px">🎲 Roll Initiative</div>
+    <div style="margin-bottom:8px">
+      <div style="font-size:10px;color:var(--txd);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Name</div>
+      <input id="init-roll-name" type="text" style="width:100%;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:4px;padding:5px 7px;font-size:12px;box-sizing:border-box" placeholder="Your name">
+    </div>
+    <div style="margin-bottom:10px">
+      <div style="font-size:10px;color:var(--txd);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Initiative Bonus</div>
+      <input id="init-roll-bonus" type="number" value="0" style="width:80px;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:4px;padding:5px 7px;font-size:12px" oninput="_updateInitRollPreview()">
+    </div>
+    <div id="init-roll-preview" style="font-size:11px;color:var(--txd);margin-bottom:12px;text-align:center">1d20 + 0</div>
+    <div style="display:flex;gap:6px">
+      <button class="btn sm" onclick="confirmInitRoll()" style="flex:1;font-weight:bold">Roll</button>
+      <button class="btn sm" onclick="closeInitRollModal()" style="flex:1">Cancel</button>
     </div>
   </div>
 </div>

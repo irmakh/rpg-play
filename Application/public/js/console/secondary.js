@@ -984,7 +984,7 @@ async function sRollMyInitiative() {
   const bonus = parseInt(prompt('Initiative bonus:', '0')) || 0;
   const roll  = Math.ceil(Math.random() * 20) + bonus;
   try {
-    await fetch('/api/initiative/roll', {
+    await fetch('/api/initiative/entries', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: name.trim(), roll }),
     });
@@ -995,7 +995,7 @@ async function sRemoveInitEntry(id) {
   const entry = sInitData.entries?.find(e => e.id === id);
   if (!entry || !confirm(`Remove "${entry.name}"?`)) return;
   try {
-    await fetch(`/api/initiative/${id}`, {
+    await fetch(`/api/initiative/entries/${id}`, {
       method: 'DELETE', headers: { 'Content-Type': 'application/json', 'X-Master-Password': masterPw },
       body: JSON.stringify({}),
     });
@@ -1008,12 +1008,12 @@ async function sRollTokenInit() {
   const existing = sInitData.entries.find(e => e.id === tok.initiativeId);
   try {
     if (existing) {
-      await fetch(`/api/initiative/${tok.initiativeId}/roll`, {
+      await fetch(`/api/initiative/entries/${tok.initiativeId}/roll`, {
         method: 'PATCH', headers: { 'Content-Type': 'application/json', 'X-Master-Password': masterPw },
         body: JSON.stringify({ roll }),
       });
     } else {
-      const res = await fetch('/api/initiative/add', {
+      const res = await fetch('/api/initiative/entries', {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Master-Password': masterPw },
         body: JSON.stringify({ name: tok.name, roll, monsterId: tok.linkedId || '' }),
       });

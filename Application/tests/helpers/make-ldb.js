@@ -123,6 +123,10 @@ export function makeLdb() {
   function getInitEntry_byCharId(charId) {
     return db.prepare('SELECT * FROM initiative_entries WHERE charId = ?').get(charId) || null;
   }
+  function getInitEntryByCharId(charId) {
+    if (!charId) return null;
+    return db.prepare("SELECT * FROM initiative_entries WHERE charId = ? AND charId != '' LIMIT 1").get(String(charId)) || null;
+  }
 
   // ── table state ────────────────────────────────────────────────────────────
   function getTableState() {
@@ -182,7 +186,7 @@ export function makeLdb() {
     listMedia, createMedia, setPortrait, getMediaById, deleteMedia,
     // initiative
     listInitEntries, getInitEntry, createInitEntry, updateInitEntry, deleteInitEntry,
-    listOrphanMonsterInitEntries, clearInitEntries, getInitState, setInitState, getInitEntry_byCharId,
+    listOrphanMonsterInitEntries, clearInitEntries, getInitState, setInitState, getInitEntry_byCharId, getInitEntryByCharId,
     // table state
     getTableState, updateTableState,
     // table tokens

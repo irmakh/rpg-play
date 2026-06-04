@@ -303,7 +303,7 @@ function rollTokenInitiative() {
   if (tok.type === 'monster') {
     openGroupInitModal(tok, null);
   } else {
-    _startMonsterInitRoll(tok);
+    _startCharInitRoll(tok);
   }
 }
 
@@ -326,14 +326,14 @@ function _startMonsterInitRoll(tok) {
     afterRoll: async (total) => {
       try {
         if (existingEntry) {
-          const res = await fetch(`/api/initiative/${tokInitId}/roll`, {
+          const res = await fetch(`/api/initiative/entries/${tokInitId}/roll`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json', 'X-Master-Password': masterPw },
             body: JSON.stringify({ roll: total })
           });
           if (!res.ok) return showToast('Failed to update initiative.', true);
         } else {
-          const res = await fetch('/api/initiative/add', {
+          const res = await fetch('/api/initiative/entries', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-Master-Password': masterPw },
             body: JSON.stringify({ name: tokName, roll: total, monsterId: tokLinkedId || '' })
@@ -349,6 +349,36 @@ function _startMonsterInitRoll(tok) {
             patchToken(tokId, { initiativeId: data.id });
           }
         }
+        const updatedTok = tokens.find(t => t.id === tokId);
+        if (updatedTok && selectedTokenId === tokId) _refreshHpPanel(updatedTok);
+      } catch { showToast('Connection error.', true); }
+    }
+  };
+  const lbl = document.getElementById('adv-label');
+  if (lbl) lbl.textContent = 'Roll: Initiative';
+  document.getElementById('adv-modal').style.display = 'flex';
+}
+
+// Roll initiative for a player/NPC character token (not a monster).
+// Always POSTs charId + name: the server upserts by charId (one entry per character)
+// and re-links the map token so the entry shows the correct portrait / HP / AC.
+function _startCharInitRoll(tok) {
+  const tokId = tok.id, tokCharId = tok.linkedId || '';
+  const d = qrollData && _sideQrollTokenId === tokId ? qrollData : {};
+  const initBonus = (parseInt(d['init']) || 0) + (parseInt(d['init-bonus']) || 0);
+  rollPending = {
+    label: 'Initiative',
+    modifier: initBonus,
+    dmOnlyChat: true,
+    skipDiceBroadcast: true,
+    afterRoll: async (total) => {
+      try {
+        const res = await fetch('/api/initiative/entries', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Master-Password': masterPw },
+          body: JSON.stringify({ name: tok.name, roll: total, charId: tokCharId })
+        });
+        if (!res.ok) return showToast('Failed to roll initiative.', true);
         const updatedTok = tokens.find(t => t.id === tokId);
         if (updatedTok && selectedTokenId === tokId) _refreshHpPanel(updatedTok);
       } catch { showToast('Connection error.', true); }
@@ -497,13 +527,13 @@ async function _applyMonsterInitRoll(tok, roll) {
   const existingEntry = initData.entries.find(e => e.id === tok.initiativeId);
   try {
     if (existingEntry) {
-      await fetch(`/api/initiative/${tok.initiativeId}/roll`, {
+      await fetch(`/api/initiative/entries/${tok.initiativeId}/roll`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', 'X-Master-Password': masterPw },
         body: JSON.stringify({ roll })
       });
     } else {
-      const res = await fetch('/api/initiative/add', {
+      const res = await fetch('/api/initiative/entries', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Master-Password': masterPw },
         body: JSON.stringify({ name: tok.name, roll, monsterId: tok.linkedId || '' })

@@ -240,7 +240,7 @@ async function submitAddNpc() {
   const roll = Math.ceil(Math.random() * 20) + bonus;
   errEl.textContent = '';
   try {
-    const res = await fetch('/api/initiative/add', {
+    const res = await fetch('/api/initiative/entries', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Master-Password': masterPw },
       body: JSON.stringify({ name, roll, monsterId: pendingInitMonsterId || '' })
@@ -322,8 +322,8 @@ async function submitEdit() {
   if (!name) { errEl.textContent = 'Name required.'; return; }
   if (isNaN(roll)) { errEl.textContent = 'Invalid roll.'; return; }
   try {
-    const res = await fetch(`/api/initiative/${editingId}`, {
-      method: 'PUT',
+    const res = await fetch(`/api/initiative/entries/${editingId}`, {
+      method: 'PATCH',
       headers: { 'Content-Type': 'application/json', 'X-Master-Password': masterPw },
       body: JSON.stringify({ name, roll })
     });
@@ -338,7 +338,7 @@ async function deleteEntry(id) {
   const e = initDataMap[id];
   if (!e || !confirm(`Remove "${e.name}" from initiative?`)) return;
   try {
-    const res = await fetch(`/api/initiative/${id}`, {
+    const res = await fetch(`/api/initiative/entries/${id}`, {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json', 'X-Master-Password': masterPw },
       body: JSON.stringify({})

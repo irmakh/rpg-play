@@ -336,6 +336,12 @@ export function listInitEntries() {
 export function getInitEntry(id) {
   return db.prepare('SELECT * FROM initiative_entries WHERE id = ?').get(id) || null;
 }
+// Find a player's entry by their character id. Only matches non-empty charIds,
+// so monster/name-only entries (charId='') can never be matched by accident.
+export function getInitEntryByCharId(charId) {
+  if (!charId) return null;
+  return db.prepare("SELECT * FROM initiative_entries WHERE charId = ? AND charId != '' LIMIT 1").get(String(charId)) || null;
+}
 export function createInitEntry(id, fields) {
   db.prepare('INSERT INTO initiative_entries (id, name, roll, charId, monsterId, createdAt) VALUES (?, ?, ?, ?, ?, ?)')
     .run(id, fields.name || '', fields.roll || 0, fields.charId || '', fields.monsterId || '', fields.createdAt || new Date().toISOString());

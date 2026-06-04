@@ -1,6 +1,7 @@
 export default function register(app, ctx) {
   const { ldb, idb, DB_PROVIDER, genId, masterAuth, charAuth, broadcast } = ctx;
 
+  // GET /api/initiative — fetch all entries + current state
   app.get('/api/initiative', async (req, res) => {
     try {
       let entries, state;
@@ -16,57 +17,134 @@ export default function register(app, ctx) {
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
   });
 
-  app.post('/api/initiative', async (req, res) => {
+  // POST /api/initiative/entries — add or upsert an initiative entry
+  // - monsters: require DM auth
+  // - players (charId, no monsterId): DM or matching character auth
+  // - does NOT touch currentId (mid-combat adds keep current turn)
+  app.post('/api/initiative/entries', async (req, res) => {
     try {
       const { name, roll, charId, monsterId } = req.body || {};
       if (!name || roll === undefined) return res.status(400).json({ error: 'name and roll required' });
-      const newId = genId();
-      const fields = { name: String(name).trim(), roll: parseInt(roll), charId: charId || '', monsterId: monsterId || '', createdAt: new Date().toISOString() };
-      if (DB_PROVIDER === 'localdb') {
-        ldb.createInitEntry(newId, fields);
-      } else {
-        await idb.transact([idb.tx.initiativeEntries[newId].update(fields)]);
+
+      const isMaster = masterAuth(req);
+
+      if (monsterId) {
+        if (!isMaster) return res.status(401).json({ error: 'Unauthorized' });
+      } else if (charId) {
+        if (!isMaster) {
+          const status = await charAuth(charId, req);
+          if (status !== 200) return res.status(status).json({ error: 'Unauthorized' });
+        }
       }
-      broadcast('initiative', { action: 'roll' });
-      res.json({ id: newId, ok: true });
+
+      // Upsert by charId: one entry per character. Matches ONLY this character's
+      // entry (non-empty charId), so it can never update another combatant's row.
+      let entryId = null;
+      if (charId) {
+        let existing;
+        if (DB_PROVIDER === 'localdb') {
+          existing = ldb.getInitEntryByCharId(String(charId));
+        } else {
+          const all = (await idb.query({ initiativeEntries: {} })).initiativeEntries || [];
+          existing = all.find(e => e.charId && e.charId === String(charId));
+        }
+        if (existing) entryId = existing.id;
+      }
+
+      if (entryId) {
+        if (DB_PROVIDER === 'localdb') {
+          ldb.updateInitEntry(entryId, { roll: parseInt(roll), name: String(name).trim() });
+        } else {
+          await idb.transact([idb.tx.initiativeEntries[entryId].update({ roll: parseInt(roll), name: String(name).trim() })]);
+        }
+        if (charId) _linkTokenToInitEntry(entryId, String(charId));
+      } else {
+        entryId = genId();
+        const fields = {
+          name: String(name).trim(),
+          roll: parseInt(roll),
+          charId: charId || '',
+          monsterId: monsterId || '',
+          createdAt: new Date().toISOString()
+        };
+        if (DB_PROVIDER === 'localdb') {
+          ldb.createInitEntry(entryId, fields);
+        } else {
+          await idb.transact([idb.tx.initiativeEntries[entryId].update(fields)]);
+        }
+        if (charId) _linkTokenToInitEntry(entryId, String(charId));
+      }
+
+      broadcast('initiative', { action: 'updated' });
+      res.json({ id: entryId, ok: true });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
   });
 
-  app.put('/api/initiative/:id', async (req, res) => {
+  // PATCH /api/initiative/entries/:id — general update (name and/or roll), DM only
+  app.patch('/api/initiative/entries/:id', async (req, res) => {
     try {
-      const { name, roll, charId } = req.body || {};
-      const isMaster = masterAuth(req);
-      if (!isMaster) {
-        if (!charId) return res.status(401).json({ error: 'Unauthorized' });
-        const status = await charAuth(charId, req);
-        if (status !== 200) return res.status(status).json({ error: 'Unauthorized' });
-        const entry = DB_PROVIDER === 'localdb' ? ldb.getInitEntry(req.params.id) : (await idb.query({ initiativeEntries: { $: { where: { id: req.params.id } } } })).initiativeEntries?.[0];
-        if (!entry || entry.charId !== charId) return res.status(403).json({ error: 'Forbidden' });
-      }
+      if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
+      const { name, roll } = req.body || {};
       const update = {};
-      if (name !== undefined) update.name = String(name);
+      if (name !== undefined) update.name = String(name).trim();
       if (roll !== undefined) update.roll = parseInt(roll);
+      if (Object.keys(update).length === 0) return res.status(400).json({ error: 'No fields to update' });
       if (DB_PROVIDER === 'localdb') {
         ldb.updateInitEntry(req.params.id, update);
       } else {
         await idb.transact([idb.tx.initiativeEntries[req.params.id].update(update)]);
       }
-      broadcast('initiative', { action: 'edit' });
+      broadcast('initiative', { action: 'updated' });
       res.json({ ok: true });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
   });
 
-  app.delete('/api/initiative/:id', async (req, res) => {
+  // PATCH /api/initiative/entries/:id/roll — update roll value for an entry
+  app.patch('/api/initiative/entries/:id/roll', async (req, res) => {
     try {
-      const { charId } = req.body || {};
-      const isMaster = masterAuth(req);
-      if (!isMaster) {
-        if (!charId) return res.status(401).json({ error: 'Unauthorized' });
-        const status = await charAuth(charId, req);
-        if (status !== 200) return res.status(status).json({ error: 'Unauthorized' });
-        const entry = DB_PROVIDER === 'localdb' ? ldb.getInitEntry(req.params.id) : (await idb.query({ initiativeEntries: { $: { where: { id: req.params.id } } } })).initiativeEntries?.[0];
-        if (!entry || entry.charId !== charId) return res.status(403).json({ error: 'Forbidden' });
+      const { roll } = req.body || {};
+      if (roll === undefined) return res.status(400).json({ error: 'roll required' });
+
+      let entry;
+      if (DB_PROVIDER === 'localdb') {
+        entry = ldb.getInitEntry(req.params.id);
+      } else {
+        entry = (await idb.query({ initiativeEntries: { $: { where: { id: req.params.id } } } })).initiativeEntries?.[0];
       }
+      if (!entry) return res.status(404).json({ error: 'Not found' });
+
+      // Monsters: DM only. Player entries (no monsterId): anyone can update their own roll.
+      const isMaster = masterAuth(req);
+      if (!isMaster && entry.monsterId) return res.status(401).json({ error: 'Unauthorized' });
+
+      if (DB_PROVIDER === 'localdb') {
+        ldb.updateInitEntry(req.params.id, { roll: parseInt(roll) });
+      } else {
+        await idb.transact([idb.tx.initiativeEntries[req.params.id].update({ roll: parseInt(roll) })]);
+      }
+      broadcast('initiative', { action: 'updated' });
+      res.json({ ok: true });
+    } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
+  });
+
+  // DELETE /api/initiative/entries/:id — remove an entry; auto-advance if it was the active turn
+  app.delete('/api/initiative/entries/:id', async (req, res) => {
+    try {
+      const isMaster = masterAuth(req);
+      let entry;
+      if (DB_PROVIDER === 'localdb') {
+        entry = ldb.getInitEntry(req.params.id);
+      } else {
+        entry = (await idb.query({ initiativeEntries: { $: { where: { id: req.params.id } } } })).initiativeEntries?.[0];
+      }
+      if (!entry) return res.status(404).json({ error: 'Not found' });
+
+      if (!isMaster) {
+        if (!entry.charId) return res.status(401).json({ error: 'Unauthorized' });
+        const status = await charAuth(entry.charId, req);
+        if (status !== 200) return res.status(status).json({ error: 'Unauthorized' });
+      }
+
       if (DB_PROVIDER === 'localdb') {
         const state = ldb.getInitState();
         const wasCurrentTurn = state.currentId === req.params.id;
@@ -93,85 +171,12 @@ export default function register(app, ctx) {
           await idb.transact([idb.tx.initiativeState[stateId].update({ currentId: nextId })]);
         }
       }
-      broadcast('initiative', { action: 'delete' });
+      broadcast('initiative', { action: 'updated' });
       res.json({ ok: true });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
   });
 
-  app.post('/api/initiative/next', async (req, res) => {
-    try {
-      let entries, state, stateId;
-      if (DB_PROVIDER === 'localdb') {
-        entries = ldb.listInitEntries();
-        state   = ldb.getInitState();
-        stateId = state.id;
-      } else {
-        const result = await idb.query({ initiativeEntries: {}, initiativeState: {} });
-        entries = (result.initiativeEntries || []).sort((a, b) => (b.roll || 0) - (a.roll || 0));
-        state   = result.initiativeState?.[0];
-        stateId = state?.id || genId();
-      }
-      if (entries.length === 0) return res.json({ ok: true });
-      const idx    = state?.currentId ? entries.findIndex(e => e.id === state.currentId) : -1;
-      const nextId = entries[(idx + 1) % entries.length].id;
-      if (DB_PROVIDER === 'localdb') {
-        ldb.setInitState(nextId);
-      } else {
-        await idb.transact([idb.tx.initiativeState[stateId].update({ currentId: nextId })]);
-      }
-      try {
-        const tokList = DB_PROVIDER === 'localdb' ? ldb.getTableTokensByInitId(nextId) : (await idb.query({ tableTokens: { $: { where: { initiativeId: nextId } } } })).tableTokens || [];
-        if (tokList.length > 0) {
-          if (DB_PROVIDER === 'localdb') {
-            for (const t of tokList) { ldb.updateTableToken(t.id, { movedFt: 0 }); broadcast('table', { action: 'token-updated', token: { ...t, movedFt: 0 } }); }
-          } else {
-            await idb.transact(tokList.map(t => idb.tx.tableTokens[t.id].update({ movedFt: 0 })));
-            for (const t of tokList) broadcast('table', { action: 'token-updated', token: { ...t, movedFt: 0 } });
-          }
-        }
-      } catch {}
-      broadcast('initiative', { action: 'next' });
-      res.json({ ok: true });
-    } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
-  });
-
-  app.post('/api/initiative/prev', async (req, res) => {
-    try {
-      let entries, state, stateId;
-      if (DB_PROVIDER === 'localdb') {
-        entries = ldb.listInitEntries();
-        state   = ldb.getInitState();
-        stateId = state.id;
-      } else {
-        const result = await idb.query({ initiativeEntries: {}, initiativeState: {} });
-        entries = (result.initiativeEntries || []).sort((a, b) => (b.roll || 0) - (a.roll || 0));
-        state   = result.initiativeState?.[0];
-        stateId = state?.id || genId();
-      }
-      if (entries.length === 0) return res.json({ ok: true });
-      const idx    = state?.currentId ? entries.findIndex(e => e.id === state.currentId) : 0;
-      const prevId = entries[(idx - 1 + entries.length) % entries.length].id;
-      if (DB_PROVIDER === 'localdb') {
-        ldb.setInitState(prevId);
-      } else {
-        await idb.transact([idb.tx.initiativeState[stateId].update({ currentId: prevId })]);
-      }
-      try {
-        const tokList = DB_PROVIDER === 'localdb' ? ldb.getTableTokensByInitId(prevId) : (await idb.query({ tableTokens: { $: { where: { initiativeId: prevId } } } })).tableTokens || [];
-        if (tokList.length > 0) {
-          if (DB_PROVIDER === 'localdb') {
-            for (const t of tokList) { ldb.updateTableToken(t.id, { movedFt: 0 }); broadcast('table', { action: 'token-updated', token: { ...t, movedFt: 0 } }); }
-          } else {
-            await idb.transact(tokList.map(t => idb.tx.tableTokens[t.id].update({ movedFt: 0 })));
-            for (const t of tokList) broadcast('table', { action: 'token-updated', token: { ...t, movedFt: 0 } });
-          }
-        }
-      } catch {}
-      broadcast('initiative', { action: 'prev' });
-      res.json({ ok: true });
-    } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
-  });
-
+  // POST /api/initiative/start — DM starts combat; sets currentId to highest-roll entry
   app.post('/api/initiative/start', async (req, res) => {
     try {
       if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
@@ -198,6 +203,64 @@ export default function register(app, ctx) {
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
   });
 
+  // POST /api/initiative/next — advance to next turn; resets movedFt for incoming token
+  app.post('/api/initiative/next', async (req, res) => {
+    try {
+      let entries, state, stateId;
+      if (DB_PROVIDER === 'localdb') {
+        entries = ldb.listInitEntries();
+        state   = ldb.getInitState();
+        stateId = state.id;
+      } else {
+        const result = await idb.query({ initiativeEntries: {}, initiativeState: {} });
+        entries = (result.initiativeEntries || []).sort((a, b) => (b.roll || 0) - (a.roll || 0));
+        state   = result.initiativeState?.[0];
+        stateId = state?.id || genId();
+      }
+      if (entries.length === 0) return res.json({ ok: true });
+      const idx    = state?.currentId ? entries.findIndex(e => e.id === state.currentId) : -1;
+      const nextId = entries[(idx + 1) % entries.length].id;
+      if (DB_PROVIDER === 'localdb') {
+        ldb.setInitState(nextId);
+      } else {
+        await idb.transact([idb.tx.initiativeState[stateId].update({ currentId: nextId })]);
+      }
+      _resetMovedFt(nextId);
+      broadcast('initiative', { action: 'next' });
+      res.json({ ok: true });
+    } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
+  });
+
+  // POST /api/initiative/prev — go to previous turn; resets movedFt for incoming token
+  app.post('/api/initiative/prev', async (req, res) => {
+    try {
+      if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
+      let entries, state, stateId;
+      if (DB_PROVIDER === 'localdb') {
+        entries = ldb.listInitEntries();
+        state   = ldb.getInitState();
+        stateId = state.id;
+      } else {
+        const result = await idb.query({ initiativeEntries: {}, initiativeState: {} });
+        entries = (result.initiativeEntries || []).sort((a, b) => (b.roll || 0) - (a.roll || 0));
+        state   = result.initiativeState?.[0];
+        stateId = state?.id || genId();
+      }
+      if (entries.length === 0) return res.json({ ok: true });
+      const idx    = state?.currentId ? entries.findIndex(e => e.id === state.currentId) : 0;
+      const prevId = entries[(idx - 1 + entries.length) % entries.length].id;
+      if (DB_PROVIDER === 'localdb') {
+        ldb.setInitState(prevId);
+      } else {
+        await idb.transact([idb.tx.initiativeState[stateId].update({ currentId: prevId })]);
+      }
+      _resetMovedFt(prevId);
+      broadcast('initiative', { action: 'prev' });
+      res.json({ ok: true });
+    } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
+  });
+
+  // POST /api/initiative/end — DM ends combat; clears currentId
   app.post('/api/initiative/end', async (req, res) => {
     try {
       if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
@@ -213,6 +276,7 @@ export default function register(app, ctx) {
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
   });
 
+  // POST /api/initiative/clear — DM clears all entries and resets state
   app.post('/api/initiative/clear', async (req, res) => {
     try {
       if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
@@ -232,75 +296,7 @@ export default function register(app, ctx) {
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
   });
 
-  // POST /api/initiative/roll — player (or DM for a char) submits their roll; upserts by charId
-  app.post('/api/initiative/roll', async (req, res) => {
-    try {
-      const { name, roll, charId } = req.body || {};
-      if (!name || roll === undefined) return res.status(400).json({ error: 'name and roll required' });
-      let existingId = null;
-      if (charId) {
-        const all = DB_PROVIDER === 'localdb' ? ldb.listInitEntries()
-          : (await idb.query({ initiativeEntries: {} })).initiativeEntries || [];
-        const existing = all.find(e => e.charId === String(charId));
-        if (existing) existingId = existing.id;
-      }
-      if (existingId) {
-        if (DB_PROVIDER === 'localdb') {
-          ldb.updateInitEntry(existingId, { roll: parseInt(roll), name: String(name).trim() });
-        } else {
-          await idb.transact([idb.tx.initiativeEntries[existingId].update({ roll: parseInt(roll), name: String(name).trim() })]);
-        }
-        broadcast('initiative', { action: 'edit' });
-        // Re-link token in case it was placed after the entry was created
-        if (charId) _linkTokenToInitEntry(existingId, String(charId));
-        return res.json({ id: existingId, ok: true });
-      }
-      const newId = genId();
-      const fields = { name: String(name).trim(), roll: parseInt(roll), charId: charId || '', monsterId: '', createdAt: new Date().toISOString() };
-      if (DB_PROVIDER === 'localdb') {
-        ldb.createInitEntry(newId, fields);
-      } else {
-        await idb.transact([idb.tx.initiativeEntries[newId].update(fields)]);
-      }
-      broadcast('initiative', { action: 'roll' });
-      if (charId) _linkTokenToInitEntry(newId, String(charId));
-      res.json({ id: newId, ok: true });
-    } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
-  });
-
-  // Helper: set initiativeId on map tokens that are linked to a character id
-  function _linkTokenToInitEntry(entryId, charId) {
-    if (!charId || !entryId) return;
-    try {
-      if (DB_PROVIDER === 'localdb') {
-        const toks = ldb.listTableTokens().filter(t => t.linkedId === charId && t.type !== 'monster');
-        for (const tok of toks) {
-          ldb.updateTableToken(tok.id, { initiativeId: entryId });
-          broadcast('table', { action: 'token-updated', token: { ...tok, initiativeId: entryId } });
-        }
-      }
-      // idb path: not implemented (localdb is the primary provider)
-    } catch {}
-  }
-
-  // POST /api/initiative/add — DM-only, creates a monster initiative entry
-  app.post('/api/initiative/add', async (req, res) => {
-    try {
-      if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
-      const { name, roll, monsterId } = req.body || {};
-      if (!name || roll === undefined) return res.status(400).json({ error: 'name and roll required' });
-      const newId = genId();
-      const fields = { name: String(name).trim(), roll: parseInt(roll), charId: '', monsterId: monsterId || '', createdAt: new Date().toISOString() };
-      if (DB_PROVIDER === 'localdb') {
-        ldb.createInitEntry(newId, fields);
-      } else {
-        await idb.transact([idb.tx.initiativeEntries[newId].update(fields)]);
-      }
-      broadcast('initiative', { action: 'roll' });
-      res.json({ id: newId, ok: true });
-    } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
-  });
-
+  // POST /api/initiative/cleanup — DM utility: remove orphaned monster entries
   app.post('/api/initiative/cleanup', async (req, res) => {
     try {
       if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
@@ -315,30 +311,41 @@ export default function register(app, ctx) {
         if (orphans.length > 0) await idb.transact(orphans.map(e => idb.tx.initiativeEntries[e.id].delete()));
         removed = orphans.length;
       }
-      broadcast('initiative', { action: 'reload' });
+      broadcast('initiative', { action: 'updated' });
       res.json({ ok: true, removed });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
   });
 
-  app.patch('/api/initiative/:id/roll', async (req, res) => {
+  // ── Private helpers ───────────────────────────────────────────────────────────
+
+  // Link map tokens for a character to the given initiative entry
+  function _linkTokenToInitEntry(entryId, charId) {
+    if (!charId || !entryId || DB_PROVIDER !== 'localdb') return;
     try {
-      const { roll } = req.body || {};
-      if (roll === undefined) return res.status(400).json({ error: 'roll required' });
-      let entry;
-      if (DB_PROVIDER === 'localdb') {
-        entry = ldb.getInitEntry(req.params.id);
-      } else {
-        entry = (await idb.query({ initiativeEntries: { $: { where: { id: req.params.id } } } })).initiativeEntries?.[0];
+      const toks = ldb.listTableTokens().filter(t => t.linkedId === charId && t.type !== 'monster');
+      for (const tok of toks) {
+        ldb.updateTableToken(tok.id, { initiativeId: entryId });
+        broadcast('table', { action: 'token-updated', token: { ...tok, initiativeId: entryId } });
       }
-      if (!entry) return res.status(404).json({ error: 'Not found' });
-      if (entry.monsterId && !masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
+    } catch {}
+  }
+
+  // Reset movedFt to 0 for all tokens linked to the given initiative entry
+  async function _resetMovedFt(entryId) {
+    try {
+      const tokList = DB_PROVIDER === 'localdb'
+        ? ldb.getTableTokensByInitId(entryId)
+        : (await idb.query({ tableTokens: { $: { where: { initiativeId: entryId } } } })).tableTokens || [];
+      if (tokList.length === 0) return;
       if (DB_PROVIDER === 'localdb') {
-        ldb.updateInitEntry(req.params.id, { roll: parseInt(roll) });
+        for (const t of tokList) {
+          ldb.updateTableToken(t.id, { movedFt: 0 });
+          broadcast('table', { action: 'token-updated', token: { ...t, movedFt: 0 } });
+        }
       } else {
-        await idb.transact([idb.tx.initiativeEntries[req.params.id].update({ roll: parseInt(roll) })]);
+        await idb.transact(tokList.map(t => idb.tx.tableTokens[t.id].update({ movedFt: 0 })));
+        for (const t of tokList) broadcast('table', { action: 'token-updated', token: { ...t, movedFt: 0 } });
       }
-      broadcast('initiative', { action: 'edit' });
-      res.json({ ok: true });
-    } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
-  });
+    } catch {}
+  }
 }

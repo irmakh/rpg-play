@@ -90,7 +90,7 @@ async function submitInitiativeRoll(total, name) {
   try {
     const headers = { 'Content-Type': 'application/json' };
     if (charPasswords[currentCharId]) headers['X-Character-Password'] = charPasswords[currentCharId];
-    await fetch('/api/initiative/roll', {
+    await fetch('/api/initiative/entries', {
       method: 'POST', headers,
       body: JSON.stringify({ charId: currentCharId, name, roll: total })
     });
@@ -117,7 +117,7 @@ async function submitInitNpc() {
   const roll = Math.ceil(Math.random() * 20) + bonus;
   errEl.textContent = '';
   try {
-    const res = await fetch('/api/initiative/add', {
+    const res = await fetch('/api/initiative/entries', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Master-Password': pw },
       body: JSON.stringify({ name, roll })

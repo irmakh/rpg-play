@@ -417,23 +417,25 @@ function rollInitiativeFromPanel() {
   const d = qrollData || {};
   // init = dex mod + item bonuses; init-bonus = manual bonus — always add both
   const modifier = (parseInt(d['init']) || 0) + (parseInt(d['init-bonus']) || 0);
-  const activeTokId = getActiveTurnTokenId();
-  const selNonMon = selectedTokenId && tokens.find(t => t.id === selectedTokenId && t.type !== 'monster') ? selectedTokenId : null;
-  const panelNonMon = _sideQrollTokenId && tokens.find(t => t.id === _sideQrollTokenId && t.type !== 'monster') ? _sideQrollTokenId : null;
-  const targetId = activeTokId
-    || selNonMon
-    || panelNonMon
-    || (sessionCharId ? tokens.find(t => t.linkedId === sessionCharId && t.type !== 'monster')?.id : null);
-  const tok = targetId ? tokens.find(t => t.id === targetId) : null;
+  // Roll for the character whose sheet is displayed in THIS side panel.
+  // Derive the charId from the live panel token (_sideQrollTokenId is set
+  // synchronously) rather than _sideCharId, which is only assigned after an
+  // async fetch and can briefly lag behind the displayed token.
+  const panelTok = _sideQrollTokenId ? tokens.find(t => t.id === _sideQrollTokenId) : null;
+  const charId = (panelTok && panelTok.type !== 'monster') ? (panelTok.linkedId || _sideCharId || '') : (_sideCharId || '');
+  const name   = qrollCharName || panelTok?.name || '';
   rollPending = {
     label: 'Initiative',
     modifier,
-    afterRoll: tok?.linkedId ? async (total) => {
+    afterRoll: charId ? async (total) => {
       try {
-        await fetch('/api/initiative/roll', {
+        const hdrs = { 'Content-Type': 'application/json' };
+        if (masterPw) hdrs['X-Master-Password'] = masterPw;
+        else if (sessionCharPw) hdrs['X-Character-Password'] = sessionCharPw;
+        await fetch('/api/initiative/entries', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ charId: tok.linkedId, name: qrollCharName || tok.name, roll: total })
+          headers: hdrs,
+          body: JSON.stringify({ charId, name, roll: total })
         });
       } catch {}
     } : null

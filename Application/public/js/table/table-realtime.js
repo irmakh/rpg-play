@@ -45,8 +45,10 @@ function startSSE() {
     initiative: async (d) => {
       const prevCurrentId = initData.currentId;
       await fetchInitiative();
-      // On turn advance or initiative start/end/clear, release manual view selection
-      if (d?.action === 'next' || d?.action === 'start' || d?.action === 'end' || d?.action === 'clear') {
+      // On turn advance or initiative start/end/clear, release manual view selection.
+      // 'updated' (add/edit/delete entries) intentionally keeps the selection — so
+      // clicking to view a combatant persists when someone re-rolls mid-combat.
+      if (['next', 'start', 'end', 'clear'].includes(d?.action)) {
         _sideViewInitId = null;
       }
       // Only invalidate the side panel cache if the active turn actually changed

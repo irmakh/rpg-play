@@ -32,6 +32,7 @@
 - table.html/table.css/table.js: left sidebar layout (240px #left-panel) — Initiative, Chat, Token/HP sections. No floating panels. Both sidebars have toolbar toggle buttons.
 - table.js has been split into 12 modules under Application/public/js/table/ (commit e4bc4b9). The monolithic file no longer exists. table.html loads the 12 files in order via defer script tags.
 - OpenAI (ChatGPT) added as third AI DM provider (session 54). Key stored as openaiApiKey (separate from openrouterApiKey). Provider tab added in setup, settings modal, change-model modal. Curated model list: gpt-4.1-mini (default), gpt-4.1, gpt-4.1-nano, gpt-4o, gpt-4o-mini, o4-mini, o3-mini.
+- Initiative system fully rewritten (session 60, FRONTEND_VERSION 85). Endpoints: GET /api/initiative; POST /api/initiative/entries (upsert by charId — players+monsters); PATCH /api/initiative/entries/:id (DM name/roll); PATCH /api/initiative/entries/:id/roll (roll only); DELETE /api/initiative/entries/:id; POST start/next/prev/end/clear/cleanup. Upsert uses ldb.getInitEntryByCharId (precise SQL, charId != '' so never matches monster/empty entries). CRITICAL: roll paths must send the TARGET character's charId, never the active-turn char — rollInitiativeFromPanel derives charId from live _sideQrollTokenId panel token (NOT _sideCharId which lags an async fetch, NOT getActiveTurnTokenId). _startCharInitRoll always POSTs charId. Player roll modal = #init-roll-modal (replaced window.prompt). SSE actions: updated/start/next/prev/end/clear. Old paths (/api/initiative/roll, /add, PUT /:id, PATCH /:id/roll) all removed.
 
 ## Key Facts — App Stack
 
@@ -83,5 +84,5 @@
 - Stories system: manual comic upload workflow. storiesdb.js (separate SQLite DB). Three screens: stories.html (dashboard), story-builder.html (panel editor with character cast multiselect by portrait), story-viewer.html (grid/strip + lightbox + cast strip). Password gate via POST /api/auth/verify-any accepts DM or any character password.
 ---
 
-*Last updated: 2026-05-30*
+*Last updated: 2026-06-04*
 *This file is the source of truth for persistent facts. Edit directly to update.*
