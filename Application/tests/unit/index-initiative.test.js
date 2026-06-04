@@ -32,7 +32,7 @@ function extractFunctions(src, ...names) {
   }).join('\n');
 }
 
-const FN_SRC = extractFunctions(SRC, 'renderInitiativeTracker');
+const FN_SRC = extractFunctions(SRC, 'initMonsterIdentifier', 'renderInitiativeTracker');
 
 /**
  * Load renderInitiativeTracker into a fresh vm context.
@@ -42,7 +42,7 @@ const FN_SRC = extractFunctions(SRC, 'renderInitiativeTracker');
  *
  * Returns { render, listEl, badgeEl } where listEl.innerHTML is set by render().
  */
-function load(initData, collapsed = true) {
+function load(initData, collapsed = true, isDM = false) {
   const listEl  = { innerHTML: '' };
   const badgeEl = { style: { display: 'none' } };
 
@@ -50,6 +50,7 @@ function load(initData, collapsed = true) {
     initData,
     initTrackerCollapsed: collapsed,
     initDataMap: {},
+    indexIsDM: () => isDM,
     // Simple HTML-escaping so names appear verbatim (no special chars in test data)
     esc: (s) => String(s || ''),
     document: {
@@ -121,14 +122,16 @@ describe('renderInitiativeTracker — monster filtering', () => {
   it('shows monster entries when currentId is set (combat is active)', () => {
     const { render, listEl } = load({
       entries: [
-        { id: 'e1', name: 'Aria',   roll: 18, monsterId: '' },
-        { id: 'e2', name: 'Goblin', roll: 12, monsterId: 'mon-1' },
+        { id: 'e1', name: 'Aria',     roll: 18, monsterId: '' },
+        { id: 'e2', name: 'Goblin G7', roll: 12, monsterId: 'mon-1' },
       ],
       currentId: 'e1',
     });
     render();
     expect(listEl.innerHTML).toContain('Aria');
-    expect(listEl.innerHTML).toContain('Goblin');
+    // Monster is visible during combat but only its identifier shows for players
+    expect(listEl.innerHTML).toContain('G7');
+    expect(listEl.innerHTML).not.toContain('Goblin');
   });
 
   it('PC and NPC entries (empty monsterId) are always visible', () => {
@@ -137,6 +140,60 @@ describe('renderInitiativeTracker — monster filtering', () => {
       currentId: null,
     });
     render();
+    expect(listEl.innerHTML).toContain('Innkeeper Bob');
+  });
+});
+
+// ── monster name masking (player vs DM) ───────────────────────────────────────
+describe('renderInitiativeTracker — monster name masking', () => {
+  it('shows only the identifier (last word) of a monster, hiding the type, for players', () => {
+    const { render, listEl } = load({
+      entries: [{ id: 'e1', name: 'Ancient Red Dragon D3', roll: 20, monsterId: 'm1' }],
+      currentId: 'e1',
+    });
+    render();
+    expect(listEl.innerHTML).toContain('D3');
+    expect(listEl.innerHTML).not.toContain('Ancient Red Dragon');
+    expect(listEl.innerHTML).not.toContain('Dragon');
+  });
+
+  it('hides edit/remove buttons on monster rows for players', () => {
+    const { render, listEl } = load({
+      entries: [{ id: 'e1', name: 'Goblin A', roll: 12, monsterId: 'm1' }],
+      currentId: 'e1',
+    });
+    render();
+    expect(listEl.innerHTML).not.toContain('openInitEditModal');
+    expect(listEl.innerHTML).not.toContain('deleteInitEntry');
+  });
+
+  it('shows the real monster name to the DM', () => {
+    const { render, listEl } = load(
+      { entries: [{ id: 'e1', name: 'Goblin A', roll: 12, monsterId: 'm1' }], currentId: 'e1' },
+      true,  // collapsed
+      true   // isDM
+    );
+    render();
+    expect(listEl.innerHTML).toContain('Goblin A');
+  });
+
+  it('keeps edit/remove buttons on monster rows for the DM', () => {
+    const { render, listEl } = load(
+      { entries: [{ id: 'e1', name: 'Goblin A', roll: 12, monsterId: 'm1' }], currentId: 'e1' },
+      true, true
+    );
+    render();
+    expect(listEl.innerHTML).toContain('openInitEditModal');
+    expect(listEl.innerHTML).toContain('deleteInitEntry');
+  });
+
+  it('never masks player/NPC entries (empty monsterId)', () => {
+    const { render, listEl } = load({
+      entries: [{ id: 'e1', name: 'Innkeeper Bob', roll: 5, monsterId: '' }],
+      currentId: null,
+    });
+    render();
+    // Full name preserved — not reduced to its last word ("Bob")
     expect(listEl.innerHTML).toContain('Innkeeper Bob');
   });
 });
@@ -178,20 +235,21 @@ describe('renderInitiativeTracker — active turn marker', () => {
   it('the active entry gets the init-cur class', () => {
     const { render, listEl } = load({
       entries: [
-        { id: 'e1', name: 'Aria',   roll: 18, monsterId: '' },
-        { id: 'e2', name: 'Goblin', roll: 10, monsterId: 'mon-1' },
+        { id: 'e1', name: 'Aria',      roll: 18, monsterId: '' },
+        { id: 'e2', name: 'Goblin G9', roll: 10, monsterId: 'mon-1' },
       ],
       currentId: 'e1',
     });
     render();
-    // The row containing 'Aria' should have init-cur; Goblin's should not
+    // The row containing 'Aria' should have init-cur; the monster's should not.
+    // The monster type is masked to its identifier ('G9') for players, so match on that.
     // Split on the opening tag; check for ' init-cur"' (space+class+quote) to
     // avoid false matches on the always-present "init-cur-marker" class.
     const rows = listEl.innerHTML.split('<div class="init-row');
-    const ariaRow   = rows.find(r => r.includes('Aria'));
-    const goblinRow = rows.find(r => r.includes('Goblin'));
+    const ariaRow    = rows.find(r => r.includes('Aria'));
+    const monsterRow = rows.find(r => r.includes('G9'));
     expect(ariaRow).toContain(' init-cur"');
-    expect(goblinRow).not.toContain(' init-cur"');
+    expect(monsterRow).not.toContain(' init-cur"');
   });
 
   it('the active marker ▶ appears only on the current entry', () => {

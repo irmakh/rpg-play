@@ -46,6 +46,13 @@ function initTogglePanel() {
   }
 }
 
+// Player-facing identifier for a monster initiative entry: the auto-generated tag
+// appended to the type (the last word of the name). Mirrors tokDisplayName's fallback.
+function initMonsterIdentifier(name) {
+  const parts = String(name || '').trim().split(/\s+/);
+  return parts[parts.length - 1] || String(name || '');
+}
+
 function renderInitiativeTracker(showBadge = false) {
   const list = document.getElementById('init-tracker-list');
   if (!list) return;
@@ -60,14 +67,25 @@ function renderInitiativeTracker(showBadge = false) {
   }
   initDataMap = {};
   sorted.forEach(e => { initDataMap[e.id] = e; });
+  const dm = indexIsDM();
   list.innerHTML = sorted.map(e => {
     const isCur = e.id === initData.currentId;
+    // Players must never see a monster's type — show only its identifier (the last
+    // word of the name, e.g. "Goblin A" → "A"), matching the table token display.
+    // DM sees the real name.
+    const displayName = (e.monsterId && !dm) ? initMonsterIdentifier(e.name) : e.name;
+    // Monster rows are DM-only to edit/remove; hide the buttons (the edit modal would
+    // otherwise reveal the real monster name) for players.
+    const canEdit = dm || !e.monsterId;
+    const editBtns = canEdit
+      ? `<button class="sk-roll-btn" onclick="openInitEditModal('${e.id}')" title="Edit">✎</button>
+      <button class="del-btn" onclick="deleteInitEntry('${e.id}')" title="Remove">✕</button>`
+      : '';
     return `<div class="init-row${isCur ? ' init-cur' : ''}">
       <span class="init-cur-marker">${isCur ? '▶' : ''}</span>
-      <span class="init-row-name">${esc(e.name)}</span>
+      <span class="init-row-name">${esc(displayName)}</span>
       <span class="init-row-roll">${e.roll}</span>
-      <button class="sk-roll-btn" onclick="openInitEditModal('${e.id}')" title="Edit">✎</button>
-      <button class="del-btn" onclick="deleteInitEntry('${e.id}')" title="Remove">✕</button>
+      ${editBtns}
     </div>`;
   }).join('');
 }
