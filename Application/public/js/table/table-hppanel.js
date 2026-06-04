@@ -38,6 +38,9 @@ async function openHpPanel(tok) {
           const c = await r.json();
           const ac = (c.data || {}).ac;
           _hpPanelAc = ac != null && ac !== '' ? (parseInt(ac) || null) : null;
+          // Cache AC on the token so initiative panel can display it
+          const liveTok = tokens.find(t => t.id === tok.id);
+          if (liveTok && _hpPanelAc != null) { liveTok.ac = _hpPanelAc; renderInitiativeTracker(); }
         }
       }
     } catch {}

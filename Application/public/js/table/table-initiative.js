@@ -40,7 +40,8 @@ function renderInitiativeTracker(showBadge) {
 
     // ── Modern HUD: avatar card rows ──────────────────────────────────────
     if (document.body.dataset.theme === 'modern') {
-      const eTokAll = tokens.find(t => t.initiativeId === e.id);
+      const eTokAll = tokens.find(t => t.initiativeId === e.id)
+        || (e.charId ? tokens.find(t => t.linkedId === e.charId && t.type !== 'monster') : null);
       const portrait = eTokAll?.portraitThumb || eTokAll?.portrait || null;
       const cur = eTokAll?.hpCurrent ?? null;
       const max = eTokAll?.hpMax ?? null;
@@ -108,7 +109,7 @@ async function rollMyInitiative() {
     await fetch('/api/initiative/roll', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: name.trim(), roll })
+      body: JSON.stringify({ name: name.trim(), roll, charId: sessionCharId || '' })
     });
   } catch { showToast('Failed to roll initiative.', true); }
 }

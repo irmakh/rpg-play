@@ -273,7 +273,10 @@ async function loadSideQroll() {
   if (!targetId && _sideViewInitId) {
     const viewEntry = initData.entries?.find(e => e.id === _sideViewInitId);
     if (viewEntry) {
-      const viewTok = tokens.find(t => t.initiativeId === _sideViewInitId);
+      const viewTok = tokens.find(t => t.initiativeId === _sideViewInitId)
+        || (viewEntry.charId && !viewEntry.monsterId
+            ? tokens.find(t => t.linkedId === viewEntry.charId && t.type !== 'monster')
+            : null);
       targetId = viewTok?.id || null;
     } else {
       _sideViewInitId = null; // entry no longer exists
@@ -418,7 +421,12 @@ function rollInitiativeFromPanel() {
   // init = dex mod + item bonuses; init-bonus = manual bonus — always add both
   const modifier = (parseInt(d['init']) || 0) + (parseInt(d['init-bonus']) || 0);
   const activeTokId = getActiveTurnTokenId();
-  const targetId = activeTokId || (!initData.currentId ? selectedTokenId : null);
+  const selNonMon = selectedTokenId && tokens.find(t => t.id === selectedTokenId && t.type !== 'monster') ? selectedTokenId : null;
+  const panelNonMon = _sideQrollTokenId && tokens.find(t => t.id === _sideQrollTokenId && t.type !== 'monster') ? _sideQrollTokenId : null;
+  const targetId = activeTokId
+    || selNonMon
+    || panelNonMon
+    || (sessionCharId ? tokens.find(t => t.linkedId === sessionCharId && t.type !== 'monster')?.id : null);
   const tok = targetId ? tokens.find(t => t.id === targetId) : null;
   rollPending = {
     label: 'Initiative',

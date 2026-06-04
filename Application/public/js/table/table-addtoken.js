@@ -153,7 +153,7 @@ async function submitAddToken() {
     // Fetch char data for HP/speed
     const char = _charList.find(c => c.id === _pendingTokenLinkedId);
     const name = char?.name || 'Character';
-    let hpMax = 10, hpCur = 10, hpTemp = 0, speed = 30;
+    let hpMax = 10, hpCur = 10, hpTemp = 0, speed = 30, charAc = null;
     try {
       const res = await fetch(`/api/characters/${_pendingTokenLinkedId}`, {
         headers: masterPw ? { 'X-Character-Password': masterPw } : {}
@@ -163,6 +163,7 @@ async function submitAddToken() {
         hpMax = parseInt(cdata.data?.hpmax) || 10;
         hpCur = parseInt(cdata.data?.hpcur) || hpMax;
         hpTemp = Math.max(0, parseInt(cdata.data?.hptemp) || 0);
+        const rawAc = cdata.data?.ac; charAc = rawAc != null && rawAc !== '' ? (parseInt(rawAc) || null) : null;
         if (cdata.data?.['speed-base'] !== undefined) {
           // speed-base is raw; add equipped item bonuses
           let charItems = [];
@@ -189,7 +190,7 @@ async function submitAddToken() {
     const initEntry = initData.entries.find(e => e.charId === _pendingTokenLinkedId);
     payload = {
       name, type: _pendingTokenType || 'character', linkedId: _pendingTokenLinkedId,
-      hpCurrent: hpCur, hpMax, hpTemp, speed,
+      hpCurrent: hpCur, hpMax, hpTemp, speed, ac: charAc,
       color: _pendingTokenType === 'npc' ? '#7ec8e3' : '#c8a04a',
       initiativeId: initEntry?.id || '',
       portrait, portraitThumb,

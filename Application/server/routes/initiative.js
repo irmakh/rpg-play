@@ -251,6 +251,8 @@ export default function register(app, ctx) {
           await idb.transact([idb.tx.initiativeEntries[existingId].update({ roll: parseInt(roll), name: String(name).trim() })]);
         }
         broadcast('initiative', { action: 'edit' });
+        // Re-link token in case it was placed after the entry was created
+        if (charId) _linkTokenToInitEntry(existingId, String(charId));
         return res.json({ id: existingId, ok: true });
       }
       const newId = genId();
@@ -261,9 +263,25 @@ export default function register(app, ctx) {
         await idb.transact([idb.tx.initiativeEntries[newId].update(fields)]);
       }
       broadcast('initiative', { action: 'roll' });
+      if (charId) _linkTokenToInitEntry(newId, String(charId));
       res.json({ id: newId, ok: true });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
   });
+
+  // Helper: set initiativeId on map tokens that are linked to a character id
+  function _linkTokenToInitEntry(entryId, charId) {
+    if (!charId || !entryId) return;
+    try {
+      if (DB_PROVIDER === 'localdb') {
+        const toks = ldb.listTableTokens().filter(t => t.linkedId === charId && t.type !== 'monster');
+        for (const tok of toks) {
+          ldb.updateTableToken(tok.id, { initiativeId: entryId });
+          broadcast('table', { action: 'token-updated', token: { ...tok, initiativeId: entryId } });
+        }
+      }
+      // idb path: not implemented (localdb is the primary provider)
+    } catch {}
+  }
 
   // POST /api/initiative/add — DM-only, creates a monster initiative entry
   app.post('/api/initiative/add', async (req, res) => {
