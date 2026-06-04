@@ -150,6 +150,17 @@ input:focus,select:focus{outline:none;border-color:var(--ac)}
 .chat-new-badge{background:var(--err);color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;margin-left:6px;font-weight:bold}
 #chat-bar.chat-drop-over{border-top-color:var(--ac);outline:2px dashed var(--ac);outline-offset:-2px}
 #chat-bar.chat-drop-over .chat-log::after{content:'Drop image to share';position:sticky;bottom:0;display:block;text-align:center;padding:8px;color:var(--ac);font-size:11px;pointer-events:none}
+/* ── Resize handles ── */
+.resize-handle-v{width:4px;flex-shrink:0;cursor:col-resize;background:transparent;z-index:10;position:relative;transition:background .15s}
+.resize-handle-v::after{content:'';position:absolute;inset:0 -4px}
+.resize-handle-v:hover,.resize-handle-v.rh-active{background:rgba(200,160,74,.55)}
+.resize-handle-h{height:5px;flex-shrink:0;cursor:row-resize;background:transparent;z-index:10;position:relative;transition:background .15s}
+.resize-handle-h::after{content:'';position:absolute;inset:-4px 0}
+.resize-handle-h:hover,.resize-handle-h.rh-active{background:rgba(200,160,74,.55)}
+/* Modal drag handle cursor */
+.modal-drag-handle{cursor:grab;user-select:none}
+.modal-drag-handle:active{cursor:grabbing}
+
 /* upload progress bar */
 #chat-upload-bar{padding:4px 0 2px}
 #chat-upload-bar .chat-upload-info{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--txd);margin-bottom:4px}

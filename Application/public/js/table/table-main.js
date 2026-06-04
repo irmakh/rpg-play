@@ -49,6 +49,136 @@ function renderSidePanel() {
   }
 }
 
+// ── Zoom float position sync (call after panel resize or open/close) ──────────
+function updateZoomFloat() {
+  const zf = document.getElementById('zoom-float');
+  const rp = document.getElementById('side-panel');
+  if (!zf || !rp) return;
+  const isModern = document.body.dataset.theme === 'modern';
+  const panelHidden = rp.style.display === 'none';
+  const panelClosed = isModern && !rp.classList.contains('rp-open');
+  zf.style.right = (panelHidden || panelClosed ? 12 : rp.offsetWidth + 12) + 'px';
+}
+
+// ── Resizable panels ──────────────────────────────────────────────────────────
+function _isModernTheme() { return document.body.dataset.theme === 'modern'; }
+
+function initResizablePanels() {
+  // Left panel
+  const lp = document.getElementById('left-panel');
+  const rhL = document.getElementById('rh-left');
+  if (lp && rhL) {
+    const saved = localStorage.getItem('tbl_lpW');
+    if (saved) {
+      document.documentElement.style.setProperty('--lp-width', saved);
+      if (!_isModernTheme()) lp.style.width = saved;
+    }
+    // Clear any stale inline style so modern CSS width:0 auto-hide can work
+    if (_isModernTheme()) lp.style.width = '';
+    rhL.addEventListener('mousedown', e => {
+      e.preventDefault();
+      rhL.classList.add('rh-active');
+      const x0 = e.clientX, w0 = lp.offsetWidth;
+      function onMove(e) {
+        const w = Math.max(120, Math.min(500, w0 + e.clientX - x0)) + 'px';
+        document.documentElement.style.setProperty('--lp-width', w);
+        if (!_isModernTheme()) lp.style.width = w;
+      }
+      function onUp() {
+        rhL.classList.remove('rh-active');
+        localStorage.setItem('tbl_lpW', lp.offsetWidth + 'px');
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+      }
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+  }
+  // Right panel
+  const rp = document.getElementById('side-panel');
+  const rhR = document.getElementById('rh-right');
+  if (rp && rhR) {
+    const saved = localStorage.getItem('tbl_rpW');
+    if (saved) {
+      document.documentElement.style.setProperty('--rp-width', saved);
+      if (!_isModernTheme()) rp.style.width = saved;
+    }
+    // Clear any stale inline style so modern CSS width:0 auto-hide can work
+    if (_isModernTheme()) rp.style.width = '';
+    rhR.addEventListener('mousedown', e => {
+      e.preventDefault();
+      rhR.classList.add('rh-active');
+      const x0 = e.clientX, w0 = rp.offsetWidth;
+      function onMove(e) {
+        const w = Math.max(120, Math.min(520, w0 - (e.clientX - x0))) + 'px';
+        document.documentElement.style.setProperty('--rp-width', w);
+        if (!_isModernTheme()) rp.style.width = w;
+        updateZoomFloat();
+      }
+      function onUp() {
+        rhR.classList.remove('rh-active');
+        localStorage.setItem('tbl_rpW', rp.offsetWidth + 'px');
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+      }
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+    // Keep zoom float in sync when rp-open class changes (token selection)
+    new MutationObserver(updateZoomFloat).observe(rp, { attributes: true, attributeFilter: ['class','style'] });
+  }
+  // Chat bar
+  const chatLog = document.querySelector('#chat-bar .chat-log');
+  const rhC = document.getElementById('rh-chat');
+  if (chatLog && rhC) {
+    const saved = localStorage.getItem('tbl_chatH');
+    if (saved) chatLog.style.height = saved;
+    rhC.addEventListener('mousedown', e => {
+      e.preventDefault();
+      rhC.classList.add('rh-active');
+      const y0 = e.clientY, h0 = chatLog.offsetHeight;
+      function onMove(e) { chatLog.style.height = Math.max(60, Math.min(700, h0 - (e.clientY - y0))) + 'px'; }
+      function onUp() {
+        rhC.classList.remove('rh-active');
+        localStorage.setItem('tbl_chatH', chatLog.style.height);
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+      }
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+  }
+}
+
+// ── Modal backdrop click-to-close ─────────────────────────────────────────────
+function initModalBackdrops() {
+  [
+    ['dm-tools-modal',     closeDMToolsModal],
+    ['add-token-modal',    closeAddTokenModal],
+    ['dice-roller-modal',  closeDiceRollerModal],
+    ['monster-info-modal', closeMonsterInfoTableModal],
+  ].forEach(([id, fn]) => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('click', e => { if (e.target === el) fn(); });
+  });
+}
+
+// ── Draggable modals ──────────────────────────────────────────────────────────
+function initDraggableModals() {
+  function setup(modalId, getBox, getHandle) {
+    const modal = document.getElementById(modalId);
+    if (!modal) return;
+    const box    = getBox(modal);
+    const handle = box && (getHandle ? getHandle(box) : box.querySelector('.modal-drag-handle'));
+    if (box && handle) makeDraggable(box, handle);
+  }
+  setup('dm-tools-modal',     m => m.firstElementChild,            null);
+  setup('dice-roller-modal',  m => m.firstElementChild,            null);
+  setup('monster-info-modal', m => m.firstElementChild,            null);
+  setup('music-modal',        m => m.firstElementChild,            null);
+  setup('add-token-modal',    m => m.querySelector('.modal-box'),  b => b.querySelector('.ct'));
+}
+
 // ── Page init ─────────────────────────────────────────────────────────────────
 window.addEventListener('load', async () => {
   _loadSession();
@@ -105,6 +235,9 @@ window.addEventListener('load', async () => {
   startSSE();
   initMusicPlayer();
   initChatDragDrop();
+  initResizablePanels();
+  initDraggableModals();
+  initModalBackdrops();
 
   // Load chat history in background — non-blocking so map and SSE start immediately
   fetch('/api/chat', { headers: isDM() ? { 'X-Master-Password': masterPw } : {} })

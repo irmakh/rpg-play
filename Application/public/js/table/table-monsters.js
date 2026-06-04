@@ -314,8 +314,14 @@ function renderMonsterFullStats(data, tok) {
 // ── Monster info modal (full stat block popup for DM) ─────────────────────────
 let _infoModalMonsterId = null;
 
-function showMonsterInfoModal(linkedId) {
-  const mon = _monsterList.find(m => m.id === linkedId);
+async function showMonsterInfoModal(linkedId) {
+  let mon = _monsterList.find(m => m.id === linkedId);
+  if (!mon) {
+    try {
+      const r = await fetch(`/api/monsters/${linkedId}`, { headers: authHeaders() });
+      if (r.ok) { mon = await r.json(); _monsterList.push(mon); }
+    } catch {}
+  }
   if (!mon) return;
   _infoModalMonsterId = linkedId;
   document.getElementById('monster-info-table-title').textContent = mon.name || 'Monster';

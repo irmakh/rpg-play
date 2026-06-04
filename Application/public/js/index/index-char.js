@@ -1,3 +1,13 @@
+let _applyingData = false;
+
+function scheduleAutoSave() {
+  if (!currentCharId || _applyingData) return;
+  clearTimeout(_autoSaveTimer);
+  const el = document.getElementById('save-status');
+  if (el) { clearTimeout(statusTimer); el.textContent = '…'; el.className = 'info'; }
+  _autoSaveTimer = setTimeout(() => saveCharacter(true), 800);
+}
+
 function indexLogout() {
   sessionStorage.removeItem('rpgSession');
   sessionStorage.removeItem('dmMasterPw');
@@ -43,6 +53,7 @@ function collectData() {
 }
 
 function clearSheet() {
+  _applyingData = true;
   document.querySelectorAll('[data-key]').forEach(el => {
     if (el.type === 'checkbox') el.checked = false;
     else el.value = '';
@@ -66,10 +77,12 @@ function clearSheet() {
   mediaList = [];
   renderMedia();
   updatePortraitHeader();
+  _applyingData = false;
 }
 
 function applyData(d) {
   if (!d) return;
+  _applyingData = true;
   document.querySelectorAll('[data-key]').forEach(el => {
     const v = d[el.dataset.key];
     if (v === undefined) return;
@@ -134,6 +147,7 @@ function applyData(d) {
   if (d['_loots']) { try { claimedLoots = JSON.parse(d['_loots']); } catch {} }
   renderClaimedLoots();
   recalcAll();
+  _applyingData = false;
 }
 
 // ── API + Password state ───────────────────────────────────────────────────────
@@ -143,14 +157,14 @@ let pwSetCharId    = null;
 let ncImportData   = null; // parsed XML data for new-char import
 
 // ── Character list ────────────────────────────────────────────────────────────
-async function loadCharacterList(skipAutoLoad = false) {
+async function loadCharacterList(skipAutoLoad = false, skipLoad = false) {
   // Character session: always load their one character directly — skipAutoLoad does not apply
   if (indexCharId()) {
     const charId = indexCharId();
     const charPw = indexCharPw();
     if (charPw) charPasswords[charId] = charPw;
     _applySessionUI();
-    await loadCharacter(charId);
+    if (!skipLoad) await loadCharacter(charId);
     return;
   }
   // DM session: load all characters
@@ -329,6 +343,7 @@ async function saveCharacter(silent = false) {
   const data = collectData();
   _suppressSSEReload = true;
   if (!silent) showLoading('Saving…');
+  else { const el = document.getElementById('save-status'); if (el) { clearTimeout(statusTimer); el.textContent = 'Saving…'; el.className = 'info'; } }
   const headers = { 'Content-Type': 'application/json' };
   if (charPasswords[currentCharId]) headers['X-Character-Password'] = charPasswords[currentCharId];
   else if (indexMasterPw()) headers['X-Character-Password'] = indexMasterPw();

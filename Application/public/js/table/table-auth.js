@@ -79,6 +79,7 @@ function toggleSidePanel() {
   const hidden = panel.style.display === 'none';
   panel.style.display = hidden ? '' : 'none';
   if (btn) btn.textContent = hidden ? '▶' : '◀';
+  if (typeof updateZoomFloat === 'function') updateZoomFloat();
 }
 
 function applyDMControls() {

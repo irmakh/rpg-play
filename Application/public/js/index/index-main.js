@@ -31,6 +31,13 @@ document.addEventListener('keydown', e => {
 
 document.getElementById('wpn-tbl').addEventListener('input', renderWeaponsSummary);
 
+// Auto-save: any input/change inside the character body schedules a save
+const _charBody = document.getElementById('char-body');
+if (_charBody) {
+  _charBody.addEventListener('input',  scheduleAutoSave);
+  _charBody.addEventListener('change', scheduleAutoSave);
+}
+
 initRollClickHandlers();
 loadCharacterList(true);
 // Initiative data loaded on first panel open — panel starts collapsed so no need to fetch upfront

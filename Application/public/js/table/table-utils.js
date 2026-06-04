@@ -76,3 +76,35 @@ function showStatus(msg, isErr) {
   // no status bar on this page, use console
   console.log((isErr ? 'ERROR: ' : '') + msg);
 }
+
+// ── Draggable modal utility ───────────────────────────────────────────────────
+function makeDraggable(box, handle) {
+  handle.style.cursor = 'grab';
+  handle.addEventListener('mousedown', e => {
+    if (e.button !== 0 || e.target.closest('button,input,select,textarea,a')) return;
+    e.preventDefault();
+    if (!box.style.left) {
+      const r = box.getBoundingClientRect();
+      box.style.position = 'fixed';
+      box.style.margin   = '0';
+      box.style.left     = r.left + 'px';
+      box.style.top      = r.top  + 'px';
+    }
+    const ox = e.clientX - parseFloat(box.style.left);
+    const oy = e.clientY - parseFloat(box.style.top);
+    handle.style.cursor = 'grabbing';
+    document.body.style.userSelect = 'none';
+    function onMove(e) {
+      box.style.left = Math.max(0, Math.min(window.innerWidth  - box.offsetWidth,  e.clientX - ox)) + 'px';
+      box.style.top  = Math.max(0, Math.min(window.innerHeight - box.offsetHeight, e.clientY - oy)) + 'px';
+    }
+    function onUp() {
+      handle.style.cursor = 'grab';
+      document.body.style.userSelect = '';
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup',   onUp);
+    }
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup',   onUp);
+  });
+}

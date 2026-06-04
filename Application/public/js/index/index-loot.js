@@ -130,6 +130,7 @@ async function syncLootDescVisibility() {
 function removeLoot(index) {
   claimedLoots.splice(index, 1);
   renderClaimedLoots();
+  scheduleAutoSave();
 }
 
 function openLootAddModal() {
@@ -150,4 +151,5 @@ function confirmLootAdd() {
   claimedLoots.push({ id: 'manual-' + Date.now(), name, description });
   renderClaimedLoots();
   closeLootAddModal();
+  scheduleAutoSave();
 }

@@ -2,7 +2,7 @@
 window.addEventListener('load', function startRealtime() {
   connectRealtime({
     characters: async (payload) => {
-      loadCharacterList(true);
+      loadCharacterList(true, _suppressSSEReload);
       if (currentCharId && payload.id === currentCharId && !_suppressSSEReload) {
         try {
           const headers = {};

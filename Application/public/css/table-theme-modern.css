@@ -24,6 +24,12 @@
 
 /* ════════════════ MODERN THEME BELOW ════════════════ */
 
+/* ── CSS variable overrides for modern theme ── */
+body[data-theme="modern"] {
+  --bg2: #13161e;
+  --bg3: #233346;
+}
+
 /* ── Vertical tool strip — hidden in classic, shown in modern ── */
 #vtool-strip { display: none }
 
@@ -123,8 +129,8 @@ body[data-theme="modern"] #left-panel {
   padding: 0;
 }
 body[data-theme="modern"] #left-panel.lp-open {
-  width: 264px;
-  min-width: 264px;
+  width: var(--lp-width, 264px);
+  min-width: var(--lp-width, 264px);
   overflow-y: auto;
   border-right: 1px solid rgba(200,160,74,.08);
 }
@@ -262,7 +268,8 @@ body[data-theme="modern"] .qroll-row { padding: 5px 12px }
 body[data-theme="modern"] .qroll-val { font-size: 13px }
 
 /* ── Chat bar ── */
-body[data-theme="modern"] #chat-bar { border-top: 1px solid rgba(200,160,74,.18) }
+body[data-theme="modern"] #chat-bar { border-top: 1px solid rgba(200,160,74,.18); background: #090c14 }
+body[data-theme="modern"] .chat-roller { background: #0b0f1c; border-top-color: rgba(200,160,74,.1) }
 body[data-theme="modern"] #chat-bar-hdr {
   padding: 8px 14px;
   background: #0f1424;
@@ -410,8 +417,8 @@ body[data-theme="modern"] #side-panel {
   padding: 0;
 }
 body[data-theme="modern"] #side-panel.rp-open {
-  width: 264px;
-  min-width: 264px;
+  width: var(--rp-width, 264px);
+  min-width: var(--rp-width, 264px);
   overflow-y: auto;
   border-left: 1px solid rgba(200,160,74,.08);
 }
@@ -513,4 +520,16 @@ body[data-theme="modern"] #zoom-float button {
 body[data-theme="modern"] #zoom-float button:hover {
   background: rgba(200,160,74,.14);
   border-color: rgba(200,160,74,.55);
+}
+
+/* ── Modal box backgrounds ── */
+body[data-theme="modern"] #dm-tools-modal > div,
+body[data-theme="modern"] #dice-roller-modal > div,
+body[data-theme="modern"] #music-modal > div,
+body[data-theme="modern"] #monster-info-modal > div,
+body[data-theme="modern"] #group-init-modal > div,
+body[data-theme="modern"] #confirm-modal > div,
+body[data-theme="modern"] .modal-box {
+  background: #0b0f1c;
+  border-color: rgba(200,160,74,.28);
 }

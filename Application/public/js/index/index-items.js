@@ -202,11 +202,12 @@ function saveItemModal() {
   renderWeaponsSummary();
   renderEquippedItemsSummary();
   recalcAll();
+  scheduleAutoSave();
 }
 
 function toggleItemEquipped(id) {
   const item = items.find(i => i.id === id);
-  if (item) { item.equipped = !item.equipped; renderItems(); renderWeaponsSummary(); renderEquippedItemsSummary(); recalcAll(); }
+  if (item) { item.equipped = !item.equipped; renderItems(); renderWeaponsSummary(); renderEquippedItemsSummary(); recalcAll(); scheduleAutoSave(); }
 }
 
 function deleteItem(id) {
@@ -217,6 +218,7 @@ function deleteItem(id) {
   renderWeaponsSummary();
   renderEquippedItemsSummary();
   recalcAll();
+  scheduleAutoSave();
 }
 
 function openItemDetail(id) {

@@ -138,6 +138,7 @@
     </div>
 
   </div><!-- /#left-panel -->
+  <div class="resize-handle-v" id="rh-left"></div>
 
   <!-- ── Vertical Tool Strip (Modern HUD theme only) ─────────────────────── -->
   <div id="vtool-strip">
@@ -186,6 +187,7 @@
       <div id="placement-hint" style="display:none;position:absolute;top:16px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.8);color:var(--ac);padding:8px 18px;border-radius:6px;font-size:13px;font-weight:bold;pointer-events:none;z-index:30;white-space:nowrap;border:1px solid var(--a66)">Click on map to place token &nbsp;·&nbsp; Esc to cancel</div>
     </div>
   </div>
+  <div class="resize-handle-v" id="rh-right"></div>
 
   <!-- ── Right Panel — Token Details ───────────────────────────────────────── -->
   <div id="side-panel">
@@ -334,6 +336,7 @@
 
 <!-- Chat Bar -->
 <div id="chat-bar">
+  <div class="resize-handle-h" id="rh-chat"></div>
   <div id="chat-bar-hdr" onclick="chatToggle()">
     <span>💬 Chat <span id="chat-badge" class="chat-new-badge" style="display:none">0</span></span>
     <span id="chat-chevron">▼</span>
@@ -360,7 +363,7 @@
 <!-- DM Tools Modal (replaces settings modal — accessible to all users) -->
 <div id="dm-tools-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:2000;align-items:center;justify-content:center">
   <div style="background:var(--bg2);border:1px solid var(--ac);border-radius:8px;width:420px;max-width:96vw;max-height:88vh;display:flex;flex-direction:column">
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--a44);flex-shrink:0">
+    <div class="modal-drag-handle" style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--a44);flex-shrink:0">
       <span style="font-weight:bold;font-size:14px">🗺 Map &amp; Tokens</span>
       <button class="btn sm" onclick="closeDMToolsModal()">✕</button>
     </div>
@@ -503,7 +506,7 @@
 <!-- Dice Roller Modal -->
 <div id="dice-roller-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:2000;align-items:center;justify-content:center">
   <div style="background:var(--bg2);border:1px solid var(--ac);border-radius:8px;width:380px;max-height:90vh;display:flex;flex-direction:column">
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--a44)">
+    <div class="modal-drag-handle" style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--a44)">
       <span style="font-weight:bold;font-size:14px">Dice Roller</span>
       <button class="btn sm" onclick="closeDiceRollerModal()">✕</button>
     </div>
@@ -543,7 +546,7 @@
 <!-- Monster Info Modal (DM) -->
 <div id="monster-info-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:2100;align-items:center;justify-content:center;padding:16px">
   <div style="background:var(--bg2);border:1px solid var(--ac);border-radius:6px;max-width:680px;width:100%;max-height:90vh;display:flex;flex-direction:column">
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--a44)">
+    <div class="modal-drag-handle" style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--a44)">
       <span id="monster-info-table-title" style="font-size:15px;font-weight:bold;color:var(--ac)"></span>
       <button class="btn sm" onclick="closeMonsterInfoTableModal()">✕</button>
     </div>
@@ -580,7 +583,7 @@
 <!-- Music Player Modal (DM only) -->
 <div id="music-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:2000;align-items:center;justify-content:center">
   <div style="background:var(--bg2);border:1px solid var(--ac);border-radius:8px;width:400px;max-width:96vw;max-height:90vh;display:flex;flex-direction:column">
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--a44)">
+    <div class="modal-drag-handle" style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--a44)">
       <span style="font-weight:bold;font-size:14px">🎵 Music Player</span>
       <button class="btn sm" onclick="closeMusicModal()">✕</button>
     </div>

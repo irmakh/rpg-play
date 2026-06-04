@@ -130,6 +130,7 @@ function updMod(stat) { recalcAll(); }
 // ── Inspiration toggle ────────────────────────────────────────────────────────
 function toggleInspire() {
   document.getElementById('inspire').classList.toggle('on');
+  scheduleAutoSave();
 }
 
 // ── Add / Delete rows ─────────────────────────────────────────────────────────
@@ -138,9 +139,9 @@ function delRow(btn) {
   const isSpell = tr.closest('#spell-tbl') !== null;
   if (isSpell) {
     const name = tr.querySelector('input[type=text]')?.value?.trim() || 'this spell';
-    showConfirm('Delete ' + name + '?', () => { tr.remove(); recalcPreparedCount(); });
+    showConfirm('Delete ' + name + '?', () => { tr.remove(); recalcPreparedCount(); scheduleAutoSave(); });
   } else {
-    tr.remove(); recalcPreparedCount(); renderWeaponsSummary();
+    tr.remove(); recalcPreparedCount(); renderWeaponsSummary(); scheduleAutoSave();
   }
 }
 function toggleSpellExpand(el) { el.closest('tr').classList.toggle('spell-expanded'); }
@@ -181,6 +182,7 @@ function sortSpells(col) {
     return 0;
   });
   rows.forEach(r => tbl.appendChild(r));
+  scheduleAutoSave();
 
   for (let i = 0; i <= 7; i++) {
     const ind = document.getElementById('spth-' + i);

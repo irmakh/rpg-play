@@ -23,9 +23,9 @@ function renderInitiativeTracker(showBadge) {
     const eDisplayName = e.monsterId
       ? (eTok ? tokDisplayName(eTok) : (() => { const p = e.name.trim().split(' '); return p[p.length-1]; })())
       : e.name;
-    // DM: identifier is a link to monsters page; full name shown as tooltip
+    // DM: identifier opens monster info modal; full name shown as tooltip
     const nameHtml = (e.monsterId && isDM())
-      ? `<a href="/monsters.html" target="_blank" style="color:inherit;text-decoration:underline dotted;cursor:pointer" title="${esc(e.name)}" onclick="event.stopPropagation()">${esc(eDisplayName)}</a>`
+      ? `<span style="color:inherit;text-decoration:underline dotted;cursor:pointer" title="${esc(e.name)}" onclick="event.stopPropagation();showMonsterInfoModal('${esc(e.monsterId)}')">${esc(eDisplayName)}</span>`
       : esc(eDisplayName);
     const canEdit = isDM() || !e.monsterId; // DM edits all; players edit non-monster entries
     const rollHtml = canEdit
