@@ -58,4 +58,5 @@ function showTab(name, el) {
   if (name === 'shop')     loadShopTab();
   if (name === 'loot')     loadLootTab();
   if (name === 'calendar') pcalLoad();
+  if (name === 'actions' && typeof renderActionsTab === 'function') renderActionsTab();
 }

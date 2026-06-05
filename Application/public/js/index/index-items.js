@@ -311,27 +311,9 @@ function renderItems() {
 }
 
 function renderWeaponsSummary() {
-  const el = document.getElementById('main-weapons-summary');
-  if (!el) return;
-  const wpnRows = [];
-  document.querySelectorAll('#wpn-tbl tr:not(:first-child)').forEach(tr => {
-    const inp = tr.querySelectorAll('input[type=text], input[type=number]');
-    if (inp.length >= 3) wpnRows.push([inp[0].value, inp[1].value, inp[2].value, inp[3]?.value || '']);
-  });
-  if (wpnRows.length === 0) {
-    el.innerHTML = '<div style="color:var(--txd);font-size:11px;padding:4px 0">No weapons — add them in the Inventory tab.</div>';
-    return;
-  }
-  const tableRows = wpnRows.map(([name, atk, dmg, notes]) => {
-    const n = esc(name || '—'), a = esc(atk || '+0'), d = esc(dmg || '—');
-    return `<tr>
-      <td style="font-weight:bold">${n}</td>
-      <td><div style="display:flex;align-items:center;gap:2px">${a}<button class="roll-btn" data-name="${n}" data-val="${a}" onclick="rollWeaponAtkVal(this.dataset.name,this.dataset.val)" title="Roll attack">🎲</button></div></td>
-      <td><div style="display:flex;align-items:center;gap:2px">${d}<button class="roll-btn" data-name="${n}" data-val="${esc(dmg||'1d6')}" data-notes="${esc(notes||'')}" onclick="rollWeaponDmgVal(this.dataset.name,this.dataset.val,this.dataset.notes)" title="Roll damage">🎲</button></div></td>
-      <td style="color:var(--txd);font-size:11px">${esc(notes)}</td>
-    </tr>`;
-  }).join('');
-  el.innerHTML = `<div class="tbl-wrap"><table><tr><th>Name</th><th>Atk</th><th>Damage</th><th>Notes</th></tr>${tableRows}</table></div>`;
+  // The Main-tab "Weapons & Attacks" summary card was removed. Weapon attacks now
+  // live on the Actions tab; any weapon change re-renders that tab's display.
+  if (typeof renderActionsTab === 'function') renderActionsTab();
 }
 
 function renderEquippedItemsSummary() {

@@ -22,6 +22,11 @@ const rollHistory = [];
 let items = [];
 let itemIdCounter = 0;
 
+// Custom actions (shared with index-actions.js) — Actions tab + table right panel
+let actions = [];
+let actionIdCounter = 0;
+let _actionFilter = 'all';
+
 // SSE suppression (set by saveCharacter, read by realtime handler)
 let _suppressSSEReload = false;
 

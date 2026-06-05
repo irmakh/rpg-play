@@ -1,4 +1,4 @@
-const CACHE = 'rpg-v91';
+const CACHE = 'rpg-v94';
 
 const STATIC = [
   // Core pages
@@ -70,16 +70,33 @@ self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
   // Always network for API, SSE, WebSocket
   if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/ws')) return;
+
+  const cacheGet = () =>
+    fetch(e.request).then(res => {
+      if (res.ok && e.request.method === 'GET') {
+        const clone = res.clone();
+        caches.open(CACHE).then(c => c.put(e.request, clone));
+      }
+      return res;
+    });
+
+  // Network-first for HTML / navigations so the app shell is never stale
+  // (cache-first on HTML would keep serving an old page that references
+  // removed scripts/markup). Falls back to cache when offline.
+  const isHTML = e.request.mode === 'navigate'
+    || e.request.destination === 'document'
+    || url.pathname.endsWith('.html');
+  if (isHTML) {
+    e.respondWith(
+      cacheGet().catch(() =>
+        caches.match(e.request).then(c => c || caches.match('/index.html'))
+      )
+    );
+    return;
+  }
+
+  // Cache-first for versioned static assets (JS/CSS/img are busted via ?v=N).
   e.respondWith(
-    caches.match(e.request).then(cached => {
-      if (cached) return cached;
-      return fetch(e.request).then(res => {
-        if (res.ok && e.request.method === 'GET') {
-          const clone = res.clone();
-          caches.open(CACHE).then(c => c.put(e.request, clone));
-        }
-        return res;
-      });
-    })
+    caches.match(e.request).then(cached => cached || cacheGet())
   );
 });

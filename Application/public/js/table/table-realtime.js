@@ -87,9 +87,11 @@ function startSSE() {
     },
     characters: async (d) => {
       if (d.action !== 'updated') return;
-      // If the changed character is linked to the active token, reload side panel data
+      // Reload side panel data if the changed character is linked to the token
+      // currently shown in the panel (selected/viewed) or the active-turn token.
+      const sideTok   = _sideQrollTokenId ? tokens.find(t => t.id === _sideQrollTokenId) : null;
       const activeTok = tokens.find(t => t.id === getActiveTurnTokenId());
-      if (activeTok?.linkedId === d.id) {
+      if (sideTok?.linkedId === d.id || activeTok?.linkedId === d.id) {
         _sideQrollTokenId = null;
         loadSideQroll();
       }

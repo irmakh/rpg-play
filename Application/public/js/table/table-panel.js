@@ -1,5 +1,6 @@
 // ── Side panel Quick Roll ─────────────────────────────────────────────────────
 let _sideCharId = null; // character ID currently displayed in the side panel
+let _sideAllSpells = []; // full parsed _spells of the displayed char (for action spell description posting)
 function toggleSideSection(name) {
   const el    = document.getElementById(`side-sec-${name}`);
   const arrow = document.getElementById(`side-sec-${name}-arrow`);
@@ -54,12 +55,17 @@ function renderSideCharacter() {
     if (total > 0) spellSlots.push({ level: i, total, used: parseInt(d['slot-' + i + '-used']) || 0 });
   }
 
-  // Prepared spells (index 7 = prepared flag)
+  // Prepared spells (index 7 = prepared flag). Keep the full list for the Actions
+  // sections, which reference spells by their index in _sideAllSpells.
+  _sideAllSpells = [];
   let preparedSpells = [];
   try {
-    const allSpells = JSON.parse(d['_spells'] || '[]');
-    preparedSpells = allSpells.filter(s => s && s[7]);
+    _sideAllSpells = JSON.parse(d['_spells'] || '[]');
+    preparedSpells = _sideAllSpells.filter(s => s && s[7]);
   } catch {}
+  // Actions sections (action-flagged spells [13] + custom actions from _actions)
+  const canEditActions = isDM() || isCharSession();
+  const actionSectionsHtml = _buildSidePanelActions(d, canEditActions);
 
   // Shared rows (both themes)
   const skillRows = SKILL_NAMES.map((name, i) => {
@@ -138,12 +144,9 @@ function renderSideCharacter() {
       for (const s of byLevel[lvl]) {
         const idx = preparedSpells.indexOf(s);
         const sName = s[1] || '?';
-        const hasDesc = !!(s[6] && String(s[6]).trim());
         const flags = (s[4] ? ' <span style="color:#aaddff" title="Concentration">C</span>' : '')
                     + (s[5] ? ' <span style="color:#ddaaff" title="Ritual">R</span>' : '');
-        const nameSpan = hasDesc
-          ? `<span class="rp-spell-name" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px" onclick="postSpellInfoFromPanel(${idx})" title="Show description in chat">${esc(sName)}</span>${flags}`
-          : `<span>${esc(sName)}${flags}</span>`;
+        const nameSpan = `<span class="rp-spell-name" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px" onclick="postSpellInfoFromPanel(${idx})" title="Send to chat">${esc(sName)}</span>${flags}`;
         spellListHtml += `<div class="qroll-row" style="padding:3px 10px;font-size:11px">`
           + nameSpan
           + (spAtk !== null ? `<span class="qroll-val" onclick="event.stopPropagation();qroll('${esc(sName)}','${esc(String(spAtk))}')" style="font-size:11px;cursor:pointer" title="Spell attack">⚡</span>` : '')
@@ -212,6 +215,7 @@ function renderSideCharacter() {
       + `<div class="rp-flat-hdr">Saving Throws</div>${saveGridHtml}`
       + `<div class="rp-flat-hdr">Skills</div><div class="rp-skill-grid">${skillRows}</div>`
       + `<div class="rp-flat-hdr">Attacks</div>${atkCompactHtml}`
+      + actionSectionsHtml
       + spellSlotsHtml
       + spellListHtml;
   }
@@ -239,6 +243,7 @@ function renderSideCharacter() {
     + `<div id="side-sec-saves" class="qroll-rows" style="${_sideSecStyle('saves')}">${saveRows}</div></div>`
     + `<div class="qroll-section"><div class="qroll-section-hdr" onclick="toggleSideSection('attacks')">Attacks <span id="side-sec-attacks-arrow">${_sideSecArrow('attacks')}</span></div>`
     + `<div id="side-sec-attacks" class="qroll-rows" style="${_sideSecStyle('attacks')}">${atkSection}</div></div>`
+    + (actionSectionsHtml ? `<div class="qroll-section">${actionSectionsHtml}</div>` : '')
     + (spellSlotsHtml ? `<div class="qroll-section">${spellSlotsHtml}</div>` : '')
     + (spellListHtml ? `<div class="qroll-section">${spellListHtml}</div>` : '');
 }
@@ -270,6 +275,125 @@ async function updateSpellSlot(level, used) {
     });
   } catch {}
 }
+
+// ── Actions sections (Actions / Bonus / Reactions / Other) ────────────────────
+const _RP_ACT_CATS = [['action', 'Actions'], ['bonus', 'Bonus Actions'], ['reaction', 'Reactions'], ['other', 'Other']];
+
+function _buildSidePanelActions(d, canEdit) {
+  let acts = [];
+  try { acts = JSON.parse(d['_actions'] || '[]'); } catch {}
+  let html = '';
+  const hasLimited = acts.some(a => a && (parseInt(a.uses) || 0) > 0);
+  for (const [key, label] of _RP_ACT_CATS) {
+    const spells = _sideAllSpells
+      .map((s, idx) => ({ s, idx }))
+      .filter(o => o.s && o.s[13] === key);
+    const customs = acts.filter(a => a && a.category === key);
+    if (!spells.length && !customs.length) continue;
+    html += `<div class="rp-flat-hdr">${label}</div>`;
+    html += spells.map(o => _renderSidePanelSpell(o.s, o.idx, d)).join('');
+    html += customs.map(a => _renderSidePanelCustom(a, canEdit)).join('');
+  }
+  if (html && canEdit && hasLimited) {
+    html += `<div class="rp-act-rest">`
+      + `<button class="btn sm" onclick="tableActionRest('short')" title="Restore short-rest uses">↻ Short</button>`
+      + `<button class="btn sm" onclick="tableActionRest('long')" title="Restore short- and long-rest uses">↻ Long</button>`
+      + `</div>`;
+  }
+  return html;
+}
+
+function _renderSidePanelSpell(s, idx, d) {
+  const sName = s[1] || '?';
+  const lvl = (s[0] && String(s[0]) !== '0') ? `(${esc(String(s[0]))})` : '(cantrip)';
+  const spAtk = d['sp-atk'];
+  const nameSpan = `<span class="rp-spell-name" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px" onclick="postSpellInfoFromAll(${idx})" title="Send to chat">${esc(sName)}</span>`;
+  const atk = (spAtk !== undefined && spAtk !== null && spAtk !== '')
+    ? `<span class="qroll-val" onclick="event.stopPropagation();qroll('Spell Attack','${esc(String(spAtk))}')" style="font-size:11px;cursor:pointer" title="Spell attack">⚡</span>`
+    : '';
+  return `<div class="qroll-row" style="padding:3px 10px;font-size:11px">${nameSpan} <span style="font-size:10px;color:var(--txd)">${lvl}</span> ${atk}</div>`;
+}
+
+function _renderSidePanelCustom(a, canEdit) {
+  const n = esc(a.name || 'Action');
+  const dice = (a.dice || '').trim();
+  const uses = parseInt(a.uses) || 0;
+  const used = Math.min(parseInt(a.used) || 0, uses);
+  const diceBtn = dice
+    ? `<span class="rp-act-roll" data-name="${n}" data-dice="${esc(dice)}" onclick="rollDamageStr(this.dataset.name, this.dataset.dice)" title="Roll ${esc(dice)}">🎲 ${esc(dice)}</span>`
+    : '';
+  let usesHtml = '';
+  if (uses > 0) {
+    let boxes = '';
+    for (let i = 0; i < uses; i++) {
+      const click = canEdit ? ` onclick="clickActionBox(${a.id},${i})" style="cursor:pointer"` : '';
+      boxes += `<span class="rp-act-box${i < used ? ' used' : ''}"${click} title="${i < used ? 'Used' : 'Available'}"></span>`;
+    }
+    const rl = a.recharge === 'short' ? 'Short Rest' : a.recharge === 'long' ? 'Long Rest' : '';
+    usesHtml = `<div class="rp-act-uses">${boxes}${rl ? `<span class="rp-act-recharge">/ ${rl}</span>` : ''}</div>`;
+  }
+  return `<div class="rp-act-item">`
+    + `<div class="rp-act-head"><span class="rp-act-name">${n}</span>${diceBtn}</div>`
+    + (a.description ? `<div class="rp-act-desc">${esc(a.description)}</div>` : '')
+    + usesHtml
+    + `</div>`;
+}
+
+function clickActionBox(actionId, idx) {
+  if (!qrollData || !_sideCharId) return;
+  let arr;
+  try { arr = JSON.parse(qrollData._actions || '[]'); } catch { return; }
+  const a = arr.find(x => x && x.id === actionId);
+  if (!a) return;
+  const uses = parseInt(a.uses) || 0;
+  const used = Math.min(parseInt(a.used) || 0, uses);
+  let newUsed;
+  if (idx < used) {
+    newUsed = idx;                 // clicking a filled box restores down to it
+  } else {
+    newUsed = idx + 1;             // clicking an empty box consumes up to it
+    if ((a.dice || '').trim()) rollDamageStr(a.name || 'Action', a.dice.trim());
+  }
+  if (newUsed === used) return;
+  a.used = newUsed;
+  qrollData._actions = JSON.stringify(arr);
+  const content = document.getElementById('side-qroll-content');
+  if (content) content.innerHTML = renderSideCharacter();
+  updateActionUse(actionId, newUsed);
+}
+
+async function updateActionUse(actionId, used) {
+  if (!_sideCharId) return;
+  try {
+    await fetch(`/api/characters/${_sideCharId}/action-use`, {
+      method: 'PATCH',
+      headers: authHeaders(),
+      body: JSON.stringify({ actionId, used })
+    });
+  } catch {}
+}
+
+async function tableActionRest(type) {
+  if (!qrollData || !_sideCharId) return;
+  let arr;
+  try { arr = JSON.parse(qrollData._actions || '[]'); } catch { arr = []; }
+  arr.forEach(a => {
+    if (a && (a.recharge === 'short' || (type === 'long' && a.recharge === 'long'))) a.used = 0;
+  });
+  qrollData._actions = JSON.stringify(arr);
+  const content = document.getElementById('side-qroll-content');
+  if (content) content.innerHTML = renderSideCharacter();
+  try {
+    await fetch(`/api/characters/${_sideCharId}/action-rest`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ type })
+    });
+  } catch {}
+}
+
+// Post an action-flagged spell to chat (indexes into _sideAllSpells).
+function postSpellInfoFromAll(idx) { _postSpellInfo(_sideAllSpells[idx]); }
 
 async function loadSideQroll() {
   const content = document.getElementById('side-qroll-content');
@@ -441,21 +565,27 @@ function weaponDmgRoll() {
   if (w && w.dmg) rollDamageStr(`${w.wName} Dmg`, w.dmg, w.note || '');
 }
 
-// Item 9: clicking a spell name posts its description to chat rendered as raw HTML
-// (so 5e.tools links etc. embedded in the notes are clickable).
-function postSpellInfoFromPanel(idx) {
-  const s = _sideSpells[idx];
+// Item 9: clicking a spell name posts it to chat rendered as raw HTML (so links
+// in the notes are clickable). Always posts — even with an empty description — and
+// appends a 5e.tools link for the spell that opens in a new tab.
+function _spell5eUrl(name) {
+  return `https://5e.tools/spells.html#${encodeURIComponent(String(name || '').trim().toLowerCase())}_xphb`;
+}
+
+function _postSpellInfo(s) {
   if (!s) return;
   const name = s[1] || 'Spell';
   const desc = s[6] || '';
   const lvl  = s[0];
   const meta = [];
   if (lvl !== undefined && lvl !== '' && lvl !== null) meta.push(String(lvl) === '0' ? 'Cantrip' : `Level ${esc(String(lvl))}`);
-  if (s[2]) meta.push(`⏱ ${esc(s[2])}`);
-  if (s[3]) meta.push(`🎯 ${esc(s[3])}`);
+  if (s[2])  meta.push(`⏱ ${esc(s[2])}`);
+  if (s[3])  meta.push(`🎯 ${esc(s[3])}`);
+  if (s[14]) meta.push(`⏳ ${esc(s[14])}`);
   let html = `<strong>${esc(name)}</strong>`;
   if (meta.length) html += `<div style="font-size:10px;opacity:.7;margin-top:1px">${meta.join(' · ')}</div>`;
   if (desc) html += `<div style="margin-top:4px">${desc}</div>`;
+  html += `<div style="margin-top:4px"><a href="${esc(_spell5eUrl(name))}" target="_blank" rel="noopener">📖 Open on 5e.tools ↗</a></div>`;
   // postToChat() forces type:'roll', so post the HTML text message directly.
   fetch('/api/chat', {
     method: 'POST',
@@ -463,6 +593,8 @@ function postSpellInfoFromPanel(idx) {
     body: JSON.stringify({ sender: getChatSender(), type: 'text', message: html, html: true })
   }).catch(() => {});
 }
+
+function postSpellInfoFromPanel(idx) { _postSpellInfo(_sideSpells[idx]); }
 
 async function rollDamageStr(label, dmgStr, description = '') {
   const result = parseDice(dmgStr);

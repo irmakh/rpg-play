@@ -135,6 +135,14 @@
           <div style="font-size:10px;color:var(--txd);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Conditions</div>
           <div id="bulk-conditions-grid" style="display:flex;flex-wrap:wrap;gap:3px"></div>
         </div>
+        <!-- Visibility to players (DM only) -->
+        <div style="border-top:1px solid var(--a44);padding:6px 8px 6px">
+          <div style="font-size:10px;color:var(--txd);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Visibility to players</div>
+          <div style="display:flex;gap:4px">
+            <button class="btn success sm" onclick="bulkSetVisibility(true)" style="flex:1" title="Show all selected tokens to players">👁 Visible</button>
+            <button class="btn danger sm" onclick="bulkSetVisibility(false)" style="flex:1" title="Hide all selected tokens from players">🚫 Hidden</button>
+          </div>
+        </div>
         <!-- Initiative (DM only, monster tokens) -->
         <div id="bulk-init-row" style="display:none;border-top:1px solid var(--a44);padding:6px 8px 6px">
           <button class="btn sm" onclick="rollBulkInitiative()" style="width:100%;font-size:12px">🎲 Roll Monster Initiative</button>
@@ -285,18 +293,18 @@
         </div>
       </div>
 
+      <!-- Initiative roll + edit label (DM only) — directly below Temp HP -->
+      <div id="hp-init-row" style="display:none;border-top:1px solid var(--a44);padding:6px 8px">
+        <button id="hp-init-btn" class="btn sm" onclick="rollTokenInitiative()" style="width:100%;font-size:12px">🎲 Roll Initiative</button>
+        <button class="btn sm" onclick="openEditLabel()" style="width:100%;font-size:12px;margin-top:4px">✏ Edit Identifier</button>
+      </div>
+
       <!-- Character / Monster sheet content -->
       <div id="side-qroll-content"></div>
 
       <!-- Visibility toggle (DM only) -->
       <div id="hp-vis-row" style="display:none;border-top:1px solid var(--a44);padding:6px 8px">
         <button id="hp-vis-btn" class="btn sm" onclick="toggleTokenVisibility()" style="width:100%;font-size:12px"></button>
-      </div>
-
-      <!-- Initiative roll + edit label (DM only) -->
-      <div id="hp-init-row" style="display:none;border-top:1px solid var(--a44);padding:6px 8px">
-        <button id="hp-init-btn" class="btn sm" onclick="rollTokenInitiative()" style="width:100%;font-size:12px">🎲 Roll Initiative</button>
-        <button class="btn sm" onclick="openEditLabel()" style="width:100%;font-size:12px;margin-top:4px">✏ Edit Identifier</button>
       </div>
 
       <!-- Token portrait upload (DM only, monster tokens) -->

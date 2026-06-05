@@ -157,7 +157,7 @@ function addWeapon() {
 function addSpell() {
   const tbl = document.getElementById('spell-tbl');
   const tr = document.createElement('tr');
-  tr.innerHTML = `<td style="text-align:center"><input type="checkbox" onchange="recalcPreparedCount()"></td><td><input type="text" value="0" style="width:28px"></td><td><div style="display:flex;align-items:center;gap:3px"><span class="spell-tog" onclick="toggleSpellExpand(this)"></span><input type="text" placeholder="Spell name"><a href="#" class="tools-link" onclick="openSpell5e(this);return false" title="Open in 5e.tools">↗</a></div></td><td><input type="text" value="Action" style="width:70px"></td><td><input type="text" placeholder="Range" style="width:65px"></td><td style="text-align:center"><input type="checkbox"></td><td style="text-align:center"><input type="checkbox"></td><td><select class="spell-school" style="width:60px;font-size:11px;padding:1px 2px"><option value="">—</option><option value="Abj">Abj</option><option value="Conj">Conj</option><option value="Div">Div</option><option value="Ench">Ench</option><option value="Evoc">Evoc</option><option value="Illu">Illu</option><option value="Necro">Necro</option><option value="Trans">Trans</option></select></td><td style="white-space:nowrap"><div style="display:flex;align-items:center;gap:3px"><label style="font-size:10px;display:flex;align-items:center;gap:1px;cursor:pointer"><input type="checkbox" class="spell-v" style="width:11px;height:11px">V</label><label style="font-size:10px;display:flex;align-items:center;gap:1px;cursor:pointer"><input type="checkbox" class="spell-s" style="width:11px;height:11px">S</label><label style="font-size:10px;display:flex;align-items:center;gap:1px;cursor:pointer"><input type="checkbox" class="spell-m" style="width:11px;height:11px" onchange="spellMChange(this)">M</label></div></td><td><input type="text" placeholder="Notes"><input type="text" class="spell-mat" placeholder="Material…" style="display:none;width:100%;font-size:10px;margin-top:2px"></td><td><button class="del-btn" onclick="delRow(this)">✕</button></td>`;
+  tr.innerHTML = `<td style="text-align:center"><input type="checkbox" onchange="recalcPreparedCount()"></td><td><input type="text" value="0" style="width:28px"></td><td><div style="display:flex;align-items:center;gap:3px"><span class="spell-tog" onclick="toggleSpellExpand(this)"></span><input type="text" placeholder="Spell name"><a href="#" class="tools-link" onclick="openSpell5e(this);return false" title="Open in 5e.tools">↗</a></div></td><td><input type="text" value="Action" style="width:70px"></td><td><input type="text" placeholder="Range" style="width:65px"></td><td><input type="text" class="spell-duration" placeholder="Duration" style="width:75px"></td><td style="text-align:center"><input type="checkbox"></td><td style="text-align:center"><input type="checkbox"></td><td><select class="spell-school" style="width:60px;font-size:11px;padding:1px 2px"><option value="">—</option><option value="Abj">Abj</option><option value="Conj">Conj</option><option value="Div">Div</option><option value="Ench">Ench</option><option value="Evoc">Evoc</option><option value="Illu">Illu</option><option value="Necro">Necro</option><option value="Trans">Trans</option></select></td><td style="white-space:nowrap"><div style="display:flex;align-items:center;gap:3px"><label style="font-size:10px;display:flex;align-items:center;gap:1px;cursor:pointer"><input type="checkbox" class="spell-v" style="width:11px;height:11px">V</label><label style="font-size:10px;display:flex;align-items:center;gap:1px;cursor:pointer"><input type="checkbox" class="spell-s" style="width:11px;height:11px">S</label><label style="font-size:10px;display:flex;align-items:center;gap:1px;cursor:pointer"><input type="checkbox" class="spell-m" style="width:11px;height:11px" onchange="spellMChange(this)">M</label></div></td><td><input type="text" class="spell-notes" placeholder="Notes"><input type="text" class="spell-mat" placeholder="Material…" style="display:none;width:100%;font-size:10px;margin-top:2px"><select class="spell-action" onchange="scheduleAutoSave()" title="Show this spell in the Actions tab" style="width:100%;font-size:10px;margin-top:2px"><option value="">— not an action —</option><option value="action">▸ Action</option><option value="bonus">▸ Bonus Action</option><option value="reaction">▸ Reaction</option></select></td><td><button class="del-btn" onclick="delRow(this)">✕</button></td>`;
   tbl.appendChild(tr);
 }
 
@@ -184,7 +184,7 @@ function sortSpells(col) {
   rows.forEach(r => tbl.appendChild(r));
   scheduleAutoSave();
 
-  for (let i = 0; i <= 7; i++) {
+  for (let i = 0; i <= 8; i++) {
     const ind = document.getElementById('spth-' + i);
     if (ind) ind.textContent = i === spellSortCol ? (spellSortDir === 1 ? ' ▲' : ' ▼') : '';
   }
@@ -194,15 +194,15 @@ function _spellCellVal(row, col) {
   const cell = row.querySelectorAll('td')[col];
   if (!cell) return '';
   switch (col) {
-    case 0: case 5: case 6:  // Prep / Conc / Ritual — checked sorts first (asc)
+    case 0: case 6: case 7:  // Prep / Conc / Ritual — checked sorts first (asc)
       return cell.querySelector('input[type=checkbox]')?.checked ? 0 : 1;
     case 1:  // Lvl — numeric
       return parseInt(cell.querySelector('input')?.value || '0', 10);
     case 2:  // Name — text inside flex div
       return (cell.querySelector('input[type=text]')?.value || '').toLowerCase();
-    case 7:  // School — select
+    case 8:  // School — select
       return (cell.querySelector('select')?.value || '').toLowerCase();
-    default:  // Time (3), Range (4) — plain text input
+    default:  // Time (3), Range (4), Duration (5) — plain text input
       return (cell.querySelector('input')?.value || '').toLowerCase();
   }
 }

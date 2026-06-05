@@ -28,7 +28,7 @@ function collectData() {
     if (inp.length >= 4) wpnRows.push([inp[0].value, inp[1].value, inp[2].value, inp[3].value, tr.dataset.itemId ? parseInt(tr.dataset.itemId) : null]);
   });
   out['_weapons'] = JSON.stringify(wpnRows);
-  // Spell rows: [lvl, name, time, range, conc, ritual, notes, prepared, school, v, s, m, material]
+  // Spell rows: [lvl, name, time, range, conc, ritual, notes, prepared, school, v, s, m, material, actionCategory, duration]
   const spRows = [];
   document.querySelectorAll('#spell-tbl tr:not(:first-child)').forEach(tr => {
     const txts = tr.querySelectorAll('input[type=text], input[type=number]');
@@ -36,15 +36,19 @@ function collectData() {
     if (txts.length >= 4) spRows.push([
       txts[0].value, txts[1].value, txts[2].value, txts[3].value,
       chks[1]?.checked || false, chks[2]?.checked || false,
-      txts[4]?.value || '', chks[0]?.checked || false,
+      tr.querySelector('.spell-notes')?.value || '', chks[0]?.checked || false,
       tr.querySelector('.spell-school')?.value || '',
       tr.querySelector('.spell-v')?.checked || false,
       tr.querySelector('.spell-s')?.checked || false,
       tr.querySelector('.spell-m')?.checked || false,
-      tr.querySelector('.spell-mat')?.value || ''
+      tr.querySelector('.spell-mat')?.value || '',
+      tr.querySelector('.spell-action')?.value || '',
+      tr.querySelector('.spell-duration')?.value || ''
     ]);
   });
   out['_spells'] = JSON.stringify(spRows);
+  out['_actions'] = JSON.stringify(actions);
+  out['_actionIdCounter'] = actionIdCounter;
   out['_rollHistory'] = JSON.stringify(rollHistory.map(e => ({...e, time: e.time.toISOString()})));
   out['_items'] = JSON.stringify(items);
   out['_itemIdCounter'] = itemIdCounter;
@@ -72,6 +76,9 @@ function clearSheet() {
   items = [];
   itemIdCounter = 0;
   renderItems();
+  actions = [];
+  actionIdCounter = 0;
+  if (typeof renderActionsTab === 'function') renderActionsTab();
   claimedLoots = [];
   renderClaimedLoots();
   mediaList = [];
@@ -114,8 +121,11 @@ function applyData(d) {
       const bold = r[0] !== '0' ? 'bold' : 'normal';
       const school = r[8] || '';
       const rv = !!r[9], rs = !!r[10], rm = !!r[11], rmat = r[12] || '';
+      const act = r[13] || '';
+      const dur = r[14] || '';
       const schoolOpts = ['','Abj','Conj','Div','Ench','Evoc','Illu','Necro','Trans'].map(o => `<option value="${o}" ${school===o?'selected':''}>${o||'—'}</option>`).join('');
-      tr.innerHTML = `<td style="text-align:center"><input type="checkbox" onchange="recalcPreparedCount()" ${r[7]?'checked':''}></td><td><input type="text" value="${esc(r[0])}" style="width:28px"></td><td><div style="display:flex;align-items:center;gap:3px"><span class="spell-tog" onclick="toggleSpellExpand(this)"></span><input type="text" value="${esc(r[1])}" style="font-weight:${bold}"><a href="#" class="tools-link" onclick="openSpell5e(this);return false" title="Open in 5e.tools">↗</a></div></td><td><input type="text" value="${esc(r[2])}" style="width:70px"></td><td><input type="text" value="${esc(r[3])}" style="width:65px"></td><td style="text-align:center"><input type="checkbox" ${r[4]?'checked':''}></td><td style="text-align:center"><input type="checkbox" ${r[5]?'checked':''}></td><td><select class="spell-school" style="width:60px;font-size:11px;padding:1px 2px">${schoolOpts}</select></td><td style="white-space:nowrap"><div style="display:flex;align-items:center;gap:3px"><label style="font-size:10px;display:flex;align-items:center;gap:1px;cursor:pointer"><input type="checkbox" class="spell-v" style="width:11px;height:11px" ${rv?'checked':''}>V</label><label style="font-size:10px;display:flex;align-items:center;gap:1px;cursor:pointer"><input type="checkbox" class="spell-s" style="width:11px;height:11px" ${rs?'checked':''}>S</label><label style="font-size:10px;display:flex;align-items:center;gap:1px;cursor:pointer"><input type="checkbox" class="spell-m" style="width:11px;height:11px" onchange="spellMChange(this)" ${rm?'checked':''}>M</label></div></td><td><input type="text" value="${esc(r[6]||'')}"><input type="text" class="spell-mat" placeholder="Material…" value="${esc(rmat)}" style="display:${rm?'block':'none'};width:100%;font-size:10px;margin-top:2px"></td><td><button class="del-btn" onclick="delRow(this)">✕</button></td>`;
+      const actOpts = [['','— not an action —'],['action','▸ Action'],['bonus','▸ Bonus Action'],['reaction','▸ Reaction']].map(([v,l]) => `<option value="${v}" ${act===v?'selected':''}>${l}</option>`).join('');
+      tr.innerHTML = `<td style="text-align:center"><input type="checkbox" onchange="recalcPreparedCount()" ${r[7]?'checked':''}></td><td><input type="text" value="${esc(r[0])}" style="width:28px"></td><td><div style="display:flex;align-items:center;gap:3px"><span class="spell-tog" onclick="toggleSpellExpand(this)"></span><input type="text" value="${esc(r[1])}" style="font-weight:${bold}"><a href="#" class="tools-link" onclick="openSpell5e(this);return false" title="Open in 5e.tools">↗</a></div></td><td><input type="text" value="${esc(r[2])}" style="width:70px"></td><td><input type="text" value="${esc(r[3])}" style="width:65px"></td><td><input type="text" class="spell-duration" value="${esc(dur)}" placeholder="Duration" style="width:75px"></td><td style="text-align:center"><input type="checkbox" ${r[4]?'checked':''}></td><td style="text-align:center"><input type="checkbox" ${r[5]?'checked':''}></td><td><select class="spell-school" style="width:60px;font-size:11px;padding:1px 2px">${schoolOpts}</select></td><td style="white-space:nowrap"><div style="display:flex;align-items:center;gap:3px"><label style="font-size:10px;display:flex;align-items:center;gap:1px;cursor:pointer"><input type="checkbox" class="spell-v" style="width:11px;height:11px" ${rv?'checked':''}>V</label><label style="font-size:10px;display:flex;align-items:center;gap:1px;cursor:pointer"><input type="checkbox" class="spell-s" style="width:11px;height:11px" ${rs?'checked':''}>S</label><label style="font-size:10px;display:flex;align-items:center;gap:1px;cursor:pointer"><input type="checkbox" class="spell-m" style="width:11px;height:11px" onchange="spellMChange(this)" ${rm?'checked':''}>M</label></div></td><td><input type="text" class="spell-notes" value="${esc(r[6]||'')}"><input type="text" class="spell-mat" placeholder="Material…" value="${esc(rmat)}" style="display:${rm?'block':'none'};width:100%;font-size:10px;margin-top:2px"><select class="spell-action" onchange="scheduleAutoSave()" title="Show this spell in the Actions tab" style="width:100%;font-size:10px;margin-top:2px">${actOpts}</select></td><td><button class="del-btn" onclick="delRow(this)">✕</button></td>`;
       tbl.appendChild(tr);
     });
   }
@@ -133,6 +143,10 @@ function applyData(d) {
   items.forEach(i => { if (i.itemType === 'item') i.itemType = 'wondrous'; });
   itemIdCounter = parseInt(d['_itemIdCounter']) || (items.length > 0 ? Math.max(...items.map(i => i.id)) : 0);
   renderItems();
+  // Custom actions
+  actions = [];
+  if (d['_actions']) { try { actions = JSON.parse(d['_actions']); } catch {} }
+  actionIdCounter = parseInt(d['_actionIdCounter']) || (actions.length > 0 ? Math.max(...actions.map(a => a.id || 0)) : 0);
   // Roll history
   rollHistory.length = 0;
   if (d['_rollHistory']) {
@@ -142,6 +156,7 @@ function applyData(d) {
   renderRollHistory();
   renderWeaponsSummary();
   renderEquippedItemsSummary();
+  if (typeof renderActionsTab === 'function') renderActionsTab();
   // Loots
   claimedLoots = [];
   if (d['_loots']) { try { claimedLoots = JSON.parse(d['_loots']); } catch {} }

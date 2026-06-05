@@ -62,7 +62,45 @@ function makeWpnRow(values, itemId = null) {
  * inspire    — initial inspire state
  * wpnRows    — array of makeWpnRow() objects (existing rows in the table)
  */
-function makeDom({ keyValues = {}, inspire = false, wpnRows = [] } = {}) {
+/**
+ * Build a fake spell table row mirroring the live DOM structure read by
+ * collectData (positional text inputs/checkboxes + classed sub-elements).
+ */
+function makeSpellRow(o = {}) {
+  const txts = [
+    { value: o.lvl   ?? '0' },
+    { value: o.name  ?? '' },
+    { value: o.time  ?? '' },
+    { value: o.range ?? '' },
+    { value: o.notes ?? '' },
+  ];
+  const chks = [
+    { checked: !!o.prepared },
+    { checked: !!o.conc },
+    { checked: !!o.ritual },
+  ];
+  const map = {
+    '.spell-school':   { value: o.school ?? '' },
+    '.spell-v':        { checked: !!o.v },
+    '.spell-s':        { checked: !!o.s },
+    '.spell-m':        { checked: !!o.m },
+    '.spell-mat':      { value: o.mat ?? '' },
+    '.spell-action':   { value: o.action ?? '' },
+    '.spell-notes':    { value: o.notes ?? '' },
+    '.spell-duration': { value: o.duration ?? '' },
+  };
+  return {
+    querySelectorAll(sel) {
+      if (sel === 'input[type=text], input[type=number]') return txts;
+      if (sel === 'input[type=checkbox]') return chks;
+      return [];
+    },
+    querySelector(sel) { return map[sel] || null; },
+    remove() {},
+  };
+}
+
+function makeDom({ keyValues = {}, inspire = false, wpnRows = [], spellRows = [] } = {}) {
   const keyEls = Object.entries(keyValues).map(([key, val]) => {
     if (typeof val === 'boolean') {
       return { dataset: { key }, type: 'checkbox', checked: val };
@@ -91,7 +129,7 @@ function makeDom({ keyValues = {}, inspire = false, wpnRows = [] } = {}) {
   const spellAppended = [];
   const spellTblEl = {
     querySelectorAll(sel) {
-      if (sel === 'tr:not(:first-child)') return [];
+      if (sel === 'tr:not(:first-child)') return [...spellRows];
       return [];
     },
     appendChild(tr) { spellAppended.push(tr); },
@@ -101,7 +139,7 @@ function makeDom({ keyValues = {}, inspire = false, wpnRows = [] } = {}) {
     querySelectorAll(sel) {
       if (sel === '[data-key]')                          return keyEls;
       if (sel === '#wpn-tbl tr:not(:first-child)')       return [...wpnRows];
-      if (sel === '#spell-tbl tr:not(:first-child)')     return [];
+      if (sel === '#spell-tbl tr:not(:first-child)')     return [...spellRows];
       return [];
     },
     getElementById(id) {
@@ -141,18 +179,23 @@ function load({
   keyValues    = {},
   inspire      = false,
   wpnRows      = [],
+  spellRows    = [],
   rollHistory  = [],
   items        = [],
   itemIdCounter = 0,
   claimedLoots = [],
+  actions      = [],
+  actionIdCounter = 0,
 } = {}) {
-  const dom = makeDom({ keyValues, inspire, wpnRows });
+  const dom = makeDom({ keyValues, inspire, wpnRows, spellRows });
 
   const ctx = createContext({
     rollHistory:   [...rollHistory],
     items:         items.map(i => ({ ...i })),
     itemIdCounter,
     claimedLoots:  claimedLoots.map(l => ({ ...l })),
+    actions:       actions.map(a => ({ ...a })),
+    actionIdCounter,
     document:      dom,
     // side-effect stubs (called by applyData but not under test here)
     renderItems:                 () => {},
@@ -160,6 +203,7 @@ function load({
     renderWeaponsSummary:        () => {},
     renderEquippedItemsSummary:  () => {},
     renderClaimedLoots:          () => {},
+    renderActionsTab:            () => {},
     recalcAll:                   () => {},
     parseInt, Math, JSON, String, Date,
   });
@@ -175,6 +219,8 @@ function load({
     get items()        { return ctx.items; },
     get itemIdCounter(){ return ctx.itemIdCounter; },
     get claimedLoots() { return ctx.claimedLoots; },
+    get actions()      { return ctx.actions; },
+    get actionIdCounter(){ return ctx.actionIdCounter; },
   };
 }
 
@@ -444,5 +490,132 @@ describe('applyData — null / missing input', () => {
   it('returns immediately without throwing when called with undefined', () => {
     const { applyData } = load();
     expect(() => applyData(undefined)).not.toThrow();
+  });
+});
+
+// ── collectData — custom actions ──────────────────────────────────────────────
+describe('collectData — custom actions', () => {
+  it('serialises the actions array to _actions JSON', () => {
+    const { collectData } = load({
+      actions: [{ id: 1, name: 'Second Wind', category: 'bonus', uses: 3, used: 1, recharge: 'short', dice: '1d10+8', description: 'heal' }],
+    });
+    const parsed = JSON.parse(collectData()._actions);
+    expect(parsed).toHaveLength(1);
+    expect(parsed[0].name).toBe('Second Wind');
+    expect(parsed[0].category).toBe('bonus');
+    expect(parsed[0].used).toBe(1);
+  });
+
+  it('captures actionIdCounter', () => {
+    const { collectData } = load({ actionIdCounter: 7 });
+    expect(collectData()._actionIdCounter).toBe(7);
+  });
+
+  it('serialises an empty actions array', () => {
+    const { collectData } = load({ actions: [] });
+    expect(collectData()._actions).toBe('[]');
+  });
+});
+
+// ── collectData — spell action category ([13]) ────────────────────────────────
+describe('collectData — spell action category', () => {
+  it('captures the .spell-action value at index 13', () => {
+    const { collectData } = load({
+      spellRows: [makeSpellRow({ lvl: '1', name: 'Entangle', action: 'action' })],
+    });
+    const rows = JSON.parse(collectData()._spells);
+    expect(rows[0][1]).toBe('Entangle');
+    expect(rows[0][13]).toBe('action');
+  });
+
+  it('defaults to empty string when no action category is set', () => {
+    const { collectData } = load({
+      spellRows: [makeSpellRow({ lvl: '0', name: 'Fire Bolt' })],
+    });
+    const rows = JSON.parse(collectData()._spells);
+    expect(rows[0][13]).toBe('');
+  });
+});
+
+// ── collectData — spell duration ([14]) ───────────────────────────────────────
+describe('collectData — spell duration', () => {
+  it('captures the .spell-duration value at index 14', () => {
+    const { collectData } = load({
+      spellRows: [makeSpellRow({ lvl: '1', name: 'Entangle', duration: 'Concentration, up to 1 minute' })],
+    });
+    const rows = JSON.parse(collectData()._spells);
+    expect(rows[0][14]).toBe('Concentration, up to 1 minute');
+  });
+
+  it('reads notes by class independently of duration', () => {
+    const { collectData } = load({
+      spellRows: [makeSpellRow({ name: 'Bless', notes: '2d6 radiant', duration: 'Instantaneous' })],
+    });
+    const rows = JSON.parse(collectData()._spells);
+    expect(rows[0][6]).toBe('2d6 radiant');   // notes
+    expect(rows[0][14]).toBe('Instantaneous'); // duration
+  });
+
+  it('defaults to empty string when duration is absent', () => {
+    const { collectData } = load({ spellRows: [makeSpellRow({ name: 'Fire Bolt' })] });
+    const rows = JSON.parse(collectData()._spells);
+    expect(rows[0][14]).toBe('');
+  });
+});
+
+// ── applyData — custom actions ────────────────────────────────────────────────
+describe('applyData — custom actions', () => {
+  it('restores actions from _actions JSON', () => {
+    const r = load();
+    r.applyData({ _actions: JSON.stringify([{ id: 2, name: 'Action Surge', category: 'other', uses: 1, used: 0, recharge: 'short' }]) });
+    expect(r.actions).toHaveLength(1);
+    expect(r.actions[0].name).toBe('Action Surge');
+  });
+
+  it('resets actions to empty array when _actions is absent', () => {
+    const r = load({ actions: [{ id: 1, name: 'Old', category: 'action' }] });
+    r.applyData({});
+    expect(r.actions).toHaveLength(0);
+  });
+
+  it('restores actionIdCounter from _actionIdCounter', () => {
+    const r = load({ actionIdCounter: 0 });
+    r.applyData({ _actions: '[]', _actionIdCounter: 12 });
+    expect(r.actionIdCounter).toBe(12);
+  });
+
+  it('derives actionIdCounter from max id when counter is absent', () => {
+    const r = load({ actionIdCounter: 0 });
+    r.applyData({ _actions: JSON.stringify([{ id: 3, name: 'A' }, { id: 8, name: 'B' }]) });
+    expect(r.actionIdCounter).toBe(8);
+  });
+
+  it('handles malformed _actions JSON gracefully (no throw)', () => {
+    const r = load();
+    expect(() => r.applyData({ _actions: 'not json' })).not.toThrow();
+    expect(r.actions).toHaveLength(0);
+  });
+});
+
+// ── applyData — spell action category renders into the row ────────────────────
+describe('applyData — spell action category', () => {
+  it('marks the matching action option as selected in the appended row', () => {
+    const { applyData, dom } = load();
+    applyData({ _spells: JSON.stringify([['1', 'Entangle', 'Action', '90 ft', false, false, '', true, 'Conj', false, false, false, '', 'action']]) });
+    expect(dom.spellAppended).toHaveLength(1);
+    expect(dom.spellAppended[0].innerHTML).toContain('value="action" selected');
+  });
+
+  it('defaults to the "not an action" option when [13] is absent', () => {
+    const { applyData, dom } = load();
+    applyData({ _spells: JSON.stringify([['0', 'Fire Bolt', 'Action', '120 ft', false, false, '', false, 'Evoc']]) });
+    expect(dom.spellAppended[0].innerHTML).toContain('value="" selected');
+  });
+
+  it('renders the duration value ([14]) into the appended row', () => {
+    const { applyData, dom } = load();
+    applyData({ _spells: JSON.stringify([['1', 'Entangle', 'Action', '90 ft', true, false, '', true, 'Conj', false, false, false, '', 'action', '1 minute']]) });
+    expect(dom.spellAppended[0].innerHTML).toContain('class="spell-duration"');
+    expect(dom.spellAppended[0].innerHTML).toContain('value="1 minute"');
   });
 });

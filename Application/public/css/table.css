@@ -300,6 +300,21 @@ input[type=number]{-moz-appearance:textfield;appearance:textfield}
 /* ── Flat section header (modern HUD, no collapse) ── */
 .rp-flat-hdr{font-size:9px;color:var(--ac);text-transform:uppercase;letter-spacing:.5px;padding:5px 8px 3px;background:var(--a22);border-top:1px solid var(--a44)}
 
+/* ── Side panel: Actions / Bonus / Reactions / Other ── */
+.rp-act-item{padding:5px 10px 6px;border-bottom:1px solid var(--a22)}
+.rp-act-item:last-child{border-bottom:none}
+.rp-act-head{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.rp-act-name{font-size:12px;font-weight:bold;color:var(--ahi,var(--ac))}
+.rp-act-roll{margin-left:auto;font-size:10px;color:#ff9966;cursor:pointer;white-space:nowrap}
+.rp-act-roll:hover{filter:brightness(1.2)}
+.rp-act-desc{font-size:10px;color:var(--txd);margin-top:2px;line-height:1.35;white-space:pre-wrap}
+.rp-act-uses{display:flex;align-items:center;gap:4px;margin-top:4px}
+.rp-act-box{width:13px;height:13px;border:2px solid var(--ac);border-radius:3px;display:inline-block;background:transparent}
+.rp-act-box.used{background:var(--ac)}
+.rp-act-recharge{font-size:10px;color:var(--txd);margin-left:3px}
+.rp-act-rest{display:flex;gap:6px;padding:6px 8px}
+.rp-act-rest .btn.sm{font-size:10px;padding:2px 8px}
+
 /* ── Skills 2-column grid in modern HUD ── */
 .rp-skill-grid{display:grid;grid-template-columns:1fr 1fr;padding:2px 0}
 .rp-skill-grid .qroll-row{font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:3px 8px}

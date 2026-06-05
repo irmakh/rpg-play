@@ -41,6 +41,7 @@ export default function register(app, ctx) {
       }
       if (data['_weapons'] !== undefined) qroll['_weapons'] = data['_weapons'];
       if (data['_spells']  !== undefined) qroll['_spells']  = data['_spells'];
+      if (data['_actions'] !== undefined) qroll['_actions'] = data['_actions'];
       res.json({ id: char.id, name: char.name, data: qroll });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
   });
@@ -67,6 +68,69 @@ export default function register(app, ctx) {
       }
       broadcast('characters', { action: 'updated', id: charId });
       res.json({ ok: true, used: data[`slot-${level}-used`] });
+    } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
+  });
+
+  // Update the spent-uses count of a single custom action (Actions tab limited use).
+  app.patch('/api/characters/:id/action-use', async (req, res) => {
+    try {
+      const charId = req.params.id;
+      if (!masterAuth(req)) {
+        const status = await charAuth(charId, req);
+        if (status !== 200) return res.status(status).json({ error: status === 404 ? 'Not found' : 'Unauthorized' });
+      }
+      const { actionId, used } = req.body || {};
+      if (actionId === undefined || used === undefined) return res.status(400).json({ error: 'actionId and used required' });
+      const char = await getCharacter(charId);
+      if (!char) return res.status(404).json({ error: 'Not found' });
+      let data = {};
+      try { data = JSON.parse(char.dataJson || '{}'); } catch {}
+      let acts = [];
+      try { acts = JSON.parse(data._actions || '[]'); } catch {}
+      const a = acts.find(x => x && x.id === actionId);
+      if (!a) return res.status(404).json({ error: 'Action not found' });
+      const max = parseInt(a.uses) || 0;
+      a.used = Math.max(0, Math.min(parseInt(used) || 0, max));
+      data._actions = JSON.stringify(acts);
+      const dataJson = JSON.stringify(data);
+      if (DB_PROVIDER === 'localdb') {
+        ldb.updateCharacter(charId, { dataJson });
+      } else {
+        await idb.transact([idb.tx.characters[charId].update({ dataJson })]);
+      }
+      broadcast('characters', { action: 'updated', id: charId });
+      res.json({ ok: true, used: a.used });
+    } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
+  });
+
+  // Reset spent uses on a rest. type 'short' restores short-recharge actions;
+  // 'long' restores both long- and short-recharge actions.
+  app.post('/api/characters/:id/action-rest', async (req, res) => {
+    try {
+      const charId = req.params.id;
+      if (!masterAuth(req)) {
+        const status = await charAuth(charId, req);
+        if (status !== 200) return res.status(status).json({ error: status === 404 ? 'Not found' : 'Unauthorized' });
+      }
+      const type = (req.body && req.body.type) === 'long' ? 'long' : 'short';
+      const char = await getCharacter(charId);
+      if (!char) return res.status(404).json({ error: 'Not found' });
+      let data = {};
+      try { data = JSON.parse(char.dataJson || '{}'); } catch {}
+      let acts = [];
+      try { acts = JSON.parse(data._actions || '[]'); } catch {}
+      acts.forEach(a => {
+        if (a && (a.recharge === 'short' || (type === 'long' && a.recharge === 'long'))) a.used = 0;
+      });
+      data._actions = JSON.stringify(acts);
+      const dataJson = JSON.stringify(data);
+      if (DB_PROVIDER === 'localdb') {
+        ldb.updateCharacter(charId, { dataJson });
+      } else {
+        await idb.transact([idb.tx.characters[charId].update({ dataJson })]);
+      }
+      broadcast('characters', { action: 'updated', id: charId });
+      res.json({ ok: true });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
   });
 

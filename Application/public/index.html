@@ -69,14 +69,15 @@
 
   <div class="tabs">
     <div class="tab active" onclick="showTab('main',this)">Main</div>
+    <div class="tab" onclick="showTab('actions',this)">⚔️ Actions</div>
     <div class="tab" onclick="showTab('spells',this)">Spells</div>
-    <div class="tab" onclick="showTab('notes',this)">Notes & BG</div>
-    <div class="tab" onclick="showTab('inventory',this)">🎒 Inventory</div>
+    <div class="tab" onclick="showTab('notes',this)">Notes</div>
+    <div class="tab" onclick="showTab('inventory',this)">🎒 Items</div>
     <div class="tab" onclick="showTab('rolls',this)">🎲 Rolls</div>
     <div class="tab" id="tab-btn-media" onclick="showTab('media',this)">📸 Media</div>
     <div class="tab" id="tab-btn-shop" onclick="showTab('shop',this)">🛒 Shop</div>
-    <div class="tab" id="tab-btn-loot" onclick="showTab('loot',this)">⚔️ Loots</div>
-    <div class="tab" id="tab-btn-calendar" onclick="showTab('calendar',this)">📅 Calendar</div>
+    <div class="tab" id="tab-btn-loot" onclick="showTab('loot',this)">⚔️ Loot</div>
+    <div class="tab" id="tab-btn-calendar" onclick="showTab('calendar',this)">📅 Cal</div>
   </div>
 
   <!-- MAIN -->
@@ -174,12 +175,6 @@
           </div>
         </div></div>
 
-        <!-- Weapons summary (auto-populated from Inventory tab) -->
-        <div class="card"><div class="ct">Weapons & Attacks</div><div class="cb" style="padding:8px 10px">
-          <div id="main-weapons-summary"><div style="color:var(--txd);font-size:11px;padding:4px 0">No weapons — add them in the Inventory tab.</div></div>
-          <button class="add-btn" style="margin-top:4px" onclick="showTab('inventory',document.querySelector('.tab[onclick*=inventory]'))">+ Go to Inventory</button>
-        </div></div>
-
         <!-- Equipped items summary (auto-populated from Inventory tab) -->
         <div class="card"><div class="ct">Equipped Items</div><div class="cb" style="padding:8px 10px">
           <div id="main-items-summary"><div style="color:var(--txd);font-size:11px;padding:4px 0">No equipped items — add them in the Inventory tab.</div></div>
@@ -210,18 +205,42 @@
     </div>
   </div>
 
-  <!-- INVENTORY -->
-  <div id="tab-inventory" class="page">
-    <!-- Weapons -->
-    <div class="card"><div class="ct">Weapons & Attacks</div><div class="cb">
-      <div class="tbl-wrap">
-      <table id="wpn-tbl">
-        <tr><th>Name</th><th>Atk</th><th>Damage/Type</th><th>Notes</th><th></th></tr>
-      </table>
+  <!-- ACTIONS -->
+  <div id="tab-actions" class="page">
+    <div class="card"><div class="ct">Actions</div><div class="cb" style="padding:8px 10px">
+      <div class="act-toolbar">
+        <div class="act-filters" id="act-filters">
+          <button type="button" class="act-chip active" data-filter="all" onclick="setActionFilter('all',this)">ALL</button>
+          <button type="button" class="act-chip" data-filter="attack" onclick="setActionFilter('attack',this)">ATTACK</button>
+          <button type="button" class="act-chip" data-filter="action" onclick="setActionFilter('action',this)">ACTION</button>
+          <button type="button" class="act-chip" data-filter="bonus" onclick="setActionFilter('bonus',this)">BONUS ACTION</button>
+          <button type="button" class="act-chip" data-filter="reaction" onclick="setActionFilter('reaction',this)">REACTION</button>
+          <button type="button" class="act-chip" data-filter="other" onclick="setActionFilter('other',this)">OTHER</button>
+          <button type="button" class="act-chip" data-filter="limited" onclick="setActionFilter('limited',this)">LIMITED USE</button>
+        </div>
+        <a href="#" class="tools-link act-manage" onclick="openActionModal(null);return false" title="Add a custom action">MANAGE CUSTOM</a>
       </div>
-      <button class="add-btn" onclick="addWeapon()">+ Add Weapon</button>
+      <div class="act-rest-bar">
+        <button type="button" class="add-btn" style="width:auto" onclick="actionRest('short')" title="Restore uses that recharge on a Short Rest">↻ Short Rest</button>
+        <button type="button" class="add-btn" style="width:auto" onclick="actionRest('long')" title="Restore uses that recharge on a Long or Short Rest">↻ Long Rest</button>
+      </div>
+      <div id="actions-body"></div>
     </div></div>
 
+    <!-- Weapons data store + advanced editor (attacks display in the sections above) -->
+    <details id="wpn-edit-wrap" class="act-wpn-edit">
+      <summary>Edit / add weapon attacks</summary>
+      <div class="tbl-wrap">
+        <table id="wpn-tbl">
+          <tr><th>Name</th><th>Atk</th><th>Damage/Type</th><th>Notes</th><th></th></tr>
+        </table>
+      </div>
+      <button type="button" class="add-btn" onclick="addWeapon()">+ Add Weapon</button>
+    </details>
+  </div>
+
+  <!-- INVENTORY -->
+  <div id="tab-inventory" class="page">
     <!-- Equipment & Items -->
     <div class="card"><div class="ct">Equipment &amp; Items</div><div class="cb" style="padding:8px 10px">
       <div id="items-body"></div>
@@ -278,9 +297,10 @@
           <th class="sp-sortable" onclick="sortSpells(2)">Name<span class="sort-ind" id="spth-2"></span></th>
           <th class="sp-sortable" onclick="sortSpells(3)">Time<span class="sort-ind" id="spth-3"></span></th>
           <th class="sp-sortable" onclick="sortSpells(4)">Range<span class="sort-ind" id="spth-4"></span></th>
-          <th class="sp-sortable" style="text-align:center" onclick="sortSpells(5)">Conc<span class="sort-ind" id="spth-5"></span></th>
-          <th class="sp-sortable" style="text-align:center" onclick="sortSpells(6)">Ritual<span class="sort-ind" id="spth-6"></span></th>
-          <th class="sp-sortable" onclick="sortSpells(7)">School<span class="sort-ind" id="spth-7"></span></th>
+          <th class="sp-sortable" onclick="sortSpells(5)">Dur<span class="sort-ind" id="spth-5"></span></th>
+          <th class="sp-sortable" style="text-align:center" onclick="sortSpells(6)">Conc<span class="sort-ind" id="spth-6"></span></th>
+          <th class="sp-sortable" style="text-align:center" onclick="sortSpells(7)">Ritual<span class="sort-ind" id="spth-7"></span></th>
+          <th class="sp-sortable" onclick="sortSpells(8)">School<span class="sort-ind" id="spth-8"></span></th>
           <th>V/S/M</th><th>Notes</th><th></th>
         </tr>
       </table>
@@ -673,6 +693,46 @@
   </div>
 </div>
 
+<!-- Custom action modal -->
+<div id="action-modal" class="modal-overlay" style="display:none">
+  <div class="modal-box" style="max-width:420px;width:92%">
+    <div class="ct" id="act-modal-title">Add Action</div>
+    <div class="modal-body" style="max-height:75vh;overflow-y:auto">
+      <div class="field"><label class="lbl">Name</label><input type="text" id="am-name" placeholder="e.g. Second Wind"></div>
+      <div class="g2" style="gap:8px;margin-bottom:6px">
+        <div class="field"><label class="lbl">Category</label>
+          <select id="am-category">
+            <option value="action">Action</option>
+            <option value="bonus">Bonus Action</option>
+            <option value="reaction">Reaction</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div class="field"><label class="lbl">Dice (optional)</label><input type="text" id="am-dice" placeholder="e.g. 1d10+8"></div>
+      </div>
+      <div class="field"><label class="lbl">Description</label><textarea id="am-desc" style="min-height:70px" placeholder="What this action does…"></textarea></div>
+      <div style="font-size:10px;color:var(--ac);text-transform:uppercase;letter-spacing:.5px;margin:10px 0 6px;font-weight:bold;border-bottom:1px solid var(--a44);padding-bottom:2px">Limited Use (optional)</div>
+      <div class="g2" style="gap:8px;margin-bottom:6px">
+        <div class="field"><label class="lbl">Uses (0 = unlimited)</label><input type="number" id="am-uses" value="0" min="0"></div>
+        <div class="field"><label class="lbl">Recharge</label>
+          <select id="am-recharge">
+            <option value="">— none —</option>
+            <option value="short">Short Rest</option>
+            <option value="long">Long Rest</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-btns" style="justify-content:space-between">
+      <button class="del-btn" id="am-delete-btn" style="display:none;padding:4px 10px" onclick="deleteActionEntry()">Delete</button>
+      <div style="display:flex;gap:8px">
+        <button class="char-btn" onclick="closeActionModal()">Cancel</button>
+        <button class="char-btn primary" onclick="saveActionModal()">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Password modal (set / change / remove only — unlock uses inline screen) -->
 <div id="loot-add-modal" class="modal-overlay" style="display:none">
   <div class="modal-box">
@@ -733,6 +793,7 @@
 <script src="/js/index/index-char.js" defer></script>
 <script src="/js/index/index-dice.js" defer></script>
 <script src="/js/index/index-items.js" defer></script>
+<script src="/js/index/index-actions.js" defer></script>
 <script src="/js/index/index-media.js" defer></script>
 <script src="/js/index/index-shop.js" defer></script>
 <script src="/js/index/index-loot.js" defer></script>

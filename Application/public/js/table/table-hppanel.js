@@ -87,8 +87,9 @@ function _refreshHpPanel(tok) {
 
   const hpNameEl = document.getElementById('hp-panel-name');
   if (isDM() && tok.type === 'monster' && tok.label) {
+    // DM view: lead with the player-facing identifier, monster type in brackets.
     const baseName = tok.name.slice(0, tok.name.length - tok.label.length).trimEnd() || tok.name;
-    hpNameEl.innerHTML = esc(baseName) + ` <span style="color:var(--txd);font-weight:normal;font-size:11px">[${esc(tok.label)}]</span>`;
+    hpNameEl.innerHTML = esc(tok.label) + ` <span style="color:var(--txd);font-weight:normal;font-size:11px">[${esc(baseName)}]</span>`;
   } else {
     hpNameEl.textContent = tokDisplayName(tok);
   }
@@ -845,6 +846,25 @@ function applyBulkHpChange(mode) {
 
 function applyBulkQuickDmg(n) { document.getElementById('bulk-amount').value = n; applyBulkHpChange('dmg'); }
 function applyBulkQuickHeal(n) { document.getElementById('bulk-amount').value = n; applyBulkHpChange('heal'); }
+
+// Bulk show/hide selected tokens from players (DM only).
+function bulkSetVisibility(visible) {
+  if (!isDM() || bulkTokenIds.size === 0) return;
+  for (const id of bulkTokenIds) {
+    const tok = tokens.find(t => t.id === id);
+    if (!tok) continue;
+    patchToken(id, { visible });
+    const tid = id;
+    _tokQ.run(async () => {
+      try { await fetch(`/api/table/tokens/${tid}`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify({ visible }) }); } catch {}
+    });
+  }
+  renderTokens();
+  renderHpTable();
+  renderBulkPanel();
+  const selTok = tokens.find(t => t.id === selectedTokenId);
+  if (selTok && bulkTokenIds.has(selectedTokenId)) _refreshHpPanel(selTok);
+}
 
 function bulkToggleCondition(name) {
   if (bulkTokenIds.size === 0) return;

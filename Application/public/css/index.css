@@ -143,8 +143,8 @@ body.theme-mobile .sheet{padding-bottom:240px}
 body{font-family:'Segoe UI',sans-serif;background:var(--bg);color:var(--tx);font-size:13px}
 .sheet{max-width:980px;margin:0 auto;padding:16px}
 h1{color:var(--ac);font-size:26px;letter-spacing:1px;margin:0;text-transform:uppercase;text-align:left}
-.tabs{display:flex;gap:6px;margin:12px 0}
-.tab{background:var(--bg2);border:1px solid var(--a44);color:var(--a88);padding:6px 18px;border-radius:4px 4px 0 0;cursor:pointer;font-size:12px;font-weight:bold}
+.tabs{display:flex;flex-wrap:wrap;gap:5px;margin:12px 0}
+.tab{background:var(--bg2);border:1px solid var(--a44);color:var(--a88);padding:6px 11px;border-radius:4px 4px 0 0;cursor:pointer;font-size:12px;font-weight:bold;white-space:nowrap}
 .tab.active{background:var(--ac);color:var(--bg);border-color:var(--ac)}
 .page{display:none}.page.active{display:block}
 .card{background:var(--bg2);border:1px solid var(--a44);border-radius:6px;overflow:hidden;margin-bottom:10px}
@@ -224,6 +224,44 @@ td input[type=checkbox]{accent-color:var(--ac)}
 /* 5e.tools links */
 .tools-link{color:var(--exp);font-size:10px;text-decoration:none;opacity:0.6;flex-shrink:0;line-height:1}
 .tools-link:hover{opacity:1;text-decoration:none}
+
+/* ── Actions tab ── */
+.act-toolbar{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.act-filters{display:flex;flex-wrap:wrap;gap:4px}
+.act-chip{background:var(--bg2);border:1px solid var(--a44);color:var(--a88,var(--txd));padding:3px 9px;border-radius:12px;cursor:pointer;font-size:10px;font-weight:bold;letter-spacing:.5px;text-transform:uppercase}
+.act-chip:hover{border-color:var(--ahi)}
+.act-chip.active{background:var(--ac);color:var(--bg);border-color:var(--ac)}
+.act-manage{font-size:10px;font-weight:bold;letter-spacing:.5px}
+.act-rest-bar{display:flex;gap:8px;margin-bottom:10px}
+.act-rest-bar .add-btn{flex:0 0 auto}
+.act-section{margin-bottom:14px}
+.act-section-hdr{font-size:11px;font-weight:bold;color:var(--ac);text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid var(--a44);padding-bottom:3px;margin-bottom:6px}
+.act-atk-tbl{width:100%;border-collapse:collapse;margin-bottom:8px}
+.act-atk-tbl th{font-size:9px;text-transform:uppercase;letter-spacing:.5px;color:var(--txd);text-align:left;padding:2px 6px;border-bottom:1px solid var(--a44)}
+.act-atk-tbl td{padding:4px 6px;border-bottom:1px solid var(--sep,var(--a22));font-size:12px;vertical-align:middle}
+.act-atk-name{font-weight:bold;color:var(--ahi)}
+.act-atk-range,.act-atk-notes{color:var(--txd);font-size:11px}
+.act-atk-hit,.act-atk-dmg{white-space:nowrap}
+.act-atk-hit span,.act-atk-dmg span{font-weight:bold}
+.act-item{padding:6px 2px 7px;border-bottom:1px solid var(--sep,var(--a22))}
+.act-item:last-child{border-bottom:none}
+.act-head{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.act-name{font-weight:bold;color:var(--ahi);font-size:13px}
+.act-lvl{font-size:11px;color:var(--txd)}
+.act-tag{font-size:9px;text-transform:uppercase;letter-spacing:.5px;color:var(--bg);background:var(--a66,var(--ac));padding:1px 6px;border-radius:8px}
+.act-controls{margin-left:auto;display:flex;align-items:center;gap:6px}
+.act-edit-btn{background:var(--a22);border:1px solid var(--a44);color:var(--txd);border-radius:3px;padding:1px 6px;font-size:11px;cursor:pointer;line-height:1.3}
+.act-edit-btn:hover{color:var(--ac);border-color:var(--ac)}
+.act-desc{font-size:11px;color:var(--tx,inherit);margin-top:3px;line-height:1.4;white-space:pre-wrap}
+.act-uses{display:flex;align-items:center;gap:5px;margin-top:5px}
+.act-box{width:15px;height:15px;border:2px solid var(--a66,var(--ac));border-radius:3px;cursor:pointer;display:inline-block;background:transparent;transition:background .1s}
+.act-box:hover{border-color:var(--ahi)}
+.act-box.used{background:var(--ac);border-color:var(--ac)}
+.act-recharge{font-size:11px;color:var(--txd);margin-left:4px}
+.act-wpn-edit{margin-top:10px;background:var(--bg2);border:1px solid var(--a44);border-radius:6px;padding:4px 10px 10px;overflow:hidden}
+.act-wpn-edit>summary{cursor:pointer;font-size:11px;font-weight:bold;color:var(--txd);text-transform:uppercase;letter-spacing:.5px;padding:8px 4px;list-style:revert}
+.act-wpn-edit>summary:hover{color:var(--ac)}
+.act-wpn-edit[open]>summary{border-bottom:1px solid var(--a44);margin-bottom:8px}
 /* ── Dice rolling ── */
 .roll-btn{background:none;border:none;cursor:pointer;padding:1px 3px;font-size:11px;opacity:0.55;line-height:1;flex-shrink:0}
 .roll-btn:hover{opacity:1}

@@ -379,6 +379,18 @@ describe('GET /api/characters/:id/qroll', () => {
     const res = await request(app).get('/api/characters/c1/qroll');
     expect(res.body.data._weapons).toEqual(weapons);
   });
+
+  it('includes _actions when present', async () => {
+    const { app, ldb } = makeApp();
+    const actions = JSON.stringify([{ id: 1, name: 'Second Wind', category: 'bonus', uses: 3, used: 0 }]);
+    ldb.createCharacter('c1', {
+      name: 'Fighter',
+      dataJson: JSON.stringify({ _actions: actions }),
+      createdAt: new Date().toISOString(),
+    });
+    const res = await request(app).get('/api/characters/c1/qroll');
+    expect(res.body.data._actions).toBe(actions);
+  });
 });
 
 // ── POST /api/characters/:id/roll ─────────────────────────────────────────────
@@ -434,5 +446,102 @@ describe('POST /api/characters/:id/roll', () => {
     const hist = JSON.parse(stored._rollHistory);
     expect(hist.length).toBe(100);
     expect(hist[0].label).toBe('Overflow');
+  });
+});
+
+// ── PATCH /api/characters/:id/action-use ──────────────────────────────────────
+describe('PATCH /api/characters/:id/action-use', () => {
+  function seedActions(ldb, acts) {
+    ldb.createCharacter('c1', {
+      name: 'Hero',
+      dataJson: JSON.stringify({ _actions: JSON.stringify(acts) }),
+      createdAt: new Date().toISOString(),
+    });
+  }
+  const storedActions = (ldb) => JSON.parse(JSON.parse(ldb.getCharacter('c1').dataJson)._actions);
+
+  it('returns 404 for a non-existent character', async () => {
+    const { app } = makeApp();
+    const res = await dm(request(app).patch('/api/characters/ghost/action-use')).send({ actionId: 1, used: 1 });
+    expect(res.status).toBe(404);
+  });
+
+  it('returns 400 when actionId or used is missing', async () => {
+    const { app, ldb } = makeApp();
+    seedActions(ldb, [{ id: 1, name: 'Second Wind', uses: 3, used: 0 }]);
+    const res = await dm(request(app).patch('/api/characters/c1/action-use')).send({ actionId: 1 });
+    expect(res.status).toBe(400);
+  });
+
+  it('returns 404 when the action id is not found', async () => {
+    const { app, ldb } = makeApp();
+    seedActions(ldb, [{ id: 1, name: 'Second Wind', uses: 3, used: 0 }]);
+    const res = await dm(request(app).patch('/api/characters/c1/action-use')).send({ actionId: 99, used: 1 });
+    expect(res.status).toBe(404);
+  });
+
+  it('updates the spent-uses count and persists it', async () => {
+    const { app, ldb } = makeApp();
+    seedActions(ldb, [{ id: 1, name: 'Second Wind', uses: 3, used: 0 }]);
+    const res = await dm(request(app).patch('/api/characters/c1/action-use')).send({ actionId: 1, used: 2 });
+    expect(res.status).toBe(200);
+    expect(res.body.used).toBe(2);
+    expect(storedActions(ldb)[0].used).toBe(2);
+  });
+
+  it('clamps used to the action maximum', async () => {
+    const { app, ldb } = makeApp();
+    seedActions(ldb, [{ id: 1, name: 'Second Wind', uses: 3, used: 0 }]);
+    const res = await dm(request(app).patch('/api/characters/c1/action-use')).send({ actionId: 1, used: 10 });
+    expect(res.body.used).toBe(3);
+    expect(storedActions(ldb)[0].used).toBe(3);
+  });
+
+  it('clamps used to a minimum of 0', async () => {
+    const { app, ldb } = makeApp();
+    seedActions(ldb, [{ id: 1, name: 'Second Wind', uses: 3, used: 2 }]);
+    const res = await dm(request(app).patch('/api/characters/c1/action-use')).send({ actionId: 1, used: -5 });
+    expect(res.body.used).toBe(0);
+  });
+});
+
+// ── POST /api/characters/:id/action-rest ──────────────────────────────────────
+describe('POST /api/characters/:id/action-rest', () => {
+  function seedMixed(ldb) {
+    ldb.createCharacter('c1', {
+      name: 'Hero',
+      dataJson: JSON.stringify({ _actions: JSON.stringify([
+        { id: 1, recharge: 'short', uses: 2, used: 2 },
+        { id: 2, recharge: 'long',  uses: 1, used: 1 },
+        { id: 3, recharge: '',      uses: 2, used: 1 },
+      ]) }),
+      createdAt: new Date().toISOString(),
+    });
+  }
+  const used = (ldb, id) => JSON.parse(JSON.parse(ldb.getCharacter('c1').dataJson)._actions).find(a => a.id === id).used;
+
+  it('returns 404 for a non-existent character', async () => {
+    const { app } = makeApp();
+    const res = await dm(request(app).post('/api/characters/ghost/action-rest')).send({ type: 'short' });
+    expect(res.status).toBe(404);
+  });
+
+  it('short rest resets only short-recharge actions', async () => {
+    const { app, ldb } = makeApp();
+    seedMixed(ldb);
+    const res = await dm(request(app).post('/api/characters/c1/action-rest')).send({ type: 'short' });
+    expect(res.status).toBe(200);
+    expect(used(ldb, 1)).toBe(0);
+    expect(used(ldb, 2)).toBe(1);
+    expect(used(ldb, 3)).toBe(1);
+  });
+
+  it('long rest resets both short- and long-recharge actions', async () => {
+    const { app, ldb } = makeApp();
+    seedMixed(ldb);
+    await dm(request(app).post('/api/characters/c1/action-rest')).send({ type: 'long' });
+    expect(used(ldb, 1)).toBe(0);
+    expect(used(ldb, 2)).toBe(0);
+    expect(used(ldb, 3)).toBe(1);
   });
 });
