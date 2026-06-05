@@ -542,11 +542,11 @@ function panToToken(id) {
 function moveSelectedToken(key) {
   const tok = tokens.find(t => t.id === selectedTokenId);
   if (!tok) return;
-  const canMove = isDM() || isMyToken(tok);
-  if (!canMove) return;
+  // Movement is open to everyone (item 11). Undo via undoLastMove.
   const dx = key === 'ArrowLeft' ? -1 : key === 'ArrowRight' ? 1 : 0;
   const dy = key === 'ArrowUp'   ? -1 : key === 'ArrowDown'  ? 1 : 0;
   const nx = (tok.x || 0) + dx, ny = (tok.y || 0) + dy;
+  recordTokenMove(tok.id, tok.x || 0, tok.y || 0, tok.movedFt || 0);
   // Optimistic update — immediate
   patchToken(selectedTokenId, { x: nx, y: ny });
   renderTokens();
@@ -589,8 +589,8 @@ async function deleteSelectedToken() {
 function attachTokenEvents(div, tok) {
   div.addEventListener('mousedown', e => {
     if (currentTool !== 'move') return;
-    const canMove = isDM() || isMyToken(tok);
-    if (!canMove) return;
+    // Movement is open to everyone (item 11) — any token can be dragged by any user.
+    // Accidental moves are recoverable via the Undo button (undoLastMove).
     e.preventDefault();
     e.stopPropagation();
     _dragPendingTimer = setTimeout(() => { _dragPendingTimer = null; startDrag(tok, e); }, 500);
@@ -648,6 +648,9 @@ function finishDrag(e) {
     renderGrid(); renderTokens(); return;
   }
 
+  // Record the pre-move position so any user can Undo this move.
+  recordTokenMove(tokenId, origX, origY, origMovedFt);
+
   // Optimistic update — immediate
   const dx = Math.abs(grid.x - origX), dy = Math.abs(grid.y - origY);
   const dist = Math.max(dx, dy) * 5;
@@ -666,6 +669,53 @@ function finishDrag(e) {
       patchToken(tokenId, { x: origX, y: origY, movedFt: origMovedFt });
       renderGrid(); renderTokens(); renderSidePanel();
       showToast('Network error.', true);
+    }
+  });
+}
+
+// ── Undo last token move (item 11) ────────────────────────────────────────────
+// Records the position a token occupied *before* its most recent move so any user
+// can snap it back. Single-level: each new move overwrites the previous record.
+function recordTokenMove(tokenId, x, y, movedFt) {
+  if (_suppressUndoCapture) return;
+  lastTokenMove = { tokenId, x, y, movedFt: movedFt || 0 };
+  updateUndoButton();
+}
+
+function updateUndoButton() {
+  const btn = document.getElementById('btn-undo-move');
+  if (!btn) return;
+  if (lastTokenMove && tokens.find(t => t.id === lastTokenMove.tokenId)) {
+    btn.style.display = '';
+    const tok = tokens.find(t => t.id === lastTokenMove.tokenId);
+    btn.title = `Undo move of ${tok ? tokDisplayName(tok) : 'token'}`;
+  } else {
+    btn.style.display = 'none';
+  }
+}
+
+function undoLastMove() {
+  if (!lastTokenMove) return;
+  const { tokenId, x, y, movedFt } = lastTokenMove;
+  const tok = tokens.find(t => t.id === tokenId);
+  if (!tok) { lastTokenMove = null; updateUndoButton(); return; }
+  lastTokenMove = null;
+  updateUndoButton();
+  // Restore optimistically and push to server. Suppress capture so the restore
+  // itself isn't recorded (no undo-the-undo loop).
+  _suppressUndoCapture = true;
+  patchToken(tokenId, { x, y, movedFt });
+  renderGrid(); renderTokens(); renderSidePanel(); renderHpTable();
+  _tokQ.run(async () => {
+    try {
+      await fetch(`/api/table/tokens/${tokenId}`, {
+        method: 'PUT', headers: authHeaders(),
+        body: JSON.stringify({ x, y, movedFt })
+      });
+    } catch {
+      showToast('Undo failed — network error.', true);
+    } finally {
+      setTimeout(() => { _suppressUndoCapture = false; }, 400);
     }
   });
 }
@@ -1049,8 +1099,15 @@ overlayCanvas.addEventListener('mousedown', e => {
   if (currentTool === 'ruler') {
     rulerState = { x1: pos.x, y1: pos.y };
   } else if (currentTool === 'ping') {
-    const grid = canvasToGrid(pos.x, pos.y);
-    sendPing(grid.x, grid.y);
+    // Item 5: pin the ping to the exact click point, not a snapped grid cell.
+    // We still send in grid units (so server + companion stay compatible), but as
+    // fractional coords. tokenToPixel adds cs/2 to center within a cell, so the
+    // -0.5 cancels it and the ring lands precisely on the cursor (server keeps the
+    // fraction via parseFloat).
+    const cs = tableState.cellSize || 50;
+    const col = (pos.x - (tableState.offsetX || 0)) / cs - 0.5;
+    const row = (pos.y - (tableState.offsetY || 0)) / cs - 0.5;
+    sendPing(col, row);
   } else if (currentTool === 'draw') {
     if (drawSubMode === 'select') {
       const selShape = selectedShapeId ? drawings.find(s => s.id === selectedShapeId) : null;
@@ -1167,12 +1224,14 @@ document.addEventListener('mousemove', e => {
   const grid = canvasToGrid(pos.x, pos.y);
   if (grid.x !== dragState.origX || grid.y !== dragState.origY) dragState.didMove = true;
   const cs = tableState.cellSize || 50;
-  const ox = tableState.offsetX || 0, oy = tableState.offsetY || 0;
   const dragTok = tokens.find(t => t.id === dragState.tokenId);
   const sizeMult = dragTok?.tokenSize || 1;
   const size = Math.round(sizeMult * cs - 4);
-  const cx = ox + grid.x * cs + sizeMult * cs / 2;
-  const cy = oy + grid.y * cs + sizeMult * cs / 2;
+  // Item 4: the ghost follows the cursor freely while dragging — no snapping during
+  // the drag. The grid cell is only resolved on drop (finishDrag → canvasToGrid),
+  // so movement feels fluid instead of jumping a cell behind the mouse.
+  const cx = pos.x;
+  const cy = pos.y;
   oCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
   oCtx.beginPath();
   oCtx.arc(cx, cy, size / 2, 0, Math.PI * 2);

@@ -276,13 +276,15 @@ describe('PUT /api/table/tokens/:id (Player)', () => {
     expect(ldb.getTableToken(id).hpCurrent).toBe(5);
   });
 
-  it('player cannot move a monster token → 403', async () => {
-    const { app } = makeApp();
-    const id = await createToken(app, { name: 'Goblin', type: 'monster' });
+  it('player can move a monster token (movement open to everyone, item 11)', async () => {
+    const { app, ldb } = makeApp();
+    const id = await createToken(app, { name: 'Goblin', type: 'monster', x: 0, y: 0 });
     const res = await request(app)
       .put(`/api/table/tokens/${id}`)
       .send({ x: 5, y: 5 });
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(200);
+    expect(ldb.getTableToken(id).x).toBe(5);
+    expect(ldb.getTableToken(id).y).toBe(5);
   });
 
   it('player can move a character token when no initiative is active', async () => {
@@ -296,17 +298,19 @@ describe('PUT /api/table/tokens/:id (Player)', () => {
     expect(ldb.getTableToken(id).y).toBe(4);
   });
 
-  it('player moving out of turn during initiative → 403', async () => {
+  it('player can move out of turn during initiative (movement open to everyone, item 11)', async () => {
     const { app, ldb } = makeApp();
-    // Two initiative entries; e1 is active, token is linked to e2
+    // Two initiative entries; e1 is active, token is linked to e2 (not its turn)
     ldb.createInitEntry('e1', { name: 'Other', roll: 20 });
     ldb.createInitEntry('e2', { name: 'Aria',  roll: 10 });
     ldb.setInitState('e1'); // e1's turn
-    const id = await createToken(app, { name: 'Aria', type: 'character', initiativeId: 'e2' });
+    const id = await createToken(app, { name: 'Aria', type: 'character', initiativeId: 'e2', x: 0, y: 0 });
     const res = await request(app)
       .put(`/api/table/tokens/${id}`)
       .send({ x: 2, y: 2 });
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(200);
+    expect(ldb.getTableToken(id).x).toBe(2);
+    expect(ldb.getTableToken(id).y).toBe(2);
   });
 
   it('player moving on their turn accumulates movedFt', async () => {

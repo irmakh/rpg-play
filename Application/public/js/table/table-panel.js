@@ -82,7 +82,7 @@ function renderSideCharacter() {
         + `<span style="font-size:11px;color:var(--txd)">↳ Damage</span>`
         + `<span class="qroll-val" style="color:#ff9966;font-size:13px">${esc(wDmg)}</span></div>`
       : '';
-    return `<div class="qroll-row" onclick="qroll('${esc(wName)} Atk','${esc(wAtk)}')" title="Attack roll">`
+    return `<div class="qroll-row" onclick="qroll('${esc(wName)} Atk','${esc(wAtk)}','${esc(wDmg)}'${wNoteJs ? `,'${wNoteJs}'` : ''})" title="Attack roll — then choose Miss / Roll Damage">`
       + `<span>${esc(wName)}</span><span class="qroll-val">${esc(wAtk)}</span></div>${dmgRow}`;
   }).join('');
   const spAtkRow = spAtk !== null
@@ -120,8 +120,10 @@ function renderSideCharacter() {
       + `</div>`
     : '';
 
-  // Prepared spells HTML (shared)
+  // Prepared spells HTML (shared). _sideSpells holds the rendered spells so a name
+  // click can look the spell up by index and post its description to chat (item 9).
   let spellListHtml = '';
+  _sideSpells = preparedSpells;
   if (preparedSpells.length > 0) {
     const byLevel = {};
     for (const s of preparedSpells) {
@@ -134,11 +136,16 @@ function renderSideCharacter() {
       const lvlName = lvl === '0' ? 'Cantrips' : `Level ${lvl}`;
       spellListHtml += `<div style="font-size:9px;color:var(--txd);padding:3px 10px 1px;text-transform:uppercase;letter-spacing:.5px">${lvlName}</div>`;
       for (const s of byLevel[lvl]) {
+        const idx = preparedSpells.indexOf(s);
         const sName = s[1] || '?';
+        const hasDesc = !!(s[6] && String(s[6]).trim());
         const flags = (s[4] ? ' <span style="color:#aaddff" title="Concentration">C</span>' : '')
                     + (s[5] ? ' <span style="color:#ddaaff" title="Ritual">R</span>' : '');
+        const nameSpan = hasDesc
+          ? `<span class="rp-spell-name" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px" onclick="postSpellInfoFromPanel(${idx})" title="Show description in chat">${esc(sName)}</span>${flags}`
+          : `<span>${esc(sName)}${flags}</span>`;
         spellListHtml += `<div class="qroll-row" style="padding:3px 10px;font-size:11px">`
-          + `<span>${esc(sName)}${flags}</span>`
+          + nameSpan
           + (spAtk !== null ? `<span class="qroll-val" onclick="event.stopPropagation();qroll('${esc(sName)}','${esc(String(spAtk))}')" style="font-size:11px;cursor:pointer" title="Spell attack">⚡</span>` : '')
           + `</div>`;
       }
@@ -186,7 +193,7 @@ function renderSideCharacter() {
         + weapons.filter(r => r[0]).map(r => {
             const [wName, wAtk, wDmg, wNote] = [r[0]||'', r[1]||'+0', r[2]||'', r[3]||''];
             const wNoteJs = wNote.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\r?\n/g, ' ');
-            const atkClick = `qroll('${esc(wName)} Atk','${esc(wAtk)}')`;
+            const atkClick = `qroll('${esc(wName)} Atk','${esc(wAtk)}','${esc(wDmg)}'${wNoteJs ? `,'${wNoteJs}'` : ''})`;
             const dmgClick = wDmg ? `rollDamageStr('${esc(wName)} Dmg','${esc(wDmg)}'${wNoteJs ? `,'${wNoteJs}'` : ''})` : '';
             return `<div class="rp-atk-row">`
               + `<span class="rp-atk-name" onclick="${atkClick}" title="${esc(wName)}">${esc(wName)}</span>`
@@ -390,11 +397,71 @@ async function loadSideQroll() {
   content.innerHTML = '';
 }
 
-function qroll(label, modifier) {
-  rollPending = { label, modifier: parseInt(String(modifier).replace(/[^0-9\-+]/g,'')) || 0 };
-  const lbl = document.getElementById('adv-label');
-  if (lbl) lbl.textContent = 'Roll: ' + label;
-  document.getElementById('adv-modal').style.display = 'flex';
+// Item 2: rolls fire immediately using the persistent diceMode toggle — no modal.
+// Item 3: weapon attacks pass weaponDmg/weaponNote so confirmRoll can offer a
+// Miss / Roll Damage prompt once the attack die settles.
+function qroll(label, modifier, weaponDmg = null, weaponNote = '') {
+  rollPending = {
+    label,
+    modifier: parseInt(String(modifier).replace(/[^0-9\-+]/g,'')) || 0,
+    weaponDmg: weaponDmg || null,
+    weaponNote: weaponNote || ''
+  };
+  confirmRoll(diceMode);
+}
+
+// Item 2: persistent dice-mode toggle (Normal / Adv / Dis) shown under the name.
+function setDiceMode(mode) {
+  if (!['norm', 'adv', 'dis'].includes(mode)) mode = 'norm';
+  diceMode = mode;
+  document.querySelectorAll('#rp-dice-mode .dm-seg').forEach(b =>
+    b.classList.toggle('active', b.dataset.mode === mode));
+}
+
+// Item 3: after a weapon attack roll, prompt for Miss (close) or Roll Damage.
+function showWeaponDmgPrompt(atkLabel, dmg, note) {
+  const wName = String(atkLabel).replace(/ Atk$/i, '').replace(/ atk$/i, '');
+  _pendingWeaponDmg = { wName, dmg, note: note || '' };
+  const el = document.getElementById('weapon-dmg-prompt');
+  if (!el) return;
+  const lbl = document.getElementById('weapon-dmg-prompt-label');
+  if (lbl) lbl.textContent = `${wName} hit?`;
+  el.style.display = 'flex';
+}
+function weaponDmgMiss() {
+  _pendingWeaponDmg = null;
+  const el = document.getElementById('weapon-dmg-prompt');
+  if (el) el.style.display = 'none';
+}
+function weaponDmgRoll() {
+  const w = _pendingWeaponDmg;
+  _pendingWeaponDmg = null;
+  const el = document.getElementById('weapon-dmg-prompt');
+  if (el) el.style.display = 'none';
+  if (w && w.dmg) rollDamageStr(`${w.wName} Dmg`, w.dmg, w.note || '');
+}
+
+// Item 9: clicking a spell name posts its description to chat rendered as raw HTML
+// (so 5e.tools links etc. embedded in the notes are clickable).
+function postSpellInfoFromPanel(idx) {
+  const s = _sideSpells[idx];
+  if (!s) return;
+  const name = s[1] || 'Spell';
+  const desc = s[6] || '';
+  const lvl  = s[0];
+  const meta = [];
+  if (lvl !== undefined && lvl !== '' && lvl !== null) meta.push(String(lvl) === '0' ? 'Cantrip' : `Level ${esc(String(lvl))}`);
+  if (s[2]) meta.push(`⏱ ${esc(s[2])}`);
+  if (s[3]) meta.push(`🎯 ${esc(s[3])}`);
+  let html = `<strong>${esc(name)}</strong>`;
+  if (meta.length) html += `<div style="font-size:10px;opacity:.7;margin-top:1px">${meta.join(' · ')}</div>`;
+  if (desc) html += `<div style="margin-top:4px">${desc}</div>`;
+  // postToChat() forces type:'roll', so post the HTML text message directly.
+  fetch('/api/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sender: getChatSender(), type: 'text', message: html, html: true })
+  }).catch(() => {});
 }
 
 async function rollDamageStr(label, dmgStr, description = '') {
@@ -440,16 +507,14 @@ function rollInitiativeFromPanel() {
       } catch {}
     } : null
   };
-  const lbl = document.getElementById('adv-label');
-  if (lbl) lbl.textContent = 'Roll: Initiative';
-  document.getElementById('adv-modal').style.display = 'flex';
+  confirmRoll(diceMode); // item 2: use persistent dice mode, no modal
 }
 
 // ── Advantage modal (advClose in js/lib/dice-engine.js) ──────────────────────
 async function confirmRoll(type) {
   if (!rollPending) return;
   document.getElementById('adv-modal').style.display = 'none';
-  const { label, modifier, afterRoll, dmOnlyChat, skipDiceBroadcast } = rollPending;
+  const { label, modifier, afterRoll, dmOnlyChat, skipDiceBroadcast, weaponDmg, weaponNote } = rollPending;
   rollPending = null;
   const charId = getActiveCharLinkedId();
   const r1 = Math.ceil(Math.random() * 20);
@@ -471,9 +536,12 @@ async function confirmRoll(type) {
   const detail = type !== 'norm' ? `d20(${r1}, ${r2} → ${used})${modifier !== 0 ? (modifier > 0 ? ' + ' : ' − ') + Math.abs(modifier) : ''}` : `d20(${r1})${modifier !== 0 ? (modifier > 0 ? ' + ' : ' − ') + Math.abs(modifier) : ''}`;
   _pushRollToChar(charId, { label: chatLabel, type, detail, total, isCrit: used === 20, isFail: used === 1, isDamage: false, time: new Date().toISOString() });
   if (afterRoll) afterRoll(total);
+  // Item 3: weapon attack → offer Miss / Roll Damage now that the die has settled.
+  if (weaponDmg) showWeaponDmgPrompt(label, weaponDmg, weaponNote);
 }
 
 document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && document.getElementById('image-reveal-modal')?.style.display === 'flex') { closeImageRevealModal(); return; }
   if (e.key === 'Escape' && document.getElementById('media-lightbox')) { lightboxClose(); return; }
   if (e.key === 'Escape' && placementState) { exitPlacementMode(); return; }
   if (e.key === 'Escape' && currentTool === 'draw') {

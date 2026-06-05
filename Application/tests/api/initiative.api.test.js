@@ -434,10 +434,10 @@ describe('POST /api/initiative/next', () => {
 
 // ── POST /api/initiative/prev ─────────────────────────────────────────────────
 describe('POST /api/initiative/prev', () => {
-  it('returns 401 without DM auth', async () => {
+  it('works without DM auth (symmetric with /next — item 8)', async () => {
     const { app } = makeApp();
     const res = await request(app).post('/api/initiative/prev');
-    expect(res.status).toBe(401);
+    expect(res.status).toBe(200);
   });
 
   it('goes back to the previous entry', async () => {

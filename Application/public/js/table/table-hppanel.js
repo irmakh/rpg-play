@@ -357,9 +357,7 @@ function _startMonsterInitRoll(tok) {
       } catch { showToast('Connection error.', true); }
     }
   };
-  const lbl = document.getElementById('adv-label');
-  if (lbl) lbl.textContent = 'Roll: Initiative';
-  document.getElementById('adv-modal').style.display = 'flex';
+  confirmRoll(diceMode); // item 2: persistent dice mode, no modal
 }
 
 // Roll initiative for a player/NPC character token (not a monster).
@@ -387,9 +385,7 @@ function _startCharInitRoll(tok) {
       } catch { showToast('Connection error.', true); }
     }
   };
-  const lbl = document.getElementById('adv-label');
-  if (lbl) lbl.textContent = 'Roll: Initiative';
-  document.getElementById('adv-modal').style.display = 'flex';
+  confirmRoll(diceMode); // item 2: persistent dice mode, no modal
 }
 
 let _groupInitTok = null;

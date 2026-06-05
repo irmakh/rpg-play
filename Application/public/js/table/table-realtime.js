@@ -11,10 +11,21 @@ function startSSE() {
         case 'token-added':
           if (!tokens.find(t => t.id === d.token.id)) tokens.push(d.token);
           renderTokens(); renderHpTable(); break;
-        case 'token-moved':
+        case 'token-moved': {
+          // Record the pre-move position for Undo so any client can revert a move
+          // another player just made. Skip our own echo (local pos already == new).
+          const prev = tokens.find(t => t.id === d.id);
+          if (prev && (prev.x !== d.x || prev.y !== d.y)) {
+            recordTokenMove(d.id, prev.x || 0, prev.y || 0, prev.movedFt || 0);
+          }
           patchToken(d.id, { x: d.x, y: d.y, movedFt: d.movedFt });
           renderTokens(); renderSidePanel(); renderHpTable(); break;
-        case 'token-updated':
+        }
+        case 'token-updated': {
+          const prevU = tokens.find(t => t.id === d.token.id);
+          if (prevU && (prevU.x !== d.token.x || prevU.y !== d.token.y)) {
+            recordTokenMove(d.token.id, prevU.x || 0, prevU.y || 0, prevU.movedFt || 0);
+          }
           replaceToken(d.token); renderTokens(); renderSidePanel(); renderHpTable();
           // Initiative HP bars read token HP first — keep them live on any token change.
           renderInitiativeTracker();
@@ -22,6 +33,7 @@ function startSSE() {
           // Refresh side qroll if it was the active token (HP changed)
           if (d.token.id === getActiveTurnTokenId()) { _sideQrollTokenId = null; loadSideQroll(); }
           break;
+        }
         case 'token-removed':
           if (_dragPendingTimer && dragState?.tokenId === d.id) {
             clearTimeout(_dragPendingTimer); _dragPendingTimer = null;
@@ -30,27 +42,34 @@ function startSSE() {
             dragState = null; oCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
           }
           if (selectedTokenId === d.id) { selectedTokenId = null; closeHpPanel(); renderSidePanel(); }
-          tokens = tokens.filter(t => t.id !== d.id); renderTokens(); renderHpTable(); break;
+          tokens = tokens.filter(t => t.id !== d.id);
+          if (lastTokenMove?.tokenId === d.id) { lastTokenMove = null; }
+          updateUndoButton();
+          renderTokens(); renderHpTable(); break;
         case 'tokens-cleared':
           if (_dragPendingTimer) { clearTimeout(_dragPendingTimer); _dragPendingTimer = null; }
           dragState = null; oCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
           selectedTokenId = null; closeHpPanel(); renderSidePanel();
-          tokens = []; renderTokens(); renderHpTable(); break;
+          tokens = []; lastTokenMove = null; updateUndoButton(); renderTokens(); renderHpTable(); break;
         case 'fog-updated':
           applyFogRegions(d.fogRegions); break;
         case 'items-updated':
           applyHiddenItems(d.hiddenItems); break;
         case 'ping':
           renderPing(d.x, d.y, d.color); break;
+        case 'image-reveal':
+          showImageRevealModal(d.mediumUrl || d.url); break;
       }
     },
     initiative: async (d) => {
       const prevCurrentId = initData.currentId;
       await fetchInitiative();
-      // On turn advance or initiative start/end/clear, release manual view selection.
-      // 'updated' (add/edit/delete entries) intentionally keeps the selection — so
-      // clicking to view a combatant persists when someone re-rolls mid-combat.
-      if (['next', 'start', 'end', 'clear'].includes(d?.action)) {
+      // Item 7: turn advances (next/prev) must NOT hijack the side panel away from
+      // what the user manually clicked. Only release the manual view selection when
+      // combat itself starts/ends/clears. 'next'/'prev'/'updated' keep the selection,
+      // so the panel only auto-follows the active turn when the user hasn't picked a
+      // combatant to watch.
+      if (['start', 'end', 'clear'].includes(d?.action)) {
         _sideViewInitId = null;
       }
       // Only invalidate the side panel cache if the active turn actually changed

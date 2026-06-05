@@ -58,6 +58,13 @@ body[data-theme="modern"] #table-wrap:has(#side-panel.rp-open) #zoom-float{right
 #rp-token-details{display:flex;flex-direction:column}
 .rp-action-row{display:flex;align-items:center;justify-content:flex-end;gap:3px;padding:5px 8px;border-bottom:1px solid var(--a44)}
 .rp-portrait-area{display:flex;align-items:center;gap:10px;padding:10px 10px 8px}
+/* Dice mode toggle (item 2) */
+.rp-dice-mode{display:flex;gap:0;margin:0 10px 8px;border:1px solid var(--a55);border-radius:6px;overflow:hidden}
+.rp-dice-mode .dm-seg{flex:1;background:var(--bg2);color:var(--txd);border:none;border-right:1px solid var(--a55);padding:5px 4px;font-size:11px;font-weight:bold;cursor:pointer;transition:background .12s,color .12s}
+.rp-dice-mode .dm-seg:last-child{border-right:none}
+.rp-dice-mode .dm-seg:hover{background:var(--bg3);color:var(--tx)}
+.rp-dice-mode .dm-seg.active{background:var(--ac);color:#fff}
+.rp-spell-name:hover{color:var(--ac)}
 .rp-stats-row{display:flex;align-items:stretch;border-top:1px solid var(--a44);border-bottom:1px solid var(--a44)}
 .rp-stat-block{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 4px;min-width:0}
 .rp-stat-nums{display:flex;align-items:baseline;gap:1px}

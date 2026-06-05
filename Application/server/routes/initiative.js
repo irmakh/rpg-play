@@ -234,7 +234,8 @@ export default function register(app, ctx) {
   // POST /api/initiative/prev — go to previous turn; resets movedFt for incoming token
   app.post('/api/initiative/prev', async (req, res) => {
     try {
-      if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
+      // Symmetric with /next: turn control is usable during combat without master
+      // auth (item 8 — Prev previously 401'd for non-DM while Next worked).
       let entries, state, stateId;
       if (DB_PROVIDER === 'localdb') {
         entries = ldb.listInitEntries();

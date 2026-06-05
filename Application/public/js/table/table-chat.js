@@ -28,7 +28,9 @@ function _clearChatUploading(thumbObjectUrl) {
   if (thumbObjectUrl) URL.revokeObjectURL(thumbObjectUrl);
 }
 
-async function uploadChatImage(file) {
+// Item 10: when the DM sends an image it is "revealed" as a central modal on every
+// client instead of posted inline. Players' images still post inline to chat.
+async function uploadChatImage(file, reveal = (typeof isDM === 'function' && isDM())) {
   if (!file || !file.type.startsWith('image/')) return;
   if (file.size > 10 * 1024 * 1024) { alert('Image too large (max 10 MB)'); return; }
   const thumbUrl = URL.createObjectURL(file);
@@ -40,10 +42,12 @@ async function uploadChatImage(file) {
       reader.onerror = reject;
       reader.readAsDataURL(file);
     });
+    const headers = { 'Content-Type': 'application/json' };
+    if (reveal && masterPw) headers['X-Master-Password'] = masterPw;
     const res = await fetch('/api/chat/image', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ dataUrl, sender: getChatSender() })
+      headers,
+      body: JSON.stringify({ dataUrl, sender: getChatSender(), reveal: !!reveal })
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
@@ -55,6 +59,22 @@ async function uploadChatImage(file) {
 
 function handleChatImageFile(file) {
   if (file) uploadChatImage(file);
+}
+
+// ── DM image reveal modal (item 10) ───────────────────────────────────────────
+function showImageRevealModal(url) {
+  if (!url) return;
+  const modal = document.getElementById('image-reveal-modal');
+  const img   = document.getElementById('image-reveal-img');
+  if (!modal || !img) return;
+  img.src = url;
+  modal.style.display = 'flex';
+}
+function closeImageRevealModal() {
+  const modal = document.getElementById('image-reveal-modal');
+  const img   = document.getElementById('image-reveal-img');
+  if (modal) modal.style.display = 'none';
+  if (img) img.src = '';
 }
 
 function initChatDragDrop() {

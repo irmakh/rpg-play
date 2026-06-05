@@ -351,12 +351,9 @@ export default function register(app, ctx) {
 
         const { x, y } = body;
         if (x === undefined || y === undefined) return res.status(400).json({ error: 'x and y required' });
-        if (tok.type === 'monster') return res.status(403).json({ error: 'Unauthorized' });
-        const callerCharId = req.headers['x-character-id'];
-        if (callerCharId) {
-          const ownerField = tok.assignedCharId || tok.linkedId;
-          if (!ownerField || ownerField !== callerCharId) return res.status(403).json({ error: 'Not your token' });
-        }
+        // Item 11: token movement is open to everyone. Players may move any token
+        // (characters and monsters) regardless of ownership or whose turn it is.
+        // Accidental moves are recoverable via the client-side Undo button.
         let currentId = '';
         if (DB_PROVIDER === 'localdb') {
           currentId = ldb.getInitState().currentId || '';
@@ -366,7 +363,6 @@ export default function register(app, ctx) {
         }
         const newX = parseInt(x) || 0, newY = parseInt(y) || 0;
         if (currentId) {
-          if (tok.initiativeId && tok.initiativeId !== currentId) return res.status(403).json({ error: 'Not your turn' });
           const dx = Math.abs(newX - (tok.x || 0)), dy = Math.abs(newY - (tok.y || 0));
           const dist = Math.max(dx, dy) * 5;
           const newMovedFt = (tok.movedFt || 0) + dist;

@@ -196,10 +196,9 @@ async function dmNextTurn() {
 
 async function dmPrevTurn() {
   try {
-    await fetch('/api/initiative/prev', {
-      method: 'POST',
-      headers: { 'X-Master-Password': masterPw }
-    });
+    const headers = {};
+    if (isDM()) headers['X-Master-Password'] = masterPw;
+    await fetch('/api/initiative/prev', { method: 'POST', headers });
   } catch {}
 }
 
@@ -269,8 +268,15 @@ function viewInitEntry(id) {
   const entry = initData.entries?.find(e => e.id === id);
   if (!entry) return;
   if (!isDM() && entry.monsterId) return;
-  _sideViewInitId = (_sideViewInitId === id) ? null : id;
+  const wasViewing = _sideViewInitId === id;
+  _sideViewInitId = wasViewing ? null : id;
   _sideQrollTokenId = null;
   loadSideQroll();
   renderInitiativeTracker();
+  // Item 6: clicking any combatant in the list pans the camera to its token,
+  // regardless of whose turn it is. (Skip when toggling the row off.)
+  if (!wasViewing) {
+    const tok = _findInitToken(entry);
+    if (tok) panToToken(tok.id);
+  }
 }

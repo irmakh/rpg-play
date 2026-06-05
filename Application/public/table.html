@@ -32,6 +32,7 @@
 
   <button class="btn tool-btn active" id="btn-tool-select" onclick="setTool('select')" title="Select">🖱</button>
   <button class="btn tool-btn" id="btn-tool-move" onclick="setTool('move')" title="Move">✥ Move</button>
+  <button class="btn tool-btn" id="btn-undo-move" onclick="undoLastMove()" title="Undo last token move" style="display:none">↶ Undo</button>
   <button class="btn tool-btn" id="btn-tool-pan" onclick="setTool('pan')" title="Pan map">✋</button>
   <button class="btn tool-btn" id="btn-tool-ruler" onclick="setTool('ruler')" title="Ruler">📏</button>
   <button class="btn tool-btn" id="btn-tool-ping" onclick="setTool('ping')" title="Ping">📍</button>
@@ -223,6 +224,13 @@
           <div id="hp-panel-name" style="font-weight:bold;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--tx)"></div>
           <div id="rp-subtitle" style="font-size:10px;color:var(--txd);margin-top:2px;line-height:1.4"></div>
         </div>
+      </div>
+
+      <!-- Dice mode toggle (item 2): persistent Normal/Adv/Dis for all d20 rolls -->
+      <div class="rp-dice-mode" id="rp-dice-mode" title="Roll mode applied to every d20 roll on this sheet">
+        <button type="button" class="dm-seg active" data-mode="norm" onclick="setDiceMode('norm')">Normal</button>
+        <button type="button" class="dm-seg" data-mode="adv" onclick="setDiceMode('adv')" title="Roll with advantage">Adv</button>
+        <button type="button" class="dm-seg" data-mode="dis" onclick="setDiceMode('dis')" title="Roll with disadvantage">Dis</button>
       </div>
 
       <!-- Big stats: HP / AC / Speed -->
@@ -590,6 +598,19 @@
 
 <!-- Toast notification -->
 <div id="toast" style="display:none;position:fixed;top:18px;left:50%;transform:translateX(-50%);background:var(--bg2);border:1px solid var(--a66);color:var(--tx);padding:8px 20px;border-radius:6px;font-size:13px;z-index:3000;pointer-events:none;box-shadow:0 2px 12px #0008;white-space:nowrap"></div>
+
+<!-- DM image reveal modal (item 10) — dramatic central reveal, closes per-client -->
+<div id="image-reveal-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:4000;align-items:center;justify-content:center;flex-direction:column;gap:14px;padding:24px;cursor:zoom-out" onclick="closeImageRevealModal()">
+  <img id="image-reveal-img" alt="" style="max-width:94vw;max-height:84vh;object-fit:contain;border-radius:8px;box-shadow:0 8px 40px #000c;border:2px solid var(--a66)">
+  <button class="btn" onclick="event.stopPropagation();closeImageRevealModal()" style="font-size:14px;padding:7px 22px">✕ Close</button>
+</div>
+
+<!-- Weapon attack → Miss / Roll Damage prompt (item 3) -->
+<div id="weapon-dmg-prompt" style="display:none;position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--bg2);border:1px solid var(--a66);border-radius:8px;padding:10px 16px;z-index:3200;align-items:center;gap:12px;box-shadow:0 4px 18px #000a">
+  <span id="weapon-dmg-prompt-label" style="font-size:13px;color:var(--tx);font-weight:bold"></span>
+  <button class="btn sm" onclick="weaponDmgMiss()">✗ Miss</button>
+  <button class="btn primary sm" onclick="weaponDmgRoll()">🎲 Roll Damage</button>
+</div>
 
 <!-- Confirm modal -->
 <div id="confirm-modal" style="display:none;position:fixed;inset:0;background:var(--ov);align-items:center;justify-content:center;z-index:2800">

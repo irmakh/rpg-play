@@ -61,7 +61,7 @@ export default function register(app, ctx) {
   // ── Chat Image Upload (all users) ────────────────────────────────────────────
   app.post('/api/chat/image', async (req, res) => {
     try {
-      const { dataUrl, sender } = req.body || {};
+      const { dataUrl, sender, reveal } = req.body || {};
       if (!dataUrl || !sender) return res.status(400).json({ error: 'dataUrl and sender required' });
       const mimeMatch = dataUrl.match(/^data:([^;]+);base64,([A-Za-z0-9+/=]+)$/);
       if (!mimeMatch) return res.status(400).json({ error: 'Invalid data URL' });
@@ -73,6 +73,12 @@ export default function register(app, ctx) {
       const buffer = Buffer.from(b64, 'base64');
       const urls = await processImageSizes(mimeType, buffer, 'media', mediaId);
       insertSharedMedia(mediaId, mimeType, Buffer.from('FILE:' + urls.original));
+      // Item 10: DM "reveal" pops a central modal on every client (each player closes
+      // their own view) instead of pinning the image to the chat log. DM-only.
+      if (reveal === true && masterAuth(req)) {
+        broadcast('table', { action: 'image-reveal', url: urls.original, mediumUrl: urls.medium });
+        return res.json({ ok: true, mediaId, revealed: true });
+      }
       const entry = {
         id: genId(),
         sender: String(sender).slice(0, 40),
@@ -105,16 +111,20 @@ export default function register(app, ctx) {
   });
 
   app.post('/api/chat', (req, res) => {
-    const { sender, dice, results, modifier, total, label, type, message, description, dmOnly } = req.body;
+    const { sender, dice, results, modifier, total, label, type, message, description, dmOnly, html } = req.body;
     let entry;
     if (type === 'text') {
       if (!sender || !message)
         return res.status(400).json({ error: 'sender and message required' });
+      // html:true marks a message whose body is pre-formatted HTML (e.g. a spell
+      // description with embedded tool links — item 9). Allow a larger limit for these.
+      const isHtml = html === true;
       entry = {
         id: genId(),
         sender: String(sender).slice(0, 40),
-        message: String(message).slice(0, 500),
+        message: String(message).slice(0, isHtml ? 4000 : 500),
         type: 'text',
+        ...(isHtml ? { html: true } : {}),
         timestamp: new Date().toISOString()
       };
     } else {
