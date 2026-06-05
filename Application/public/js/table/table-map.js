@@ -593,7 +593,7 @@ function attachTokenEvents(div, tok) {
     // Accidental moves are recoverable via the Undo button (undoLastMove).
     e.preventDefault();
     e.stopPropagation();
-    _dragPendingTimer = setTimeout(() => { _dragPendingTimer = null; startDrag(tok, e); }, 500);
+    _dragPendingTimer = setTimeout(() => { _dragPendingTimer = null; startDrag(tok, e); }, 100);
   });
 
   div.addEventListener('click', e => {
