@@ -167,6 +167,17 @@ async function postToChat(payload) {
 }
 
 function getChatSender() {
+  // Players always post under their own character name, regardless of which token
+  // is selected. The DM posts as the currently selected token on the table (its
+  // side-panel name), falling back to "DM" when nothing is selected.
+  if (isCharSession()) {
+    if (sessionCharName) return sessionCharName;
+    const ownTok = sessionCharId
+      ? tokens.find(t => t.linkedId === String(sessionCharId) && t.type !== 'monster')
+      : null;
+    return ownTok?.name || 'Player';
+  }
+  if (isDM()) return qrollCharName || 'DM';
   return qrollCharName || 'Table';
 }
 

@@ -7,6 +7,7 @@ function _loadSession() {
     sessionRole  = s.role;
     masterPw     = s.role === 'dm' ? (s.masterPw || '') : '';
     sessionCharId  = s.role === 'character' ? (s.characterId || null) : null;
+    sessionCharName = s.role === 'character' ? (s.characterName || null) : null;
     sessionCharPw  = s.role === 'character' ? (s.charPw || null) : null;
   } catch {}
 }

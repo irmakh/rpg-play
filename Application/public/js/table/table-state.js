@@ -3,6 +3,7 @@ let masterPw = '';
 // Session — populated from sessionStorage on page load
 let sessionRole = null;     // 'dm' | 'character' | null
 let sessionCharId = null;   // character id when role === 'character'
+let sessionCharName = null; // character display name when role === 'character'
 let sessionCharPw = null;   // character plaintext pw (for header auth)
 let tableState = { cellSize: 50, offsetX: 0, offsetY: 0, mapWidth: 0, mapHeight: 0, mapDataUrl: '' };
 let tokens = [];
