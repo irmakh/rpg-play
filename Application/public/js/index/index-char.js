@@ -463,6 +463,41 @@ async function ncConfirm() {
   }
 
   document.getElementById('nc-modal').style.display = 'none';
+
+  // Import-mode: if a character with the same name already exists, ask whether to
+  // update it in place (avoids creating a duplicate) or create a new copy.
+  if (mode === 'import') {
+    let existing = null;
+    try {
+      const listRes = await fetch('/api/characters');
+      if (listRes.ok) {
+        const chars = await listRes.json();
+        const target = name.trim().toLowerCase();
+        existing = chars.find(c => (c.name || '').trim().toLowerCase() === target) || null;
+      }
+    } catch {}
+    if (existing) {
+      const update = confirm(`A character named "${name}" already exists.\n\nOK — Update that character with the imported data.\nCancel — Create a new separate copy.`);
+      if (update) {
+        try {
+          const headers = { 'Content-Type': 'application/json' };
+          if (charPasswords[existing.id]) headers['X-Character-Password'] = charPasswords[existing.id];
+          else if (indexMasterPw()) headers['X-Character-Password'] = indexMasterPw();
+          const putRes = await fetch(`/api/characters/${existing.id}`, {
+            method: 'PUT', headers, body: JSON.stringify({ data: dataToApply })
+          });
+          if (putRes.status === 401) { setStatus('That character is locked — unlock it first, then import again.', true); return; }
+          if (!putRes.ok) { setStatus('Update failed', true); return; }
+          await loadCharacterList(true);
+          await loadCharacter(existing.id);
+          setStatus('Updated "' + name + '" from import!', false);
+        } catch (e) { setStatus('Failed to update character', true); }
+        return;
+      }
+      // Cancel → fall through and create a new separate copy below.
+    }
+  }
+
   try {
     const createBody = { name, char_type: charType };
     if (password) createBody.password = password;
@@ -685,12 +720,21 @@ function characterToXML(d) {
   let spells = []; try { spells = JSON.parse(d._spells||'[]'); } catch {}
   p('    <spells>');
   spells.forEach(s => {
-    p(`      <spell level="${xe(s[0])}" conc="${b(s[4])}" ritual="${b(s[5])}" prepared="${b(s[7])}" school="${xe(s[8]||'')}" v="${b(s[9])}" s="${b(s[10])}" m="${b(s[11])}">`);
+    p(`      <spell level="${xe(s[0])}" conc="${b(s[4])}" ritual="${b(s[5])}" prepared="${b(s[7])}" school="${xe(s[8]||'')}" v="${b(s[9])}" s="${b(s[10])}" m="${b(s[11])}" action="${xe(s[13]||'')}" duration="${xe(s[14]||'')}">`);
     p(`        <name>${xe(s[1])}</name><time>${xe(s[2])}</time><range>${xe(s[3])}</range><notes>${xe(s[6]||'')}</notes>${s[11]?`<material>${xe(s[12]||'')}</material>`:''}`);
     p(`      </spell>`);
   });
   p('    </spells>');
   p('  </spellcasting>');
+
+  let customActions = []; try { customActions = JSON.parse(d._actions||'[]'); } catch {}
+  p(`  <actions idCounter="${xe(d._actionIdCounter||0)}">`);
+  customActions.forEach(a => {
+    p(`    <action id="${xe(a.id)}" category="${xe(a.category||'action')}" dice="${xe(a.dice||'')}" uses="${xe(a.uses||0)}" used="${xe(a.used||0)}" recharge="${xe(a.recharge||'')}">`);
+    p(`      <name>${xe(a.name||'')}</name><description>${cd(a.description||'')}</description>`);
+    p(`    </action>`);
+  });
+  p('  </actions>');
 
   p(`  <class_features>${cd(d.features)}</class_features>`);
   p(`  <feats>${cd(d.feats)}</feats>`);
@@ -912,7 +956,9 @@ function xmlToCharacterData(xmlText) {
     el.getAttribute('v')==='true',
     el.getAttribute('s')==='true',
     el.getAttribute('m')==='true',
-    el.querySelector('material')?.textContent?.trim()||''
+    el.querySelector('material')?.textContent?.trim()||'',
+    el.getAttribute('action')||'',
+    el.getAttribute('duration')||''
   ]));
   d._spells = JSON.stringify(spells);
 
@@ -964,6 +1010,23 @@ function xmlToCharacterData(xmlText) {
     });
   });
   d._loots = JSON.stringify(parsedLoots);
+
+  const parsedActions = [];
+  doc.querySelectorAll('actions > action').forEach(el => {
+    parsedActions.push({
+      id: parseInt(el.getAttribute('id')) || (Date.now() + parsedActions.length),
+      name: el.querySelector('name')?.textContent?.trim() || '',
+      category: el.getAttribute('category') || 'action',
+      description: el.querySelector('description')?.textContent?.trim() || '',
+      dice: el.getAttribute('dice') || '',
+      uses: parseInt(el.getAttribute('uses')) || 0,
+      used: parseInt(el.getAttribute('used')) || 0,
+      recharge: el.getAttribute('recharge') || ''
+    });
+  });
+  d._actions = JSON.stringify(parsedActions);
+  const actIdCtr = doc.querySelector('actions')?.getAttribute('idCounter');
+  d._actionIdCounter = actIdCtr || (parsedActions.length ? String(Math.max(...parsedActions.map(a => a.id || 0))) : '0');
 
   return d;
 }
