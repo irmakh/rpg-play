@@ -228,10 +228,16 @@ input:focus,select:focus{outline:none;border-color:var(--ac)}
 }
 .move-range{position:absolute;pointer-events:none;background:rgba(100,220,100,.12);border:1px solid rgba(100,220,100,.3)}
 
+/* ── Dice animation on/off switch (toolbar, next to 🎲) ── */
+.dice-anim-switch{position:relative;width:34px;min-width:34px;height:18px;padding:0;margin-left:4px;border:1px solid var(--a55);border-radius:9px;background:var(--bg3);cursor:pointer;flex-shrink:0;transition:background .2s,border-color .2s}
+.dice-anim-switch .das-knob{position:absolute;top:1px;left:1px;width:14px;height:14px;border-radius:50%;background:var(--txd);transition:left .2s,background .2s}
+.dice-anim-switch.on{background:var(--ok);border-color:var(--ok)}
+.dice-anim-switch.on .das-knob{left:17px;background:#0a2040}
+
 /* ── 3D Dice Overlay ── */
 #dice-overlay{
   display:none;position:fixed;inset:0;
-  background:rgba(0,0,0,.88);
+  background:transparent;
   z-index:2600;
   align-items:center;justify-content:center;flex-direction:column;
   gap:20px;cursor:pointer;

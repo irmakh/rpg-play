@@ -101,6 +101,8 @@ function _makeDieEl(sides, value, size, dur) {
 }
 
 function showDiceAnimation(sides, dieResults, modifier, total, label, duration, usedIdx = -1) {
+  // Dice animation toggle (table screen): when off, skip the visual entirely
+  if (typeof window !== 'undefined' && window.diceAnimEnabled === false) return Promise.resolve();
   const arr = Array.isArray(dieResults) ? dieResults : [dieResults];
   return new Promise(resolve => {
     if (_diceAutoClose) { clearTimeout(_diceAutoClose); _diceAutoClose = null; }

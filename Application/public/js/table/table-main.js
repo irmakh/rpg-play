@@ -29,6 +29,25 @@ function _updateThemeBtn(theme) {
   btn.textContent = theme === 'modern' ? '🖥' : '🎨';
 }
 
+// ── Dice animation on/off ─────────────────────────────────────────────────────
+function initDiceAnim() {
+  const on = localStorage.getItem('diceAnimEnabled') !== '0'; // default on
+  window.diceAnimEnabled = on;
+  _updateDiceAnimBtn(on);
+}
+function toggleDiceAnim() {
+  const next = !window.diceAnimEnabled;
+  window.diceAnimEnabled = next;
+  localStorage.setItem('diceAnimEnabled', next ? '1' : '0');
+  _updateDiceAnimBtn(next);
+}
+function _updateDiceAnimBtn(on) {
+  const btn = document.getElementById('btn-dice-anim');
+  if (!btn) return;
+  btn.classList.toggle('on', on);
+  btn.setAttribute('aria-checked', on ? 'true' : 'false');
+}
+
 // ── Side panel ────────────────────────────────────────────────────────────────
 function renderSidePanel() {
   const activeTokId = getActiveTurnTokenId();
@@ -183,6 +202,7 @@ function initDraggableModals() {
 window.addEventListener('load', async () => {
   _loadSession();
   initTheme();
+  initDiceAnim();
   applyDMControls();
   setTool('select'); // initialize pointer-events on overlay canvas
 

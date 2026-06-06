@@ -62,11 +62,20 @@ function handleChatImageFile(file) {
 }
 
 // ── DM image reveal modal (item 10) ───────────────────────────────────────────
+let _imgRevealPos = { x: 0, y: 0 };
+
+function _applyImageRevealPos() {
+  const card = document.getElementById('image-reveal-card');
+  if (card) card.style.transform = `translate(${_imgRevealPos.x}px, ${_imgRevealPos.y}px)`;
+}
+
 function showImageRevealModal(url) {
   if (!url) return;
   const modal = document.getElementById('image-reveal-modal');
   const img   = document.getElementById('image-reveal-img');
   if (!modal || !img) return;
+  _imgRevealPos = { x: 0, y: 0 };
+  _applyImageRevealPos();
   img.src = url;
   modal.style.display = 'flex';
 }
@@ -75,6 +84,35 @@ function closeImageRevealModal() {
   const img   = document.getElementById('image-reveal-img');
   if (modal) modal.style.display = 'none';
   if (img) img.src = '';
+}
+
+// Drag the revealed media card around the screen (purely local — never broadcast)
+function startImageRevealDrag(e) {
+  if (e.target.closest('button')) return; // don't drag when clicking the ✕
+  e.preventDefault();
+  const card = document.getElementById('image-reveal-card');
+  if (!card) return;
+  const touch = e.touches ? e.touches[0] : e;
+  const startX = touch.clientX, startY = touch.clientY;
+  const origX = _imgRevealPos.x, origY = _imgRevealPos.y;
+  card.style.cursor = 'grabbing';
+  const move = ev => {
+    const t = ev.touches ? ev.touches[0] : ev;
+    _imgRevealPos.x = origX + (t.clientX - startX);
+    _imgRevealPos.y = origY + (t.clientY - startY);
+    _applyImageRevealPos();
+  };
+  const up = () => {
+    card.style.cursor = 'grab';
+    window.removeEventListener('mousemove', move);
+    window.removeEventListener('mouseup', up);
+    window.removeEventListener('touchmove', move);
+    window.removeEventListener('touchend', up);
+  };
+  window.addEventListener('mousemove', move);
+  window.addEventListener('mouseup', up);
+  window.addEventListener('touchmove', move, { passive: false });
+  window.addEventListener('touchend', up);
 }
 
 function initChatDragDrop() {

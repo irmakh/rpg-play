@@ -42,6 +42,7 @@
   </div>
 
   <button class="btn tool-btn" onclick="openDiceRollerModal()" title="Dice Roller" style="margin-left:4px">🎲</button>
+  <button class="dice-anim-switch on" id="btn-dice-anim" role="switch" aria-checked="true" onclick="toggleDiceAnim()" title="Dice animation on/off"><span class="das-knob"></span></button>
   <button id="btn-theme-toggle" onclick="toggleTheme()" title="Switch to Modern HUD" style="margin-left:4px">🎨</button>
   <button class="btn tool-btn" id="btn-leftpanel-toggle" onclick="toggleLeftPanel()" title="Toggle left panel" style="margin-left:4px">◀</button>
   <button class="btn tool-btn" id="btn-sidepanel-toggle" onclick="toggleSidePanel()" title="Toggle right panel" style="margin-left:2px">▶</button>
@@ -607,9 +608,11 @@
 <div id="toast" style="display:none;position:fixed;top:18px;left:50%;transform:translateX(-50%);background:var(--bg2);border:1px solid var(--a66);color:var(--tx);padding:8px 20px;border-radius:6px;font-size:13px;z-index:3000;pointer-events:none;box-shadow:0 2px 12px #0008;white-space:nowrap"></div>
 
 <!-- DM image reveal modal (item 10) — dramatic central reveal, closes per-client -->
-<div id="image-reveal-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:4000;align-items:center;justify-content:center;flex-direction:column;gap:14px;padding:24px;cursor:zoom-out" onclick="closeImageRevealModal()">
-  <img id="image-reveal-img" alt="" style="max-width:94vw;max-height:84vh;object-fit:contain;border-radius:8px;box-shadow:0 8px 40px #000c;border:2px solid var(--a66)">
-  <button class="btn" onclick="event.stopPropagation();closeImageRevealModal()" style="font-size:14px;padding:7px 22px">✕ Close</button>
+<div id="image-reveal-modal" style="display:none;position:fixed;inset:0;z-index:4000;align-items:center;justify-content:center;padding:24px;pointer-events:none">
+  <div id="image-reveal-card" onmousedown="startImageRevealDrag(event)" ontouchstart="startImageRevealDrag(event)" style="position:relative;background:var(--bg2);border:2px solid var(--a66);border-radius:10px;padding:10px;box-shadow:0 8px 40px #000c;cursor:grab;touch-action:none;pointer-events:auto">
+    <button class="btn sm" onclick="event.stopPropagation();closeImageRevealModal()" title="Close" style="position:absolute;top:6px;right:6px;z-index:1">✕</button>
+    <img id="image-reveal-img" alt="" draggable="false" style="display:block;max-width:88vw;max-height:80vh;object-fit:contain;border-radius:6px">
+  </div>
 </div>
 
 <!-- Weapon attack → Miss / Roll Damage prompt (item 3) -->

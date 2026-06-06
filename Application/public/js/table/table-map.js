@@ -105,11 +105,15 @@ function canvasToGrid(canvasX, canvasY) {
 }
 
 function getCanvasPos(e) {
-  const rect = canvasArea.getBoundingClientRect();
+  // Measure from the content wrapper's own rect: getBoundingClientRect already
+  // reflects scroll position, the scale() transform, AND the inline-block line-box
+  // gap. Measuring from #canvas-area instead assumed the wrapper sat at its (0,0),
+  // which was off by the inline-block gap (~10px) and shifted every click.
+  const rect = canvasWrap.getBoundingClientRect();
   const scale = zoomPct / 100;
   return {
-    x: (e.clientX - rect.left + canvasArea.scrollLeft) / scale,
-    y: (e.clientY - rect.top  + canvasArea.scrollTop)  / scale
+    x: (e.clientX - rect.left) / scale,
+    y: (e.clientY - rect.top)  / scale
   };
 }
 
