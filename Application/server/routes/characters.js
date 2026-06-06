@@ -42,6 +42,7 @@ export default function register(app, ctx) {
       if (data['_weapons'] !== undefined) qroll['_weapons'] = data['_weapons'];
       if (data['_spells']  !== undefined) qroll['_spells']  = data['_spells'];
       if (data['_actions'] !== undefined) qroll['_actions'] = data['_actions'];
+      if (data['_items']   !== undefined) qroll['_items']   = data['_items'];
       res.json({ id: char.id, name: char.name, data: qroll });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
   });
@@ -131,6 +132,108 @@ export default function register(app, ctx) {
       }
       broadcast('characters', { action: 'updated', id: charId });
       res.json({ ok: true });
+    } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
+  });
+
+  // Recompute the stats that depend on equipped items — mirrors recalcAll() in
+  // public/js/index/index-calc.js so wear/unwear from the table matches the sheet.
+  const _SP_ABIL = { strength:'str', str:'str', dexterity:'dex', dex:'dex', constitution:'con', con:'con',
+    intelligence:'int', int:'int', wisdom:'wis', wis:'wis', charisma:'cha', cha:'cha' };
+  function _abilMod(score) { return Math.floor(((parseInt(score) || 10) - 10) / 2); }
+  function _signed(n) { return (n >= 0 ? '+' : '') + n; }
+  function recalcDerived(data) {
+    let items = [];
+    try { items = JSON.parse(data._items || '[]'); } catch {}
+    const equipped = items.filter(i => i && i.equipped);
+    const dexMod = _abilMod(data.dex);
+    const prof = parseInt(data.profbonus) || 0;
+
+    // Initiative = DEX mod + equipped item init bonuses
+    const initItem = equipped.reduce((s, i) => s + (parseInt(i.initBonus) || 0), 0);
+    data.init = _signed(dexMod + initItem);
+
+    // Speed = base + equipped item speed bonuses + manual bonus
+    const spdItem = equipped.reduce((s, i) => s + (parseInt(i.speedBonus) || 0), 0);
+    const spdManual = parseInt(data['speed-bonus']) || 0;
+    const spdBase = (data['speed-base'] !== undefined && data['speed-base'] !== '')
+      ? (parseInt(String(data['speed-base']).replace(/[^0-9]/g, '')) || 30)
+      : (parseInt(String(data.speed || '30').replace(/[^0-9]/g, '')) || 30);
+    data.speed = (spdBase + spdItem + spdManual) + ' ft';
+
+    // AC = equipped armor (by type) + DEX mod + flat item bonuses + manual bonus
+    const armor = equipped.find(i => i.itemType === 'armor');
+    let baseAC;
+    if (!armor) baseAC = 10 + dexMod;
+    else if (armor.armorType === 'heavy') baseAC = (parseInt(armor.acBase) || 10);
+    else if (armor.armorType === 'medium') baseAC = (parseInt(armor.acBase) || 10) + Math.min(2, dexMod);
+    else baseAC = (parseInt(armor.acBase) || 10) + dexMod;
+    const flatBonus = equipped.reduce((s, i) => s + (parseInt(i.acBonus) || 0), 0);
+    const manualAcBonus = parseInt(data['ac-bonus']) || 0;
+    data.ac = baseAC + flatBonus + manualAcBonus;
+
+    // Spellcasting DC / attack / modifier (+ equipped item bonuses)
+    const spKey = _SP_ABIL[String(data['sp-ability'] || '').toLowerCase().trim()];
+    if (spKey) {
+      const spMod = _abilMod(data[spKey]);
+      const spAtkItem = equipped.reduce((s, i) => s + (parseInt(i.spellAtkBonus) || 0), 0);
+      const spDcItem  = equipped.reduce((s, i) => s + (parseInt(i.spellDcBonus)  || 0), 0);
+      data['sp-dc']  = 8 + prof + spMod + spDcItem;
+      data['sp-atk'] = _signed(prof + spMod + spAtkItem);
+      data['sp-mod'] = _signed(spMod);
+    }
+    return data;
+  }
+
+  // Wear / unwear an inventory item from the table side panel.
+  app.patch('/api/characters/:id/equip', async (req, res) => {
+    try {
+      const charId = req.params.id;
+      if (!masterAuth(req)) {
+        const status = await charAuth(charId, req);
+        if (status !== 200) return res.status(status).json({ error: status === 404 ? 'Not found' : 'Unauthorized' });
+      }
+      const { itemId, equipped } = req.body || {};
+      if (itemId === undefined) return res.status(400).json({ error: 'itemId required' });
+      const char = await getCharacter(charId);
+      if (!char) return res.status(404).json({ error: 'Not found' });
+      let data = {};
+      try { data = JSON.parse(char.dataJson || '{}'); } catch {}
+      let items = [];
+      try { items = JSON.parse(data._items || '[]'); } catch {}
+      const it = items.find(x => x && x.id === itemId);
+      if (!it) return res.status(404).json({ error: 'Item not found' });
+      it.equipped = (equipped === undefined) ? !it.equipped : !!equipped;
+      data._items = JSON.stringify(items);
+      recalcDerived(data);
+      const dataJson = JSON.stringify(data);
+      if (DB_PROVIDER === 'localdb') {
+        ldb.updateCharacter(charId, { dataJson });
+      } else {
+        await idb.transact([idb.tx.characters[charId].update({ dataJson })]);
+      }
+      broadcast('characters', { action: 'updated', id: charId });
+
+      // Sync the recomputed AC / speed to any linked table tokens.
+      try {
+        const linkedTokens = DB_PROVIDER === 'localdb'
+          ? ldb.getLinkedTokens(charId)
+          : (await idb.query({ tableTokens: { $: { where: { linkedId: charId } } } })).tableTokens || [];
+        if (linkedTokens.length > 0) {
+          const updFields = {};
+          const acN = parseInt(data.ac); if (!isNaN(acN)) updFields.ac = acN;
+          const spN = parseInt(String(data.speed).replace(/[^0-9]/g, '')); if (!isNaN(spN)) updFields.speed = spN;
+          if (Object.keys(updFields).length) {
+            if (DB_PROVIDER === 'localdb') {
+              for (const t of linkedTokens) { ldb.updateTableToken(t.id, updFields); broadcast('table', { action: 'token-updated', token: { ...t, ...updFields } }); }
+            } else {
+              await idb.transact(linkedTokens.map(t => idb.tx.tableTokens[t.id].update(updFields)));
+              for (const t of linkedTokens) broadcast('table', { action: 'token-updated', token: { ...t, ...updFields } });
+            }
+          }
+        }
+      } catch (syncErr) { console.error('equip token sync:', syncErr); }
+
+      res.json({ ok: true, equipped: it.equipped, ac: data.ac, speed: data.speed, init: data.init });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
   });
 

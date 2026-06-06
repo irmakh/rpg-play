@@ -104,6 +104,7 @@ body[data-theme="modern"] #table-wrap:has(#side-panel.rp-open) #zoom-float{right
 .btn.success:hover{background:#44ff4433}
 .btn.sm{padding:2px 8px;font-size:11px}
 .tool-btn.active{background:var(--ac);color:var(--bg)}
+.tool-btn.pop-active{background:var(--ac);color:var(--bg);box-shadow:0 0 0 1px var(--ahi) inset}
 
 /* ── Form fields ── */
 .field{margin-bottom:8px}
@@ -333,6 +334,16 @@ input[type=number]{-moz-appearance:textfield;appearance:textfield}
 .rp-spell-pips{display:flex;flex-wrap:wrap;gap:2px;justify-content:center;max-width:34px}
 .rp-spell-pip{width:7px;height:7px;border-radius:50%;background:var(--ac);display:inline-block;flex-shrink:0}
 .rp-spell-pip.used{background:transparent;border:1px solid var(--a55)}
+/* Items wear/unwear grid (min 2 per row) */
+.rp-item-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:6px 8px}
+.rp-item-cell{display:flex;align-items:center;gap:5px;padding:4px 6px;background:var(--a22);border:1px solid var(--a44);border-radius:4px;font-size:11px;min-width:0;transition:background .1s}
+.rp-item-cell.worn{background:var(--a44);border-color:var(--a66)}
+.rp-item-cell:hover{background:var(--a44)}
+.rp-item-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rp-item-box{width:13px;height:13px;border:1.5px solid var(--a66);border-radius:3px;flex-shrink:0;position:relative}
+.rp-item-box.on{background:var(--ac);border-color:var(--ac)}
+.rp-item-box.on::after{content:'✓';position:absolute;inset:0;color:var(--bg);font-size:10px;line-height:11px;text-align:center;font-weight:bold}
+.rp-item-chip{font-size:9px;color:var(--ac);background:var(--bgd);padding:0 4px;border-radius:3px;flex-shrink:0}
 .rp-save-grid{display:grid;grid-template-columns:repeat(3,1fr);padding:4px 8px 6px}
 .rp-save-cell{display:flex;flex-direction:column;align-items:center;padding:5px 2px;cursor:pointer;border-radius:3px;transition:background .1s}
 .rp-save-cell:hover{background:rgba(255,255,255,.06)}

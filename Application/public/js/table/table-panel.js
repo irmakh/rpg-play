@@ -126,6 +126,9 @@ function renderSideCharacter() {
       + `</div>`
     : '';
 
+  // Items (wear / unwear) — shown before spell slots, 2-per-row grid with checkboxes
+  const itemsHtml = _buildSidePanelItems(d, canEditSlots);
+
   // Prepared spells HTML (shared). _sideSpells holds the rendered spells so a name
   // click can look the spell up by index and post its description to chat (item 9).
   let spellListHtml = '';
@@ -216,6 +219,7 @@ function renderSideCharacter() {
       + `<div class="rp-flat-hdr">Skills</div><div class="rp-skill-grid">${skillRows}</div>`
       + `<div class="rp-flat-hdr">Attacks</div>${atkCompactHtml}`
       + actionSectionsHtml
+      + itemsHtml
       + spellSlotsHtml
       + spellListHtml;
   }
@@ -244,6 +248,7 @@ function renderSideCharacter() {
     + `<div class="qroll-section"><div class="qroll-section-hdr" onclick="toggleSideSection('attacks')">Attacks <span id="side-sec-attacks-arrow">${_sideSecArrow('attacks')}</span></div>`
     + `<div id="side-sec-attacks" class="qroll-rows" style="${_sideSecStyle('attacks')}">${atkSection}</div></div>`
     + (actionSectionsHtml ? `<div class="qroll-section">${actionSectionsHtml}</div>` : '')
+    + (itemsHtml ? `<div class="qroll-section">${itemsHtml}</div>` : '')
     + (spellSlotsHtml ? `<div class="qroll-section">${spellSlotsHtml}</div>` : '')
     + (spellListHtml ? `<div class="qroll-section">${spellListHtml}</div>` : '');
 }
@@ -272,6 +277,55 @@ async function updateSpellSlot(level, used) {
       method: 'PATCH',
       headers: authHeaders(),
       body: JSON.stringify({ level, used })
+    });
+  } catch {}
+}
+
+// ── Items (wear / unwear) ─────────────────────────────────────────────────────
+function _sideItemChip(it) {
+  if (it.itemType === 'armor') return `<span class="rp-item-chip">AC ${parseInt(it.acBase) || 10}</span>`;
+  const ac = parseInt(it.acBonus) || 0;
+  if (ac) return `<span class="rp-item-chip">AC${ac > 0 ? '+' : ''}${ac}</span>`;
+  return '';
+}
+
+function _buildSidePanelItems(d, canEdit) {
+  let its = [];
+  try { its = JSON.parse(d['_items'] || '[]'); } catch {}
+  if (!its.length) return '';
+  const cells = its.map(it => {
+    const worn = !!it.equipped;
+    const attrs = canEdit
+      ? ` onclick="clickEquipItem(${it.id})" style="cursor:pointer" title="${worn ? 'Worn — click to remove' : 'Click to wear'}"`
+      : '';
+    return `<div class="rp-item-cell${worn ? ' worn' : ''}"${attrs}>`
+      + `<span class="rp-item-box${worn ? ' on' : ''}"></span>`
+      + `<span class="rp-item-name">${esc(it.name || 'Item')}</span>${_sideItemChip(it)}</div>`;
+  }).join('');
+  return `<div class="rp-flat-hdr">Items${canEdit ? ' <span style="font-size:8px;opacity:.5;font-weight:normal;letter-spacing:0">(click to wear / remove)</span>' : ''}</div>`
+    + `<div class="rp-item-grid">${cells}</div>`;
+}
+
+function clickEquipItem(itemId) {
+  if (!qrollData || !_sideCharId) return;
+  let its = [];
+  try { its = JSON.parse(qrollData._items || '[]'); } catch { return; }
+  const it = its.find(x => x && x.id === itemId);
+  if (!it) return;
+  it.equipped = !it.equipped;             // optimistic toggle; server recomputes AC/speed
+  qrollData._items = JSON.stringify(its);
+  const content = document.getElementById('side-qroll-content');
+  if (content) content.innerHTML = renderSideCharacter();
+  _syncEquip(itemId, it.equipped);
+}
+
+async function _syncEquip(itemId, equipped) {
+  if (!_sideCharId) return;
+  try {
+    await fetch(`/api/characters/${_sideCharId}/equip`, {
+      method: 'PATCH',
+      headers: authHeaders(),
+      body: JSON.stringify({ itemId, equipped })
     });
   } catch {}
 }
@@ -726,5 +780,15 @@ document.addEventListener('keydown', e => {
   }
   if (currentTool === 'draw' && drawSubMode === 'select' && selectedShapeId) {
     if (e.key === 'Delete') { e.preventDefault(); deleteSelectedShape(); }
+  }
+});
+
+// When the right panel docks back from a pop-out window, force a clean rebind to
+// the currently-selected token so live SSE updates / item wear-toggle work again
+// without needing to reselect (loadSideQroll's early-return is bypassed via reset).
+window.addEventListener('popout-docked', e => {
+  if (e.detail && e.detail.id === 'side-panel' && typeof loadSideQroll === 'function') {
+    _sideQrollTokenId = null;
+    loadSideQroll();
   }
 });

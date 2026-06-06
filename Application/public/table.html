@@ -46,6 +46,9 @@
   <button id="btn-theme-toggle" onclick="toggleTheme()" title="Switch to Modern HUD" style="margin-left:4px">🎨</button>
   <button class="btn tool-btn" id="btn-leftpanel-toggle" onclick="toggleLeftPanel()" title="Toggle left panel" style="margin-left:4px">◀</button>
   <button class="btn tool-btn" id="btn-sidepanel-toggle" onclick="toggleSidePanel()" title="Toggle right panel" style="margin-left:2px">▶</button>
+  <button class="btn tool-btn" id="btn-pop-left" onclick="togglePopout('left-panel')" title="Pop out / dock the left panel in its own window" style="margin-left:6px">⧉◀</button>
+  <button class="btn tool-btn" id="btn-pop-right" onclick="togglePopout('side-panel')" title="Pop out / dock the right panel in its own window" style="margin-left:2px">▶⧉</button>
+  <button class="btn tool-btn" id="btn-pop-chat" onclick="togglePopout('chat-bar')" title="Pop out / dock the chat in its own window" style="margin-left:2px">⧉💬</button>
 </div>
 
 <!-- Now Playing bar — visible to all clients when music is playing -->
@@ -694,6 +697,7 @@
 <script src="/js/table/table-hppanel.js" defer></script>
 <script src="/js/table/table-addtoken.js" defer></script>
 <script src="/js/table/table-music.js" defer></script>
+<script src="/js/table/table-popout.js" defer></script>
 <script src="/js/table/table-main.js" defer></script>
 </body>
 </html>

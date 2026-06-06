@@ -138,7 +138,9 @@ export default function register(app, ctx) {
         modifier: parseInt(modifier) || 0,
         total: parseInt(total),
         label: label ? String(label).slice(0, 60) : null,
-        description: description ? String(description).slice(0, 200) : null,
+        // Full damage/roll descriptions post intact (was truncated at 200); 4000
+        // matches the large HTML-message cap and stays a sane bound against abuse.
+        description: description ? String(description).slice(0, 4000) : null,
         dmOnly: dmOnly === true,
         timestamp: new Date().toISOString()
       };

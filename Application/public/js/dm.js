@@ -538,11 +538,15 @@ function appendChatEntry(e) {
 
   if (e.type === 'text') {
     div.className = 'chat-entry chat-text';
+    // Messages flagged html:true (e.g. spell descriptions with 5e.tools links)
+    // render their body as raw HTML; all other text stays escaped.
+    const body = e.html
+      ? `<div class="chat-html" style="word-break:break-word;line-height:1.45">${e.message || ''}</div>`
+      : `<div style="word-break:break-word;white-space:pre-wrap">${esc(e.message || '')}</div>`;
     div.innerHTML = `<div style="display:flex;justify-content:space-between;margin-bottom:2px">
       <span class="ce-sender">${esc(e.sender || '?')}</span>
       ${timeCol}
-    </div>
-    <div style="word-break:break-word;white-space:pre-wrap">${esc(e.message || '')}</div>`;
+    </div>${body}`;
     log.appendChild(div);
     return;
   }

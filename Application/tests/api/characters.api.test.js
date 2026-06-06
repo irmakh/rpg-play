@@ -545,3 +545,84 @@ describe('POST /api/characters/:id/action-rest', () => {
     expect(used(ldb, 3)).toBe(1);
   });
 });
+
+// ── PATCH /api/characters/:id/equip ───────────────────────────────────────────
+describe('PATCH /api/characters/:id/equip', () => {
+  function seedEquip(ldb, items, extra = {}) {
+    ldb.createCharacter('c1', {
+      name: 'Hero',
+      dataJson: JSON.stringify({ dex: '16', profbonus: '2', _items: JSON.stringify(items), ...extra }),
+      createdAt: new Date().toISOString(),
+    });
+  }
+  const stored = (ldb) => JSON.parse(ldb.getCharacter('c1').dataJson);
+  const items  = (ldb) => JSON.parse(stored(ldb)._items);
+
+  it('returns 404 for a non-existent character', async () => {
+    const { app } = makeApp();
+    const res = await dm(request(app).patch('/api/characters/ghost/equip')).send({ itemId: 1 });
+    expect(res.status).toBe(404);
+  });
+
+  it('returns 400 when itemId is missing', async () => {
+    const { app, ldb } = makeApp();
+    seedEquip(ldb, [{ id: 1, name: 'Cloak', itemType: 'wondrous', equipped: false }]);
+    const res = await dm(request(app).patch('/api/characters/c1/equip')).send({});
+    expect(res.status).toBe(400);
+  });
+
+  it('returns 404 when the item id is not found', async () => {
+    const { app, ldb } = makeApp();
+    seedEquip(ldb, [{ id: 1, name: 'Cloak', itemType: 'wondrous', equipped: false }]);
+    const res = await dm(request(app).patch('/api/characters/c1/equip')).send({ itemId: 99 });
+    expect(res.status).toBe(404);
+  });
+
+  it('equipping light armor recomputes AC = acBase + DEX mod', async () => {
+    const { app, ldb } = makeApp();
+    seedEquip(ldb, [{ id: 1, name: 'Leather', itemType: 'armor', armorType: 'light', acBase: 12, equipped: false }]);
+    const res = await dm(request(app).patch('/api/characters/c1/equip')).send({ itemId: 1, equipped: true });
+    expect(res.status).toBe(200);
+    expect(res.body.equipped).toBe(true);
+    expect(res.body.ac).toBe(15);            // 12 + DEX mod (+3)
+    expect(items(ldb)[0].equipped).toBe(true);
+    expect(stored(ldb).ac).toBe(15);
+  });
+
+  it('heavy armor ignores DEX mod, plus flat acBonus from another equipped item', async () => {
+    const { app, ldb } = makeApp();
+    seedEquip(ldb, [
+      { id: 1, name: 'Plate', itemType: 'armor', armorType: 'heavy', acBase: 18, equipped: true },
+      { id: 2, name: 'Ring of Protection', itemType: 'wondrous', acBonus: 1, equipped: false },
+    ]);
+    const res = await dm(request(app).patch('/api/characters/c1/equip')).send({ itemId: 2, equipped: true });
+    expect(res.body.ac).toBe(19);            // 18 (heavy, no dex) + 1 ring
+  });
+
+  it('unequipping armor reverts AC to 10 + DEX mod', async () => {
+    const { app, ldb } = makeApp();
+    seedEquip(ldb, [{ id: 1, name: 'Leather', itemType: 'armor', armorType: 'light', acBase: 12, equipped: true }]);
+    const res = await dm(request(app).patch('/api/characters/c1/equip')).send({ itemId: 1, equipped: false });
+    expect(res.body.equipped).toBe(false);
+    expect(res.body.ac).toBe(13);            // 10 + DEX mod (+3)
+  });
+
+  it('toggles equipped when no explicit value is sent', async () => {
+    const { app, ldb } = makeApp();
+    seedEquip(ldb, [{ id: 1, name: 'Cloak', itemType: 'wondrous', equipped: false }]);
+    const res = await dm(request(app).patch('/api/characters/c1/equip')).send({ itemId: 1 });
+    expect(res.body.equipped).toBe(true);
+    expect(items(ldb)[0].equipped).toBe(true);
+  });
+
+  it('rejects an unauthenticated request on a password-locked character', async () => {
+    const { app, ldb } = makeApp();
+    ldb.createCharacter('c1', {
+      name: 'Locked', passwordHash: 'x:y',
+      dataJson: JSON.stringify({ dex: '14', _items: JSON.stringify([{ id: 1, itemType: 'wondrous', equipped: false }]) }),
+      createdAt: new Date().toISOString(),
+    });
+    const res = await request(app).patch('/api/characters/c1/equip').send({ itemId: 1, equipped: true });
+    expect(res.status).toBe(401);
+  });
+});
