@@ -50,7 +50,70 @@ let _diceAutoClose = null;
 let _polyIntervals = [];
 const MAX_DICE_SHOW = 8;
 
+// 3D CSS d20 (icosahedron) — adapted from the "3d d20 die with pure CSS" CodePen
+// by Vicente Mundim. 20 triangular <figure> faces numbered 1–20 via a CSS counter;
+// the die tumbles with the `d20-roll` keyframe, then lands by setting data-face=N
+// (the matching face rotates to the front). Built at a fixed 200px coordinate
+// system and scaled down to fit the engine's requested size.
+function _makeD20El(value, size, dur) {
+  const k = size / 200;
+  const scene = document.createElement('div');
+  scene.style.cssText = `position:relative;width:${size}px;height:${size}px;flex-shrink:0`;
+  const stage = document.createElement('div');
+  stage.className = 'd20-stage';
+  stage.style.cssText = `position:absolute;top:0;left:0;width:200px;height:200px;transform:scale(${k});transform-origin:top left`;
+  const die = document.createElement('div');
+  die.className = 'd20-die';
+  die.style.setProperty('--roll-dur', `${dur}ms`);
+  for (let i = 0; i < 20; i++) {
+    const f = document.createElement('figure');
+    f.className = 'd20-face';
+    die.appendChild(f);
+  }
+  stage.appendChild(die);
+  scene.appendChild(stage);
+  return {
+    container: scene,
+    animEl: die,
+    textEl: null,
+    isCube: false,
+    reveal: (val) => { die.classList.remove('rolling'); die.setAttribute('data-face', String(val)); }
+  };
+}
+
+// 3D CSS d10 (pentagonal trapezohedron) — adapted from the matching CodePen by
+// Vicente Mundim. 10 kite faces numbered 0–9 via a CSS counter. Our engine rolls
+// d10 values 1–10, so it lands on face = value % 10 (a rolled 10 shows "0", the
+// real-world d10 convention; the result readout still shows 10).
+function _makeD10El(value, size, dur) {
+  const k = size / 200;
+  const scene = document.createElement('div');
+  scene.style.cssText = `position:relative;width:${size}px;height:${size}px;flex-shrink:0`;
+  const stage = document.createElement('div');
+  stage.className = 'd10-stage';
+  stage.style.cssText = `position:absolute;top:0;left:0;width:200px;height:200px;transform:scale(${k});transform-origin:top left`;
+  const die = document.createElement('div');
+  die.className = 'd10-die';
+  die.style.setProperty('--roll-dur', `${dur}ms`);
+  for (let i = 0; i < 10; i++) {
+    const f = document.createElement('figure');
+    f.className = 'd10-face';
+    die.appendChild(f);
+  }
+  stage.appendChild(die);
+  scene.appendChild(stage);
+  return {
+    container: scene,
+    animEl: die,
+    textEl: null,
+    isCube: false,
+    reveal: (val) => { die.classList.remove('rolling'); die.setAttribute('data-face', String(val % 10)); }
+  };
+}
+
 function _makeDieEl(sides, value, size, dur) {
+  if (sides === 20) return _makeD20El(value, size, dur);
+  if (sides === 10) return _makeD10El(value, size, dur);
   const isD6 = sides === 6;
   if (isD6) {
     const tz = size / 2;
@@ -129,13 +192,15 @@ function showDiceAnimation(sides, dieResults, modifier, total, label, duration, 
     row.innerHTML = '';
     const reveals = [];
     for (let i = 0; i < shown; i++) {
-      const { container, animEl, textEl, isCube } = _makeDieEl(sides, arr[i], size, dur);
+      const { container, animEl, textEl, isCube, reveal } = _makeDieEl(sides, arr[i], size, dur);
       row.appendChild(container);
       void animEl.offsetWidth;
       animEl.classList.add('rolling');
       const isDimmed = shown > 1 && usedIdx >= 0 && i !== usedIdx;
-      reveals.push({ textEl, val: arr[i], isCube, container, isDimmed });
-      if (!isCube) {
+      reveals.push({ textEl, val: arr[i], isCube, container, isDimmed, reveal });
+      // Polygon dice show the rolling value via a cycling number; dice that supply
+      // their own reveal() (the 3D d20) render the result by rotating a face instead.
+      if (!isCube && !reveal) {
         const el = textEl;
         const id = setInterval(() => { el.textContent = Math.ceil(Math.random() * sides); }, 100);
         _polyIntervals.push(id);
@@ -144,8 +209,9 @@ function showDiceAnimation(sides, dieResults, modifier, total, label, duration, 
     document.getElementById('dice-overlay').classList.add('active');
     setTimeout(() => {
       _polyIntervals.forEach(clearInterval); _polyIntervals = [];
-      reveals.forEach(({ textEl, val, container, isDimmed }) => {
-        textEl.textContent = val;
+      reveals.forEach(({ textEl, val, container, isDimmed, reveal }) => {
+        if (reveal) reveal(val);
+        else textEl.textContent = val;
         if (isDimmed) container.style.cssText += ';opacity:0.35;filter:blur(1.5px);transition:opacity .4s,filter .4s';
       });
       bigEl.classList.add('show');
