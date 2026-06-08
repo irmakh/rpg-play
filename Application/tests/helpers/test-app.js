@@ -17,6 +17,7 @@ import { makeLdb } from './make-ldb.js';
 import registerInitiative  from '../../server/routes/initiative.js';
 import registerTable       from '../../server/routes/table.js';
 import registerCharacters  from '../../server/routes/characters.js';
+import registerAuth        from '../../server/routes/auth.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
@@ -119,6 +120,7 @@ export function makeApp() {
   registerInitiative(app, ctx);
   registerTable(app, ctx);
   registerCharacters(app, ctx);
+  registerAuth(app, ctx);
 
-  return { app, ldb, masterPw: TEST_MASTER_PW };
+  return { app, ldb, masterPw: TEST_MASTER_PW, hashPassword };
 }
