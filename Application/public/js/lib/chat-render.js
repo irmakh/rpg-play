@@ -19,8 +19,11 @@ function appendChatEntry(e) {
     div.className = 'chat-entry chat-text';
     // Item 9: messages flagged html:true (e.g. spell descriptions with tool links)
     // render their body as raw HTML; all other text is escaped as before.
+    // Both paths preserve line breaks: the escaped path via pre-wrap, the html
+    // path by turning newlines in the message into <br> (the body is built as
+    // single-line concatenated HTML, so the only newlines are content ones).
     const body = e.html
-      ? `<div class="chat-html" style="word-break:break-word;line-height:1.45">${e.message || ''}</div>`
+      ? `<div class="chat-html" style="word-break:break-word;line-height:1.45">${String(e.message || '').replace(/\n/g, '<br>')}</div>`
       : `<div style="word-break:break-word;white-space:pre-wrap">${esc(e.message || '')}</div>`;
     div.innerHTML = `<div style="display:flex;justify-content:space-between;margin-bottom:2px">
       <span class="ce-sender">${esc(e.sender || '?')}</span>

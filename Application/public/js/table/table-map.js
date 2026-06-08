@@ -669,7 +669,7 @@ function finishDrag(e) {
 
   // Optimistic update — immediate
   const dx = Math.abs(grid.x - origX), dy = Math.abs(grid.y - origY);
-  const dist = Math.max(dx, dy) * 5;
+  const dist = Math.round(Math.sqrt(dx * dx + dy * dy) * 5); // Euclidean, like the ruler
   const optimisticMovedFt = freeMove ? origMovedFt : origMovedFt + dist;
   patchToken(tokenId, { x: grid.x, y: grid.y, movedFt: optimisticMovedFt });
   renderGrid(); renderTokens(); renderSidePanel(); renderHpTable();
@@ -1258,7 +1258,7 @@ document.addEventListener('mousemove', e => {
   oCtx.stroke();
   if (!dragState.freeMove) {
     const dx = Math.abs(grid.x - dragState.origX), dy = Math.abs(grid.y - dragState.origY);
-    const dist = Math.max(dx, dy) * 5;
+    const dist = Math.round(Math.sqrt(dx * dx + dy * dy) * 5); // Euclidean, like the ruler
     const remaining = dragState.remainingFt - dist;
     oCtx.font = 'bold 12px Segoe UI';
     oCtx.textAlign = 'center';

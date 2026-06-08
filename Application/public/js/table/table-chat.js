@@ -219,6 +219,25 @@ function getChatSender() {
   return qrollCharName || 'Table';
 }
 
+// Shared "info card" poster — used by the player-action, monster-action, and
+// spell "send to chat" features so they all format and break lines identically.
+// `text` is treated as plain text (escaped, newlines -> <br>); `html` is used
+// as pre-formatted safe HTML (e.g. spell notes). Pass one of them.
+function postChatInfoCard({ name, meta, text, html, sender } = {}) {
+  let body = `<strong>${esc(name || '')}</strong>`;
+  const parts = (meta || []).filter(Boolean);
+  if (parts.length) body += `<div style="font-size:10px;opacity:.7;margin-top:1px">${esc(parts.join(' · '))}</div>`;
+  const descHtml = html != null && html !== ''
+    ? html
+    : (text ? esc(String(text)).replace(/\n/g, '<br>') : '');
+  if (descHtml) body += `<div style="margin-top:4px">${descHtml}</div>`;
+  return fetch('/api/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sender: sender || getChatSender(), type: 'text', message: body, html: true })
+  }).catch(() => {});
+}
+
 async function sendChatInput() {
   const input = document.getElementById('chat-input');
   const text = (input?.value || '').trim();

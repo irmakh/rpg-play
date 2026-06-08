@@ -41,13 +41,9 @@ async function useMonsterAction(section, idx) {
       return e.items.map(i => '• ' + _plainEntry(typeof i === 'string' ? i : (i.name || ''))).join('\n');
     return '';
   }).filter(Boolean).join('\n');
-  try {
-    await fetch('/api/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sender, type: 'text', message: item.name + '\n' + rawText })
-    });
-  } catch {}
+  // Shared info-card poster (table-chat.js) — keeps formatting and line breaks
+  // identical to the player-action and spell "send to chat" features.
+  postChatInfoCard({ name: item.name, text: rawText, sender });
 }
 
 function renderMonsterActionsPanel(data, tok) {

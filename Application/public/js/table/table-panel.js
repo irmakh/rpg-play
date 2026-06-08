@@ -386,11 +386,35 @@ function _renderSidePanelCustom(a, canEdit) {
     const rl = a.recharge === 'short' ? 'Short Rest' : a.recharge === 'long' ? 'Long Rest' : '';
     usesHtml = `<div class="rp-act-uses">${boxes}${rl ? `<span class="rp-act-recharge">/ ${rl}</span>` : ''}</div>`;
   }
+  // "Use" — posts the action's details to chat (mirrors the monster Use button).
+  const useBtn = `<span class="rp-mon-use-btn" onclick="useCharacterAction('${a.id}')" title="Send details to chat"${dice ? '' : ' style="margin-left:auto"'}>Use</span>`;
   return `<div class="rp-act-item">`
-    + `<div class="rp-act-head"><span class="rp-act-name">${n}</span>${diceBtn}</div>`
+    + `<div class="rp-act-head"><span class="rp-act-name">${n}</span>${diceBtn}${useBtn}</div>`
     + (a.description ? `<div class="rp-act-desc">${esc(a.description)}</div>` : '')
     + usesHtml
     + `</div>`;
+}
+
+// Post a character custom action's details to chat (name, category, dice, uses,
+// description) — the player-action equivalent of useMonsterAction. Works the
+// same in the docked right panel and the popped-out sheet (same render path).
+function useCharacterAction(id) {
+  const d = qrollData || {};
+  let acts = [];
+  try { acts = JSON.parse(d._actions || '[]'); } catch {}
+  const a = acts.find(x => x && String(x.id) === String(id));
+  if (!a) return;
+  const name = a.name || 'Action';
+  const meta = [];
+  const catLabel = { action: 'Action', bonus: 'Bonus Action', reaction: 'Reaction', other: 'Other' }[a.category] || '';
+  if (catLabel) meta.push(catLabel);
+  if (a.dice) meta.push(`🎲 ${a.dice}`);
+  const uses = parseInt(a.uses) || 0;
+  if (uses > 0) {
+    const used = Math.min(parseInt(a.used) || 0, uses);
+    meta.push(`Uses ${uses - used}/${uses}`);
+  }
+  postChatInfoCard({ name, meta, text: a.description });
 }
 
 function clickActionBox(actionId, idx) {
@@ -640,23 +664,16 @@ function _spell5eUrl(name) {
 function _postSpellInfo(s) {
   if (!s) return;
   const name = s[1] || 'Spell';
-  const desc = s[6] || '';
+  const desc = s[6] || ''; // already HTML (spell notes)
   const lvl  = s[0];
+  // Raw meta values — postChatInfoCard escapes them.
   const meta = [];
-  if (lvl !== undefined && lvl !== '' && lvl !== null) meta.push(String(lvl) === '0' ? 'Cantrip' : `Level ${esc(String(lvl))}`);
-  if (s[2])  meta.push(`⏱ ${esc(s[2])}`);
-  if (s[3])  meta.push(`🎯 ${esc(s[3])}`);
-  if (s[14]) meta.push(`⏳ ${esc(s[14])}`);
-  let html = `<strong>${esc(name)}</strong>`;
-  if (meta.length) html += `<div style="font-size:10px;opacity:.7;margin-top:1px">${meta.join(' · ')}</div>`;
-  if (desc) html += `<div style="margin-top:4px">${desc}</div>`;
-  html += `<div style="margin-top:4px"><a href="${esc(_spell5eUrl(name))}" target="_blank" rel="noopener">📖 Open on 5e.tools ↗</a></div>`;
-  // postToChat() forces type:'roll', so post the HTML text message directly.
-  fetch('/api/chat', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ sender: getChatSender(), type: 'text', message: html, html: true })
-  }).catch(() => {});
+  if (lvl !== undefined && lvl !== '' && lvl !== null) meta.push(String(lvl) === '0' ? 'Cantrip' : `Level ${String(lvl)}`);
+  if (s[2])  meta.push(`⏱ ${s[2]}`);
+  if (s[3])  meta.push(`🎯 ${s[3]}`);
+  if (s[14]) meta.push(`⏳ ${s[14]}`);
+  const link = `<div style="margin-top:4px"><a href="${esc(_spell5eUrl(name))}" target="_blank" rel="noopener">📖 Open on 5e.tools ↗</a></div>`;
+  postChatInfoCard({ name, meta, html: (desc || '') + link });
 }
 
 function postSpellInfoFromPanel(idx) { _postSpellInfo(_sideSpells[idx]); }

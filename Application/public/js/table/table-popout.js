@@ -98,6 +98,28 @@
     try { window.dispatchEvent(new Event('resize')); } catch {}
   }
 
+  // Size the pop-out window to the user's screen. The character sheet wants room
+  // for its multi-column layout, so it opens larger (~half the screen, capped);
+  // the other panels keep their compact defaults but are clamped to fit. The
+  // window is centered on whichever monitor the app currently lives on.
+  function _winSize(id, cfg) {
+    const sw = (window.screen && screen.availWidth)  || window.innerWidth  || 1024;
+    const sh = (window.screen && screen.availHeight) || window.innerHeight || 768;
+    let w, h;
+    if (id === 'side-panel') {
+      w = Math.round(Math.min(Math.max(sw * 0.5, 380), 980, sw - 40));
+      h = Math.round(Math.min(Math.max(sh * 0.9, 520), sh - 40));
+    } else {
+      w = Math.min(cfg.w, sw - 40);
+      h = Math.min(cfg.h, sh - 40);
+    }
+    const dx = (window.screenLeft != null ? window.screenLeft : window.screenX) || 0;
+    const dy = (window.screenTop  != null ? window.screenTop  : window.screenY) || 0;
+    const left = Math.round(dx + Math.max(0, (sw - w) / 2));
+    const top  = Math.round(dy + Math.max(0, (sh - h) / 2));
+    return { w, h, left, top };
+  }
+
   function _popOut(id) {
     const cfg = PANELS[id];
     if (!cfg || _popouts[id]) return;
@@ -105,9 +127,10 @@
     if (!node) return;
     _patchLookups();
 
+    const s = _winSize(id, cfg);
     const win = window.open(
       '', 'popout-' + id,
-      `width=${cfg.w},height=${cfg.h},resizable=yes,scrollbars=yes,menubar=no,toolbar=no,location=no,status=no`
+      `width=${s.w},height=${s.h},left=${s.left},top=${s.top},resizable=yes,scrollbars=yes,menubar=no,toolbar=no,location=no,status=no`
     );
     if (!win) { alert('Pop-out was blocked by the browser. Allow pop-ups for this site, then try again.'); return; }
 
@@ -119,6 +142,7 @@
       '<title>' + cfg.title + '</title>' +
       '<link rel="stylesheet" href="/css/table.css">' +
       '<link rel="stylesheet" href="/css/table-theme-modern.css">' +
+      '<link rel="stylesheet" href="/css/table-sheet-popout.css">' +
       '<style>' +
         'html,body{margin:0;height:100%;overflow:hidden;background:var(--bg2,#1e1e1e)}' +
         '#po-host{position:fixed;inset:0;display:flex;flex-direction:column}' +
@@ -134,6 +158,10 @@
     win.document.close();
     win.document.body.dataset.theme = theme;
     win.document.body.className = document.body.className;
+    // The Character/Details pop-out gets the redesigned full-sheet layout. All of
+    // its styling is scoped under this class, so the docked panel and the other
+    // pop-outs (initiative, chat) are completely unaffected.
+    if (id === 'side-panel') win.document.body.classList.add('po-sheet-window');
 
     // Remember the original slot, then physically move the node into the pop-out.
     const placeholder = document.createComment('popout:' + id);
