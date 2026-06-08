@@ -367,7 +367,7 @@ function _showMapCtxMenu(cx, cy, html) {
 }
 
 canvasArea.addEventListener('click', e => {
-  if (!isDM() || currentTool !== 'select') return;
+  if (!isDM() || currentTool !== 'move') return;
   if (e.target.closest('.token')) return; // token click — handled separately
   const pos = getCanvasPos(e);
   const grid = canvasToGrid(pos.x, pos.y);
@@ -597,34 +597,37 @@ function attachTokenEvents(div, tok) {
     // Accidental moves are recoverable via the Undo button (undoLastMove).
     e.preventDefault();
     e.stopPropagation();
+    // Remember the pressed token so mouseup can click-select it when no drag happens.
+    // (The move tool both selects and drags — relying on the native 'click' event was
+    // unreliable because finishDrag rebuilds the token DOM, which cancels the click.)
+    _pendingClickToken = tok;
     _dragPendingTimer = setTimeout(() => { _dragPendingTimer = null; startDrag(tok, e); }, 100);
   });
+}
 
-  div.addEventListener('click', e => {
-    if (dragState && dragState.didMove) return;
-    if (currentTool === 'select' || currentTool === 'move') {
-      if (e.shiftKey && isDM()) {
-        // Shift+click: toggle token in bulk selection, hide single-token panel
-        if (bulkTokenIds.has(tok.id)) {
-          bulkTokenIds.delete(tok.id);
-        } else {
-          bulkTokenIds.add(tok.id);
-        }
-        closeHpPanel();
-        renderTokens();
-        renderBulkPanel();
-        renderHpTable();
-      } else {
-        // Normal click: clear bulk, single select
-        if (bulkTokenIds.size > 0) {
-          bulkTokenIds.clear();
-          renderBulkPanel();
-        }
-        selectToken(tok.id);
-        openHpPanel(tok);
-      }
+// Click-select a token (move tool): shift+click toggles bulk selection (DM), a plain
+// click single-selects and opens the right-side details panel. Called from mouseup.
+function _selectTokenClick(tok, e) {
+  if (e.shiftKey && isDM()) {
+    // Shift+click: toggle token in bulk selection, hide single-token panel
+    if (bulkTokenIds.has(tok.id)) {
+      bulkTokenIds.delete(tok.id);
+    } else {
+      bulkTokenIds.add(tok.id);
     }
-  });
+    closeHpPanel();
+    renderTokens();
+    renderBulkPanel();
+    renderHpTable();
+  } else {
+    // Normal click: clear bulk, single select
+    if (bulkTokenIds.size > 0) {
+      bulkTokenIds.clear();
+      renderBulkPanel();
+    }
+    selectToken(tok.id);
+    openHpPanel(tok);
+  }
 }
 
 function startDrag(tok, e) {
@@ -641,8 +644,17 @@ function finishDrag(e) {
 
   oCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
 
-  // No actual drag to a new cell — treat as a plain click, don't move anything
-  if (!didMove) { renderGrid(); renderTokens(); return; }
+  // No actual drag to a new cell — treat as a plain click: select the token.
+  // (renderTokens here rebuilds the DOM, which is why we can't rely on a native
+  // click event for selection — do it explicitly instead.)
+  if (!didMove) {
+    renderGrid(); renderTokens();
+    if (_pendingClickToken) { _selectTokenClick(_pendingClickToken, e); _pendingClickToken = null; }
+    return;
+  }
+
+  // A real move consumes the press — don't also click-select.
+  _pendingClickToken = null;
 
   const pos = getCanvasPos(e);
   const grid = canvasToGrid(pos.x, pos.y);
@@ -783,8 +795,8 @@ function setTool(name) {
     b.classList.toggle('active', b.dataset.mstripTool === name);
   });
   overlayCanvas.style.cursor = (name === 'ruler' || name === 'multi') ? 'crosshair' : name === 'draw' ? (drawSubMode === 'select' ? 'default' : 'crosshair') : name === 'ping' ? 'cell' : name === 'pan' ? 'grab' : 'default';
-  // Select and move modes: overlay transparent so token divs receive pointer events
-  overlayCanvas.style.pointerEvents = (name === 'select' || name === 'move') ? 'none' : 'all';
+  // Move mode (also selects): overlay transparent so token divs receive pointer events
+  overlayCanvas.style.pointerEvents = (name === 'move') ? 'none' : 'all';
   if (name !== 'ruler') { rulerState = null; oCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height); }
   if (name !== 'pan') { panState = null; }
   if (name !== 'draw') { drawingState = null; selectedShapeId = null; shapeEditState = null; }
@@ -1324,5 +1336,11 @@ document.addEventListener('mouseup', e => {
     overlayCanvas.style.cursor = 'grab';
     return;
   }
-  if (dragState) finishDrag(e);
+  if (dragState) {
+    finishDrag(e); // handles click-select for the no-move case
+  } else if (_pendingClickToken) {
+    // Quick tap released before the drag timer fired — click-select the token.
+    _selectTokenClick(_pendingClickToken, e);
+  }
+  _pendingClickToken = null;
 });

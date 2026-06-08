@@ -889,3 +889,130 @@ function bulkToggleCondition(name) {
   const selTok = tokens.find(t => t.id === selectedTokenId);
   if (selTok && bulkTokenIds.has(selectedTokenId)) _refreshHpPanel(selTok);
 }
+
+// ── Group ability check / saving throw (DM, multi-selected tokens) ────────────
+// Every selected token rolls its own d20 + its own bonus; results post to chat.
+let _groupCheckKind = 'check';      // 'check' | 'save'
+let _groupCheckAbility = 1;         // 0=STR .. 5=CHA (default DEX)
+let _groupCheckRollType = 'normal'; // 'normal' | 'adv' | 'dis'
+const _GC_ABILITY_KEYS   = ['str','dex','con','int','wis','cha'];
+const _GC_ABILITY_LABELS = ['STR','DEX','CON','INT','WIS','CHA'];
+
+function openGroupCheckModal(kind) {
+  if (!isDM() || bulkTokenIds.size === 0) return;
+  _groupCheckKind = (kind === 'save') ? 'save' : 'check';
+  _groupCheckRollType = 'normal';
+  const sel = [...bulkTokenIds].map(id => tokens.find(t => t.id === id)).filter(Boolean);
+  const titleEl = document.getElementById('group-check-title');
+  if (titleEl) titleEl.textContent = _groupCheckKind === 'save' ? '🛡 Group Saving Throw' : '🎲 Group Ability Check';
+  const descEl = document.getElementById('group-check-desc');
+  if (descEl) descEl.textContent = `${sel.length} token${sel.length !== 1 ? 's' : ''} will roll individually.`;
+  _updateGroupCheckUI();
+  document.getElementById('group-check-modal').style.display = 'flex';
+}
+
+function closeGroupCheckModal() {
+  const m = document.getElementById('group-check-modal');
+  if (m) m.style.display = 'none';
+}
+
+function setGroupCheckAbility(i)  { _groupCheckAbility = i; _updateGroupCheckUI(); }
+function setGroupCheckRollType(t) { _groupCheckRollType = t; _updateGroupCheckUI(); }
+
+function _updateGroupCheckUI() {
+  for (let i = 0; i < 6; i++) {
+    const btn = document.getElementById('group-check-ab-' + i);
+    if (!btn) continue;
+    const active = _groupCheckAbility === i;
+    btn.style.background  = active ? 'var(--ac)' : '';
+    btn.style.color       = active ? '#fff' : '';
+    btn.style.borderColor = active ? 'var(--ac)' : '';
+  }
+  for (const t of ['normal', 'adv', 'dis']) {
+    const btn = document.getElementById('group-check-rt-' + t);
+    if (!btn) continue;
+    const active = _groupCheckRollType === t;
+    btn.style.background  = active ? 'var(--ac)' : '';
+    btn.style.color       = active ? '#fff' : '';
+    btn.style.borderColor = active ? 'var(--ac)' : '';
+  }
+}
+
+// Resolve a token's d20 bonus for the chosen ability + kind.
+// Monsters read from _monsterList (save object → ability mod fallback); player
+// tokens fetch /api/characters/:id/qroll. Returns an integer, or null if unknown.
+async function _tokenCheckBonus(tok, abIdx, kind) {
+  const abKey = _GC_ABILITY_KEYS[abIdx];
+  const parseBonus = v => parseInt(String(v).replace(/[^0-9\-+]/g, '')) || 0;
+  if (tok.type === 'monster') {
+    const mon = _monsterList.find(m => m.id === tok.linkedId);
+    const d = (mon && mon.data) || {};
+    const score = parseInt(d[abKey]);
+    const mod = isNaN(score) ? 0 : Math.floor((score - 10) / 2);
+    if (kind === 'save') {
+      const sv = d.save && d.save[abKey];
+      return (sv !== undefined && sv !== null && sv !== '') ? parseBonus(sv) : mod;
+    }
+    return mod;
+  }
+  if (!tok.linkedId) return null;
+  try {
+    const res = await fetch(`/api/characters/${tok.linkedId}/qroll`);
+    if (!res.ok) return null;
+    const j = await res.json();
+    const d = j.data || {};
+    if (kind === 'save') return parseBonus(d['save-' + abKey]);
+    const score = parseInt(d[abKey]);
+    return isNaN(score) ? 0 : Math.floor((score - 10) / 2);
+  } catch { return null; }
+}
+
+async function confirmGroupCheckRoll() {
+  if (!isDM() || bulkTokenIds.size === 0) { closeGroupCheckModal(); return; }
+  const abIdx = _groupCheckAbility, kind = _groupCheckKind, rollType = _groupCheckRollType;
+  const sel = [...bulkTokenIds].map(id => tokens.find(t => t.id === id)).filter(Boolean);
+  closeGroupCheckModal();
+  if (!sel.length) return;
+
+  const abLabel   = _GC_ABILITY_LABELS[abIdx];
+  const kindLabel = kind === 'save' ? 'Save' : 'Check';
+  const rtLabel   = rollType === 'adv' ? ' (Adv)' : rollType === 'dis' ? ' (Dis)' : '';
+
+  const rows = [];
+  for (const tok of sel) {
+    const bonus = await _tokenCheckBonus(tok, abIdx, kind);
+    const r1 = Math.ceil(Math.random() * 20);
+    const r2 = Math.ceil(Math.random() * 20);
+    const used = rollType === 'adv' ? Math.max(r1, r2) : rollType === 'dis' ? Math.min(r1, r2) : r1;
+    const name = tokDisplayName(tok);
+    if (bonus === null) {
+      rows.push({ name, total: null });
+    } else {
+      const dicePart = rollType !== 'normal' ? `${r1}/${r2}→${used}` : `${used}`;
+      const bonusStr = bonus >= 0 ? `+${bonus}` : `${bonus}`;
+      rows.push({ name, total: used + bonus, detail: `d20(${dicePart}) ${bonusStr}`, isCrit: used === 20, isFail: used === 1 });
+    }
+  }
+  rows.sort((a, b) => (b.total ?? -999) - (a.total ?? -999));
+
+  let html = `<strong>${esc(abLabel)} ${kindLabel}${rtLabel}</strong>`;
+  html += `<div style="margin-top:4px;display:flex;flex-direction:column;gap:2px">`;
+  for (const r of rows) {
+    if (r.total === null) {
+      html += `<div style="display:flex;justify-content:space-between;gap:10px;opacity:.5"><span>${esc(r.name)}</span><span>—</span></div>`;
+    } else {
+      const color = r.isCrit ? '#44ff44' : r.isFail ? '#ff5555' : 'inherit';
+      html += `<div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline">`
+        + `<span>${esc(r.name)}</span>`
+        + `<span><span style="font-size:10px;opacity:.55">${esc(r.detail)}</span> <strong style="color:${color};font-size:14px">${r.total}</strong></span></div>`;
+    }
+  }
+  html += `</div>`;
+
+  fetch('/api/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sender: getChatSender(), type: 'text', message: html, html: true })
+  }).catch(() => {});
+  showToast(`Rolled ${abLabel} ${kindLabel} for ${rows.length} token${rows.length !== 1 ? 's' : ''}.`);
+}

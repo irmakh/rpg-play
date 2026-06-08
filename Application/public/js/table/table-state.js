@@ -11,6 +11,7 @@ let initData = { entries: [], currentId: null };
 let currentTool = 'move';
 let dragState = null;   // { tokenId, origX, origY, origPxX, origPxY, remainingFt, ghostEl }
 let _dragPendingTimer = null; // setTimeout handle — drag starts 500ms after mousedown
+let _pendingClickToken = null; // token pressed under the move tool; click-selected on mouseup if no drag occurred
 let lastTokenMove = null; // { tokenId, x, y, movedFt } — previous position for single-level Undo (any user)
 let _suppressUndoCapture = false; // true while applying an undo, so the undo itself isn't recorded as a new move
 let rulerState = null;  // { x1, y1 }

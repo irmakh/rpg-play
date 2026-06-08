@@ -238,7 +238,7 @@ input:focus,select:focus{outline:none;border-color:var(--ac)}
 /* ── 3D Dice Overlay ── */
 #dice-overlay{
   display:none;position:fixed;inset:0;
-  background:transparent;
+  background:rgba(0,0,0,.78);
   z-index:2600;
   align-items:center;justify-content:center;flex-direction:column;
   gap:20px;cursor:pointer;

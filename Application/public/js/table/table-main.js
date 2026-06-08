@@ -204,7 +204,7 @@ window.addEventListener('load', async () => {
   initTheme();
   initDiceAnim();
   applyDMControls();
-  setTool('select'); // initialize pointer-events on overlay canvas
+  setTool('move'); // initialize pointer-events on overlay canvas (move tool also selects)
 
   // Open init panel by default
   const initBody = document.getElementById('init-body-wrap');

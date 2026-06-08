@@ -585,15 +585,26 @@ function qroll(label, modifier, weaponDmg = null, weaponNote = '') {
     weaponDmg: weaponDmg || null,
     weaponNote: weaponNote || ''
   };
+  // "Ask" mode: show the per-roll Normal/Adv/Dis modal instead of rolling now.
+  if (diceMode === 'ask') { _showAdvModal(label); return; }
   confirmRoll(diceMode);
 }
 
-// Item 2: persistent dice-mode toggle (Normal / Adv / Dis) shown under the name.
+// Item 2: persistent dice-mode toggle (Normal / Adv / Dis / Ask) shown under the name.
 function setDiceMode(mode) {
-  if (!['norm', 'adv', 'dis'].includes(mode)) mode = 'norm';
+  if (!['norm', 'adv', 'dis', 'ask'].includes(mode)) mode = 'norm';
   diceMode = mode;
   document.querySelectorAll('#rp-dice-mode .dm-seg').forEach(b =>
     b.classList.toggle('active', b.dataset.mode === mode));
+}
+
+// "Ask" mode helper: open the advantage modal (Advantage/Normal/Disadvantage)
+// for the pending roll. confirmRoll() reads rollPending, which the caller set.
+function _showAdvModal(label) {
+  const lbl = document.getElementById('adv-label');
+  if (lbl) lbl.textContent = label || 'Roll';
+  const modal = document.getElementById('adv-modal');
+  if (modal) modal.style.display = 'flex';
 }
 
 // Item 3: after a weapon attack roll, prompt for Miss (close) or Roll Damage.
@@ -693,7 +704,9 @@ function rollInitiativeFromPanel() {
       } catch {}
     } : null
   };
-  confirmRoll(diceMode); // item 2: use persistent dice mode, no modal
+  // "Ask" mode: prompt for Normal/Adv/Dis; otherwise roll with the persistent mode.
+  if (diceMode === 'ask') { _showAdvModal('Initiative'); return; }
+  confirmRoll(diceMode);
 }
 
 // ── Advantage modal (advClose in js/lib/dice-engine.js) ──────────────────────
@@ -738,7 +751,7 @@ document.addEventListener('keydown', e => {
       return;
     }
     drawingState = null; selectedShapeId = null; shapeEditState = null;
-    oCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height); setTool('select'); return;
+    oCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height); setTool('move'); return;
   }
   if (e.key === 'Escape' && currentTool === 'multi') { multiSelectState = null; oCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height); return; }
   if (document.getElementById('dm-tools-modal')?.style.display === 'flex') {

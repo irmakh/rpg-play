@@ -30,8 +30,7 @@
 
   <div style="flex:1"></div>
 
-  <button class="btn tool-btn active" id="btn-tool-select" onclick="setTool('select')" title="Select">🖱</button>
-  <button class="btn tool-btn" id="btn-tool-move" onclick="setTool('move')" title="Move">✥ Move</button>
+  <button class="btn tool-btn active" id="btn-tool-move" onclick="setTool('move')" title="Move &amp; select tokens">✥ Move</button>
   <button class="btn tool-btn" id="btn-undo-move" onclick="undoLastMove()" title="Undo last token move" style="display:none">↶ Undo</button>
   <button class="btn tool-btn" id="btn-tool-pan" onclick="setTool('pan')" title="Pan map">✋</button>
   <button class="btn tool-btn" id="btn-tool-ruler" onclick="setTool('ruler')" title="Ruler">📏</button>
@@ -147,6 +146,14 @@
             <button class="btn danger sm" onclick="bulkSetVisibility(false)" style="flex:1" title="Hide all selected tokens from players">🚫 Hidden</button>
           </div>
         </div>
+        <!-- Group ability check / saving throw (DM only) -->
+        <div style="border-top:1px solid var(--a44);padding:6px 8px 6px">
+          <div style="font-size:10px;color:var(--txd);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Group roll</div>
+          <div style="display:flex;gap:4px">
+            <button class="btn sm" onclick="openGroupCheckModal('check')" style="flex:1;font-size:11px" title="All selected tokens roll an ability check individually">🎲 Ability Check</button>
+            <button class="btn sm" onclick="openGroupCheckModal('save')" style="flex:1;font-size:11px" title="All selected tokens roll a saving throw individually">🛡 Saving Throw</button>
+          </div>
+        </div>
         <!-- Initiative (DM only, monster tokens) -->
         <div id="bulk-init-row" style="display:none;border-top:1px solid var(--a44);padding:6px 8px 6px">
           <button class="btn sm" onclick="rollBulkInitiative()" style="width:100%;font-size:12px">🎲 Roll Monster Initiative</button>
@@ -159,10 +166,7 @@
 
   <!-- ── Vertical Tool Strip (Modern HUD theme only) ─────────────────────── -->
   <div id="vtool-strip">
-    <button class="vtool-btn" data-mstrip-tool="select" onclick="setTool('select')" title="Select">
-      <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><path d="M1.5 1L6 12.5l2-4.5 4.5-2z"/></svg>
-    </button>
-    <button class="vtool-btn" data-mstrip-tool="move" onclick="setTool('move')" title="Move tokens">
+    <button class="vtool-btn active" data-mstrip-tool="move" onclick="setTool('move')" title="Move &amp; select tokens">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M12 3v18M3 12h18"/></svg>
     </button>
     <button class="vtool-btn" data-mstrip-tool="pan" onclick="setTool('pan')" title="Pan map">
@@ -242,6 +246,7 @@
         <button type="button" class="dm-seg active" data-mode="norm" onclick="setDiceMode('norm')">Normal</button>
         <button type="button" class="dm-seg" data-mode="adv" onclick="setDiceMode('adv')" title="Roll with advantage">Adv</button>
         <button type="button" class="dm-seg" data-mode="dis" onclick="setDiceMode('dis')" title="Roll with disadvantage">Dis</button>
+        <button type="button" class="dm-seg" data-mode="ask" onclick="setDiceMode('ask')" title="Ask each roll: pick Normal/Adv/Dis in a popup">Ask</button>
       </div>
 
       <!-- Big stats: HP / AC / Speed -->
@@ -482,6 +487,37 @@
     <div style="display:flex;gap:4px">
       <button class="btn sm success" onclick="confirmGroupInitRoll()" style="flex:1;font-size:12px">Roll Initiative</button>
       <button class="btn sm" onclick="closeMonsterGroupInitModal()" style="font-size:12px">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Group ability check / saving throw modal -->
+<div id="group-check-modal" style="position:fixed;inset:0;background:var(--ov);display:none;align-items:center;justify-content:center;z-index:2500" onclick="closeGroupCheckModal()">
+  <div style="background:var(--bg2);border:1px solid var(--a55);border-radius:8px;padding:16px 20px;min-width:260px;max-width:320px" onclick="event.stopPropagation()">
+    <div id="group-check-title" style="font-weight:bold;font-size:13px;margin-bottom:6px">🎲 Group Ability Check</div>
+    <div id="group-check-desc" style="font-size:11px;color:var(--txd);margin-bottom:10px"></div>
+    <div style="margin-bottom:8px">
+      <div style="font-size:10px;color:var(--txd);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Ability</div>
+      <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:3px">
+        <button id="group-check-ab-0" class="btn sm" onclick="setGroupCheckAbility(0)" style="font-size:11px;padding:4px 0">STR</button>
+        <button id="group-check-ab-1" class="btn sm" onclick="setGroupCheckAbility(1)" style="font-size:11px;padding:4px 0">DEX</button>
+        <button id="group-check-ab-2" class="btn sm" onclick="setGroupCheckAbility(2)" style="font-size:11px;padding:4px 0">CON</button>
+        <button id="group-check-ab-3" class="btn sm" onclick="setGroupCheckAbility(3)" style="font-size:11px;padding:4px 0">INT</button>
+        <button id="group-check-ab-4" class="btn sm" onclick="setGroupCheckAbility(4)" style="font-size:11px;padding:4px 0">WIS</button>
+        <button id="group-check-ab-5" class="btn sm" onclick="setGroupCheckAbility(5)" style="font-size:11px;padding:4px 0">CHA</button>
+      </div>
+    </div>
+    <div style="margin-bottom:12px">
+      <div style="font-size:10px;color:var(--txd);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Roll</div>
+      <div style="display:flex;gap:4px">
+        <button id="group-check-rt-normal" class="btn sm" onclick="setGroupCheckRollType('normal')" style="flex:1;font-size:11px">Normal</button>
+        <button id="group-check-rt-adv" class="btn sm" onclick="setGroupCheckRollType('adv')" style="flex:1;font-size:11px">Adv</button>
+        <button id="group-check-rt-dis" class="btn sm" onclick="setGroupCheckRollType('dis')" style="flex:1;font-size:11px">Dis</button>
+      </div>
+    </div>
+    <div style="display:flex;gap:4px">
+      <button class="btn sm success" onclick="confirmGroupCheckRoll()" style="flex:1;font-size:12px">Roll</button>
+      <button class="btn sm" onclick="closeGroupCheckModal()" style="font-size:12px">Cancel</button>
     </div>
   </div>
 </div>
