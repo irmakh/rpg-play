@@ -141,9 +141,14 @@ body.po-sheet-window #side-qroll-content {
   column-gap: 20px;
   columns: 3 264px;
 }
-/* The top three children (sec-stat shields, "Abilities" title, ability circles)
-   span the full width above the columns. */
-body.po-sheet-window #side-qroll-content > :nth-child(-n + 3) {
+/* The top zone (a leading action row on monsters, the secondary-stat shields,
+   the "Abilities" title and the ability circles) spans the full width above the
+   columns. Targeted by class — not position — because the monster render adds an
+   extra leading .rp-action-row, which shifts child positions vs. the player one. */
+body.po-sheet-window #side-qroll-content > .rp-action-row,
+body.po-sheet-window #side-qroll-content > .rp-sec-stats,
+body.po-sheet-window #side-qroll-content > .rp-abil-hdr,
+body.po-sheet-window #side-qroll-content > .rp-ability-grid {
   -webkit-column-span: all;
   column-span: all;
 }

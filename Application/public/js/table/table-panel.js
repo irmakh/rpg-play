@@ -181,7 +181,7 @@ function renderSideCharacter() {
       + `</div>`;
 
     const abilitiesSection = hasAbilities
-      ? `<div class="rp-flat-hdr">Abilities</div>${abilityGridHtml}`
+      ? `<div class="rp-flat-hdr rp-abil-hdr">Abilities</div>${abilityGridHtml}`
       : '';
 
     const saveGridHtml = `<div class="rp-save-grid">`

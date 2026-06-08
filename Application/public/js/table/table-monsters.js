@@ -258,7 +258,7 @@ function renderMonsterFullStats(data, tok) {
       ?`<div class="rp-mon-link"><a href="/monsters.html" target="_blank">📖 Full stat block →</a></div>`:'';
 
     return actionRowHtml+secStatsHtml
-      +`<div class="rp-flat-hdr">Abilities</div>`+abilityGridHtml
+      +`<div class="rp-flat-hdr rp-abil-hdr">Abilities</div>`+abilityGridHtml
       +`<div class="rp-flat-hdr">Saving Throws</div>`+saveGridHtml
       +skillsHtml+actionsHtml+traitsHtml+defenseHtml+linkHtml;
   }
