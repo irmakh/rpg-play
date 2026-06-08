@@ -394,13 +394,6 @@ let _groupInitTokenIds = [];
 let _groupInitMode = 'merged';
 let _groupInitRollType = 'normal';
 
-function _rollD20(rollType) {
-  const a = Math.ceil(Math.random() * 20);
-  if (rollType === 'normal') return a;
-  const b = Math.ceil(Math.random() * 20);
-  return rollType === 'adv' ? Math.max(a, b) : Math.min(a, b);
-}
-
 function _groupInitDexMod(tok) {
   if (!tok || !tok.linkedId) return 0;
   const mon = _monsterList.find(m => m.id === tok.linkedId);
@@ -503,21 +496,57 @@ async function confirmGroupInitRoll() {
   const targetToks = tokenIds.map(id => tokens.find(t => t.id === id)).filter(Boolean);
   if (!targetToks.length) return;
 
+  // Roll a d20 (honouring adv/dis) and return the kept value + a dice-detail string.
+  const rollOne = () => {
+    const r1 = Math.ceil(Math.random() * 20);
+    const r2 = Math.ceil(Math.random() * 20);
+    const used = rollType === 'adv' ? Math.max(r1, r2) : rollType === 'dis' ? Math.min(r1, r2) : r1;
+    const dicePart = rollType !== 'normal' ? `${r1}/${r2}→${used}` : `${used}`;
+    return { used, dicePart };
+  };
+  const mkRow = (name, used, bonus, dicePart) => ({
+    name, total: used + bonus, isCrit: used === 20, isFail: used === 1,
+    detail: `d20(${dicePart}) ${bonus >= 0 ? '+' + bonus : bonus}`,
+  });
+
+  const rows = [];
   if (mode === 'merged') {
     // One shared d20 + reference token's dex mod → same total for all
     const refTok = _groupInitTok || targetToks[0];
-    const d20 = _rollD20(rollType);
-    const roll = d20 + _groupInitDexMod(refTok);
+    const bonus = _groupInitDexMod(refTok);
+    const { used, dicePart } = rollOne();
+    const roll = used + bonus;
     for (const tok of targetToks) await _applyMonsterInitRoll(tok, roll);
+    for (const tok of targetToks) rows.push(mkRow(tokDisplayName(tok), used, bonus, dicePart));
     showToast(`Initiative ${roll} set for all ${targetToks.length} tokens.`);
   } else {
     // Individual: separate d20 + each token's own dex mod
     for (const tok of targetToks) {
-      const d20 = _rollD20(rollType);
-      await _applyMonsterInitRoll(tok, d20 + _groupInitDexMod(tok));
+      const bonus = _groupInitDexMod(tok);
+      const { used, dicePart } = rollOne();
+      await _applyMonsterInitRoll(tok, used + bonus);
+      rows.push(mkRow(tokDisplayName(tok), used, bonus, dicePart));
     }
     showToast(`Individual initiative rolled for ${targetToks.length} tokens.`);
   }
+
+  // Post all results to chat in one message (same format as group check / save).
+  rows.sort((a, b) => (b.total ?? -999) - (a.total ?? -999));
+  const rtLabel = rollType === 'adv' ? ' (Adv)' : rollType === 'dis' ? ' (Dis)' : '';
+  let html = `<strong>Initiative${rtLabel}${mode === 'merged' ? ' · group' : ''}</strong>`;
+  html += `<div style="margin-top:4px;display:flex;flex-direction:column;gap:2px">`;
+  for (const r of rows) {
+    const color = r.isCrit ? '#44ff44' : r.isFail ? '#ff5555' : 'inherit';
+    html += `<div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline">`
+      + `<span>${esc(r.name)}</span>`
+      + `<span><span style="font-size:10px;opacity:.55">${esc(r.detail)}</span> <strong style="color:${color};font-size:14px">${r.total}</strong></span></div>`;
+  }
+  html += `</div>`;
+  fetch('/api/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sender: getChatSender(), type: 'text', message: html, html: true })
+  }).catch(() => {});
 
   const selTok = tokens.find(t => t.id === selectedTokenId);
   if (selTok && tokenIds.includes(selectedTokenId)) _refreshHpPanel(selTok);
