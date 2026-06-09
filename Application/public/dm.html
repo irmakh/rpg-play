@@ -254,6 +254,15 @@
         </label>
       </div>
       <div id="backup-status" style="margin-top:12px;font-size:12px;min-height:18px;color:var(--txd)"></div>
+
+      <div style="border-top:1px solid var(--bd,#3a3a4a);margin:16px 0 12px"></div>
+      <div class="ct" style="font-size:14px;margin-bottom:6px">🗄️ Raw Database Files</div>
+      <p style="font-size:12px;color:var(--txd);margin:0 0 10px">
+        Downloads every SQLite database file as-is, bundled into one <code>.tar.gz</code> — for a full off-site backup.
+        <br><span style="color:var(--err)">Note:</span> uploaded images &amp; audio (under <code>uploads/</code>) are stored separately and are <strong>not</strong> included yet.
+      </p>
+      <button class="btn" id="dbbk-dl-btn" onclick="downloadRawDbBackup()" style="width:100%">⬇️ Download Raw DB Files (.tar.gz)</button>
+      <div id="dbbk-status" style="margin-top:10px;font-size:12px;min-height:18px;color:var(--txd)"></div>
     </div>
     <div class="modal-btns">
       <button class="btn" onclick="closeBackupModal()">Cancel</button>

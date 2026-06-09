@@ -54,6 +54,7 @@ Vanilla JS, no build step, no framework. Runs on SQLite by default; nothing to p
 - Media sharing: drag-and-drop image / video → shared instantly to the table
 - DM chat: free text or `/r` rolls (broadcasts the 3D animation to all screens); **per-message delete** removes it from every client live
 - Data backup / restore: per-section JSON export, non-destructive merge import
+- **Raw database backup:** one-click download of all SQLite databases (`localdb`, `media`, `stories`, `aiDM`) as-is, bundled into a single streamed `.tar.gz` for full off-site backup (uploaded media under `uploads/` is stored separately and not yet included)
 - Multiple themes
 
 ### DM Calendar (`/events.html`) — DM only

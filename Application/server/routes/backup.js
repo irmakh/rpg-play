@@ -1,4 +1,25 @@
 import express from 'express';
+import zlib from 'zlib';
+import { Readable } from 'stream';
+
+// ── Minimal streaming tar (ustar) writer ──────────────────────────────────────
+// Builds a 512-byte POSIX header for one regular file. No deps.
+function tarHeader(name, size, mtimeMs) {
+  const buf = Buffer.alloc(512);
+  buf.write(name, 0, 100, 'utf8');                                  // name
+  buf.write('0000644\0', 100, 8, 'ascii');                          // mode
+  buf.write('0000000\0', 108, 8, 'ascii');                          // uid
+  buf.write('0000000\0', 116, 8, 'ascii');                          // gid
+  buf.write(size.toString(8).padStart(11, '0') + '\0', 124, 12, 'ascii');             // size (octal)
+  buf.write(Math.floor(mtimeMs / 1000).toString(8).padStart(11, '0') + '\0', 136, 12, 'ascii'); // mtime
+  buf.write('        ', 148, 8, 'ascii');                           // chksum placeholder (spaces)
+  buf.write('0', 156, 1, 'ascii');                                  // typeflag = normal file
+  buf.write('ustar\0', 257, 6, 'ascii');                            // magic
+  buf.write('00', 263, 2, 'ascii');                                 // version
+  let sum = 0; for (let i = 0; i < 512; i++) sum += buf[i];         // checksum over header
+  buf.write(sum.toString(8).padStart(6, '0') + '\0 ', 148, 8, 'ascii');
+  return buf;
+}
 
 export default function register(app, ctx) {
   const {
@@ -107,6 +128,73 @@ export default function register(app, ctx) {
       if (!res.headersSent) res.status(500).json({ error: 'Backup failed: ' + err.message });
     } finally {
       _backupRunning = false;
+    }
+  });
+
+  // ── Raw database file backup ────────────────────────────────────────────────
+  // Streams a .tar.gz of the live SQLite files exactly as-is. Uses synchronous
+  // copyFileSync snapshots (journal_mode=DELETE + synchronous better-sqlite3 mean
+  // a sync copy captures a consistent point-in-time file), then streams the temp
+  // copies through gzip so memory stays flat regardless of DB size.
+  // NOTE: image/audio bytes live on disk under public/uploads/ (the DBs only hold
+  // FILE: references) — those are NOT included here. See memory note for the
+  // future "include uploads/" extension.
+  const DB_FILES = [
+    { name: 'localdb.db', rel: 'localdb.db' },
+    { name: 'media.db',   rel: 'media.db' },
+    { name: 'stories.db', rel: 'stories.db' },
+    { name: 'aiDM.db',    rel: 'aiDM/aiDM.db' },
+  ];
+
+  let _dbBackupRunning = false;
+
+  app.get('/api/admin/db-backup', (req, res) => {
+    if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
+    if (_dbBackupRunning) return res.status(409).json({ error: 'A database backup is already in progress — please wait.' });
+    _dbBackupRunning = true;
+
+    const stamp = Date.now();
+    const temps = []; // { name, path, size, mtime }
+    const cleanup = () => {
+      for (const t of temps) { try { fs.unlinkSync(t.path); } catch {} }
+      _dbBackupRunning = false;
+    };
+
+    try {
+      // 1. Snapshot each existing DB file synchronously (consistent, blocks the loop).
+      for (const f of DB_FILES) {
+        const src = path.join(__dirname, f.rel);
+        if (!fs.existsSync(src)) continue;
+        const tmp = path.join(__dirname, `.dbbk-${stamp}-${f.name}`);
+        fs.copyFileSync(src, tmp);
+        const st = fs.statSync(tmp);
+        temps.push({ name: f.name, path: tmp, size: st.size, mtime: st.mtimeMs });
+      }
+      if (temps.length === 0) { cleanup(); return res.status(404).json({ error: 'No database files found' }); }
+
+      // 2. Stream the temp snapshots into a gzipped tar.
+      const date = new Date().toISOString().split('T')[0];
+      res.setHeader('Content-Type', 'application/gzip');
+      res.setHeader('Content-Disposition', `attachment; filename="dnd-db-backup-${date}.tar.gz"`);
+
+      async function* tarball() {
+        for (const t of temps) {
+          yield tarHeader(t.name, t.size, t.mtime);
+          for await (const chunk of fs.createReadStream(t.path)) yield chunk;
+          const rem = t.size % 512;
+          if (rem) yield Buffer.alloc(512 - rem);   // pad file body to 512 boundary
+        }
+        yield Buffer.alloc(1024);                    // two zero blocks = end of archive
+      }
+
+      const gzip = zlib.createGzip();
+      Readable.from(tarball()).on('error', () => res.destroy()).pipe(gzip).pipe(res);
+      res.on('close', cleanup);
+      gzip.on('error', () => { cleanup(); res.destroy(); });
+    } catch (err) {
+      console.error('DB backup error:', err);
+      cleanup();
+      if (!res.headersSent) res.status(500).json({ error: 'DB backup failed: ' + err.message });
     }
   });
 

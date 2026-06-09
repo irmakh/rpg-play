@@ -152,6 +152,46 @@ async function runSelectiveBackup() {
   }
 }
 
+let _dbBackupInFlight = false;
+async function downloadRawDbBackup() {
+  if (_dbBackupInFlight) return;
+  _dbBackupInFlight = true;
+  const btn = document.getElementById('dbbk-dl-btn');
+  const statusEl = document.getElementById('dbbk-status');
+  btn.disabled = true;
+  statusEl.style.color = 'var(--txd)';
+  statusEl.textContent = 'Preparing database snapshot…';
+  try {
+    const res = await fetch('/api/admin/db-backup', { headers: { 'x-master-password': masterPw } });
+    if (res.status === 401) { statusEl.style.color = 'var(--err)'; statusEl.textContent = 'Unauthorized.'; return; }
+    if (res.status === 409) { statusEl.style.color = 'var(--err)'; statusEl.textContent = 'A backup is already running — please wait.'; return; }
+    if (!res.ok) {
+      let msg = 'Backup failed.';
+      try { msg = (await res.json()).error || msg; } catch {}
+      statusEl.style.color = 'var(--err)'; statusEl.textContent = msg; return;
+    }
+    const blob = await res.blob();
+    const date = new Date().toISOString().split('T')[0];
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `dnd-db-backup-${date}.tar.gz`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    statusEl.style.color = 'var(--ok)';
+    statusEl.textContent = `Downloaded (${(blob.size / 1048576).toFixed(1)} MB).`;
+  } catch (err) {
+    console.error(err);
+    statusEl.style.color = 'var(--err)';
+    statusEl.textContent = 'Error: ' + err.message;
+  } finally {
+    _dbBackupInFlight = false;
+    btn.disabled = false;
+  }
+}
+
 async function exportMonster(id, name) {
   try {
     const res = await fetch(`/api/monsters/${id}/export`, { headers: { 'X-Master-Password': masterPw } });
