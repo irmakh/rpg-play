@@ -1,191 +1,132 @@
 # RPG Play — D&D 5e Virtual Tabletop
 
-A self-hosted web application for running D&D 5e sessions. Includes a full character sheet, shared virtual battle map, real-time initiative tracker, monster library, loot manager, merchant shop, music player, story builder, and DM tools — all synced live across every connected browser with no external cloud required.
+A self-hosted web app for running D&D 5e sessions. It bundles a full character sheet, a shared virtual battle map, a real-time initiative tracker, a monster library, loot and merchant managers, a synced music player, an AI Dungeon Master, a comic-style story builder, and a mobile companion — all kept live across every connected browser with no external cloud required.
+
+Vanilla JS, no build step, no framework. Runs on SQLite by default; nothing to provision.
 
 ---
 
 ## Feature Overview
 
 ### Character Sheet (`/`)
-- Full D&D 5e character sheet: ability scores, skills, saving throws, HP, AC, speed, initiative (all auto-calculated)
-- Proficiency bonus auto-derived from level
-- Spell slot tracking with per-level counters and prepared spell count
-- Weapon attacks table with custom dice rolls; weapon notes shown in damage chat
-- Equipment / magic items panel: equipped items feed AC, initiative, and speed auto-calc; items with spell bonuses supported
-- Portrait image upload and media attachments (images, video)
-- Image and video lightbox — clicking any media card opens a fullscreen viewer; videos autoplay with full controls
-- Spell table with **clickable column sort** — click any header (Prep/Lvl/Name/Time/Range/Conc/Ritual/School) to sort ascending / descending with ▲/▼ indicator
+- Full D&D 5e sheet: ability scores, skills, saving throws, HP, AC, speed, initiative — all auto-calculated
+- Proficiency bonus auto-derived from level; spell slot tracking with per-level counters and prepared-spell count
+- **Actions tab** — aggregates weapon attacks, action-flagged spells, and freeform **custom actions** into one combat panel. Custom actions carry a category (action / bonus / reaction / other), description, dice, and limited-use tracking with short/long-rest recharge
+- Weapon attacks table with custom dice rolls; weapon notes shown in the damage chat message
+- Equipment / magic items panel: equipped items feed AC, initiative, and speed auto-calc; spell-bonus items supported
+- Spell table with **clickable column sort** — click any header (Prep / Lvl / Name / Time / Range / Conc / Ritual / School / Dur) to sort with a ▲/▼ indicator; spells carry an action-category and duration field
+- Portrait upload plus media attachments (images, video) with a fullscreen lightbox; videos autoplay with controls
 - Inventory, features & traits, background, and notes tabs
-- Dice rolling with full 3D animation — results broadcast to the virtual table in real time
-- Advantage / disadvantage rolls with dual-die animation
-- Roll history log per character
-- Import / export character as XML (compatible with D&D Beyond XML export format)
-- Per-character password protection (set, change, or remove)
-- Multiple characters supported — player selects from a list
-- Player-facing shop tab: browse items by tag, add to cart, purchase with in-character currency
-- Player-facing loot tab: claim dropped loot items
-- Player-facing initiative tracker panel (slide-out) with roll submission and NPC add
-- Player-facing calendar tab (read-only Calendar of Harptos with DM-published events)
-- Real-time chat panel: type free text or use `/r NdS+M [label]` to roll dice (e.g. `/r 2d6+3`, `/r d20 Stealth`)
-- 3D dice animation overlay shown locally when rolling and for any roll broadcast from the table
-- Three themes: Dark Gold, Parchment, Midnight
-- Quick navigation buttons to the Virtual Table and Stories
+- Dice rolling with full 3D animation, broadcast live to the virtual table; advantage / disadvantage dual-die rolls; per-character roll history
+- Import / export character as XML (D&D Beyond–compatible) — round-trips custom actions and spell action/duration fields, and prompts update-vs-new-copy on a same-name import
+- Per-character password protection (set / change / remove); multiple characters selectable from a list
+- Player-facing tabs: **Shop** (browse by tag, cart, buy with in-character currency), **Loot** (claim dropped items), **Initiative** (slide-out tracker with roll submission), **Calendar** (read-only Calendar of Harptos with DM events)
+- Real-time chat: free text or `/r NdS+M [label]` dice rolls (e.g. `/r 2d6+3`, `/r d20 Stealth`)
+- Three themes: Dark Gold, Parchment, Midnight; quick-nav buttons to the Table and Stories
 
 ### Virtual Table (`/table.html`)
-- Shared battle map with configurable grid overlay
-- Upload any image as the map background
-- Token system — place PC, NPC, and monster tokens on the grid
-- Token portraits (per character, per monster); thumbnails auto-generated at upload
-- Drag-and-drop token movement (500 ms hold delay prevents accidental moves on click)
-- Token HP tracking panel: damage, heal, temp HP, death saves, **AC display** (fetched live from character/monster data)
-- HP bar overlay on each token (colour shifts green → yellow → red)
-- Movement distance tracking per token (feet moved, reset each turn)
-- Monster name hidden from players — shown only as an identifier (e.g. "Goblin #2"); **token identifier editable** by DM directly from the side panel
-- Monster visibility toggle: DM shows / hides monsters from players in real time
-- **Monster token quick-roll panel** — click a monster token to open the side panel with full dice rolling: saves, skills, ability checks, damage rolls, initiative (advantage / disadvantage / normal modal)
-- **Monster actions panel** — collapsible section above the stat block listing all monster actions; each action has a **Use** button that posts the action text and a damage roll to the chat
-- Fog of war regions — DM draws, players see darkness; DM can reveal or re-hide per region
-- Hidden map items (traps, chests, doors, notes): DM can reveal or hide individually
-- Panel hover highlighting — hovering a fog region or item highlights its location on the canvas
-- Drawing tools: freehand, line, arrow, rectangle, circle; choose colour and stroke weight
-- Ruler tool: click-drag to measure distances in feet
-- Ping tool: click to place a temporary visible marker for all players
-- Zoom in / out
-- Prepared map selector: load a map preset saved in Map Prep
-- Permanent left sidebar — initiative tracker and chat in a fixed 240 px panel; toolbar toggle button to collapse
-- **Token assignment & unassign** — DM assigns tokens to characters; **Unassign button** appears when a token is assigned; clicking an unowned token clears the HP panel
-- 3D dice animation overlay for all rolls (including rolls broadcast from the character sheet)
-- Real-time chat panel: type free text or use `/r NdS+M [label]` to roll dice; **damage rolls show a description** (weapon name / action name) in all chat messages; media sharing also supported
-- DM unlock via master password (DM controls remain hidden until unlocked)
+- Shared battle map with a configurable grid overlay; upload any image as the background
+- Token system for PC / NPC / monster tokens, each with a portrait (thumbnails auto-generated on upload)
+- **Open token movement** — anyone can drag any token (no ownership, monster, or turn gating), with a 100 ms hold delay to avoid accidental drags and a single-level **Undo** button to snap the last move back
+- Movement distance is measured **Euclidean** (matching the ruler), reset per turn
+- Token HP panel: damage, heal, temp HP, death saves, and live **AC display**; per-token HP bar overlay (green → yellow → red)
+- **Move tool also selects** — clicking a token selects it (a dedicated Select tool is no longer needed)
+- Monster names hidden from players — shown as an identifier (e.g. "Goblin #2"), editable by the DM from the side panel; per-monster visibility toggle in real time
+- **Token quick-roll side panel** — click a token for full dice rolling: saves, skills, ability checks, damage, initiative. A persistent **dice-mode toggle** (Normal / Adv / Dis / Ask) sits under the name and applies to every roll
+- **Equipment wear/unwear** in the right panel — toggling items recomputes AC, initiative, speed, and spell DC and syncs to the token
+- **Monster actions panel** — each action has a **Use** button that posts the action text and a damage roll to chat; players' custom actions have the same **Use** button
+- Click a weapon row to roll the attack, then a **Miss / Roll Damage** prompt; click a spell name to post its full description to chat with a 5e.tools link
+- **3D dice** — animated icosahedron (d20) and pentagonal-trapezohedron (d10), shown for every roll including those broadcast from the character sheet; a toolbar switch toggles the animation on/off
+- **Group rolls (DM)** — select multiple tokens and trigger a single ability check or saving throw; each token rolls by its own bonus and the results post as one combined chat message (also for group initiative)
+- **Pop-out panels** — pop the initiative/chat sidebar, the right token panel, or the chat bar into a separate browser window; the real DOM node moves across windows and keeps updating over SSE. The popped-out character sheet uses a dedicated responsive "magazine" layout
+- Fog-of-war regions and hidden map items (traps, chests, doors, notes): DM reveals or re-hides per region/item; hovering a panel entry highlights its spot on the canvas
+- Drawing tools (freehand, line, arrow, rectangle, circle with colour/weight), ruler, ping marker, zoom
+- Prepared-map selector loads a preset from Map Prep
+- **DM shared-media reveal** — sending an image opens a draggable reveal card on every client (drag is local-only)
+- Permanent left sidebar (initiative + chat) with a collapse toggle
+- DM unlock via master password; the DM can also **log in as any character** using the master password
 
 ### DM Dashboard (`/dm.html`)
-- Initiative tracker with full CRUD: add PCs and NPCs, set initiatives, reorder, edit, delete
-- Start / stop combat, advance turns, previous turn, skip turn
-- Clean Orphans button to remove stale initiative entries without disrupting a running encounter
-- Monster library table: search, filter, add to initiative with a single click; monster identifier shown in initiative rolls in chat
-- Monster info popup: full stat block view inline; multi-line actions/traits render with correct newlines
-- Media sharing panel: drag-and-drop image / video upload → shared instantly to the table chat
-- DM chat panel: type free text or use `/r NdS+M [label]` to roll dice; roll broadcasts the 3D animation to all connected screens; **per-message delete** (✕ button, removes from all clients in real time)
-- Data backup: download a full JSON snapshot of all application data (per-section selective export)
-- Data restore: upload a backup JSON to restore (non-destructive merge — does not wipe existing data)
+- Initiative tracker with full CRUD: add PCs and NPCs, set/reorder initiatives, edit, delete
+- Start / stop combat, next / previous turn, skip; **Clean Orphans** removes stale entries without disrupting a running encounter
+- Monster library table: search, filter, add to initiative in one click (identifier shown in chat rolls)
+- Monster stat-block popup with correct multi-line trait/action rendering
+- Media sharing: drag-and-drop image / video → shared instantly to the table
+- DM chat: free text or `/r` rolls (broadcasts the 3D animation to all screens); **per-message delete** removes it from every client live
+- Data backup / restore: per-section JSON export, non-destructive merge import
 - Multiple themes
 
 ### DM Calendar (`/events.html`) — DM only
-- Full **Calendar of Harptos** (Forgotten Realms calendar system)
-- 12 months × 30 days, displayed as three tendays (1st. / 2nd. / 3rd.) × 10 columns per row
-- Festival days shown as distinct rows between months: Midwinter, Greengrass, Midsummer, Shieldmeet (leap years only, every 4 DR years), Highharvestide, The Feast of the Moon
-- Year names for all years 1–1600 in the Dale Reckoning system (e.g. 1492 DR — Year of Three Ships Sailing)
-- **Campaign date control:** DM sets the current campaign date; advance one day at a time (◀ Day / Day ▶) or jump to any specific date or festival
-- **Event creation:** add campaign events to any day or festival — title, description, event type (session / combat / travel / milestone / rest / note), and public / DM-only visibility flag
-- Public events broadcast live to all player calendars via SSE when created, edited, or deleted
-- Gold highlight marks the current campaign date on the grid; colour-coded dots show events per day
+- Full **Calendar of Harptos** (Forgotten Realms): 12 months × 30 days as three tendays × 10 columns
+- Festival rows between months: Midwinter, Greengrass, Midsummer, Shieldmeet (leap years), Highharvestide, The Feast of the Moon
+- Dale Reckoning year names for years 1–1600 (e.g. 1492 DR — Year of Three Ships Sailing)
+- **Campaign date control:** advance a day at a time or jump to any date/festival; current date highlighted in gold
+- **Events:** title, description, type (session / combat / travel / milestone / rest / note), public or DM-only; public events broadcast live to player calendars over SSE
 
 ### Player Calendar (tab on `/`)
-- Read-only calendar tab on the character sheet — players access it alongside their other tabs
-- Shows only events the DM has marked as public
-- Displays the current campaign date set by the DM (updates live via SSE)
-- Click any day cell to filter the events list to that specific day; click again or use the back link to return to the full month view
-- Month navigation with ← / → arrows; **Go to Today** button jumps back to the campaign date
+- Read-only calendar showing only DM-published public events and the current campaign date (live via SSE)
+- Click a day to filter its events; **Go to Today** jumps back to the campaign date; ← / → month navigation
 
 ### Merchant Shop (`/merchant.html`) — DM only
-- Add, edit, and delete shop items with full D&D item data: type, price (PP/GP/EP/SP/CP), quantity, AC bonus, initiative bonus, speed bonus, spell bonus, attunement, weapon properties, and notes
-- Item tagging: group items into collapsible tag sections (e.g. Weapons, Potions, Quest Items)
-- Bulk tag assignment and bulk delete across selected items
-- Tag autocomplete from existing tags
-- Shop open / closed toggle: players see items only when the shop is open
-- **Open shop by tag:** DM can push players directly to a specific tag section in the shop
-- Real-time purchase log: every player purchase is recorded with character, item, quantity, and amount
-- Real-time sync — inventory updates broadcast to all connected clients immediately
+- Add / edit / delete items with full D&D data: type, price (PP/GP/EP/SP/CP), quantity, AC / initiative / speed / spell bonuses, attunement, weapon properties, notes
+- Tagging into collapsible sections, bulk tag assignment, bulk delete, tag autocomplete
+- Shop open / closed toggle; **open shop directly to a tag** for players; real-time purchase log and inventory sync
 
 ### Loot Manager (`/loot.html`) — DM only
-- Add, edit, and delete loot items with name, description, quantity, and value
-- Item tagging with collapsible sections and bulk tag operations
-- Bulk delete
-- Import loot from a JSON file
-- Loot visibility control: show / hide the loot panel to players
-- Players claim items from the loot tab on their character sheet
-- Claim log: records who claimed what and when
+- Add / edit / delete loot (name, description, quantity, value); tagging with collapsible sections and bulk ops
+- Import loot from JSON; show / hide the loot panel to players; players claim from their sheet; claim log records who and when
 
 ### Map Prep (`/prepare-map.html`) — DM only
-- Upload a map image and configure grid size
-- Draw fog of war regions on the prep canvas
-- Place hidden items (markers with labels) on the map
-- Save named map presets; load any preset to the live table instantly
-- Export a map as a `.map.json` file; import on another instance
-- Delete saved maps
+- Upload a map and set grid size; draw fog regions; **place tokens** (with portrait and visible/hidden state) and hidden items on the prep canvas
+- Save named presets and load any to the live table instantly; export / import a map as `.map.json`; delete saved maps; load warning before overwriting the live map
 
 ### Monster Library (`/monsters.html`) — DM only
-- Full monster stat blocks: abilities, skills, saving throws, senses, CR, HP, AC, speed, traits, actions, legendary actions
-- Multi-line trait and action text renders with correct newlines on both library and DM screens
-- Monster portrait upload
-- Import monsters from XML (D&D Beyond / D&D 5e tools format) — bulk import with non-destructive merge
-- **Single-monster JSON export** with portrait image embedded — Export button per monster on both library and DM screens
-- **Single-monster JSON import** — auto-detected by `type: "monster"` field, non-destructive
-- Add any monster directly to the initiative tracker from the library
-- Search and filter by name
+- Full stat blocks: abilities, skills, saves, senses, CR, HP, AC, speed, traits, actions, legendary actions (multi-line text renders correctly)
+- Portrait upload; per-token portrait override; realtime updates of monster edits
+- Import monsters from XML (D&D Beyond / 5e tools) — bulk, non-destructive merge
+- **Single-monster JSON export** (portrait embedded) and **import** (auto-detected via `type: "monster"`), non-destructive
+- Add any monster straight to initiative; search and filter by name; extra fields for vulnerabilities and initiative
 
 ### Music & Sound Player (`/playlists.html`) — DM only
-- Upload sound / music files and organize them into named playlists
-- Playlists display with track listing; DM can reorder, rename, and delete tracks
-- **DM playback controls on the table:** play, stop, seek (seek bar affects all listeners simultaneously)
-- **Loop modes:** No Loop / Track Loop (repeats current track) / Playlist auto-advance (plays next track on end)
-- All connected clients hear audio in real time — background audio syncs to every browser tab
-- **Now-playing bar** visible to all clients showing current track name and playback state
-- **Song duration** displayed for all clients next to the now-playing bar
-- New clients joining mid-session automatically receive the current position and start from there
-- Loading / playing / paused state notifications broadcast to all clients
+- Upload audio and organise into named playlists; reorder, rename, delete tracks
+- **DM playback on the table:** play / stop / seek (seek affects all listeners); **loop modes** (none / track / playlist auto-advance)
+- All clients hear audio in real time; **now-playing bar** with track name, state, and duration; clients joining mid-track start from the current position
+- Pop-out music popup; loading / playing / paused notifications broadcast to all clients
 
 ### AI Dungeon Master (`/ai-dm`) — players only
-- Text-based D&D 5e adventure in the Forgotten Realms, powered by a local LM Studio model or any free OpenRouter model
-- Select your existing character — the full stat block (ability scores, skills, saving throws, AC, speed, HP, weapons, prepared spells, equipment, features) is fed to the AI as context
-- Choose from built-in scenarios or create custom ones (manually or AI-generated from keywords)
-- **Streaming DM responses** — text appears token by token with a loading overlay that blocks other actions during generation
-- **Dice rolls embedded in DM text** — click to roll with your character's actual modifiers; advantage/disadvantage supported; roll buttons from old messages are disabled on resume so you cannot re-roll
-- **Option buttons** — the DM presents numbered choices as clickable buttons; "Write my own" option always available
-- **Short rest** — spend hit dice to recover HP (d(class die) + CON modifier per die, min 1 per die, capped at max HP)
-- **Long rest** — restore HP, all spell slots, all hit dice, reset death saves; spell preparation screen after rest (class-appropriate prep limits for Cleric/Druid/Wizard/Paladin/Artificer)
-- **Adventure summary** — manually or automatically summarise the session history (triggers at 20 exchanges); summary is injected into AI context to compress old messages and keep within context window limits; displayed in a modal with a ✓ badge
-- **Session management** — view ended adventure logs, continue ended sessions, delete sessions
-- **Model switching** — change AI provider or model mid-session; retry button to regenerate the last DM response
-- **Seamless navigation** from the character sheet: "⚔ AI DM" button (hidden for DM sessions); character auth is passed automatically so no second password prompt
-- Sessions persist in a separate SQLite database (`aiDM/aiDM.db`); scenario customisation persisted per instance
+- Text-based D&D 5e adventure in the Forgotten Realms, powered by a local LM Studio model, OpenRouter, or OpenAI (ChatGPT)
+- Pick your existing character — the full stat block is fed to the AI as context
+- Built-in or custom scenarios (manual or AI-generated from keywords); **streaming** token-by-token responses with a blocking overlay
+- **Dice rolls embedded in DM text** — click to roll with your real modifiers (advantage/disadvantage); old roll buttons disable on resume
+- **Option buttons** for numbered choices, plus a "Write my own" option
+- **Short rest** (spend hit dice) and **long rest** (restore HP, slots, hit dice, death saves; class-appropriate spell prep screen)
+- **Adventure summary** — manual or automatic (at 20 exchanges) compression of history into AI context
+- Session management (view / continue / delete ended logs), mid-session model switching, retry / stop buttons
+- **Turkish language support** — per-session language selector injected into the system prompt
+- Seamless entry from the sheet ("⚔ AI DM" button, hidden for DM sessions; auth passed automatically); sessions persist in a separate SQLite DB (`aiDM/aiDM.db`)
 
 ### Stories (`/stories.html`) — password protected
-- Comic-book style story system for documenting campaign moments and session recaps
-- **Story dashboard** — card grid with cover image (first panel), title, cast, panel count, and date; filter by character
-- **Story builder** (`/story-builder.html`) — panel-based editor:
-  - Title and description with auto-save (debounced 1.5 s)
-  - **Character cast multiselect** — pick any defined character by portrait photo; selected characters auto-saved to the story
-  - Per-panel image upload (click to upload or replace); images stored under `/story-images/{storyId}/{seqId}.ext`
-  - Per-panel caption textarea with auto-save on blur
-  - Reorder panels with ▲/▼ buttons; delete with confirmation modal
-- **Story viewer** (`/story-viewer.html`) — two layouts:
-  - **Grid view** — responsive card grid, click any image to open fullscreen lightbox
-  - **Strip view** — vertical single-column comic strip layout
-  - **Cast strip** shown above panels displaying portrait, name, species, and class for each selected character
-- Password gate on all three stories screens — accepts DM password or any character password; automatically bypassed if already logged in via the main login screen
+- Comic-book story system for session recaps and campaign moments
+- **Dashboard** — card grid (cover = first panel, title, cast, panel count, date) with character filter
+- **Builder** (`/story-builder.html`) — title/description with debounced auto-save, **character cast multiselect by portrait**, per-panel image upload and caption, reorder ▲/▼, delete with confirm; images stored under `/story-images/{storyId}/{seqId}.ext`
+- **Viewer** (`/story-viewer.html`) — grid or vertical strip layout, fullscreen lightbox, and a cast strip showing portrait / name / species / class
+- Password gate on all three screens accepts the DM password or any character password (`POST /api/auth/verify-any`); bypassed if already logged in
 
 ### Mobile Companion PWA (`/console/`)
-- Installable Progressive Web App for phone or tablet — works offline after first load
-- Full session sync with the main table: shows the same initiative order, HP, and state
-- **Actions tab** — quick-access panel for common actions
-- **DM controls in companion:** token visibility toggle and character assignment from the phone
-- **D-pad arrows** on the map screen — move the selected token from the companion without touching the main display
-- Safe-area padding for notched / punched-hole phones (iOS and Android)
-- Companion app and main table stay in sync via SSE; no page refresh needed
+- Installable PWA for phone / tablet, works offline after first load; full SSE sync with the main table (initiative, HP, state)
+- **Actions tab** for quick common actions; **D-pad** to move the selected token from the phone
+- **DM controls in companion:** token visibility toggle and character assignment
+- Safe-area padding for notched / punch-hole phones (iOS and Android)
 
 ---
 
 ## Authentication & Login
 
-- All users go through a unified **login screen** (`/login.html`) before accessing any page
-- **Character tab:** enter your character name and password (setup flow for passwordless characters on first login)
-- **DM tab:** enter the master password to get DM access across all screens
-- Sessions stored in `sessionStorage` — closing the tab logs out; the browser back button does not re-enter protected pages without re-authenticating
-- HTML pages have auth guards — unauthenticated access redirects to login
-- **Stories screens** use a separate password gate (`POST /api/auth/verify-any`) that accepts either the DM password or any character password; automatically bypassed if already logged in
-- **Token ownership enforcement on the table:** players can only move and interact with tokens assigned to their character; DM retains full control
-- Character-role users see their own password / export buttons; DM-only controls remain hidden
+- Unified **login screen** (`/login.html`) before any page. **Character tab:** name + password (first-login setup for passwordless characters). **DM tab:** master password for DM access everywhere
+- The DM can also log in **as any character** by using the master password in the character tab
+- Sessions live in `sessionStorage` — closing the tab logs out; HTML pages have auth guards that redirect unauthenticated access to login
+- **Stories** use a separate gate (`/api/auth/verify-any`) accepting the DM or any character password, auto-bypassed when already logged in
+- Token movement on the table is intentionally **open to all players** (DM retains full control); DM-only controls stay hidden until the master password is entered
 
 ---
 
@@ -218,7 +159,7 @@ A self-hosted web application for running D&D 5e sessions. Includes a full chara
 | `localdb` | SQLite (`better-sqlite3`) | WebSocket |
 | `instantdb` | [InstantDB](https://www.instantdb.com) cloud | SSE |
 
-Set `DB_PROVIDER` in `.env`. All features described here use `localdb` mode.
+Set `DB_PROVIDER` in `.env`. The default and fully-featured path is `localdb` — every feature above works with no external service.
 
 ---
 
@@ -251,7 +192,7 @@ docker-compose restart      # Restart
 docker-compose build --no-cache && docker-compose up -d   # Rebuild
 ```
 
-> **Note:** `sharp` (native image-processing addon) requires a full rebuild (`--no-cache` + `down -v`) when first adding it — skipping `down -v` leaves the stale anonymous volume in place.
+> **Note:** native addons (`sharp`, `better-sqlite3`) require a full rebuild when first added — `docker-compose build --no-cache` **and** `docker-compose down -v && docker-compose up -d`. Skipping `down -v` leaves the stale anonymous `node_modules` volume in place and the package stays missing.
 
 ---
 
@@ -279,7 +220,7 @@ pm2 startup   # auto-start on reboot
 
 ### HTTPS / SSL (Let's Encrypt)
 
-The server natively supports HTTPS — no reverse proxy required. It listens on port 443 (HTTPS) and port 80 (HTTP → HTTPS redirect).
+The server supports HTTPS natively — no reverse proxy required. It listens on 443 (HTTPS) and 80 (HTTP → HTTPS redirect).
 
 **1. Obtain a certificate:**
 ```bash
@@ -293,9 +234,7 @@ SSL_CERT=/etc/letsencrypt/live/your-domain.com/fullchain.pem
 PORT=443
 ```
 
-**3. Renew certificates automatically:**
-
-`renew-cert.sh` in the project root handles renewal — it stops the app (to free port 80), runs certbot, and restarts. Add it to cron:
+**3. Auto-renew:** `renew-cert.sh` (project root) stops the app to free port 80, runs certbot, and restarts. Add it to cron:
 
 ```bash
 # /etc/cron.d/cert-renewal
@@ -322,58 +261,51 @@ PORT=443
 
 ## Tech Stack
 
-- **Backend:** Node.js, Express — split into 12 semantic route modules under `server/routes/`
-- **Database:** SQLite (`better-sqlite3`) for `localdb` mode / [InstantDB](https://www.instantdb.com) for cloud mode
-- **Real-time:** WebSocket (`ws`) for `localdb` mode / Server-Sent Events (SSE) for cloud mode
-- **Frontend:** Vanilla JS, HTML, CSS — no build step, no framework, no bundler
-- **Image processing:** `sharp` — every upload generates `_thumb.webp` (80×80 crop) and `_medium.webp` (max 500 px); maps excluded
-- **PWA:** Service Worker (`sw.js`) for offline caching on the companion app
-- **SSL:** Node.js native `https` module with Let's Encrypt certificates
+- **Backend:** Node.js (ES modules), Express — split into 12 semantic route modules under `server/routes/`, with a lean `server.js` entry point
+- **Database:** SQLite (`better-sqlite3`) for `localdb` / [InstantDB](https://www.instantdb.com) for cloud; stories and the AI DM each use their own SQLite DB
+- **Real-time:** WebSocket (`ws`) for `localdb` / Server-Sent Events for cloud
+- **Frontend:** Vanilla JS, HTML, CSS — no build step, no framework, no bundler. The character sheet is 15 modules under `js/index/`, the table is 14 under `js/table/`, with shared helpers in `js/lib/`
+- **Dice:** 3D CSS dice (icosahedron d20, pentagonal-trapezohedron d10) driven by a shared `dice-engine.js`
+- **Image processing:** `sharp` — each upload generates `_thumb.webp` (80×80 crop) and `_medium.webp` (max 500 px); maps excluded
+- **PWA:** Service Worker (`sw.js`) — network-first for HTML, cache-first for versioned static assets
+- **Tests:** ~20 Vitest files (unit + API) covering the sheet, table, dice fairness, and routes
+- **SSL:** Node.js native `https` with Let's Encrypt certificates
+
+### Frontend cache-busting
+
+Static JS/CSS is served `immutable` and cached by URL forever; the server injects `?v=N` into every `src`/`href` at request time. On any frontend change, bump **both** `FRONTEND_VERSION` in `server.js` and the `CACHE` version in `public/sw.js` together so the URLs change and clients fetch the new files. HTML is served `no-store`, so it always carries the current version.
 
 ---
 
 ## Project Structure
 
+High-level layout — see **[structure.md](structure.md)** for the complete, annotated file tree.
+
 ```
-rpg-play/
-├── Application/
-│   ├── server.js               # Express entry point — loads route modules, shared context
-│   ├── db/
-│   │   ├── localdb.js          # SQLite database layer (characters, media, tokens, etc.)
-│   │   └── storiesdb.js        # SQLite database layer for stories and sequences
-│   ├── server/
-│   │   └── routes/             # 12 route modules (auth, characters, table, stories, …)
-│   └── public/
-│       ├── index.html          # Character sheet
-│       ├── table.html          # Virtual battle table
-│       ├── dm.html             # DM dashboard
-│       ├── events.html         # DM Calendar (Calendar of Harptos)
-│       ├── monsters.html       # Monster library
-│       ├── prepare-map.html    # Map prep tool
-│       ├── merchant.html       # Merchant shop manager
-│       ├── loot.html           # Loot manager
-│       ├── playlists.html      # Music & sound player manager
-│       ├── stories.html        # Story dashboard
-│       ├── story-builder.html  # Story editor (panels, cast, images)
-│       ├── story-viewer.html   # Story viewer (grid / strip layouts)
-│       ├── login.html          # Login screen (all users)
-│       ├── console/            # Mobile companion PWA
-│       ├── sw.js               # Service worker (PWA offline cache)
-│       ├── story-images/       # Uploaded story panel images (served statically)
-│       ├── js/
-│       │   ├── index/          # 14 modules for the character sheet
-│       │   ├── table/          # 12 modules for the virtual table
-│       │   └── lib/            # Shared utilities (dice engine, chat render, lightbox, etc.)
-│       ├── css/                # Stylesheets
-│       └── img/                # Static images
-├── renew-cert.sh               # Let's Encrypt renewal script (PM2-aware)
-├── Dockerfile.dev
-├── docker-compose.yml
-├── docker-start.sh
-├── docker-stop.sh
-├── .env.docker                 # Environment template for Docker
-└── .env.template               # General environment template
+char_sheet/
+├── Application/            # The web app
+│   ├── server.js           #   Express entry point — loads route modules + shared context
+│   ├── server/routes/      #   12 Express route modules
+│   ├── db/                 #   SQLite layers (localdb.js, storiesdb.js)
+│   ├── aiDM/               #   AI Dungeon Master module (own DB + routes)
+│   ├── tests/              #   ~20 Vitest unit + API suites
+│   └── public/             #   Served frontend
+│       ├── *.html          #     Page entry points (index, table, dm, events, monsters, …)
+│       ├── js/index/       #     15 character-sheet modules
+│       ├── js/table/       #     14 virtual-table modules
+│       ├── js/lib/         #     Shared utilities (dice engine, chat render, calendar, …)
+│       ├── console/        #     Mobile companion PWA
+│       ├── css/  img/      #     Styles and static images
+│       ├── sw.js           #     Service worker (PWA cache)
+│       └── uploads/  story-images/   #   Runtime user uploads
+├── goals/ tools/ context/ args/ hardprompts/   # GOTCHA framework layers (see CLAUDE.md)
+├── memory/  data/          # Persistent cross-session memory
+├── docker-compose.yml  Dockerfile.dev  docker-*.sh   # Docker deployment
+├── renew-cert.sh          # Let's Encrypt renewal (PM2-aware)
+└── CLAUDE.md  README.md  FEATURES.md  DOCKER.md  structure.md
 ```
+
+📁 **Full file listing:** [structure.md](structure.md)
 
 ---
 
@@ -398,6 +330,9 @@ docker-compose down
 rm Application/*.db
 docker-compose up -d
 ```
+
+**Frontend won't update on mobile**
+Bump `FRONTEND_VERSION` (`server.js`) and the `sw.js` `CACHE` together, redeploy, then on the device clear site data / reinstall the PWA once to drop the old service worker.
 
 **Windows — Docker file sharing issues**
 Docker Desktop → Settings → Resources → File Sharing → enable your drive.
