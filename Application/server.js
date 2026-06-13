@@ -115,7 +115,7 @@ const SHARED_MEDIA_MAX = 50;
 const _mediaInsert = mediaDb.prepare('INSERT INTO shared_media (id, mime_type, data, created_at) VALUES (?, ?, ?, ?)');
 const _mediaUpsert = mediaDb.prepare('INSERT OR REPLACE INTO shared_media (id, mime_type, data, created_at) VALUES (?, ?, ?, ?)');
 const _mapUpsert   = _mediaUpsert;
-const _mediaGet    = mediaDb.prepare('SELECT mime_type, data FROM shared_media WHERE id = ?');
+const _mediaGet    = mediaDb.prepare('SELECT mime_type, data, created_at FROM shared_media WHERE id = ?');
 const _mediaCount  = mediaDb.prepare('SELECT COUNT(*) as c FROM shared_media');
 const _mediaOldest = mediaDb.prepare('DELETE FROM shared_media WHERE id = (SELECT id FROM shared_media ORDER BY created_at ASC LIMIT 1)');
 function insertSharedMedia(id, mimeType, buf) {

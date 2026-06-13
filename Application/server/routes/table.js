@@ -72,7 +72,15 @@ export default function register(app, ctx) {
     const item = _mediaGet.get(TABLE_MAP_MEDIA_ID);
     if (!item) return res.status(404).send('No map uploaded');
     const dataStr = item.data.toString();
-    if (dataStr.startsWith('FILE:')) return res.redirect(dataStr.slice(5));
+    if (dataStr.startsWith('FILE:')) {
+      // The on-disk path (table-map.<ext>) is reused when a new map shares the same
+      // extension, so the static URL is byte-identical across map swaps and the
+      // browser serves the stale cached image (max-age 300). Version it with the
+      // row's created_at so the URL changes whenever the map content changes.
+      let target = dataStr.slice(5);
+      if (item.created_at) target += (target.includes('?') ? '&' : '?') + 'v=' + item.created_at;
+      return res.redirect(target);
+    }
     const etag = `"${crypto.createHash('md5').update(item.data).digest('hex')}"`;
     if (req.headers['if-none-match'] === etag) return res.status(304).end();
     res.set('Content-Type', item.mime_type);
@@ -588,7 +596,13 @@ export default function register(app, ctx) {
     const item = _mediaGet.get('prep-map-' + req.params.id);
     if (!item) return res.status(404).send('No image uploaded');
     const dataStr = item.data.toString();
-    if (dataStr.startsWith('FILE:')) return res.redirect(dataStr.slice(5));
+    if (dataStr.startsWith('FILE:')) {
+      // Re-uploading an image to an existing prepared map overwrites the same
+      // on-disk path, so version the redirect target to avoid a stale browser cache.
+      let target = dataStr.slice(5);
+      if (item.created_at) target += (target.includes('?') ? '&' : '?') + 'v=' + item.created_at;
+      return res.redirect(target);
+    }
     const etag = `"${crypto.createHash('md5').update(item.data).digest('hex')}"`;
     if (req.headers['if-none-match'] === etag) return res.status(304).end();
     res.set('Content-Type', item.mime_type);
