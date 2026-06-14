@@ -53,6 +53,7 @@ function load(initData, collapsed = true, isDM = false) {
     indexIsDM: () => isDM,
     // Simple HTML-escaping so names appear verbatim (no special chars in test data)
     esc: (s) => String(s || ''),
+    escJs: (s) => String(s == null ? '' : s),
     document: {
       getElementById(id) {
         if (id === 'init-tracker-list') return listEl;

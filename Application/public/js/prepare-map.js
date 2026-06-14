@@ -81,6 +81,13 @@ function esc(s) {
   return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+// Escape a value for a single-quoted JS string inside an HTML attribute (see escJs note in esc.js).
+function escJs(s) {
+  return String(s == null ? '' : s)
+    .replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\r\n|\r|\n/g, '\\n')
+    .replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
 function showStatus(msg, isErr) {
   const el = document.getElementById('status-msg');
   el.textContent = msg;
@@ -132,7 +139,7 @@ function renderMapList() {
     const regionCount = Array.isArray(m.fogRegions) ? m.fogRegions.length : 0;
     const itemCount = Array.isArray(m.hiddenItems) ? m.hiddenItems.length : 0;
     const sel = m.id === currentMapId ? 'selected' : '';
-    return `<div class="map-list-row ${sel}" onclick="selectMap('${esc(m.id)}')">
+    return `<div class="map-list-row ${sel}" onclick="selectMap('${escJs(m.id)}')">
       <div style="flex:1;overflow:hidden">
         <div class="map-list-name">${esc(m.name || 'Untitled')}</div>
         <div class="map-list-meta">${m.hasImage ? '🖼 · ' : ''}${regionCount} fog · ${itemCount} item${itemCount !== 1 ? 's' : ''}</div>
@@ -828,7 +835,7 @@ function pmRenderMonsterList(query) {
   if (!pmMonsterLoaded) { el.innerHTML = '<div style="padding:8px;font-size:11px;color:var(--txd)">Loading…</div>'; return; }
   if (!list.length) { el.innerHTML = '<div style="padding:8px;font-size:11px;color:var(--txd)">No monsters found.</div>'; return; }
   el.innerHTML = list.slice(0, 60).map(m =>
-    `<div onclick="pmSelectMonster('${esc(m.id)}')" data-mid="${esc(m.id)}"
+    `<div onclick="pmSelectMonster('${escJs(m.id)}')" data-mid="${esc(m.id)}"
       style="padding:5px 8px;border-bottom:1px solid var(--sep);font-size:11px;cursor:pointer;display:flex;align-items:center;gap:6px">
       <span style="flex:1">${esc(m.name)}</span>
       <span style="font-size:10px;color:var(--txd)">CR ${esc(String(m.cr||'?'))}</span>

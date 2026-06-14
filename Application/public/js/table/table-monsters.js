@@ -68,7 +68,7 @@ function renderMonsterActionsPanel(data, tok) {
     const dmgTagMatch = entryText.match(/\{@damage\s+([^}]+)\}/i);
     const rawDmg = dmgTagMatch ? dmgTagMatch[1] : (entryText.match(/\d+d\d+\s*(?:[+-]\s*\d+)?/i)?.[0] || '');
     const dmgStr = rawDmg.replace(/\s+/g, '');
-    const sn = (item.name || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    const sn = escJs(item.name || '');
     const useBtn = `<button class="btn sm" onclick="useMonsterAction('${section}',${idx})" style="font-size:10px;padding:1px 5px;flex-shrink:0;background:rgba(100,150,255,.18);color:#aaf">Use</button>`;
 
     if (atkMatch) {
@@ -143,7 +143,7 @@ function renderMonsterFullStats(data, tok) {
   if(document.body.dataset.theme==='modern'){
     // Action row: Init (primary) + Info button
     const actionRowHtml=`<div class="rp-action-row">`
-      +(tok?.linkedId?`<button class="btn sm" onclick="showMonsterInfoModal('${esc(tok.linkedId)}')" style="font-size:10px;padding:2px 7px">Info</button>`:'')
+      +(tok?.linkedId?`<button class="btn sm" onclick="showMonsterInfoModal('${escJs(tok.linkedId)}')" style="font-size:10px;padding:2px 7px">Info</button>`:'')
       +`<button class="btn sm primary" onclick="rollMonsterInitiativeFromPanel()" title="Roll Initiative (d20${initStr})" style="font-size:10px;padding:2px 7px">🎲 Init ${initStr}</button>`
       +`</div>`;
 
@@ -187,7 +187,7 @@ function renderMonsterFullStats(data, tok) {
     if(data.skill&&Object.keys(data.skill).length){
       const rows=Object.entries(data.skill).map(([k,v])=>{
         const lbl=k.charAt(0).toUpperCase()+k.slice(1);
-        return `<div class="qroll-row" onclick="qroll('${lbl}','${v}')">`
+        return `<div class="qroll-row" onclick="qroll('${escJs(lbl)}','${escJs(v)}')">`
           +`<span>${lbl}</span><span class="qroll-val">${v}</span></div>`;
       }).join('');
       skillsHtml=`<div class="rp-flat-hdr">Skills</div><div class="rp-skill-grid">${rows}</div>`;
@@ -293,7 +293,7 @@ function renderMonsterFullStats(data, tok) {
   return `<div style="padding:2px 0 4px;display:flex;align-items:center;justify-content:space-between">
     <span style="font-size:12px;color:#ff9999;font-weight:bold">${esc(data.name||'Monster')}${tok&&tok.label?` <span style="color:var(--txd);font-weight:normal;font-size:11px">[${esc(tok.label)}]</span>`:''}</span>
     <div style="display:flex;gap:4px">
-      ${tok&&tok.linkedId?`<button class="btn sm" onclick="showMonsterInfoModal('${esc(tok.linkedId)}')" title="View full stat block" style="font-size:10px;padding:2px 6px">Info</button>`:''}
+      ${tok&&tok.linkedId?`<button class="btn sm" onclick="showMonsterInfoModal('${escJs(tok.linkedId)}')" title="View full stat block" style="font-size:10px;padding:2px 6px">Info</button>`:''}
       <button class="btn sm" onclick="rollMonsterInitiativeFromPanel()" title="Roll Initiative (d20${initStr})" style="font-size:10px;padding:2px 6px">🎲 Init ${initStr}</button>
     </div>
   </div>

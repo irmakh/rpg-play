@@ -24,7 +24,7 @@ function renderInitiativeTracker(showBadge) {
       ? (eTok ? tokDisplayName(eTok) : (() => { const p = e.name.trim().split(' '); return p[p.length - 1]; })())
       : e.name;
     const nameHtml = (e.monsterId && isDM())
-      ? `<span style="color:inherit;text-decoration:underline dotted;cursor:pointer" title="${esc(e.name)}" onclick="event.stopPropagation();showMonsterInfoModal('${esc(e.monsterId)}')">${esc(eDisplayName)}</span>`
+      ? `<span style="color:inherit;text-decoration:underline dotted;cursor:pointer" title="${esc(e.name)}" onclick="event.stopPropagation();showMonsterInfoModal('${escJs(e.monsterId)}')">${esc(eDisplayName)}</span>`
       : esc(eDisplayName);
     const canEdit  = isDM() || !e.monsterId;
     const rollHtml = canEdit
@@ -33,9 +33,9 @@ function renderInitiativeTracker(showBadge) {
            onchange="updateInitRoll(this)" onclick="event.stopPropagation()">`
       : `<span class="init-row-roll">${e.roll}</span>`;
     const delHtml  = isDM()
-      ? `<button class="btn sm danger" style="padding:1px 5px;font-size:11px;line-height:1.2;margin-left:4px" onclick="event.stopPropagation();removeInitEntry('${e.id}')" title="Remove from initiative">✕</button>`
+      ? `<button class="btn sm danger" style="padding:1px 5px;font-size:11px;line-height:1.2;margin-left:4px" onclick="event.stopPropagation();removeInitEntry('${escJs(e.id)}')" title="Remove from initiative">✕</button>`
       : '';
-    const clickAttr = canView ? `onclick="viewInitEntry('${e.id}')"` : '';
+    const clickAttr = canView ? `onclick="viewInitEntry('${escJs(e.id)}')"` : '';
 
     // ── Modern HUD: avatar card rows ─────────────────────────────────────────
     if (document.body.dataset.theme === 'modern') {

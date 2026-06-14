@@ -10,6 +10,16 @@ function esc(s) {
   return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+// Escape a value embedded in a single-quoted JS string inside an HTML attribute,
+// e.g. onclick="fn('${escJs(value)}')". Backslash-escapes JS metacharacters (entity
+// encoding alone fails — the browser decodes &#39; back to ' before the JS parses),
+// then HTML-escapes the structural chars so the attribute stays well-formed.
+function escJs(s) {
+  return String(s == null ? '' : s)
+    .replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\r\n|\r|\n/g, '\\n')
+    .replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
 function applyTheme(name) {
   document.body.className = name === 'dark-gold' ? '' : 'theme-' + name;
   localStorage.setItem('dm-theme', name);
@@ -71,14 +81,14 @@ function renderInitiative() {
   list.innerHTML = sorted.map(e => {
     const isCur = e.id === initData.currentId;
     const nameEl = e.monsterId
-      ? `<span class="init-row-name" style="cursor:pointer;text-decoration:underline dotted;color:var(--ahi)" onclick="showMonsterInfo('${e.monsterId}')" title="View monster details">${esc(e.name)}</span>`
+      ? `<span class="init-row-name" style="cursor:pointer;text-decoration:underline dotted;color:var(--ahi)" onclick="showMonsterInfo('${escJs(e.monsterId)}')" title="View monster details">${esc(e.name)}</span>`
       : `<span class="init-row-name">${esc(e.name)}</span>`;
     return `<div class="init-row${isCur ? ' init-cur' : ''}">
       <span class="init-cur-marker">${isCur ? '▶' : ''}</span>
       ${nameEl}
       <span class="init-row-roll">${e.roll}</span>
-      <button class="edit-btn" onclick="openEditModal('${e.id}')" title="Edit">✎</button>
-      <button class="del-btn" onclick="deleteEntry('${e.id}')" title="Remove">✕</button>
+      <button class="edit-btn" onclick="openEditModal('${escJs(e.id)}')" title="Edit">✎</button>
+      <button class="del-btn" onclick="deleteEntry('${escJs(e.id)}')" title="Remove">✕</button>
     </div>`;
   }).join('');
 }
@@ -573,7 +583,7 @@ function appendChatEntry(e) {
   const time = dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   const div = document.createElement('div');
   if (e.id) div.dataset.entryId = e.id;
-  const delBtn = e.id ? `<button onclick="deleteChatMsg('${esc(e.id)}')" style="background:none;border:none;cursor:pointer;color:var(--txd);font-size:11px;padding:0 0 0 4px;opacity:.6;line-height:1;flex-shrink:0" title="Delete message">✕</button>` : '';
+  const delBtn = e.id ? `<button onclick="deleteChatMsg('${escJs(e.id)}')" style="background:none;border:none;cursor:pointer;color:var(--txd);font-size:11px;padding:0 0 0 4px;opacity:.6;line-height:1;flex-shrink:0" title="Delete message">✕</button>` : '';
   const timeCol = `<span style="display:flex;align-items:center"><span style="color:var(--txd);font-size:10px">${time}</span>${delBtn}</span>`;
 
   if (e.type === 'text') {
@@ -596,7 +606,7 @@ function appendChatEntry(e) {
     let mediaEl = '';
     if (e.mimeType.startsWith('image/')) {
       const inlineUrl = (e.mediumUrl && e.mimeType.startsWith('image/')) ? e.mediumUrl : url;
-      mediaEl = `<img class="chat-media-img" loading="lazy" src="${inlineUrl}" style="max-height:220px;object-fit:contain" onclick="window.open('${url}','_blank')" title="Click to open full size">`;
+      mediaEl = `<img class="chat-media-img" loading="lazy" src="${inlineUrl}" style="max-height:220px;object-fit:contain" onclick="window.open('${escJs(url)}','_blank')" title="Click to open full size">`;
     } else if (e.mimeType.startsWith('video/')) {
       mediaEl = `<video class="chat-media-video" src="${url}" controls style="max-height:220px"></video>`;
     } else {
@@ -700,9 +710,9 @@ function renderDmMonsters() {
       <td>${esc(String(hpVal))}</td>
       <td>${esc(spd)}</td>
       <td style="text-align:right;white-space:nowrap">
-        <button class="btn sm" onclick="showMonsterInfo('${m.id}')" title="View stat block">Info</button>
-        <button class="btn sm success" onclick="openMonsterInitModal('${m.id}')" title="Add to initiative">+ Init</button>
-        <button class="btn sm" onclick="exportMonster('${m.id}','${m.name.replace(/'/g,"\\'")}')" title="Export monster to file">Export</button>
+        <button class="btn sm" onclick="showMonsterInfo('${escJs(m.id)}')" title="View stat block">Info</button>
+        <button class="btn sm success" onclick="openMonsterInitModal('${escJs(m.id)}')" title="Add to initiative">+ Init</button>
+        <button class="btn sm" onclick="exportMonster('${escJs(m.id)}','${escJs(m.name)}')" title="Export monster to file">Export</button>
       </td>
     </tr>`;
   }).join('');

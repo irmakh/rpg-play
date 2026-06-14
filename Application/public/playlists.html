@@ -218,7 +218,7 @@ function renderTagChips(ctx) {
   getTags(ctx).forEach((t, i) => {
     const chip = document.createElement('span');
     chip.className = 'tag-chip';
-    chip.innerHTML = `${t} <button onclick="removeTag('${ctx}',${i})">×</button>`;
+    chip.innerHTML = `${t} <button onclick="removeTag('${escJs(ctx)}',${i})">×</button>`;
     wrap.insertBefore(chip, bare);
   });
 }
@@ -353,11 +353,11 @@ function renderSounds() {
       <span class="sound-name" title="${esc(s.name)}">${esc(s.name)}</span>
       <audio src="${esc(s.url)}" controls preload="none" style="height:28px;width:140px;flex-shrink:0"></audio>
       <div class="sound-pl-chips" data-sound-id="${s.id}"></div>
-      <button class="btn sm" onclick="openAddDropdown('${s.id}',this)" title="Add to playlist" style="flex-shrink:0">+</button>
-      <button class="btn sm sound-edit-btn" onclick="startRename('${s.id}')" title="Rename" style="flex-shrink:0">✏</button>
-      <button class="btn sm success sound-save-btn" onclick="saveRename('${s.id}')" title="Save" style="display:none;flex-shrink:0">✓</button>
-      <button class="btn sm sound-cancel-btn" onclick="cancelRename('${s.id}')" title="Cancel" style="display:none;flex-shrink:0">✕</button>
-      <button class="btn sm danger" onclick="deleteSound('${s.id}','${esc(s.name)}')" title="Delete" style="flex-shrink:0">🗑</button>
+      <button class="btn sm" onclick="openAddDropdown('${escJs(s.id)}',this)" title="Add to playlist" style="flex-shrink:0">+</button>
+      <button class="btn sm sound-edit-btn" onclick="startRename('${escJs(s.id)}')" title="Rename" style="flex-shrink:0">✏</button>
+      <button class="btn sm success sound-save-btn" onclick="saveRename('${escJs(s.id)}')" title="Save" style="display:none;flex-shrink:0">✓</button>
+      <button class="btn sm sound-cancel-btn" onclick="cancelRename('${escJs(s.id)}')" title="Cancel" style="display:none;flex-shrink:0">✕</button>
+      <button class="btn sm danger" onclick="deleteSound('${escJs(s.id)}','${escJs(s.name)}')" title="Delete" style="flex-shrink:0">🗑</button>
     </div>`).join('');
   renderAllPlChips();
 }
@@ -370,7 +370,7 @@ function renderPlChips(soundId) {
     return ids.includes(soundId);
   });
   el.innerHTML = inPl.map(pl =>
-    `<span class="sound-pl-chip">${esc(pl.name)} <button onclick="removeSoundFromPl('${soundId}','${pl.id}')" title="Remove from ${esc(pl.name)}">×</button></span>`
+    `<span class="sound-pl-chip">${esc(pl.name)} <button onclick="removeSoundFromPl('${escJs(soundId)}','${escJs(pl.id)}')" title="Remove from ${esc(pl.name)}">×</button></span>`
   ).join('');
 }
 
@@ -420,7 +420,7 @@ function openAddDropdown(soundId, btn) {
     return !ids.includes(soundId);
   });
   drop.innerHTML = available.length
-    ? available.map(p => `<div class="pl-drop-item" onclick="addSoundToPl('${soundId}','${p.id}')">${esc(p.name)}</div>`).join('')
+    ? available.map(p => `<div class="pl-drop-item" onclick="addSoundToPl('${escJs(soundId)}','${escJs(p.id)}')">${esc(p.name)}</div>`).join('')
     : '<div style="padding:8px 12px;font-size:11px;color:var(--txd)">In all playlists</div>';
   const rect = btn.getBoundingClientRect();
   drop.style.top = (rect.bottom + 4) + 'px';
@@ -510,8 +510,8 @@ function renderPlaylists() {
           <div class="pl-name">${esc(pl.name)}</div>
           <div class="pl-meta">${typeLabel}${mapLabel} &nbsp;·&nbsp; ${cnt} track${cnt === 1 ? '' : 's'}</div>
         </div>
-        <button class="btn sm" onclick="openEditPl('${pl.id}')" style="white-space:nowrap">✏ Edit</button>
-        <button class="btn sm danger" onclick="deletePlaylist('${pl.id}','${esc(pl.name)}')" style="white-space:nowrap">🗑</button>
+        <button class="btn sm" onclick="openEditPl('${escJs(pl.id)}')" style="white-space:nowrap">✏ Edit</button>
+        <button class="btn sm danger" onclick="deletePlaylist('${escJs(pl.id)}','${escJs(pl.name)}')" style="white-space:nowrap">🗑</button>
       </div>`;
   }).join('');
 }
@@ -591,6 +591,8 @@ async function saveEditPl() {
 
 // ── Utils ─────────────────────────────────────────────────────────────────────
 function esc(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+// Escape for a single-quoted JS string inside an HTML attribute: onclick="fn('${escJs(v)}')".
+function escJs(s) { return String(s == null ? '' : s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\r\n|\r|\n/g,'\\n').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function showStatus(msg, isErr = false) {
   const el = document.getElementById('status-msg');
   el.textContent = msg;

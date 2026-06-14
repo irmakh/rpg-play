@@ -180,7 +180,7 @@ function renderCastBar() {
     const img = c.thumb
       ? `<img src="${escAttr(c.thumb)}" alt="" class="cast-chip-img">`
       : `<div class="cast-chip-no-img">${esc(c.name.charAt(0).toUpperCase())}</div>`;
-    return `<button class="cast-chip${sel ? ' selected' : ''}" onclick="toggleChar('${escAttr(c.id)}')" title="${escAttr(c.name)}">
+    return `<button class="cast-chip${sel ? ' selected' : ''}" onclick="toggleChar('${escJs(c.id)}')" title="${escAttr(c.name)}">
       ${img}
       <span class="cast-chip-name">${esc(c.name)}</span>
     </button>`;
@@ -243,8 +243,8 @@ function renderPanels() {
     const isLast  = i === sequences.length - 1;
     const imgHtml = s.image_path
       ? `<img class="panel-img" src="${esc(s.image_path)}?v=${Date.now()}" alt=""
-              onclick="triggerUpload('${escAttr(s.id)}')" title="Click to replace image">`
-      : `<div class="panel-img-empty" onclick="triggerUpload('${escAttr(s.id)}')">
+              onclick="triggerUpload('${escJs(s.id)}')" title="Click to replace image">`
+      : `<div class="panel-img-empty" onclick="triggerUpload('${escJs(s.id)}')">
            <span style="font-size:24px">🖼</span>
            <span>Upload image</span>
          </div>`;
@@ -253,20 +253,20 @@ function renderPanels() {
       <div class="panel-img-area">
         ${imgHtml}
         <input type="file" accept="image/*" id="fi-${escAttr(s.id)}" style="display:none"
-               onchange="uploadImage('${escAttr(s.id)}', this)">
-        ${s.image_path ? `<button class="panel-img-clear" onclick="clearImage('${escAttr(s.id)}')" title="Remove image">✕ Remove</button>` : ''}
+               onchange="uploadImage('${escJs(s.id)}', this)">
+        ${s.image_path ? `<button class="panel-img-clear" onclick="clearImage('${escJs(s.id)}')" title="Remove image">✕ Remove</button>` : ''}
       </div>
       <div class="panel-caption-wrap">
         <textarea class="panel-caption" rows="4"
                   placeholder="Panel caption or story text…"
-                  oninput="scheduleCaptionSave('${escAttr(s.id)}', this)"
-                  onblur="flushCaptionSave('${escAttr(s.id)}')"
+                  oninput="scheduleCaptionSave('${escJs(s.id)}', this)"
+                  onblur="flushCaptionSave('${escJs(s.id)}')"
         >${esc(s.caption)}</textarea>
       </div>
       <div class="panel-controls">
-        <button class="panel-btn" onclick="movePanel('${escAttr(s.id)}', -1)" ${isFirst ? 'disabled' : ''} title="Move up">▲</button>
-        <button class="panel-btn" onclick="movePanel('${escAttr(s.id)}', 1)" ${isLast ? 'disabled' : ''} title="Move down">▼</button>
-        <button class="panel-btn del" onclick="openDelPanel('${escAttr(s.id)}')" title="Delete panel">✕</button>
+        <button class="panel-btn" onclick="movePanel('${escJs(s.id)}', -1)" ${isFirst ? 'disabled' : ''} title="Move up">▲</button>
+        <button class="panel-btn" onclick="movePanel('${escJs(s.id)}', 1)" ${isLast ? 'disabled' : ''} title="Move down">▼</button>
+        <button class="panel-btn del" onclick="openDelPanel('${escJs(s.id)}')" title="Delete panel">✕</button>
       </div>
     </div>`;
   }).join('');
@@ -416,6 +416,9 @@ function showStatus(msg, isErr) {
 
 function esc(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function escAttr(s) { return String(s || '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+// Escape for a single-quoted JS string inside an HTML attribute: onclick="fn('${escJs(v)}')".
+// (escAttr's &#39; gets decoded back to a bare quote before inline JS runs, so it can't be used here.)
+function escJs(s) { return String(s == null ? '' : s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\r\n|\r|\n/g,'\\n').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDelPanel(); });
 

@@ -37,12 +37,12 @@ function _monsterRowHtml(m) {
   const thumb = portrait
     ? `<img loading="lazy" src="${portrait}" style="width:30px;height:30px;border-radius:50%;object-fit:cover;border:1px solid var(--a55);flex-shrink:0">`
     : `<div style="width:30px;height:30px;border-radius:50%;background:var(--bg3);border:1px solid var(--a55);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--txd)">?</div>`;
-  return `<div class="qroll-row" onclick="selectTokenMonster('${esc(m.id)}','${esc(m.name)}')"
+  return `<div class="qroll-row" onclick="selectTokenMonster('${escJs(m.id)}','${escJs(m.name)}')"
        style="padding:5px 10px;border-bottom:1px solid var(--sep);display:flex;align-items:center;gap:8px">
     ${thumb}
     <span style="flex:1">${esc(m.name)}</span>
     <span style="font-size:10px;color:var(--txd)">CR ${esc(m.cr||'?')}</span>
-    <button onclick="event.stopPropagation();uploadMonsterPortrait('${esc(m.id)}')"
+    <button onclick="event.stopPropagation();uploadMonsterPortrait('${escJs(m.id)}')"
             style="background:none;border:none;cursor:pointer;font-size:14px;padding:0 2px;opacity:.6"
             title="Upload portrait">📷</button>
   </div>`;
@@ -63,7 +63,7 @@ async function populateAddTokenModal(chars) {
   const charTab = document.getElementById('tok-tab-chars');
   if (charTab && chars.length > 0) {
     charTab.innerHTML = chars.map(c => `
-      <div class="qroll-row" onclick="selectTokenChar('${esc(c.id)}','${esc(c.name)}','${c.char_type||'character'}')"
+      <div class="qroll-row" onclick="selectTokenChar('${escJs(c.id)}','${escJs(c.name)}','${escJs(c.char_type||'character')}')"
            style="padding:6px 10px;border-bottom:1px solid var(--sep)">
         <span>${esc(c.name)}</span>
         <span style="font-size:10px;color:var(--txd)">${c.char_type === 'npc' ? 'NPC' : 'PC'}</span>

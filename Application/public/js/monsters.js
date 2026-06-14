@@ -10,6 +10,13 @@ function esc(s) {
   return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+// Escape a value for a single-quoted JS string inside an HTML attribute (see escJs note in esc.js).
+function escJs(s) {
+  return String(s == null ? '' : s)
+    .replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\r\n|\r|\n/g, '\\n')
+    .replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
 
 function applyTheme(name) {
   document.body.className = name === 'dark-gold' ? '' : 'theme-' + name;
@@ -125,11 +132,11 @@ function renderTable() {
         <td>${esc(getHpStr(d))}</td>
         <td>${esc(getSpeedStr(d))}</td>
         <td style="text-align:right;white-space:nowrap">
-          <button class="btn sm" onclick="openInfoModal('${m.id}')" title="View stat block">Info</button>
-          <button class="btn sm success" onclick="openInitModal('${m.id}')" title="Add to initiative tracker">+ Init</button>
-          <button class="btn sm" onclick="openEditMonsterModal('${m.id}')" title="Edit monster JSON">Edit</button>
-          <button class="btn sm" onclick="exportMonster('${m.id}','${m.name.replace(/'/g,"\\'")}')" title="Export monster to file">Export</button>
-          <button class="btn sm danger" onclick="deleteMonster('${m.id}')" title="Remove monster">✕</button>
+          <button class="btn sm" onclick="openInfoModal('${escJs(m.id)}')" title="View stat block">Info</button>
+          <button class="btn sm success" onclick="openInitModal('${escJs(m.id)}')" title="Add to initiative tracker">+ Init</button>
+          <button class="btn sm" onclick="openEditMonsterModal('${escJs(m.id)}')" title="Edit monster JSON">Edit</button>
+          <button class="btn sm" onclick="exportMonster('${escJs(m.id)}','${escJs(m.name)}')" title="Export monster to file">Export</button>
+          <button class="btn sm danger" onclick="deleteMonster('${escJs(m.id)}')" title="Remove monster">✕</button>
         </td>
       </tr>`;
     }).join('') +

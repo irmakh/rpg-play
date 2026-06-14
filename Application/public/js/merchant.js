@@ -64,6 +64,13 @@ function esc(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+// Escape a value for a single-quoted JS string inside an HTML attribute (see escJs note in esc.js).
+function escJs(s) {
+  return String(s == null ? '' : s)
+    .replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\r\n|\r|\n/g, '\\n')
+    .replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
 function applyTheme(name) {
   document.body.className = name === 'dark-gold' ? '' : 'theme-' + name;
   localStorage.setItem('merchant-theme', name);
@@ -321,7 +328,7 @@ function renderTable() {
       const qtyStyle = item.quantity === 0 ? 'color:var(--err)' : '';
       const checked = selectedItems.has(item.id) ? 'checked' : '';
       return `<tr>
-        <td style="width:28px"><input type="checkbox" ${checked} onchange="toggleItemSelection('${item.id}')" style="accent-color:var(--ac)"></td>
+        <td style="width:28px"><input type="checkbox" ${checked} onchange="toggleItemSelection('${escJs(item.id)}')" style="accent-color:var(--ac)"></td>
         <td><strong>${esc(item.name)}</strong></td>
         <td style="color:var(--txd)">${esc(item.itemType)}</td>
         <td style="color:var(--exp)">${cpToGp(item.valueCp)}</td>
@@ -329,8 +336,8 @@ function renderTable() {
         <td style="color:var(--txd);font-size:11px">${esc(bonusSummary(item))}</td>
         <td style="color:var(--txd);font-size:11px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(item.notes)}">${esc(item.notes) || '—'}</td>
         <td style="white-space:nowrap">
-          <button class="btn sm" onclick="openItemModal('${item.id}')" style="margin-right:4px">Edit</button>
-          <button class="btn sm danger" onclick="deleteItem('${item.id}')">Delete</button>
+          <button class="btn sm" onclick="openItemModal('${escJs(item.id)}')" style="margin-right:4px">Edit</button>
+          <button class="btn sm danger" onclick="deleteItem('${escJs(item.id)}')">Delete</button>
         </td>
       </tr>`;
     }).join('');

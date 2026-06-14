@@ -198,7 +198,7 @@ function sRenderInitiative() {
   list.innerHTML = sorted.map(e => {
     const isCur = e.id === sInitData.currentId;
     const name  = (sIsDM() || !e.monsterId) ? esc(e.name) : esc(e.name.trim().split(' ').pop());
-    const del   = sIsDM() ? `<button class="s-del-btn" onclick="sRemoveInitEntry('${e.id}')">✕</button>` : '';
+    const del   = sIsDM() ? `<button class="s-del-btn" onclick="sRemoveInitEntry('${escJs(e.id)}')">✕</button>` : '';
     return `<div class="s-init-row${isCur ? ' s-init-cur' : ''}">
       <span class="s-init-marker">${isCur ? '▶' : ''}</span>
       <span class="s-init-name">${name}</span>
@@ -442,14 +442,14 @@ function sRenderCharStats(tok) {
 
   const skillRows = SKILL_NAMES.map((name, i) => {
     const val = d[`sk-${i}`] || '+0';
-    return `<div class="s-qroll-row" onclick="sQrollRoll('${esc(name)}','${esc(val)}')">
+    return `<div class="s-qroll-row" onclick="sQrollRoll('${escJs(name)}','${escJs(val)}')">
       <span class="s-qroll-label">${esc(name)}</span><span class="s-qroll-val">${esc(val)}</span>
     </div>`;
   }).join('');
 
   const saveRows = SAVE_NAMES.map((name, i) => {
     const val = d[`save-${SAVE_KEYS[i]}`] || '+0';
-    return `<div class="s-qroll-row" onclick="sQrollRoll('${esc(name)} Save','${esc(val)}')">
+    return `<div class="s-qroll-row" onclick="sQrollRoll('${escJs(name)} Save','${escJs(val)}')">
       <span class="s-qroll-label">${esc(name)} Save</span><span class="s-qroll-val">${esc(val)}</span>
     </div>`;
   }).join('');
@@ -460,13 +460,13 @@ function sRenderCharStats(tok) {
 
   let atkRows = weapons.filter(r => r[0]).map(r => {
     const [wName, wAtk, wDmg] = [r[0] || '', r[1] || '+0', r[2] || ''];
-    const wNoteJs = (r[3] || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\r?\n/g, ' ');
+    const wNoteJs = escJs(r[3] || '');
     const dmgRow = wDmg
-      ? `<div class="s-qroll-row" onclick="sRollDamageStr('${esc(wName)} Dmg','${esc(wDmg)}')" style="padding-left:20px;background:rgba(0,0,0,.2)">
+      ? `<div class="s-qroll-row" onclick="sRollDamageStr('${escJs(wName)} Dmg','${escJs(wDmg)}')" style="padding-left:20px;background:rgba(0,0,0,.2)">
           <span class="s-qroll-label" style="color:var(--txd);font-size:11px">↳ Damage</span>
           <span class="s-qroll-val" style="color:#ff9966">${esc(wDmg)}</span>
         </div>` : '';
-    return `<div class="s-qroll-row" onclick="sQrollRoll('${esc(wName)} Atk','${esc(wAtk)}')">
+    return `<div class="s-qroll-row" onclick="sQrollRoll('${escJs(wName)} Atk','${escJs(wAtk)}')">
       <span class="s-qroll-label">${esc(wName)}</span><span class="s-qroll-val">${esc(wAtk)}</span>
     </div>${dmgRow}`;
   }).join('');
@@ -760,7 +760,7 @@ function sRenderMonsterStatBlock(data, tok) {
     html += '<div style="font-size:10px;color:var(--ac);text-transform:uppercase;font-weight:bold;letter-spacing:.5px;margin:4px 0 2px">Skills</div>';
     html += Object.entries(data.skill).map(([key, val]) => {
       const label = key.charAt(0).toUpperCase() + key.slice(1);
-      return `<div class="s-qroll-row" onclick="sQrollRoll('${label}','${val}')"><span>${label}</span><span class="s-qroll-val">${val}</span></div>`;
+      return `<div class="s-qroll-row" onclick="sQrollRoll('${escJs(label)}','${escJs(val)}')"><span>${label}</span><span class="s-qroll-val">${val}</span></div>`;
     }).join('');
   }
   if (immuneStr)  html += `<div style="margin:2px 0"><span style="color:var(--ac);font-weight:bold">Immune</span> ${esc(immuneStr)}</div>`;
@@ -869,7 +869,7 @@ function sRenderDmHpList() {
     const isCur = tok.id === activeTokId;
     const canSel = sIsDM() || sIsMyToken(tok);
     const isSel  = sSelectedToken?.id === tok.id;
-    return `<div class="s-hp-row${isCur ? ' s-hp-cur' : ''}${isSel ? ' s-hp-selected' : ''}${canSel ? ' clickable' : ''}" ${canSel ? `onclick="sSelectToken('${tok.id}')"` : ''}>
+    return `<div class="s-hp-row${isCur ? ' s-hp-cur' : ''}${isSel ? ' s-hp-selected' : ''}${canSel ? ' clickable' : ''}" ${canSel ? `onclick="sSelectToken('${escJs(tok.id)}')"` : ''}>
       <div style="flex:1;min-width:0">
         <div class="s-hp-row-name">${isCur ? '▶ ' : ''}${esc(sTokDisplayName(tok))}</div>
         <div class="s-hp-bar-mini"><div style="width:${pct*100}%;height:100%;background:${col};border-radius:2px"></div></div>
@@ -912,8 +912,8 @@ function sRenderFogSection() {
     <div class="s-fog-row">
       <span class="s-fog-name" style="color:${r.visible ? 'var(--ok)' : 'var(--txd)'}">${esc(r.label || 'Region')}</span>
       ${!r.visible
-        ? `<button class="s-btn s-btn-success" onclick="sRevealFog('${r.id}')" style="flex:none;padding:5px 10px;min-height:34px;font-size:12px">Reveal</button>`
-        : `<button class="s-btn"               onclick="sHideFog('${r.id}')"   style="flex:none;padding:5px 10px;min-height:34px;font-size:12px">Hide</button>`}
+        ? `<button class="s-btn s-btn-success" onclick="sRevealFog('${escJs(r.id)}')" style="flex:none;padding:5px 10px;min-height:34px;font-size:12px">Reveal</button>`
+        : `<button class="s-btn"               onclick="sHideFog('${escJs(r.id)}')"   style="flex:none;padding:5px 10px;min-height:34px;font-size:12px">Hide</button>`}
     </div>`).join('');
 }
 
@@ -937,12 +937,12 @@ function sRenderItemsSection() {
   if (!list) return;
   list.innerHTML = sHiddenItems.map(item => `
     <div class="s-item-row">
-      <div class="s-item-header" onclick="sToggleItemBody('${item.id}')">
+      <div class="s-item-header" onclick="sToggleItemBody('${escJs(item.id)}')">
         <span class="s-item-icon">${S_ITEM_ICONS[item.type] || '?'}</span>
         <span class="s-item-name" style="color:${item.visible ? 'var(--ok)' : 'var(--txd)'}">${esc(item.label || 'Item')}</span>
         ${!item.visible
-          ? `<button class="s-btn s-btn-success" onclick="event.stopPropagation();sRevealItem('${item.id}')" style="flex:none;padding:4px 8px;min-height:30px;font-size:11px">Reveal</button>`
-          : `<button class="s-btn"               onclick="event.stopPropagation();sHideItem('${item.id}')"   style="flex:none;padding:4px 8px;min-height:30px;font-size:11px">Hide</button>`}
+          ? `<button class="s-btn s-btn-success" onclick="event.stopPropagation();sRevealItem('${escJs(item.id)}')" style="flex:none;padding:4px 8px;min-height:30px;font-size:11px">Reveal</button>`
+          : `<button class="s-btn"               onclick="event.stopPropagation();sHideItem('${escJs(item.id)}')"   style="flex:none;padding:4px 8px;min-height:30px;font-size:11px">Hide</button>`}
       </div>
       <div id="s-item-body-${item.id}" class="s-item-body" style="display:none">
         ${item.description

@@ -10,6 +10,13 @@ function esc(s) {
   return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+// Escape a value for a single-quoted JS string inside an HTML attribute (see escJs note in esc.js).
+function escJs(s) {
+  return String(s == null ? '' : s)
+    .replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\r\n|\r|\n/g, '\\n')
+    .replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
 function applyTheme(name) {
   document.body.className = name === 'dark-gold' ? '' : 'theme-' + name;
   localStorage.setItem('loot-theme', name);
@@ -122,27 +129,27 @@ function renderItemRow(item) {
     ? `<span class="vis-badge visible">Visible</span>`
     : `<span class="vis-badge hidden">Hidden</span>`;
   const visBtn = item.visible
-    ? `<button class="btn sm danger" onclick="toggleVisible('${item.id}', false)">Hide</button>`
-    : `<button class="btn sm success" onclick="toggleVisible('${item.id}', true)">Show</button>`;
+    ? `<button class="btn sm danger" onclick="toggleVisible('${escJs(item.id)}', false)">Hide</button>`
+    : `<button class="btn sm success" onclick="toggleVisible('${escJs(item.id)}', true)">Show</button>`;
   const descBadge = item.descVisible
     ? `<span class="vis-badge visible" style="font-size:9px">Desc Visible</span>`
     : `<span class="vis-badge hidden" style="font-size:9px">Desc Hidden</span>`;
   const descBtn = item.descVisible
-    ? `<button class="btn sm danger" onclick="toggleDescVisible('${item.id}', false)" style="margin-left:4px">Hide Desc</button>`
-    : `<button class="btn sm success" onclick="toggleDescVisible('${item.id}', true)" style="margin-left:4px">Show Desc</button>`;
+    ? `<button class="btn sm danger" onclick="toggleDescVisible('${escJs(item.id)}', false)" style="margin-left:4px">Hide Desc</button>`
+    : `<button class="btn sm success" onclick="toggleDescVisible('${escJs(item.id)}', true)" style="margin-left:4px">Show Desc</button>`;
   const descPreview = item.description
     ? `<span style="color:var(--txd);font-size:11px">${esc(item.description.length > 80 ? item.description.slice(0,80)+'…' : item.description)}</span>`
     : '<span style="color:var(--sep)">—</span>';
   const checked = selectedItems.has(item.id) ? 'checked' : '';
   return `<tr>
-    <td style="text-align:center;width:30px"><input type="checkbox" ${checked} onchange="toggleItemSelection('${item.id}')"></td>
+    <td style="text-align:center;width:30px"><input type="checkbox" ${checked} onchange="toggleItemSelection('${escJs(item.id)}')"></td>
     <td><strong>${esc(item.name)}</strong></td>
     <td style="max-width:220px">${descPreview}</td>
     <td style="white-space:nowrap">${visBadge}<br>${descBadge}</td>
     <td style="white-space:nowrap">
       ${visBtn}${descBtn}
-      <button class="btn sm" onclick="openItemModal('${item.id}')" style="margin-left:4px">Edit</button>
-      <button class="btn sm danger" onclick="deleteItem('${item.id}')" style="margin-left:4px">Delete</button>
+      <button class="btn sm" onclick="openItemModal('${escJs(item.id)}')" style="margin-left:4px">Edit</button>
+      <button class="btn sm danger" onclick="deleteItem('${escJs(item.id)}')" style="margin-left:4px">Delete</button>
     </td>
   </tr>`;
 }
@@ -191,7 +198,7 @@ function renderTable() {
     const someSelected = itemIds.some(id => selectedItems.has(id));
     const selectAllChecked = allSelected ? 'checked' : '';
     const selectAllRow = `<tr class="select-all-row">
-      <td style="text-align:center"><input type="checkbox" ${selectAllChecked} ${someSelected && !allSelected ? 'style="opacity:0.5"' : ''} onchange="toggleGroupSelection('${tag}')"></td>
+      <td style="text-align:center"><input type="checkbox" ${selectAllChecked} ${someSelected && !allSelected ? 'style="opacity:0.5"' : ''} onchange="toggleGroupSelection('${escJs(tag)}')"></td>
       <td colspan="4">Select all in this group</td>
     </tr>`;
     const rows = items.map(item => renderItemRow(item)).join('');

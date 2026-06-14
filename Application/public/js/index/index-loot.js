@@ -34,7 +34,7 @@ function renderLootItems() {
         ${item.description ? `<div style="font-size:10px;color:var(--txd);margin-top:2px;white-space:pre-wrap">${esc(item.description)}</div>` : ''}
       </div>
       ${alreadyClaimed ? `<span style="font-size:10px;color:var(--ok);flex-shrink:0;padding-top:2px">✓ Claimed</span>` : ''}
-      <button class="add-btn" style="width:auto;padding:3px 10px;margin:0;flex-shrink:0" onclick="addToLootCart('${item.id}')" ${inCart ? 'disabled' : ''}>${inCart ? 'In Cart' : '+ Cart'}</button>
+      <button class="add-btn" style="width:auto;padding:3px 10px;margin:0;flex-shrink:0" onclick="addToLootCart('${escJs(item.id)}')" ${inCart ? 'disabled' : ''}>${inCart ? 'In Cart' : '+ Cart'}</button>
     </div>`;
   }).join('');
 }
@@ -64,7 +64,7 @@ function renderLootCart() {
   }
   body.innerHTML = lootCart.map(item => `<div class="shop-cart-row">
     <span class="shop-cart-name">${esc(item.name)}</span>
-    <button class="del-btn" onclick="removeFromLootCart('${item.id}')">✕</button>
+    <button class="del-btn" onclick="removeFromLootCart('${escJs(item.id)}')">✕</button>
   </div>`).join('');
   claimBtn.disabled = !currentCharId;
 }

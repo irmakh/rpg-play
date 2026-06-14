@@ -38,9 +38,9 @@ function appendChatEntry(e) {
     let mediaEl = '';
     if (e.mimeType && e.mimeType.startsWith('image/')) {
       const displayUrl = e.mediumUrl || url;
-      mediaEl = `<img loading="lazy" src="${esc(displayUrl)}" style="max-width:100%;max-height:200px;width:auto;object-fit:contain;border-radius:4px;margin-top:4px;display:block;cursor:pointer" onclick="lightboxOpen('${url}','${esc(e.mimeType || '')}')">`;
+      mediaEl = `<img loading="lazy" src="${esc(displayUrl)}" style="max-width:100%;max-height:200px;width:auto;object-fit:contain;border-radius:4px;margin-top:4px;display:block;cursor:pointer" onclick="lightboxOpen('${escJs(url)}','${escJs(e.mimeType || '')}')">`;
     } else if (e.mimeType && e.mimeType.startsWith('video/')) {
-      mediaEl = `<div style="position:relative;max-width:100%;cursor:pointer;overflow:hidden;background:#000;border-radius:4px;margin-top:4px;display:inline-block" onclick="lightboxOpen('${url}','${esc(e.mimeType || '')}')"><video src="${url}" preload="metadata" muted playsinline style="max-width:100%;max-height:200px;display:block;pointer-events:none"></video><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:28px;text-shadow:0 2px 8px #000;pointer-events:none">&#9654;</div></div>`;
+      mediaEl = `<div style="position:relative;max-width:100%;cursor:pointer;overflow:hidden;background:#000;border-radius:4px;margin-top:4px;display:inline-block" onclick="lightboxOpen('${escJs(url)}','${escJs(e.mimeType || '')}')"><video src="${url}" preload="metadata" muted playsinline style="max-width:100%;max-height:200px;display:block;pointer-events:none"></video><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:28px;text-shadow:0 2px 8px #000;pointer-events:none">&#9654;</div></div>`;
     } else if (e.mimeType && e.mimeType.startsWith('audio/')) {
       mediaEl = `<audio src="${url}" controls style="max-width:100%;margin-top:6px;display:block"></audio>`;
     } else {

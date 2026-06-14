@@ -76,12 +76,12 @@ function renderShopItems() {
     const bonuses = bonusSummary(item);
     const qtyText = item.quantity === -1 ? '∞' : `×${item.quantity}`;
     return `<div class="shop-item-row">
-      <span class="shop-item-name" style="cursor:pointer;text-decoration:underline dotted" onclick="openShopDetail('${item.id}')" title="View details">${esc(item.name)}</span>
+      <span class="shop-item-name" style="cursor:pointer;text-decoration:underline dotted" onclick="openShopDetail('${escJs(item.id)}')" title="View details">${esc(item.name)}</span>
       <span class="shop-item-price">${cpToGp(item.valueCp)}</span>
       <span class="shop-item-qty">Stock: ${qtyText}</span>
       ${bonuses ? `<span class="shop-item-bonuses">${esc(bonuses)}</span>` : ''}
       ${item.notes ? `<span class="shop-item-bonuses" style="flex:1;min-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(item.notes)}">${esc(item.notes)}</span>` : ''}
-      <button class="add-btn" style="width:auto;padding:3px 10px;margin:0" onclick="addToCart('${item.id}')">+ Cart</button>
+      <button class="add-btn" style="width:auto;padding:3px 10px;margin:0" onclick="addToCart('${escJs(item.id)}')">+ Cart</button>
     </div>`;
   }).join('');
 }
@@ -175,7 +175,7 @@ function renderCart() {
     return `<div class="shop-cart-row">
       <span class="shop-cart-name">${esc(e.shopItem.name)} ×${e.qty}</span>
       <span class="shop-cart-subtotal">${cpToGp(subtotal)}</span>
-      <button class="del-btn" onclick="removeFromCart('${e.shopItem.id}')">✕</button>
+      <button class="del-btn" onclick="removeFromCart('${escJs(e.shopItem.id)}')">✕</button>
     </div>`;
   }).join('');
   totalEl.textContent = `Total: ${cpToGp(totalCp)}`;

@@ -729,7 +729,7 @@ function renderHpTable() {
     const hpNumStr = showNums
       ? `<span style="font-weight:bold;color:${col}">${cur}</span><span style="color:var(--txd)">/${max}</span>${temp > 0 ? `<span style="color:#aaddff;font-size:10px"> +${temp}</span>` : ''}`
       : '';
-    const clickAttr = canOpenPanel ? `onclick="hpTrackerRowClick('${tok.id}', event)"` : '';
+    const clickAttr = canOpenPanel ? `onclick="hpTrackerRowClick('${escJs(tok.id)}', event)"` : '';
     const activeConds = parseConditions(tok.conditions);
     const condsHtml = activeConds.length > 0
       ? `<div style="display:flex;flex-wrap:wrap;gap:2px;margin-top:2px" onclick="event.stopPropagation()">
@@ -817,7 +817,7 @@ function renderBulkPanel() {
   const namesList = document.getElementById('bulk-names-list');
   if (namesList) {
     namesList.innerHTML = selected.map(tok =>
-      `<span style="font-size:10px;background:var(--bg3);border:1px solid #00e5ff44;border-radius:2px;padding:1px 5px;cursor:pointer;display:inline-flex;align-items:center;gap:3px" onclick="bulkDeselectToken('${tok.id}')" title="Remove from selection">${esc(tokDisplayName(tok))} <span style="color:var(--txd);font-size:9px">✕</span></span>`
+      `<span style="font-size:10px;background:var(--bg3);border:1px solid #00e5ff44;border-radius:2px;padding:1px 5px;cursor:pointer;display:inline-flex;align-items:center;gap:3px" onclick="bulkDeselectToken('${escJs(tok.id)}')" title="Remove from selection">${esc(tokDisplayName(tok))} <span style="color:var(--txd);font-size:9px">✕</span></span>`
     ).join('');
   }
 

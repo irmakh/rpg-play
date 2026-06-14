@@ -171,7 +171,7 @@ function renderGrid() {
       <div class="story-card-foot">
         <a href="/story-viewer.html?id=${esc(s.id)}" class="btn sm primary">View</a>
         <a href="/story-builder.html?id=${esc(s.id)}" class="btn sm">Edit</a>
-        <button class="btn sm danger" onclick="deleteStory('${esc(s.id)}','${esc(s.story_name || 'this story')}')">Delete</button>
+        <button class="btn sm danger" onclick="deleteStory('${escJs(s.id)}','${escJs(s.story_name || 'this story')}')">Delete</button>
       </div>
     </div>`;
   }).join('');
@@ -223,6 +223,8 @@ async function confirmDelete() {
 // ── Utils ─────────────────────────────────────────────────────────────────────
 function showStatus(msg) { document.getElementById('status-msg').textContent = msg; }
 function esc(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+// Escape for a single-quoted JS string inside an HTML attribute: onclick="fn('${escJs(v)}')".
+function escJs(s) { return String(s == null ? '' : s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\r\n|\r|\n/g,'\\n').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeNewModal(); closeDelModal(); } });
 
 init();

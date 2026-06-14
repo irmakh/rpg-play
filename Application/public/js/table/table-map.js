@@ -189,11 +189,11 @@ function renderFogPanel() {
   if (!show) return;
   list.innerHTML = fogRegions.map(r => `
     <div style="display:flex;align-items:center;gap:6px;padding:3px 0;border-bottom:1px solid var(--sep);cursor:default"
-         onmouseenter="highlightMapRegion('${r.id}')" onmouseleave="clearMapHighlight()">
+         onmouseenter="highlightMapRegion('${escJs(r.id)}')" onmouseleave="clearMapHighlight()">
       <span style="flex:1;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:${r.visible ? 'var(--ok)' : 'var(--txd)'}">${esc(r.label || 'Region')}</span>
       ${!r.visible
-        ? `<button class="btn sm" onclick="revealFogRegion('${r.id}')">Reveal</button>`
-        : `<button class="btn sm" onclick="hideFogRegion('${r.id}')" style="font-size:10px">Hide</button>`}
+        ? `<button class="btn sm" onclick="revealFogRegion('${escJs(r.id)}')">Reveal</button>`
+        : `<button class="btn sm" onclick="hideFogRegion('${escJs(r.id)}')" style="font-size:10px">Hide</button>`}
     </div>`).join('');
 }
 
@@ -266,15 +266,15 @@ function renderItemsPanel() {
   if (!show) return;
   list.innerHTML = hiddenItems.map(item => `
     <div style="border:1px solid var(--a44);border-radius:4px;margin-bottom:4px;overflow:hidden"
-         onmouseenter="highlightMapItem('${item.id}')" onmouseleave="clearMapHighlight()">
+         onmouseenter="highlightMapItem('${escJs(item.id)}')" onmouseleave="clearMapHighlight()">
       <div style="display:flex;align-items:center;gap:6px;padding:4px 5px;cursor:pointer;user-select:none"
            onclick="const b=this.parentElement.querySelector('.item-body');if(b){const open=b.style.display==='block';b.style.display=open?'none':'block';this.querySelector('span').textContent=open?'▶':'▼'}">
         <span style="font-size:10px;color:var(--txd)">▶</span>
         <span style="font-size:13px">${ITEM_ICONS[item.type] || '?'}</span>
         <span style="flex:1;font-size:11px;font-weight:bold;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:${item.visible ? 'var(--ok)' : 'var(--txd)'}">${esc(item.label || 'Item')}</span>
         ${!item.visible
-          ? `<button class="btn sm" onclick="event.stopPropagation();revealItem('${item.id}')">Reveal</button>`
-          : `<button class="btn sm" onclick="event.stopPropagation();hideItem('${item.id}')" style="font-size:10px">Hide</button>`}
+          ? `<button class="btn sm" onclick="event.stopPropagation();revealItem('${escJs(item.id)}')">Reveal</button>`
+          : `<button class="btn sm" onclick="event.stopPropagation();hideItem('${escJs(item.id)}')" style="font-size:10px">Hide</button>`}
       </div>
       <div class="item-body" style="padding:4px 5px 5px;border-top:1px solid var(--sep)">
         ${item.description ? `<div style="font-size:10px;color:var(--txd);white-space:pre-wrap">${esc(item.description)}</div>` : '<div style="font-size:10px;color:var(--a44);font-style:italic">No description.</div>'}
@@ -380,8 +380,8 @@ canvasArea.addEventListener('click', e => {
         + `<div style="font-weight:bold;margin-bottom:3px">${esc(r.label || 'Region')}</div>`
         + `<div style="font-size:10px;margin-bottom:7px;color:${r.visible ? '#88ff88' : 'var(--txd)'}">${r.visible ? '👁 Revealed to players' : '🌫 Hidden from players'}</div>`
         + (r.visible
-          ? `<button class="btn sm" onclick="_dismissMapCtxMenu();hideFogRegion('${r.id}')" style="width:100%;font-size:11px">🚫 Hide Region</button>`
-          : `<button class="btn sm" onclick="_dismissMapCtxMenu();revealFogRegion('${r.id}')" style="width:100%;font-size:11px;background:var(--ok);color:#000;border-color:var(--ok)">👁 Reveal Region</button>`)
+          ? `<button class="btn sm" onclick="_dismissMapCtxMenu();hideFogRegion('${escJs(r.id)}')" style="width:100%;font-size:11px">🚫 Hide Region</button>`
+          : `<button class="btn sm" onclick="_dismissMapCtxMenu();revealFogRegion('${escJs(r.id)}')" style="width:100%;font-size:11px;background:var(--ok);color:#000;border-color:var(--ok)">👁 Reveal Region</button>`)
       );
       return;
     }
@@ -397,8 +397,8 @@ canvasArea.addEventListener('click', e => {
         + (item.description ? `<div style="font-size:10px;color:var(--txd);margin-bottom:5px;max-height:54px;overflow-y:auto;white-space:pre-wrap;word-break:break-word">${esc(item.description)}</div>` : '')
         + `<div style="font-size:10px;margin-bottom:7px;color:${item.visible ? '#88ff88' : '#ff8888'}">${item.visible ? '👁 Revealed to players' : '🔴 Hidden from players'}</div>`
         + (item.visible
-          ? `<button class="btn sm" onclick="_dismissMapCtxMenu();hideItem('${item.id}')" style="width:100%;font-size:11px">🚫 Hide Item</button>`
-          : `<button class="btn sm" onclick="_dismissMapCtxMenu();revealItem('${item.id}')" style="width:100%;font-size:11px;background:var(--ok);color:#000;border-color:var(--ok)">👁 Reveal Item</button>`)
+          ? `<button class="btn sm" onclick="_dismissMapCtxMenu();hideItem('${escJs(item.id)}')" style="width:100%;font-size:11px">🚫 Hide Item</button>`
+          : `<button class="btn sm" onclick="_dismissMapCtxMenu();revealItem('${escJs(item.id)}')" style="width:100%;font-size:11px;background:var(--ok);color:#000;border-color:var(--ok)">👁 Reveal Item</button>`)
       );
       return;
     }

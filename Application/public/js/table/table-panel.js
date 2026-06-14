@@ -70,29 +70,29 @@ function renderSideCharacter() {
   // Shared rows (both themes)
   const skillRows = SKILL_NAMES.map((name, i) => {
     const val = d[`sk-${i}`] || '+0';
-    return `<div class="qroll-row" onclick="qroll('${esc(name)}','${esc(val)}')" title="${esc(name)}">`
+    return `<div class="qroll-row" onclick="qroll('${escJs(name)}','${escJs(val)}')" title="${esc(name)}">`
       + `<span>${esc(name)}</span><span class="qroll-val">${esc(val)}</span></div>`;
   }).join('');
   const saveRows = SAVE_NAMES.map((name, i) => {
     const val = d[`save-${SAVE_KEYS[i]}`] || '+0';
-    return `<div class="qroll-row" onclick="qroll('${esc(name)} Save','${esc(val)}')" title="${esc(name)} Save">`
+    return `<div class="qroll-row" onclick="qroll('${escJs(name)} Save','${escJs(val)}')" title="${esc(name)} Save">`
       + `<span>${esc(name)}</span><span class="qroll-val">${esc(val)}</span></div>`;
   }).join('');
   let weapons = [];
   try { weapons = JSON.parse(d['_weapons'] || '[]'); } catch {}
   const atkRows = weapons.filter(r => r[0]).map(r => {
     const [wName, wAtk, wDmg, wNote] = [r[0]||'', r[1]||'+0', r[2]||'', r[3]||''];
-    const wNoteJs = wNote.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\r?\n/g, ' ');
+    const wNoteJs = escJs(wNote);
     const dmgRow = wDmg
-      ? `<div class="qroll-row" onclick="rollDamageStr('${esc(wName)} Dmg','${esc(wDmg)}'${wNoteJs ? `,'${wNoteJs}'` : ''})" style="padding-left:20px;background:rgba(0,0,0,.15)">`
+      ? `<div class="qroll-row" onclick="rollDamageStr('${escJs(wName)} Dmg','${escJs(wDmg)}'${wNoteJs ? `,'${wNoteJs}'` : ''})" style="padding-left:20px;background:rgba(0,0,0,.15)">`
         + `<span style="font-size:11px;color:var(--txd)">↳ Damage</span>`
         + `<span class="qroll-val" style="color:#ff9966;font-size:13px">${esc(wDmg)}</span></div>`
       : '';
-    return `<div class="qroll-row" onclick="qroll('${esc(wName)} Atk','${esc(wAtk)}','${esc(wDmg)}'${wNoteJs ? `,'${wNoteJs}'` : ''})" title="Attack roll — then choose Miss / Roll Damage">`
+    return `<div class="qroll-row" onclick="qroll('${escJs(wName)} Atk','${escJs(wAtk)}','${escJs(wDmg)}'${wNoteJs ? `,'${wNoteJs}'` : ''})" title="Attack roll — then choose Miss / Roll Damage">`
       + `<span>${esc(wName)}</span><span class="qroll-val">${esc(wAtk)}</span></div>${dmgRow}`;
   }).join('');
   const spAtkRow = spAtk !== null
-    ? `<div class="qroll-row" onclick="qroll('Spell Attack','${esc(String(spAtk))}')" title="Spell Attack">`
+    ? `<div class="qroll-row" onclick="qroll('Spell Attack','${escJs(String(spAtk))}')" title="Spell Attack">`
       + `<span>Spell Atk</span><span class="qroll-val">${parseInt(spAtk) >= 0 ? '+' : ''}${esc(String(spAtk))}</span></div>`
     : '';
   const atkSection = (atkRows + spAtkRow) || `<div style="padding:4px 8px;font-size:11px;color:var(--txd)">No weapons.</div>`;
@@ -152,7 +152,7 @@ function renderSideCharacter() {
         const nameSpan = `<span class="rp-spell-name" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px" onclick="postSpellInfoFromPanel(${idx})" title="Send to chat">${esc(sName)}</span>${flags}`;
         spellListHtml += `<div class="qroll-row" style="padding:3px 10px;font-size:11px">`
           + nameSpan
-          + (spAtk !== null ? `<span class="qroll-val" onclick="event.stopPropagation();qroll('${esc(sName)}','${esc(String(spAtk))}')" style="font-size:11px;cursor:pointer" title="Spell attack">⚡</span>` : '')
+          + (spAtk !== null ? `<span class="qroll-val" onclick="event.stopPropagation();qroll('${escJs(sName)}','${escJs(String(spAtk))}')" style="font-size:11px;cursor:pointer" title="Spell attack">⚡</span>` : '')
           + `</div>`;
       }
     }
@@ -187,7 +187,7 @@ function renderSideCharacter() {
     const saveGridHtml = `<div class="rp-save-grid">`
       + SAVE_NAMES.map((name, i) => {
           const val = d[`save-${SAVE_KEYS[i]}`] || '+0';
-          return `<div class="rp-save-cell" onclick="qroll('${esc(name)} Save','${esc(val)}')" title="${esc(name)} Saving Throw">`
+          return `<div class="rp-save-cell" onclick="qroll('${escJs(name)} Save','${escJs(val)}')" title="${esc(name)} Saving Throw">`
             + `<div class="rp-save-val">${esc(val)}</div>`
             + `<div class="rp-save-name">${esc(name)}</div>`
             + `</div>`;
@@ -198,9 +198,9 @@ function renderSideCharacter() {
       ? `<div class="rp-atk-list">`
         + weapons.filter(r => r[0]).map(r => {
             const [wName, wAtk, wDmg, wNote] = [r[0]||'', r[1]||'+0', r[2]||'', r[3]||''];
-            const wNoteJs = wNote.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\r?\n/g, ' ');
-            const atkClick = `qroll('${esc(wName)} Atk','${esc(wAtk)}','${esc(wDmg)}'${wNoteJs ? `,'${wNoteJs}'` : ''})`;
-            const dmgClick = wDmg ? `rollDamageStr('${esc(wName)} Dmg','${esc(wDmg)}'${wNoteJs ? `,'${wNoteJs}'` : ''})` : '';
+            const wNoteJs = escJs(wNote);
+            const atkClick = `qroll('${escJs(wName)} Atk','${escJs(wAtk)}','${escJs(wDmg)}'${wNoteJs ? `,'${wNoteJs}'` : ''})`;
+            const dmgClick = wDmg ? `rollDamageStr('${escJs(wName)} Dmg','${escJs(wDmg)}'${wNoteJs ? `,'${wNoteJs}'` : ''})` : '';
             return `<div class="rp-atk-row">`
               + `<span class="rp-atk-name" onclick="${atkClick}" title="${esc(wName)}">${esc(wName)}</span>`
               + `<span class="rp-atk-hit" onclick="${atkClick}" title="Attack: d20${esc(wAtk)}">${esc(wAtk)}</span>`
@@ -208,7 +208,7 @@ function renderSideCharacter() {
               + `</div>`;
           }).join('')
         + (spAtk !== null
-            ? `<div class="rp-atk-row"><span class="rp-atk-name">Spell Atk</span><span class="rp-atk-hit" onclick="qroll('Spell Attack','${esc(String(spAtk))}')">${parseInt(spAtk) >= 0 ? '+' : ''}${esc(String(spAtk))}</span></div>`
+            ? `<div class="rp-atk-row"><span class="rp-atk-name">Spell Atk</span><span class="rp-atk-hit" onclick="qroll('Spell Attack','${escJs(String(spAtk))}')">${parseInt(spAtk) >= 0 ? '+' : ''}${esc(String(spAtk))}</span></div>`
             : '')
         + `</div>`
       : `<div style="padding:4px 10px;font-size:11px;color:var(--txd)">No weapons.</div>`;
@@ -363,7 +363,7 @@ function _renderSidePanelSpell(s, idx, d) {
   const spAtk = d['sp-atk'];
   const nameSpan = `<span class="rp-spell-name" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px" onclick="postSpellInfoFromAll(${idx})" title="Send to chat">${esc(sName)}</span>`;
   const atk = (spAtk !== undefined && spAtk !== null && spAtk !== '')
-    ? `<span class="qroll-val" onclick="event.stopPropagation();qroll('Spell Attack','${esc(String(spAtk))}')" style="font-size:11px;cursor:pointer" title="Spell attack">⚡</span>`
+    ? `<span class="qroll-val" onclick="event.stopPropagation();qroll('Spell Attack','${escJs(String(spAtk))}')" style="font-size:11px;cursor:pointer" title="Spell attack">⚡</span>`
     : '';
   return `<div class="qroll-row" style="padding:3px 10px;font-size:11px">${nameSpan} <span style="font-size:10px;color:var(--txd)">${lvl}</span> ${atk}</div>`;
 }
@@ -387,7 +387,7 @@ function _renderSidePanelCustom(a, canEdit) {
     usesHtml = `<div class="rp-act-uses">${boxes}${rl ? `<span class="rp-act-recharge">/ ${rl}</span>` : ''}</div>`;
   }
   // "Use" — posts the action's details to chat (mirrors the monster Use button).
-  const useBtn = `<span class="rp-mon-use-btn" onclick="useCharacterAction('${a.id}')" title="Send details to chat"${dice ? '' : ' style="margin-left:auto"'}>Use</span>`;
+  const useBtn = `<span class="rp-mon-use-btn" onclick="useCharacterAction('${escJs(a.id)}')" title="Send details to chat"${dice ? '' : ' style="margin-left:auto"'}>Use</span>`;
   return `<div class="rp-act-item">`
     + `<div class="rp-act-head"><span class="rp-act-name">${n}</span>${diceBtn}${useBtn}</div>`
     + (a.description ? `<div class="rp-act-desc">${esc(a.description)}</div>` : '')

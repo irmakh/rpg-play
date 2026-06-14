@@ -17,6 +17,13 @@ function esc(s) {
   return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+// Escape a value for a single-quoted JS string inside an HTML attribute (see escJs note in esc.js).
+function escJs(s) {
+  return String(s == null ? '' : s)
+    .replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\r\n|\r|\n/g, '\\n')
+    .replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
 // ── Auth ──────────────────────────────────────────────────────────────────────
 async function authenticate() {
   const pw = document.getElementById('gate-pw').value;
@@ -177,8 +184,8 @@ function calRenderEventsList() {
         </div>
         ${badge}
         <div class="cal-event-actions">
-          <button class="btn sm" onclick="calOpenEditEvent('${e.id}')">Edit</button>
-          <button class="btn danger sm" onclick="calConfirmDelete('${e.id}')">✕</button>
+          <button class="btn sm" onclick="calOpenEditEvent('${escJs(e.id)}')">Edit</button>
+          <button class="btn danger sm" onclick="calConfirmDelete('${escJs(e.id)}')">✕</button>
         </div>
       </div>`;
   }).join('');

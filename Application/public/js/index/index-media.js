@@ -53,17 +53,17 @@ function renderMedia() {
     const badge = m.isPortrait ? '<div class="portrait-badge">Portrait</div>' : '';
     const cardSrc = (isImg && m.mediumUrl) ? m.mediumUrl : m.dataUrl;
     const media = isImg
-      ? `<img src="${esc(cardSrc)}" alt="${esc(m.name)}" loading="lazy" onclick="_mediaLightbox('${m.id}')">`
-      : `<div class="media-vid-thumb" onclick="_mediaLightbox('${m.id}')"><video src="${esc(m.dataUrl)}" preload="metadata" muted playsinline></video><div class="media-vid-play">&#9654;</div></div>`;
+      ? `<img src="${esc(cardSrc)}" alt="${esc(m.name)}" loading="lazy" onclick="_mediaLightbox('${escJs(m.id)}')">`
+      : `<div class="media-vid-thumb" onclick="_mediaLightbox('${escJs(m.id)}')"><video src="${esc(m.dataUrl)}" preload="metadata" muted playsinline></video><div class="media-vid-play">&#9654;</div></div>`;
     const setPortBtn = isImg && !m.isPortrait
-      ? `<button class="char-btn" style="padding:2px 7px;font-size:10px" onclick="setPortrait('${m.id}')">Set Portrait</button>`
+      ? `<button class="char-btn" style="padding:2px 7px;font-size:10px" onclick="setPortrait('${escJs(m.id)}')">Set Portrait</button>`
       : '';
     return `<div class="media-card${m.isPortrait ? ' is-portrait' : ''}">
       ${badge}${media}
       <div class="media-card-name">${esc(m.name)}</div>
       <div class="media-card-actions">
         ${setPortBtn}
-        <button class="del-btn" style="font-size:11px;padding:2px 8px" onclick="deleteMedia('${m.id}')">✕</button>
+        <button class="del-btn" style="font-size:11px;padding:2px 8px" onclick="deleteMedia('${escJs(m.id)}')">✕</button>
       </div>
     </div>`;
   }).join('');
