@@ -270,24 +270,18 @@ async function removeInitEntry(id) {
 function viewInitEntry(id) {
   const entry = initData.entries?.find(e => e.id === id);
   if (!entry) return;
-  // Permission: a player may only preview an entry whose token they own; the DM sees all.
-  if (!isDM()) {
-    const mtok = _findInitToken(entry);
-    if (!mtok || !isMyToken(mtok)) return;
-  }
-  const wasViewing = _sideViewInitId === id;
-  _sideViewInitId = wasViewing ? null : id;
-  // The initiative-row preview takes priority over any map selection (mirrors how
-  // selectToken() clears _sideViewInitId), so clear the selection + its highlight.
-  selectedTokenId = null;
-  _sideQrollTokenId = null;
-  if (typeof renderTokens === 'function') renderTokens();
-  loadSideQroll();
-  renderInitiativeTracker();
-  // Item 6: clicking any combatant in the list pans the camera to its token,
-  // regardless of whose turn it is. (Skip when toggling the row off.)
-  if (!wasViewing) {
-    const tok = _findInitToken(entry);
-    if (tok) panToToken(tok.id);
-  }
+  // Resolve the entry to its map token using the SAME link the list uses to show
+  // each row's HP and name (_findInitToken), then behave exactly as if the user had
+  // clicked that token on the map — selectToken() is the proven path that puts the
+  // correct combatant in the right panel. No toggle: clicking always selects it.
+  const tok = _findInitToken(entry);
+  if (!tok) return;
+  // Permission: the DM sees everyone; a player only a token they own.
+  if (!isDM() && !isMyToken(tok)) return;
+  // Mirror a map token click exactly: selectToken() highlights + loads the sheet,
+  // openHpPanel() reveals the right panel (the details container is hidden behind a
+  // placeholder until then — that's why selecting alone left the panel blank).
+  selectToken(tok.id);
+  openHpPanel(tok);
+  panToToken(tok.id);
 }
