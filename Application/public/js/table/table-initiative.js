@@ -18,13 +18,16 @@ function renderInitiativeTracker(showBadge) {
   list.innerHTML = sorted.map(e => {
     const isCur    = e.id === initData.currentId;
     const isViewing = e.id === _sideViewInitId;
-    const canView  = isDM() || !e.monsterId;
-    const eTok     = e.monsterId ? tokens.find(t => t.initiativeId === e.id) : null;
+    const eTok     = _findInitToken(e);
+    // "Can see details" → drives whether clicking the row loads it in the right panel.
+    // The DM sees everything; a player only their own character / assigned monster
+    // token (matches the access loadSideQroll() enforces on the sheet/stat block).
+    const canView  = isDM() || (!!eTok && isMyToken(eTok));
     const eDisplayName = e.monsterId
       ? (eTok ? tokDisplayName(eTok) : (() => { const p = e.name.trim().split(' '); return p[p.length - 1]; })())
       : e.name;
     const nameHtml = (e.monsterId && isDM())
-      ? `<span style="color:inherit;text-decoration:underline dotted;cursor:pointer" title="${esc(e.name)}" onclick="event.stopPropagation();showMonsterInfoModal('${escJs(e.monsterId)}')">${esc(eDisplayName)}</span>`
+      ? `<span style="color:inherit;text-decoration:underline dotted;cursor:pointer" title="${esc(e.name)}" onclick="event.stopPropagation();viewInitEntry('${escJs(e.id)}');showMonsterInfoModal('${escJs(e.monsterId)}')">${esc(eDisplayName)}</span>`
       : esc(eDisplayName);
     const canEdit  = isDM() || !e.monsterId;
     const rollHtml = canEdit
@@ -267,10 +270,18 @@ async function removeInitEntry(id) {
 function viewInitEntry(id) {
   const entry = initData.entries?.find(e => e.id === id);
   if (!entry) return;
-  if (!isDM() && entry.monsterId) return;
+  // Permission: a player may only preview an entry whose token they own; the DM sees all.
+  if (!isDM()) {
+    const mtok = _findInitToken(entry);
+    if (!mtok || !isMyToken(mtok)) return;
+  }
   const wasViewing = _sideViewInitId === id;
   _sideViewInitId = wasViewing ? null : id;
+  // The initiative-row preview takes priority over any map selection (mirrors how
+  // selectToken() clears _sideViewInitId), so clear the selection + its highlight.
+  selectedTokenId = null;
   _sideQrollTokenId = null;
+  if (typeof renderTokens === 'function') renderTokens();
   loadSideQroll();
   renderInitiativeTracker();
   // Item 6: clicking any combatant in the list pans the camera to its token,
