@@ -177,6 +177,12 @@
       <label for="cal-ev-public">Visible to players (public)</label>
     </div>
 
+    <div class="cal-form-row">
+      <label>Media (image, video, music)</label>
+      <input type="file" id="cal-ev-media-input" accept="image/*,video/*,audio/*" multiple onchange="calAddMediaFiles(this)">
+      <div id="cal-ev-media-list" class="cal-media-pending"></div>
+    </div>
+
     <div class="cal-modal-btns">
       <button class="btn danger sm" id="cal-ev-delete-btn" onclick="calDeleteEditingEvent()" style="display:none;margin-right:auto">Delete</button>
       <button class="btn sm" onclick="calCloseEventModal()">Cancel</button>
@@ -256,6 +262,7 @@
 </div>
 
 <script src="/js/lib/fr_calendar.js" defer></script>
+<script src="/js/lib/lightbox.js" defer></script>
 <script src="/js/events.js" defer></script>
 </body>
 </html>

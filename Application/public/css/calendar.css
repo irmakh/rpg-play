@@ -156,6 +156,31 @@
 .cal-event-badge.pub  { background: rgba(90,170,120,.18); color: #5a9; border: 1px solid rgba(90,170,120,.35); }
 .cal-event-badge.priv { background: rgba(200,80,80,.15);  color: #c55; border: 1px solid rgba(200,80,80,.3);  }
 .cal-event-actions { display: flex; gap: 4px; flex-shrink: 0; align-items: flex-start; padding-top: 2px; }
+.cal-event-author { font-size: 10px; color: var(--a); margin-top: 2px; font-style: italic; }
+
+/* Event media attachments (image/audio/video) */
+.cal-media-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.cal-media-thumb {
+  width: 64px; height: 64px; object-fit: cover; border-radius: 4px;
+  border: 1px solid var(--a33); cursor: zoom-in;
+}
+.cal-media-audio { height: 30px; max-width: 220px; }
+.cal-media-video { max-width: 220px; max-height: 140px; border-radius: 4px; border: 1px solid var(--a33); }
+
+/* Pending media chips inside the journal modal */
+.cal-media-pending { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.cal-media-chip {
+  position: relative; display: inline-flex; align-items: center; justify-content: center;
+  width: 48px; height: 48px; border-radius: 4px; border: 1px solid var(--a33);
+  background: var(--bg3); overflow: hidden;
+}
+.cal-media-chip img { width: 100%; height: 100%; object-fit: cover; }
+.cal-media-chip-icon { font-size: 20px; }
+.cal-media-chip button {
+  position: absolute; top: -6px; right: -6px; width: 18px; height: 18px;
+  border-radius: 50%; border: none; background: #c44; color: #fff;
+  font-size: 11px; line-height: 1; cursor: pointer; padding: 0;
+}
 
 .cal-empty { font-size: 12px; color: var(--txd); padding: 6px 0; }
 

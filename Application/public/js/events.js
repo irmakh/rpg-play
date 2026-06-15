@@ -5,6 +5,7 @@ let calView        = { type: 'month', month: 1, year: 1492 };
 let calCurrentDate = { frYear: 1492, frMonth: 1, frDay: 1, frFestival: '' };
 let calEvents      = [];
 let editingEventId = null;
+let calPendingMedia = [];   // media descriptors staged for the open event modal
 
 function genId() {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
@@ -171,16 +172,21 @@ function calRenderEventsList() {
   }
 
   el.innerHTML = viewEvs.map(e => {
-    const badge = e.isPublic
-      ? '<span class="cal-event-badge pub">Public</span>'
-      : '<span class="cal-event-badge priv">DM Only</span>';
+    const badge = e.authorCharId
+      ? `<span class="cal-event-badge ${e.isPublic ? 'pub' : 'priv'}">${e.isPublic ? 'Shared' : 'Private'}</span>`
+      : (e.isPublic
+        ? '<span class="cal-event-badge pub">Public</span>'
+        : '<span class="cal-event-badge priv">DM Only</span>');
+    const author = e.authorCharId ? `<div class="cal-event-author">📖 ${esc(e.authorName || 'Journal')}</div>` : '';
     const dateStr = frFormatDate({ frYear: e.frYear, frMonth: e.frMonth, frDay: e.frDay, frFestival: e.frFestival });
     return `
       <div class="cal-event-item">
         <div class="cal-event-info">
           <div class="cal-event-title">${esc(e.title)}</div>
           <div class="cal-event-date">${esc(dateStr)} &middot; ${esc(e.eventType)}</div>
+          ${author}
           ${e.description ? `<div class="cal-event-desc">${esc(e.description)}</div>` : ''}
+          ${calRenderMedia(e.media)}
         </div>
         ${badge}
         <div class="cal-event-actions">
@@ -189,6 +195,18 @@ function calRenderEventsList() {
         </div>
       </div>`;
   }).join('');
+}
+
+// Render attachment thumbnails / players for a calendar event (DM view).
+function calRenderMedia(media) {
+  if (!Array.isArray(media) || !media.length) return '';
+  const items = media.map(m => {
+    if (m.type === 'image') return `<img class="cal-media-thumb" src="${esc(m.thumb || m.url)}" onclick="lightboxOpen('${escJs(m.url)}','image/jpeg')">`;
+    if (m.type === 'audio') return `<audio class="cal-media-audio" controls preload="none" src="${esc(m.url)}"></audio>`;
+    if (m.type === 'video') return `<video class="cal-media-video" controls preload="metadata" src="${esc(m.url)}"></video>`;
+    return '';
+  }).join('');
+  return `<div class="cal-media-row">${items}</div>`;
 }
 
 // ── Navigation ────────────────────────────────────────────────────────────────
@@ -298,6 +316,9 @@ function calOpenAddEventOn(year, month, day, festival) {
   document.getElementById('cal-ev-desc').value  = '';
   document.getElementById('cal-ev-type').value  = 'event';
   document.getElementById('cal-ev-public').checked = false;
+  calPendingMedia = [];
+  document.getElementById('cal-ev-media-input').value = '';
+  calRenderPendingMedia();
 
   if (festival) {
     document.getElementById('cal-ev-date-type').value  = 'festival';
@@ -324,6 +345,9 @@ function calOpenEditEvent(id) {
   document.getElementById('cal-ev-desc').value    = ev.description || '';
   document.getElementById('cal-ev-type').value    = ev.eventType || 'event';
   document.getElementById('cal-ev-public').checked = !!ev.isPublic;
+  calPendingMedia = Array.isArray(ev.media) ? ev.media.slice() : [];
+  document.getElementById('cal-ev-media-input').value = '';
+  calRenderPendingMedia();
 
   if (ev.frFestival) {
     document.getElementById('cal-ev-date-type').value = 'festival';
@@ -366,6 +390,7 @@ async function calSaveEvent() {
       frFestival:  document.getElementById('cal-ev-festival').value,
       isPublic:    document.getElementById('cal-ev-public').checked,
       eventType:   document.getElementById('cal-ev-type').value,
+      media:       calPendingMedia,
     };
   } else {
     ev = {
@@ -377,6 +402,7 @@ async function calSaveEvent() {
       frFestival:  '',
       isPublic:    document.getElementById('cal-ev-public').checked,
       eventType:   document.getElementById('cal-ev-type').value,
+      media:       calPendingMedia,
     };
   }
 
@@ -439,6 +465,54 @@ async function calRefreshEvents() {
     calRenderGrid();
     calRenderEventsList();
   } catch {}
+}
+
+// ── Event Media ───────────────────────────────────────────────────────────────
+async function calAddMediaFiles(input) {
+  const files = Array.from(input.files || []);
+  input.value = '';
+  for (const file of files) {
+    if (calPendingMedia.length >= 12) { setSaveStatus('Max 12 attachments', true); break; }
+    setSaveStatus('Uploading ' + file.name + '…');
+    try {
+      const dataUrl = await calFileToDataUrl(file);
+      const res = await fetch('/api/calendar/media', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Master-Password': masterPw },
+        body: JSON.stringify({ dataUrl }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json.url) { setSaveStatus(json.error || ('Upload failed: ' + file.name), true); continue; }
+      calPendingMedia.push(json);
+      calRenderPendingMedia();
+      setSaveStatus('');
+    } catch { setSaveStatus('Upload failed: ' + file.name, true); }
+  }
+}
+
+function calFileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result);
+    r.onerror = reject;
+    r.readAsDataURL(file);
+  });
+}
+
+function calRenderPendingMedia() {
+  const el = document.getElementById('cal-ev-media-list');
+  if (!el) return;
+  el.innerHTML = calPendingMedia.map((m, i) => {
+    const preview = m.type === 'image'
+      ? `<img src="${esc(m.thumb || m.url)}">`
+      : `<span class="cal-media-chip-icon">${m.type === 'audio' ? '🎵' : '🎬'}</span>`;
+    return `<span class="cal-media-chip">${preview}<button type="button" onclick="calRemovePendingMedia(${i})">✕</button></span>`;
+  }).join('');
+}
+
+function calRemovePendingMedia(i) {
+  calPendingMedia.splice(i, 1);
+  calRenderPendingMedia();
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────

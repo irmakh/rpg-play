@@ -18,6 +18,7 @@ import registerInitiative  from '../../server/routes/initiative.js';
 import registerTable       from '../../server/routes/table.js';
 import registerCharacters  from '../../server/routes/characters.js';
 import registerAuth        from '../../server/routes/auth.js';
+import registerEvents      from '../../server/routes/events.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
@@ -45,6 +46,7 @@ function verifyPassword(password, stored) {
 // ── Media constants ───────────────────────────────────────────────────────────
 const IMAGE_MIME   = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp']);
 const ALLOWED_MIME = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'video/mp4', 'video/webm']);
+const SHARED_MEDIA_MIME = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'video/mp4', 'video/webm', 'audio/mpeg', 'audio/ogg', 'audio/wav']);
 const MAX_MEDIA_BYTES = 25 * 1024 * 1024;
 
 async function processImageSizes(_mimeType, _buffer, folder, id) {
@@ -101,6 +103,7 @@ export function makeApp() {
     isMasterPassword,
     IMAGE_MIME,
     ALLOWED_MIME,
+    SHARED_MEDIA_MIME,
     MAX_MEDIA_BYTES,
     processImageSizes,
     saveUploadFile: () => '/uploads/test/stub.jpg',
@@ -121,6 +124,7 @@ export function makeApp() {
   registerTable(app, ctx);
   registerCharacters(app, ctx);
   registerAuth(app, ctx);
+  registerEvents(app, ctx);
 
   return { app, ldb, masterPw: TEST_MASTER_PW, hashPassword };
 }

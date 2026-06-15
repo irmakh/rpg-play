@@ -39,6 +39,16 @@
 - **listSoundFiles() / createSoundFile() / deleteSoundFile()** - CRUD for uploaded audio files
 - **listPlaylists() / createPlaylist() / updatePlaylist() / deletePlaylist()** - CRUD for tag-based playlists (generic or map-typed)
 - **getSoundsForPlaylist(playlistId)** - Returns sounds whose tags intersect with a playlist's tag filter
+- **listCalendarEvents({ isDM, charId })** - Viewer-aware calendar event list: DM sees all; a player sees public events plus their own (private journals authored by `charId`); empty `charId` returns public only
+- **getCalendarEvent(id)** - Single calendar event row (used for journal edit/delete ownership checks)
+- **createCalendarEvent / updateCalendarEvent / deleteCalendarEvent** - Calendar event CRUD; rows carry `authorCharId`/`authorName` (empty = DM event) and a `media` array (image/audio/video descriptors) serialised to `media_json`
+
+## Application — Calendar / Journal API (`Application/server/routes/events.js`)
+
+- `GET /api/calendar/events` — viewer-aware list (DM via master pw; player via `X-Character-Id` + `X-Character-Password`; anonymous = public only)
+- `POST /api/calendar/events` — DM creates an event; a character creates a journal (author forced, `shared` → public, `eventType='journal'`)
+- `PUT/DELETE /api/calendar/events/:id` — ownership-gated: DM edits/deletes anything; a player only their own journal
+- `POST /api/calendar/media` — upload one attachment (base64 data URL); images → `processImageSizes` (`calendar/`), audio/video → `saveUploadFile`; validates against `SHARED_MEDIA_MIME`, capped at `MAX_MEDIA_BYTES`
 
 ## Application — Stories Module
 

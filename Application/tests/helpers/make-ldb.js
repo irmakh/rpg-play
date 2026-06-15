@@ -42,6 +42,14 @@ export function makeLdb() {
       offsetY INTEGER DEFAULT 0, mapWidth INTEGER DEFAULT 0, mapHeight INTEGER DEFAULT 0,
       hasMap INTEGER DEFAULT 0, fogRegions TEXT DEFAULT '[]', hiddenItems TEXT DEFAULT '[]'
     );
+    CREATE TABLE IF NOT EXISTS calendar_events (
+      id TEXT PRIMARY KEY, title TEXT NOT NULL DEFAULT '', description TEXT DEFAULT '',
+      fr_year INTEGER NOT NULL DEFAULT 1492, fr_month INTEGER, fr_day INTEGER,
+      fr_festival TEXT DEFAULT '', is_public INTEGER NOT NULL DEFAULT 0,
+      event_type TEXT DEFAULT 'event',
+      author_char_id TEXT DEFAULT '', author_name TEXT DEFAULT '', media_json TEXT DEFAULT '[]',
+      created_at TEXT DEFAULT (datetime('now'))
+    );
   `);
 
   // Singleton rows
@@ -179,6 +187,41 @@ export function makeLdb() {
     db.prepare('DELETE FROM table_tokens').run();
   }
 
+  // ── calendar events (mirror db/localdb.js) ──────────────────────────────────
+  function _calRow(r) {
+    let media = [];
+    try { media = JSON.parse(r.media_json || '[]'); } catch {}
+    return {
+      id: r.id, title: r.title, description: r.description || '',
+      frYear: r.fr_year, frMonth: r.fr_month, frDay: r.fr_day,
+      frFestival: r.fr_festival || '', isPublic: !!r.is_public,
+      eventType: r.event_type, createdAt: r.created_at,
+      authorCharId: r.author_char_id || '', authorName: r.author_name || '',
+      media: Array.isArray(media) ? media : [],
+    };
+  }
+  const _CAL_ORDER = 'ORDER BY fr_year, fr_month NULLS LAST, fr_day NULLS LAST';
+  function listCalendarEvents({ isDM = false, charId = '' } = {}) {
+    if (isDM) return db.prepare(`SELECT * FROM calendar_events ${_CAL_ORDER}`).all().map(_calRow);
+    if (!charId) return db.prepare(`SELECT * FROM calendar_events WHERE is_public = 1 ${_CAL_ORDER}`).all().map(_calRow);
+    return db.prepare(`SELECT * FROM calendar_events WHERE is_public = 1 OR author_char_id = ? ${_CAL_ORDER}`).all(charId).map(_calRow);
+  }
+  function getCalendarEvent(id) {
+    const r = db.prepare('SELECT * FROM calendar_events WHERE id = ?').get(id);
+    return r ? _calRow(r) : null;
+  }
+  function createCalendarEvent(ev) {
+    db.prepare('INSERT INTO calendar_events (id,title,description,fr_year,fr_month,fr_day,fr_festival,is_public,event_type,author_char_id,author_name,media_json) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)')
+      .run(ev.id, ev.title, ev.description || '', ev.frYear, ev.frMonth ?? null, ev.frDay ?? null, ev.frFestival || '', ev.isPublic ? 1 : 0, ev.eventType || 'event', ev.authorCharId || '', ev.authorName || '', JSON.stringify(ev.media || []));
+  }
+  function updateCalendarEvent(id, ev) {
+    db.prepare('UPDATE calendar_events SET title=?,description=?,fr_year=?,fr_month=?,fr_day=?,fr_festival=?,is_public=?,event_type=?,author_char_id=?,author_name=?,media_json=? WHERE id=?')
+      .run(ev.title, ev.description || '', ev.frYear, ev.frMonth ?? null, ev.frDay ?? null, ev.frFestival || '', ev.isPublic ? 1 : 0, ev.eventType || 'event', ev.authorCharId || '', ev.authorName || '', JSON.stringify(ev.media || []), id);
+  }
+  function deleteCalendarEvent(id) {
+    db.prepare('DELETE FROM calendar_events WHERE id = ?').run(id);
+  }
+
   return {
     // characters
     listCharacters, getCharacter, createCharacter, updateCharacter, deleteCharacter, getLinkedTokens,
@@ -192,5 +235,7 @@ export function makeLdb() {
     // table tokens
     listTableTokens, getTableToken, getTableTokensByInitId,
     createTableToken, updateTableToken, deleteTableToken, clearTableTokens,
+    // calendar
+    listCalendarEvents, getCalendarEvent, createCalendarEvent, updateCalendarEvent, deleteCalendarEvent,
   };
 }

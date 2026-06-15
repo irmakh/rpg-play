@@ -150,6 +150,9 @@ try { db.exec(`ALTER TABLE table_tokens ADD COLUMN ac INTEGER`); } catch {}
 try { db.exec(`ALTER TABLE table_tokens ADD COLUMN assignedCharId TEXT DEFAULT ''`); } catch {}
 try { db.exec(`ALTER TABLE playlists ADD COLUMN sounds TEXT DEFAULT '[]'`); } catch {}
 try { db.exec(`ALTER TABLE table_tokens ADD COLUMN customPortrait INTEGER DEFAULT 0`); } catch {}
+try { db.exec(`ALTER TABLE calendar_events ADD COLUMN author_char_id TEXT DEFAULT ''`); } catch {}
+try { db.exec(`ALTER TABLE calendar_events ADD COLUMN author_name    TEXT DEFAULT ''`); } catch {}
+try { db.exec(`ALTER TABLE calendar_events ADD COLUMN media_json     TEXT DEFAULT '[]'`); } catch {}
 
 // Singleton IDs (match server.js constants)
 const SHOP_CONFIG_ID  = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
@@ -654,11 +657,15 @@ export function saveEventsData(data) {
 
 // ── Calendar ──────────────────────────────────────────────────────────────────
 function _calRow(r) {
+  let media = [];
+  try { media = JSON.parse(r.media_json || '[]'); } catch {}
   return {
     id: r.id, title: r.title, description: r.description || '',
     frYear: r.fr_year, frMonth: r.fr_month, frDay: r.fr_day,
     frFestival: r.fr_festival || '', isPublic: !!r.is_public,
     eventType: r.event_type, createdAt: r.created_at,
+    authorCharId: r.author_char_id || '', authorName: r.author_name || '',
+    media: Array.isArray(media) ? media : [],
   };
 }
 
@@ -673,21 +680,35 @@ export function saveCalendarState(s) {
     .run(CAL_STATE_ID, s.frYear, s.frMonth ?? null, s.frDay ?? null, s.frFestival || '');
 }
 
-export function listCalendarEvents(publicOnly = false) {
-  const q = publicOnly
-    ? 'SELECT * FROM calendar_events WHERE is_public = 1 ORDER BY fr_year, fr_month NULLS LAST, fr_day NULLS LAST'
-    : 'SELECT * FROM calendar_events ORDER BY fr_year, fr_month NULLS LAST, fr_day NULLS LAST';
-  return db.prepare(q).all().map(_calRow);
+const _CAL_ORDER = 'ORDER BY fr_year, fr_month NULLS LAST, fr_day NULLS LAST';
+export function listCalendarEvents({ isDM = false, charId = '' } = {}) {
+  // DM sees everything. Otherwise a viewer sees public events plus their own
+  // (private journals authored by their character). An empty charId must never
+  // match author_char_id='' (those are DM-only events), so use a public-only
+  // query in that case.
+  if (isDM) {
+    return db.prepare(`SELECT * FROM calendar_events ${_CAL_ORDER}`).all().map(_calRow);
+  }
+  if (!charId) {
+    return db.prepare(`SELECT * FROM calendar_events WHERE is_public = 1 ${_CAL_ORDER}`).all().map(_calRow);
+  }
+  return db.prepare(`SELECT * FROM calendar_events WHERE is_public = 1 OR author_char_id = ? ${_CAL_ORDER}`)
+    .all(charId).map(_calRow);
+}
+
+export function getCalendarEvent(id) {
+  const r = db.prepare('SELECT * FROM calendar_events WHERE id = ?').get(id);
+  return r ? _calRow(r) : null;
 }
 
 export function createCalendarEvent(ev) {
-  db.prepare('INSERT INTO calendar_events (id,title,description,fr_year,fr_month,fr_day,fr_festival,is_public,event_type) VALUES (?,?,?,?,?,?,?,?,?)')
-    .run(ev.id, ev.title, ev.description || '', ev.frYear, ev.frMonth ?? null, ev.frDay ?? null, ev.frFestival || '', ev.isPublic ? 1 : 0, ev.eventType || 'event');
+  db.prepare('INSERT INTO calendar_events (id,title,description,fr_year,fr_month,fr_day,fr_festival,is_public,event_type,author_char_id,author_name,media_json) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)')
+    .run(ev.id, ev.title, ev.description || '', ev.frYear, ev.frMonth ?? null, ev.frDay ?? null, ev.frFestival || '', ev.isPublic ? 1 : 0, ev.eventType || 'event', ev.authorCharId || '', ev.authorName || '', JSON.stringify(ev.media || []));
 }
 
 export function updateCalendarEvent(id, ev) {
-  db.prepare('UPDATE calendar_events SET title=?,description=?,fr_year=?,fr_month=?,fr_day=?,fr_festival=?,is_public=?,event_type=? WHERE id=?')
-    .run(ev.title, ev.description || '', ev.frYear, ev.frMonth ?? null, ev.frDay ?? null, ev.frFestival || '', ev.isPublic ? 1 : 0, ev.eventType || 'event', id);
+  db.prepare('UPDATE calendar_events SET title=?,description=?,fr_year=?,fr_month=?,fr_day=?,fr_festival=?,is_public=?,event_type=?,author_char_id=?,author_name=?,media_json=? WHERE id=?')
+    .run(ev.title, ev.description || '', ev.frYear, ev.frMonth ?? null, ev.frDay ?? null, ev.frFestival || '', ev.isPublic ? 1 : 0, ev.eventType || 'event', ev.authorCharId || '', ev.authorName || '', JSON.stringify(ev.media || []), id);
 }
 
 export function deleteCalendarEvent(id) {
