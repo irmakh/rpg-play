@@ -235,7 +235,7 @@ const MAX_MEDIA_BYTES = 25 * 1024 * 1024;
 // Bump this number whenever frontend JS or CSS files change.
 // Also bump CACHE in public/sw.js to the same value.
 // Both must always match. See deployment notes in CLAUDE.md.
-const FRONTEND_VERSION = 108;
+const FRONTEND_VERSION = 113;
 
 // ── Express app ───────────────────────────────────────────────────────────────
 const app = express();
