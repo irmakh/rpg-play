@@ -124,46 +124,49 @@
         <!-- Selected token chips -->
         <div id="bulk-names-list" style="display:flex;flex-wrap:wrap;gap:3px;padding:4px 8px 4px;border-bottom:1px solid var(--a44)"></div>
         <!-- HP change -->
-        <div style="padding:6px 8px 2px">
-          <div style="font-size:10px;color:var(--txd);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Apply to all</div>
-          <div style="display:flex;gap:4px;align-items:center">
-            <input type="number" id="bulk-amount" value="1" min="1" style="width:52px;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px;padding:3px 5px;font-size:12px">
+        <div class="rp-flat-hdr">Apply to all</div>
+        <div class="rp-blk-body">
+          <div class="rp-hp-main">
+            <input type="number" id="bulk-amount" value="1" min="1" class="rp-num-input" aria-label="Bulk HP amount">
             <button class="btn danger sm" onclick="applyBulkHpChange('dmg')">⚔ Damage</button>
             <button class="btn success sm" onclick="applyBulkHpChange('heal')">💚 Heal</button>
           </div>
-          <div style="display:flex;gap:3px;padding:4px 0 2px;flex-wrap:wrap">
-            <button class="btn danger sm" onclick="applyBulkQuickDmg(1)">-1</button>
-            <button class="btn danger sm" onclick="applyBulkQuickDmg(5)">-5</button>
-            <button class="btn danger sm" onclick="applyBulkQuickDmg(10)">-10</button>
+          <div class="rp-quick-grid">
+            <button class="btn danger sm" onclick="applyBulkQuickDmg(1)">−1</button>
+            <button class="btn danger sm" onclick="applyBulkQuickDmg(5)">−5</button>
+            <button class="btn danger sm" onclick="applyBulkQuickDmg(10)">−10</button>
             <button class="btn success sm" onclick="applyBulkQuickHeal(1)">+1</button>
             <button class="btn success sm" onclick="applyBulkQuickHeal(5)">+5</button>
             <button class="btn success sm" onclick="applyBulkQuickHeal(10)">+10</button>
           </div>
         </div>
         <!-- Conditions -->
-        <div style="border-top:1px solid var(--a44);padding:6px 8px 6px">
-          <div style="font-size:10px;color:var(--txd);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Conditions</div>
-          <div id="bulk-conditions-grid" style="display:flex;flex-wrap:wrap;gap:3px"></div>
+        <div class="rp-flat-hdr">Conditions</div>
+        <div class="rp-blk-body">
+          <div id="bulk-conditions-grid" class="rp-cond-grid"></div>
         </div>
         <!-- Visibility to players (DM only) -->
-        <div style="border-top:1px solid var(--a44);padding:6px 8px 6px">
-          <div style="font-size:10px;color:var(--txd);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Visibility to players</div>
-          <div style="display:flex;gap:4px">
-            <button class="btn success sm" onclick="bulkSetVisibility(true)" style="flex:1" title="Show all selected tokens to players">👁 Visible</button>
-            <button class="btn danger sm" onclick="bulkSetVisibility(false)" style="flex:1" title="Hide all selected tokens from players">🚫 Hidden</button>
+        <div class="rp-flat-hdr">Visibility to players</div>
+        <div class="rp-blk-body">
+          <div class="rp-btn-row">
+            <button class="btn success sm" onclick="bulkSetVisibility(true)" title="Show all selected tokens to players">👁 Visible</button>
+            <button class="btn danger sm" onclick="bulkSetVisibility(false)" title="Hide all selected tokens from players">🚫 Hidden</button>
           </div>
         </div>
         <!-- Group ability check / saving throw (DM only) -->
-        <div style="border-top:1px solid var(--a44);padding:6px 8px 6px">
-          <div style="font-size:10px;color:var(--txd);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Group roll</div>
-          <div style="display:flex;gap:4px">
-            <button class="btn sm" onclick="openGroupCheckModal('check')" style="flex:1;font-size:11px" title="All selected tokens roll an ability check individually">🎲 Ability Check</button>
-            <button class="btn sm" onclick="openGroupCheckModal('save')" style="flex:1;font-size:11px" title="All selected tokens roll a saving throw individually">🛡 Saving Throw</button>
+        <div class="rp-flat-hdr">Group roll</div>
+        <div class="rp-blk-body">
+          <div class="rp-btn-row">
+            <button class="btn sm" onclick="openGroupCheckModal('check')" style="font-size:11px" title="All selected tokens roll an ability check individually">🎲 Ability Check</button>
+            <button class="btn sm" onclick="openGroupCheckModal('save')" style="font-size:11px" title="All selected tokens roll a saving throw individually">🛡 Saving Throw</button>
           </div>
         </div>
         <!-- Initiative (DM only, monster tokens) -->
-        <div id="bulk-init-row" style="display:none;border-top:1px solid var(--a44);padding:6px 8px 6px">
-          <button class="btn sm" onclick="rollBulkInitiative()" style="width:100%;font-size:12px">🎲 Roll Monster Initiative</button>
+        <div id="bulk-init-row" style="display:none">
+          <div class="rp-flat-hdr">Initiative</div>
+          <div class="rp-blk-body">
+            <button class="btn sm" onclick="rollBulkInitiative()" style="width:100%;font-size:12px">🎲 Roll Monster Initiative</button>
+          </div>
         </div>
       </div>
     </div>
@@ -274,29 +277,34 @@
       </div>
 
       <!-- Conditions -->
-      <div id="hp-conditions-row" style="border-top:1px solid var(--a44);padding:6px 8px 4px">
-        <div style="font-size:10px;color:var(--txd);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Conditions</div>
-        <div id="hp-conditions-grid" style="display:flex;flex-wrap:wrap;gap:3px"></div>
+      <div id="hp-conditions-row">
+        <div class="rp-flat-hdr">Conditions</div>
+        <div class="rp-blk-body">
+          <div id="hp-conditions-grid" class="rp-cond-grid"></div>
+        </div>
       </div>
 
       <!-- Damage / Heal / Temp HP (own token or DM only) -->
       <div id="hp-edit-area">
-        <div style="display:flex;gap:4px;padding:5px 8px;align-items:center;border-top:1px solid var(--a44)">
-          <input type="number" id="hp-amount" value="1" min="1" style="width:52px;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px;padding:3px 5px;font-size:12px">
-          <button class="btn danger sm" onclick="applyHpChange('dmg')">⚔ Damage</button>
-          <button class="btn success sm" onclick="applyHpChange('heal')">💚 Heal</button>
+        <div class="rp-flat-hdr">Adjust HP</div>
+        <div class="rp-blk-body">
+          <div class="rp-hp-main">
+            <input type="number" id="hp-amount" value="1" min="1" class="rp-num-input" aria-label="HP amount">
+            <button class="btn danger sm" onclick="applyHpChange('dmg')">⚔ Damage</button>
+            <button class="btn success sm" onclick="applyHpChange('heal')">💚 Heal</button>
+          </div>
+          <div class="rp-quick-grid">
+            <button class="btn danger sm" onclick="quickDmg(1)">−1</button>
+            <button class="btn danger sm" onclick="quickDmg(5)">−5</button>
+            <button class="btn danger sm" onclick="quickDmg(10)">−10</button>
+            <button class="btn success sm" onclick="quickHeal(1)">+1</button>
+            <button class="btn success sm" onclick="quickHeal(5)">+5</button>
+            <button class="btn success sm" onclick="quickHeal(10)">+10</button>
+          </div>
         </div>
-        <div style="display:flex;gap:4px;padding:0 8px 5px;flex-wrap:wrap">
-          <button class="btn danger sm" onclick="quickDmg(1)">-1</button>
-          <button class="btn danger sm" onclick="quickDmg(5)">-5</button>
-          <button class="btn danger sm" onclick="quickDmg(10)">-10</button>
-          <button class="btn success sm" onclick="quickHeal(1)">+1</button>
-          <button class="btn success sm" onclick="quickHeal(5)">+5</button>
-          <button class="btn success sm" onclick="quickHeal(10)">+10</button>
-        </div>
-        <div style="display:flex;gap:4px;align-items:center;border-top:1px solid var(--a44);padding:5px 8px">
-          <span style="font-size:11px;color:var(--txd);white-space:nowrap">Temp HP:</span>
-          <input type="number" id="hp-temp-input" value="0" min="0" style="width:52px;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px;padding:3px 5px;font-size:12px">
+        <div class="rp-flat-hdr">Temp HP</div>
+        <div class="rp-blk-body rp-temp-body">
+          <input type="number" id="hp-temp-input" value="0" min="0" class="rp-num-input" aria-label="Temporary HP">
           <button class="btn sm" onclick="applyTempHp()">Set</button>
         </div>
       </div>

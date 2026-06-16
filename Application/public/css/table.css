@@ -74,6 +74,22 @@ body[data-theme="modern"] #table-wrap:has(#side-panel.rp-open) #zoom-float{right
 .rp-stat-lbl{font-size:9px;color:var(--txd);text-transform:uppercase;letter-spacing:.5px;margin-top:3px;text-align:center}
 .rp-stat-divider{width:1px;background:var(--a44);align-self:stretch;margin:6px 0}
 
+/* ── Right-panel / bulk-edit control blocks (conditions · HP · temp HP) ──
+   Section headers reuse .rp-flat-hdr (same gold bar as the sheet sections);
+   controls sit in a padded .rp-blk-body below. */
+.rp-blk-body{padding:7px 8px}
+input[type=number].rp-num-input{width:50px;flex:0 0 50px;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:4px;padding:5px 4px;font-size:13px;text-align:center;-moz-appearance:textfield}
+input[type=number].rp-num-input:focus{outline:none;border-color:var(--ac);background:var(--bgd)}
+.rp-hp-main{display:flex;gap:5px;align-items:stretch}
+.rp-hp-main .btn{flex:1 1 0;min-width:0;padding:5px 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rp-quick-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-top:6px}
+.rp-quick-grid .btn{padding:4px 0;text-align:center;min-width:0}
+.rp-btn-row{display:flex;gap:5px}
+.rp-btn-row .btn{flex:1 1 0;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rp-temp-body{display:flex;gap:7px;align-items:center}
+.rp-temp-body .btn{flex:1 1 0;min-width:0}
+.rp-cond-grid{display:flex;flex-wrap:wrap;gap:4px}
+
 /* Right panel — ability scores grid */
 .rp-ability-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:4px 8px 8px}
 .rp-ability-block{display:flex;flex-direction:column;align-items:center;background:var(--bg3);border-radius:4px;padding:5px 2px;border:1px solid var(--a44)}

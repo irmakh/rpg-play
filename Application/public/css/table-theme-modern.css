@@ -394,6 +394,8 @@ body[data-theme="modern"] #hp-label-row,
 body[data-theme="modern"] #hp-assign-row {
   border-top-color: rgba(255,255,255,.04);
 }
+body[data-theme="modern"] .rp-num-input { background: #0b1322; border-color: rgba(255,255,255,.1); }
+body[data-theme="modern"] .rp-num-input:focus { border-color: var(--ac); background: #0d1626; }
 
 /* HP panel bigger numbers override (they're now in rp-stats-row) */
 body[data-theme="modern"] #hp-cur-display { font-size: 26px !important; line-height: 1 }
