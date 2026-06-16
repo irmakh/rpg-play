@@ -85,13 +85,6 @@ body.po-sheet-window #hp-panel-name {
 }
 body.po-sheet-window #rp-subtitle { font-size: 12px !important; letter-spacing: .5px; }
 
-/* ── Dice-mode toggle ──────────────────────────────────────────────────────── */
-body.po-sheet-window .rp-dice-mode {
-  max-width: 360px;
-  margin: 2px auto 12px;
-}
-body.po-sheet-window .rp-dice-mode .dm-seg { padding: 7px 4px; font-size: 12px; }
-
 /* ── Stat shields: HP / AC / Speed ─────────────────────────────────────────── */
 body.po-sheet-window .rp-stats-row {
   border: none;
@@ -295,7 +288,6 @@ body.po-sheet-window #side-qroll-content > div { margin-bottom: 14px; }
   body.po-sheet-window .qroll-row { padding-top: 7px; padding-bottom: 7px; }
   body.po-sheet-window .rp-save-cell { padding: 8px 2px; }
   body.po-sheet-window .rp-atk-row { padding-top: 9px; padding-bottom: 9px; }
-  body.po-sheet-window .rp-dice-mode .dm-seg { padding: 9px 4px; }
   /* Numeric inputs at >=16px so iOS Safari doesn't zoom on focus */
   body.po-sheet-window #hp-amount,
   body.po-sheet-window #hp-temp-input { font-size: 16px; height: 34px; width: 64px; }

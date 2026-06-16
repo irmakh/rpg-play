@@ -41,6 +41,13 @@
   </div>
 
   <button class="btn tool-btn" onclick="openDiceRollerModal()" title="Dice Roller" style="margin-left:4px">🎲</button>
+  <!-- Dice mode toggle (item 2): persistent Normal/Adv/Dis/Ask applied to every d20 roll -->
+  <div class="rp-dice-mode" id="rp-dice-mode" style="margin-left:6px" title="Roll mode applied to every d20 roll">
+    <button type="button" class="dm-seg" data-mode="norm" onclick="setDiceMode('norm')">Normal</button>
+    <button type="button" class="dm-seg" data-mode="adv" onclick="setDiceMode('adv')" title="Roll with advantage">Adv</button>
+    <button type="button" class="dm-seg" data-mode="dis" onclick="setDiceMode('dis')" title="Roll with disadvantage">Dis</button>
+    <button type="button" class="dm-seg active" data-mode="ask" onclick="setDiceMode('ask')" title="Ask each roll: pick Normal/Adv/Dis in a popup">Ask</button>
+  </div>
   <button class="dice-anim-switch on" id="btn-dice-anim" role="switch" aria-checked="true" onclick="toggleDiceAnim()" title="Dice animation on/off"><span class="das-knob"></span></button>
   <button id="btn-theme-toggle" onclick="toggleTheme()" title="Switch to Modern HUD" style="margin-left:4px">🎨</button>
   <button class="btn tool-btn" id="btn-leftpanel-toggle" onclick="toggleLeftPanel()" title="Toggle left panel" style="margin-left:4px">◀</button>
@@ -239,14 +246,6 @@
           <div id="hp-panel-name" style="font-weight:bold;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--tx)"></div>
           <div id="rp-subtitle" style="font-size:10px;color:var(--txd);margin-top:2px;line-height:1.4"></div>
         </div>
-      </div>
-
-      <!-- Dice mode toggle (item 2): persistent Normal/Adv/Dis for all d20 rolls -->
-      <div class="rp-dice-mode" id="rp-dice-mode" title="Roll mode applied to every d20 roll on this sheet">
-        <button type="button" class="dm-seg active" data-mode="norm" onclick="setDiceMode('norm')">Normal</button>
-        <button type="button" class="dm-seg" data-mode="adv" onclick="setDiceMode('adv')" title="Roll with advantage">Adv</button>
-        <button type="button" class="dm-seg" data-mode="dis" onclick="setDiceMode('dis')" title="Roll with disadvantage">Dis</button>
-        <button type="button" class="dm-seg" data-mode="ask" onclick="setDiceMode('ask')" title="Ask each roll: pick Normal/Adv/Dis in a popup">Ask</button>
       </div>
 
       <!-- Big stats: HP / AC / Speed -->
