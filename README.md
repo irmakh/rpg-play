@@ -20,7 +20,7 @@ Vanilla JS, no build step, no framework. Runs on SQLite by default; nothing to p
 - Dice rolling with full 3D animation, broadcast live to the virtual table; advantage / disadvantage dual-die rolls; per-character roll history
 - Import / export character as XML (D&D Beyond–compatible) — round-trips custom actions and spell action/duration fields, and prompts update-vs-new-copy on a same-name import
 - Per-character password protection (set / change / remove); multiple characters selectable from a list
-- Player-facing tabs: **Shop** (browse by tag, cart, buy with in-character currency), **Loot** (claim dropped items), **Initiative** (slide-out tracker with roll submission), **Calendar** (read-only Calendar of Harptos with DM events)
+- Player-facing tabs: **Shop** (browse by tag, cart, buy with in-character currency), **Loot** (claim dropped items), **Initiative** (slide-out tracker with roll submission), **Calendar** (Calendar of Harptos — DM events plus your own journals with media)
 - Real-time chat: free text or `/r NdS+M [label]` dice rolls (e.g. `/r 2d6+3`, `/r d20 Stealth`)
 - Three themes: Dark Gold, Parchment, Midnight; quick-nav buttons to the Table and Stories
 
@@ -32,7 +32,8 @@ Vanilla JS, no build step, no framework. Runs on SQLite by default; nothing to p
 - Token HP panel: damage, heal, temp HP, death saves, and live **AC display**; per-token HP bar overlay (green → yellow → red)
 - **Move tool also selects** — clicking a token selects it (a dedicated Select tool is no longer needed)
 - Monster names hidden from players — shown as an identifier (e.g. "Goblin #2"), editable by the DM from the side panel; per-monster visibility toggle in real time
-- **Token quick-roll side panel** — click a token for full dice rolling: saves, skills, ability checks, damage, initiative. A persistent **dice-mode toggle** (Normal / Adv / Dis / Ask) sits under the name and applies to every roll
+- **Token quick-roll side panel** — click a token for full dice rolling: saves, skills, ability checks, damage, initiative. A persistent **dice-mode toggle** (Normal / Adv / Dis / Ask, default **Ask**) in the top toolbar applies to every roll
+- Right-panel sections use the same gold-bar headers as the character sheet (Conditions, HP, Temp HP, etc.), with the Bulk Edit panel mirroring the same controls for multi-token edits
 - **Equipment wear/unwear** in the right panel — toggling items recomputes AC, initiative, speed, and spell DC and syncs to the token
 - **Monster actions panel** — each action has a **Use** button that posts the action text and a damage roll to chat; players' custom actions have the same **Use** button
 - Click a weapon row to roll the attack, then a **Miss / Roll Damage** prompt; click a spell name to post its full description to chat with a 5e.tools link
@@ -63,9 +64,12 @@ Vanilla JS, no build step, no framework. Runs on SQLite by default; nothing to p
 - Dale Reckoning year names for years 1–1600 (e.g. 1492 DR — Year of Three Ships Sailing)
 - **Campaign date control:** advance a day at a time or jump to any date/festival; current date highlighted in gold
 - **Events:** title, description, type (session / combat / travel / milestone / rest / note), public or DM-only; public events broadcast live to player calendars over SSE
+- **Media attachments:** attach images, video, or audio to any event (one per upload, 25 MB cap; images get auto-generated thumbnails)
 
 ### Player Calendar (tab on `/`)
-- Read-only calendar showing only DM-published public events and the current campaign date (live via SSE)
+- Calendar showing DM-published public events, the player's own journals, and the current campaign date (live via SSE)
+- **Player journals** — players author their own dated entries from the calendar (**+Journal** button). A journal defaults to **shared** (visible to everyone) or can be kept **private** (visible only to the DM and its author); each entry can carry media attachments. Players can edit and delete only their own journals
+- Visibility rule: a viewer sees an event if they are the DM, the event is public, or they authored it
 - Click a day to filter its events; **Go to Today** jumps back to the campaign date; ← / → month navigation
 
 ### Merchant Shop (`/merchant.html`) — DM only

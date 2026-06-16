@@ -123,7 +123,7 @@ char_sheet/
 │   │       ├── backup.js               #     Per-section JSON export / restore
 │   │       ├── characters.js           #     Character CRUD + quick-roll + action use
 │   │       ├── chat.js                 #     Chat messages + image sharing
-│   │       ├── events.js               #     Calendar dates & events
+│   │       ├── events.js               #     Calendar dates, events, player journals & media
 │   │       ├── initiative.js           #     Initiative CRUD + turn control
 │   │       ├── loot.js                 #     Loot items & claims
 │   │       ├── monsters.js             #     Monster library + XML/JSON import
@@ -174,6 +174,8 @@ char_sheet/
 ├── goals/                              # GOTCHA: process definitions
 │   ├── build_app.md                    #   Greenfield build workflow (ATLAS)
 │   ├── char_sheet_dev.md               #   Feature/bugfix/optimization workflow
+│   ├── extend_db_backup_uploads.md     #   Backlog: bundle public/uploads/ into raw DB backup
+│   ├── fix_map_export_memory.md        #   Backlog: fix map export/import OOM via streaming
 │   └── manifest.md                     #   Goals index
 ├── hardprompts/                        # GOTCHA: reusable instruction templates
 │   └── README.md                       #   Layer overview / placeholder
