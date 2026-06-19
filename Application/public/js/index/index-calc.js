@@ -14,8 +14,12 @@ function recalcAll() {
   // Equipped-item bonuses to saves / skills / ability checks. Baked into the
   // displayed value fields so every consumer (display + dice rolls on both the
   // character sheet and the table right-panel, which reads these saved values)
-  // automatically picks them up.
-  const itemBonuses = aggregateItemBonuses(items);
+  // automatically picks them up. Guarded so a stale/missing dnd-data.js (helper
+  // undefined) degrades to "no item bonuses" instead of throwing and aborting
+  // the whole recalculation — which silently breaks the entire sheet.
+  let itemBonuses;
+  try { itemBonuses = aggregateItemBonuses(items); }
+  catch { itemBonuses = { saves: {}, skills: {}, checks: {} }; }
 
   // Ability modifier circles (also the value rolled for ability checks → add
   // any check bonus here). Saves/skills are derived from getMod (ability score),

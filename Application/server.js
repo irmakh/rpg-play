@@ -235,7 +235,7 @@ const MAX_MEDIA_BYTES = 25 * 1024 * 1024;
 // Bump this number whenever frontend JS or CSS files change.
 // Also bump CACHE in public/sw.js to the same value.
 // Both must always match. See deployment notes in CLAUDE.md.
-const FRONTEND_VERSION = 116;
+const FRONTEND_VERSION = 117;
 
 // ── Express app ───────────────────────────────────────────────────────────────
 const app = express();
@@ -247,9 +247,15 @@ app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads'), {
 // Inject ?v=N into all local .js and .css references in HTML pages so
 // browsers always load fresh assets after a version bump.
 // HTML itself is served with no-store so it is never stale.
+// Directory requests ("/", "/console/") are resolved to their index.html so
+// they get the same injection — otherwise express.static would serve the raw
+// page with bare asset URLs that then cache `immutable` forever (this is why
+// the character sheet at "/" kept loading stale JS while /table.html did not).
 app.use((req, res, next) => {
-  if (!req.path.endsWith('.html')) return next();
-  const filePath = path.join(__dirname, 'public', req.path);
+  let rel = req.path;
+  if (rel.endsWith('/')) rel += 'index.html';
+  if (!rel.endsWith('.html')) return next();
+  const filePath = path.join(__dirname, 'public', rel);
   fs.readFile(filePath, 'utf8', (err, html) => {
     if (err) return next();
     const versioned = html.replace(

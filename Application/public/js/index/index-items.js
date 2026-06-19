@@ -71,7 +71,10 @@ function initItemPropsGrid() {
 
 // ── Generic item bonuses (saves / skills / ability checks) ────────────────────
 function _bonusTargetOptionsHtml(selected) {
-  return ITEM_BONUS_GROUPS.map(g =>
+  // Guard against a stale/missing dnd-data.js so the +Add Bonus button still
+  // adds a (currently empty) row rather than throwing and doing nothing.
+  const groups = typeof ITEM_BONUS_GROUPS !== 'undefined' ? ITEM_BONUS_GROUPS : [];
+  return groups.map(g =>
     `<optgroup label="${g.label}">` +
     g.opts.map(([v, l]) => `<option value="${v}"${v === selected ? ' selected' : ''}>${esc(l)}</option>`).join('') +
     `</optgroup>`

@@ -93,6 +93,23 @@
     if (b) b.classList.toggle('pop-active', on);
   }
 
+  // The pop-out window's HTML is built client-side via document.write, so it
+  // never passes through the server's ?v=N injection middleware. Without a
+  // version query the CSS URLs are bare (e.g. /css/table-sheet-popout.css),
+  // which the server caches `immutable` for a year (and the service worker
+  // precaches), so an updated stylesheet — e.g. the tabbed-sheet rules added
+  // later — is never re-fetched and the pop-out renders with stale CSS.
+  // Reuse the ?v= the server already injected onto the opener's own assets so
+  // the pop-out fetches the exact same fresh files.
+  function _assetVer() {
+    const tags = document.querySelectorAll('link[rel="stylesheet"][href*="?v="],script[src*="?v="]');
+    for (const t of tags) {
+      const m = (t.getAttribute('href') || t.getAttribute('src') || '').match(/[?&]v=([^&#]+)/);
+      if (m) return '?v=' + m[1];
+    }
+    return '';
+  }
+
   function _nudgeLayout() {
     if (typeof updateZoomFloat === 'function') { try { updateZoomFloat(); } catch {} }
     try { window.dispatchEvent(new Event('resize')); } catch {}
@@ -135,14 +152,15 @@
     if (!win) { alert('Pop-out was blocked by the browser. Allow pop-ups for this site, then try again.'); return; }
 
     const theme = document.body.dataset.theme || 'classic';
+    const v = _assetVer();
     win.document.open();
     win.document.write(
       '<!DOCTYPE html><html><head><meta charset="utf-8">' +
       '<meta name="viewport" content="width=device-width,initial-scale=1">' +
       '<title>' + cfg.title + '</title>' +
-      '<link rel="stylesheet" href="/css/table.css">' +
-      '<link rel="stylesheet" href="/css/table-theme-modern.css">' +
-      '<link rel="stylesheet" href="/css/table-sheet-popout.css">' +
+      '<link rel="stylesheet" href="/css/table.css' + v + '">' +
+      '<link rel="stylesheet" href="/css/table-theme-modern.css' + v + '">' +
+      '<link rel="stylesheet" href="/css/table-sheet-popout.css' + v + '">' +
       '<style>' +
         'html,body{margin:0;height:100%;overflow:hidden;background:var(--bg2,#1e1e1e)}' +
         '#po-host{position:fixed;inset:0;display:flex;flex-direction:column}' +
