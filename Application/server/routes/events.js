@@ -71,6 +71,178 @@ export default function register(app, ctx) {
     } catch (err) { console.error('PUT /api/calendar/state:', err); res.status(500).json({ error: 'Server error' }); }
   });
 
+  // ── Weather (DM-only) ─────────────────────────────────────────────────────────
+  // Each of the three categories rolls its own d20 to pick a severity level. The
+  // d20→level thresholds are DM-configurable (defaults 15 / 18, i.e. 1–14 normal,
+  // 15–17 level1, 18–20 level2):
+  //   r >= level2Min → level2 ; r >= level1Min → level1 ; else normal.
+  // Temperature: normal = Session Normal; level1 = colder (−2d6); level2 = hotter (+2d6).
+  // Wind:        normal = Normal; level1 = Light; level2 = Strong.
+  // Precip:      normal = None; level1 = Light; level2 = Heavy — snow when the day's
+  //              temperature is at/below freezing (32°F), otherwise rain.
+  const WEATHER_FREEZING = 32;
+  const _d = (n) => Math.floor(Math.random() * n) + 1;
+  const _clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+  // Normalise the two thresholds into a coherent pair: 1 ≤ l1 ≤ l2 ≤ 20.
+  function _clampThresholds(l1, l2) {
+    l1 = _clamp(parseInt(l1) || 15, 1, 20);
+    l2 = _clamp(parseInt(l2) || 18, l1, 20);
+    return { level1Min: l1, level2Min: l2 };
+  }
+  const _levelFromD20 = (r, l1, l2) => (r >= l2 ? 'level2' : r >= l1 ? 'level1' : 'normal');
+
+  function rollWeather(sessionNormal, level1Min, level2Min) {
+    const lvl = (r) => _levelFromD20(r, level1Min, level2Min);
+    // Temperature
+    const tRoll = _d(20), tLevel = lvl(tRoll);
+    let temperature = sessionNormal, tDice = [];
+    if (tLevel !== 'normal') {
+      tDice = [_d(6), _d(6)];
+      const delta = tDice[0] + tDice[1];
+      temperature = tLevel === 'level1' ? sessionNormal - delta : sessionNormal + delta;
+    }
+    // Wind
+    const wRoll = _d(20), wLevel = lvl(wRoll);
+    const wind = wLevel === 'level2' ? 'Strong' : wLevel === 'level1' ? 'Light' : 'Normal';
+    // Precipitation — snow vs rain decided by the day's temperature
+    const pRoll = _d(20), pLevel = lvl(pRoll);
+    const wet = temperature <= WEATHER_FREEZING ? 'snow' : 'rain';
+    const precipitation = pLevel === 'level2' ? `Heavy ${wet}` : pLevel === 'level1' ? `Light ${wet}` : 'None';
+    return {
+      temperature: { roll: tRoll, level: tLevel, dice: tDice, value: temperature },
+      wind:        { roll: wRoll, level: wLevel, value: wind },
+      precipitation: { roll: pRoll, level: pLevel, value: precipitation },
+    };
+  }
+
+  // Build a stable per-day key from a campaign date.
+  function weatherDateKey(d) {
+    if (d.frFestival) return `${d.frYear}-F-${d.frFestival}`;
+    return `${d.frYear}-${d.frMonth}-${d.frDay}`;
+  }
+
+  app.get('/api/weather/config', (req, res) => {
+    try {
+      if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
+      const cfg = DB_PROVIDER === 'localdb' ? ldb.getWeatherConfig() : { sessionNormal: 60, level1Min: 15, level2Min: 18 };
+      res.set('Cache-Control', 'no-store');
+      res.json(cfg);
+    } catch (err) { console.error('GET /api/weather/config:', err); res.status(500).json({ error: 'Server error' }); }
+  });
+
+  app.put('/api/weather/config', (req, res) => {
+    try {
+      if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
+      const body = req.body || {};
+      const patch = {};
+      if (body.sessionNormal != null) {
+        const n = parseInt(body.sessionNormal);
+        if (!Number.isFinite(n)) return res.status(400).json({ error: 'Invalid sessionNormal' });
+        patch.sessionNormal = n;
+      }
+      if (body.level1Min != null || body.level2Min != null) {
+        const cur = DB_PROVIDER === 'localdb' ? ldb.getWeatherConfig() : { level1Min: 15, level2Min: 18 };
+        const { level1Min, level2Min } = _clampThresholds(
+          body.level1Min != null ? body.level1Min : cur.level1Min,
+          body.level2Min != null ? body.level2Min : cur.level2Min);
+        patch.level1Min = level1Min;
+        patch.level2Min = level2Min;
+      }
+      if (!Object.keys(patch).length) return res.status(400).json({ error: 'Nothing to update' });
+      if (DB_PROVIDER === 'localdb') ldb.saveWeatherConfig(patch);
+      res.json({ ok: true, ...patch });
+    } catch (err) { console.error('PUT /api/weather/config:', err); res.status(500).json({ error: 'Server error' }); }
+  });
+
+  // Public read — players see weather on the index calendar tab and the table
+  // screen reads "today's" weather. Weather is environmental, not secret.
+  app.get('/api/weather/log', (req, res) => {
+    try {
+      const log = DB_PROVIDER === 'localdb' ? ldb.listWeatherLog() : [];
+      res.set('Cache-Control', 'no-store');
+      res.json(log);
+    } catch (err) { console.error('GET /api/weather/log:', err); res.status(500).json({ error: 'Server error' }); }
+  });
+
+  // Manually set/override a date's weather (DM-only). Accepts explicit level +
+  // value for each category — used by the events-screen editor. roll is null
+  // for manual entries (no d20 was thrown).
+  const WX_LEVELS = ['normal', 'level1', 'level2'];
+  function _normCategory(o, allowDice) {
+    if (!o || typeof o !== 'object') return null;
+    const level = WX_LEVELS.includes(o.level) ? o.level : 'normal';
+    const roll = Number.isFinite(parseInt(o.roll)) ? parseInt(o.roll) : null;
+    const out = { roll, level };
+    if (allowDice) out.dice = Array.isArray(o.dice) ? o.dice.map(n => parseInt(n) || 0).slice(0, 4) : [];
+    return out;
+  }
+
+  app.post('/api/weather/set', (req, res) => {
+    try {
+      if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
+      if (DB_PROVIDER !== 'localdb') return res.status(501).json({ error: 'Weather requires localdb' });
+      const { date, sessionNormal, dateLabel, temperature, wind, precipitation } = req.body || {};
+      if (!date || typeof date.frYear !== 'number') return res.status(400).json({ error: 'Invalid date' });
+      const t = _normCategory(temperature, true);
+      const w = _normCategory(wind, false);
+      const p = _normCategory(precipitation, false);
+      if (!t || !w || !p) return res.status(400).json({ error: 'Missing weather fields' });
+      const tempVal = parseInt(temperature.value);
+      if (!Number.isFinite(tempVal)) return res.status(400).json({ error: 'Invalid temperature value' });
+      const sn = Number.isFinite(parseInt(sessionNormal)) ? parseInt(sessionNormal) : ldb.getWeatherConfig().sessionNormal;
+      const entry = {
+        id: weatherDateKey(date),
+        frYear: date.frYear, frMonth: date.frMonth ?? null, frDay: date.frDay ?? null, frFestival: date.frFestival || '',
+        dateLabel: String(dateLabel || ''),
+        sessionNormal: sn,
+        temperature: { ...t, value: tempVal },
+        wind: { ...w, value: String(wind.value || 'Normal') },
+        precipitation: { ...p, value: String(precipitation.value || 'None') },
+      };
+      const saved = ldb.saveWeatherEntry(entry);
+      broadcast('calendar-updated', { type: 'weather' });
+      res.json(saved);
+    } catch (err) { console.error('POST /api/weather/set:', err); res.status(500).json({ error: 'Server error' }); }
+  });
+
+  app.delete('/api/weather/log/:id', (req, res) => {
+    try {
+      if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
+      if (DB_PROVIDER === 'localdb') ldb.deleteWeatherEntry(req.params.id);
+      broadcast('calendar-updated', { type: 'weather' });
+      res.json({ ok: true });
+    } catch (err) { console.error('DELETE /api/weather/log:', err); res.status(500).json({ error: 'Server error' }); }
+  });
+
+  app.post('/api/weather/roll', (req, res) => {
+    try {
+      if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
+      if (DB_PROVIDER !== 'localdb') return res.status(501).json({ error: 'Weather requires localdb' });
+      const { date, sessionNormal, dateLabel } = req.body || {};
+      if (!date || typeof date.frYear !== 'number') return res.status(400).json({ error: 'Invalid date' });
+      const sn = parseInt(sessionNormal);
+      if (!Number.isFinite(sn)) return res.status(400).json({ error: 'Invalid sessionNormal' });
+      // Resolve the d20 thresholds from the request (modal) or the stored config.
+      const cur = ldb.getWeatherConfig();
+      const { level1Min, level2Min } = _clampThresholds(
+        req.body.level1Min != null ? req.body.level1Min : cur.level1Min,
+        req.body.level2Min != null ? req.body.level2Min : cur.level2Min);
+      // Persist the latest Session Normal + thresholds so they survive sessions.
+      ldb.saveWeatherConfig({ sessionNormal: sn, level1Min, level2Min });
+      const rolled = rollWeather(sn, level1Min, level2Min);
+      const entry = {
+        id: weatherDateKey(date),
+        frYear: date.frYear, frMonth: date.frMonth ?? null, frDay: date.frDay ?? null, frFestival: date.frFestival || '',
+        dateLabel: String(dateLabel || ''),
+        sessionNormal: sn,
+        ...rolled,
+      };
+      const saved = ldb.saveWeatherEntry(entry);
+      broadcast('calendar-updated', { type: 'weather' });
+      res.json(saved);
+    } catch (err) { console.error('POST /api/weather/roll:', err); res.status(500).json({ error: 'Server error' }); }
+  });
+
   app.get('/api/calendar/events', async (req, res) => {
     try {
       const isDM = masterAuth(req);

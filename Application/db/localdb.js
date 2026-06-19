@@ -124,6 +124,20 @@ db.exec(`
     tags TEXT DEFAULT '[]', map_name TEXT DEFAULT '',
     created_at TEXT DEFAULT (datetime('now'))
   );
+  CREATE TABLE IF NOT EXISTS weather_config (
+    id TEXT PRIMARY KEY, session_normal INTEGER DEFAULT 60,
+    level1_min INTEGER DEFAULT 15, level2_min INTEGER DEFAULT 18
+  );
+  CREATE TABLE IF NOT EXISTS weather_log (
+    id TEXT PRIMARY KEY,
+    fr_year INTEGER, fr_month INTEGER, fr_day INTEGER, fr_festival TEXT DEFAULT '',
+    date_label TEXT DEFAULT '',
+    session_normal INTEGER DEFAULT 60,
+    temp_roll INTEGER, temp_level TEXT, temp_dice TEXT DEFAULT '[]', temperature INTEGER,
+    wind_roll INTEGER, wind_level TEXT, wind TEXT,
+    precip_roll INTEGER, precip_level TEXT, precipitation TEXT,
+    created_at TEXT DEFAULT (datetime('now'))
+  );
 `);
 
 // Indexes (idempotent — safe on every startup)
@@ -167,6 +181,8 @@ try { db.prepare("ALTER TABLE shop_config ADD COLUMN activeTag TEXT DEFAULT ''")
 try { db.prepare("ALTER TABLE shop_items ADD COLUMN spellAtkBonus INTEGER DEFAULT 0").run(); } catch {}
 try { db.prepare("ALTER TABLE shop_items ADD COLUMN spellDcBonus INTEGER DEFAULT 0").run(); } catch {}
 try { db.prepare("ALTER TABLE prepared_maps ADD COLUMN preparedTokens TEXT DEFAULT '[]'").run(); } catch {}
+try { db.prepare("ALTER TABLE weather_config ADD COLUMN level1_min INTEGER DEFAULT 15").run(); } catch {}
+try { db.prepare("ALTER TABLE weather_config ADD COLUMN level2_min INTEGER DEFAULT 18").run(); } catch {}
 db.prepare("INSERT OR IGNORE INTO initiative_state (id, currentId) VALUES (?, '')").run(INIT_STATE_ID);
 db.prepare("INSERT OR IGNORE INTO table_state (id) VALUES (?)").run(TABLE_STATE_ID);
 db.prepare("INSERT OR IGNORE INTO events_state (id, dataJson) VALUES (?, '{}')").run(EVENTS_ID);
@@ -678,6 +694,74 @@ export function getCalendarState() {
 export function saveCalendarState(s) {
   db.prepare('INSERT OR REPLACE INTO calendar_state (id, fr_year, fr_month, fr_day, fr_festival) VALUES (?,?,?,?,?)')
     .run(CAL_STATE_ID, s.frYear, s.frMonth ?? null, s.frDay ?? null, s.frFestival || '');
+}
+
+// ── Weather ───────────────────────────────────────────────────────────────────
+const WEATHER_CFG_ID = 'singleton';
+
+export function getWeatherConfig() {
+  const r = db.prepare('SELECT * FROM weather_config WHERE id = ?').get(WEATHER_CFG_ID);
+  return {
+    sessionNormal: r ? r.session_normal : 60,
+    level1Min: r && r.level1_min != null ? r.level1_min : 15,
+    level2Min: r && r.level2_min != null ? r.level2_min : 18,
+  };
+}
+
+// Partial update — only overwrites the fields provided (others keep their
+// current value), so saving Session Normal alone does not reset the thresholds.
+export function saveWeatherConfig(cfg) {
+  const cur = getWeatherConfig();
+  const sessionNormal = cfg.sessionNormal != null ? (parseInt(cfg.sessionNormal) || 60) : cur.sessionNormal;
+  const level1Min = cfg.level1Min != null ? parseInt(cfg.level1Min) : cur.level1Min;
+  const level2Min = cfg.level2Min != null ? parseInt(cfg.level2Min) : cur.level2Min;
+  db.prepare('INSERT OR REPLACE INTO weather_config (id, session_normal, level1_min, level2_min) VALUES (?,?,?,?)')
+    .run(WEATHER_CFG_ID, sessionNormal, level1Min, level2Min);
+}
+
+function _weatherRow(r) {
+  if (!r) return null;
+  let tempDice = [];
+  try { tempDice = JSON.parse(r.temp_dice || '[]'); } catch {}
+  return {
+    id: r.id,
+    frYear: r.fr_year, frMonth: r.fr_month, frDay: r.fr_day, frFestival: r.fr_festival || '',
+    dateLabel: r.date_label || '',
+    sessionNormal: r.session_normal,
+    temperature: { roll: r.temp_roll, level: r.temp_level, dice: tempDice, value: r.temperature },
+    wind: { roll: r.wind_roll, level: r.wind_level, value: r.wind },
+    precipitation: { roll: r.precip_roll, level: r.precip_level, value: r.precipitation },
+    createdAt: r.created_at,
+  };
+}
+
+export function listWeatherLog() {
+  return db.prepare('SELECT * FROM weather_log ORDER BY created_at DESC').all().map(_weatherRow);
+}
+
+export function getWeatherForDate(id) {
+  return _weatherRow(db.prepare('SELECT * FROM weather_log WHERE id = ?').get(id));
+}
+
+// Insert or overwrite the weather for a given date key (e.entry.id).
+export function saveWeatherEntry(e) {
+  db.prepare(`INSERT OR REPLACE INTO weather_log
+    (id, fr_year, fr_month, fr_day, fr_festival, date_label, session_normal,
+     temp_roll, temp_level, temp_dice, temperature,
+     wind_roll, wind_level, wind,
+     precip_roll, precip_level, precipitation, created_at)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, datetime('now'))`)
+    .run(
+      e.id, e.frYear, e.frMonth ?? null, e.frDay ?? null, e.frFestival || '', e.dateLabel || '', e.sessionNormal,
+      e.temperature.roll, e.temperature.level, JSON.stringify(e.temperature.dice || []), e.temperature.value,
+      e.wind.roll, e.wind.level, e.wind.value,
+      e.precipitation.roll, e.precipitation.level, e.precipitation.value
+    );
+  return getWeatherForDate(e.id);
+}
+
+export function deleteWeatherEntry(id) {
+  db.prepare('DELETE FROM weather_log WHERE id = ?').run(id);
 }
 
 const _CAL_ORDER = 'ORDER BY fr_year, fr_month NULLS LAST, fr_day NULLS LAST';

@@ -1,4 +1,4 @@
-const CACHE = 'rpg-v117';
+const CACHE = 'rpg-v123';
 
 const STATIC = [
   // Core pages
@@ -20,6 +20,7 @@ const STATIC = [
   '/css/table.css',
   '/css/table-theme-modern.css',
   '/css/table-sheet-popout.css',
+  '/css/weather.css',
   '/css/console/table-console.css',
   // Shared JS libs
   '/js/monster-stat-block.js',
@@ -29,6 +30,8 @@ const STATIC = [
   '/js/lib/realtime.js',
   '/js/lib/dice-engine.js',
   '/js/lib/lightbox.js',
+  '/js/lib/fr_calendar.js',
+  '/js/lib/weather-ui.js',
   // Table JS modules
   '/js/table/table-state.js',
   '/js/table/table-utils.js',
@@ -43,6 +46,7 @@ const STATIC = [
   '/js/table/table-addtoken.js',
   '/js/table/table-music.js',
   '/js/table/table-popout.js',
+  '/js/table/table-weather.js',
   '/js/table/table-main.js',
   // Console JS
   '/js/console/table-console.js',

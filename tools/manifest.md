@@ -46,6 +46,8 @@
 - **listCalendarEvents({ isDM, charId })** - Viewer-aware calendar event list: DM sees all; a player sees public events plus their own (private journals authored by `charId`); empty `charId` returns public only
 - **getCalendarEvent(id)** - Single calendar event row (used for journal edit/delete ownership checks)
 - **createCalendarEvent / updateCalendarEvent / deleteCalendarEvent** - Calendar event CRUD; rows carry `authorCharId`/`authorName` (empty = DM event) and a `media` array (image/audio/video descriptors) serialised to `media_json`
+- **getWeatherConfig / saveWeatherConfig(sessionNormal)** - Single-row persisted DM "Session Normal" base temperature for the weather system (defaults 60)
+- **listWeatherLog / getWeatherForDate(id) / saveWeatherEntry(entry)** - Per-day weather log CRUD; `id` is a date key (`YYYY-M-D` or `YYYY-F-festival`) so re-rolling a day overwrites it; rows store the d20 roll + level + computed value for temperature/wind/precipitation
 
 ## Application — Calendar / Journal API (`Application/server/routes/events.js`)
 
@@ -53,6 +55,24 @@
 - `POST /api/calendar/events` — DM creates an event; a character creates a journal (author forced, `shared` → public, `eventType='journal'`)
 - `PUT/DELETE /api/calendar/events/:id` — ownership-gated: DM edits/deletes anything; a player only their own journal
 - `POST /api/calendar/media` — upload one attachment (base64 data URL); images → `processImageSizes` (`calendar/`), audio/video → `saveUploadFile`; validates against `SHARED_MEDIA_MIME`, capped at `MAX_MEDIA_BYTES`
+
+## Application — Weather API (`Application/server/routes/events.js`, DM-only)
+
+> DM daily-weather roller surfaced in events.html (button next to "Set Date…"). All routes require master password.
+
+- `GET/PUT /api/weather/config` — read/save the persisted "Session Normal" base temperature
+- `GET /api/weather/log` — full per-day weather history (newest first)
+- `POST /api/weather/roll` — server rolls weather for `{date, sessionNormal, dateLabel}`, stores it against the date key (overwrites that day), broadcasts `calendar-updated`. Mechanics: each of Temperature/Wind/Precipitation rolls its own d20 (1–14 normal, 15–17 level1, 18–20 level2). Temperature: normal = SN, level1 = SN−2d6 (colder), level2 = SN+2d6 (hotter). Wind: Normal/Light/Strong. Precip: None/Light/Heavy with snow when temp ≤ 32°F (`WEATHER_FREEZING`) else rain.
+- `POST /api/weather/set` — DM manual override: `{date, dateLabel, sessionNormal, temperature:{level,value}, wind:{level,value}, precipitation:{level,value}}`. Stored with `roll:null` (no dice). Unknown levels coerce to `normal`.
+- `DELETE /api/weather/log/:id` — DM removes a day's weather.
+- **NOTE:** `GET /api/weather/log` is PUBLIC (no auth) so the player index-calendar tab and the table-screen toolbar can read weather. `config`/`roll`/`set`/`delete` stay master-password gated.
+
+## Application — Weather UI (shared frontend)
+
+- **`public/js/lib/weather-ui.js`** — shared weather helpers loaded by events.html, index.html, table.html. `weatherDateKey(d)`, `weatherSetRegistry(map)`, `weatherIconsHTML/weatherIconSpan` (CSS-sprite glyphs cropped from `/img/weather.png`), `weatherSummary(e)`, `weatherTooltipHTML(e)`, and a singleton floating tooltip (`weatherCellTip`/`weatherShowTipEntry`/`weatherMoveTip`/`weatherHideTip`). `weatherDayMarkHTML(e,key)` builds a calendar-cell marker with hover handlers.
+- **`public/css/weather.css`** — sprite icon classes (`.wx-ico.wx-hot/.wx-normal/.wx-cold/.wx-rain/.wx-snow/.wx-wind`) cropped from `/img/weather.png` (1305×299, 6 equal columns), base 48px tile at background-size 313×72, plus the `#wx-tooltip` floating card, day-cell markers, and the table `#wx-toolbar` widget. Sprite px positions are tunable in one place.
+- **`public/js/table/table-weather.js`** — table-screen toolbar widget: `loadTableWeather()` reads calendar state + weather log, finds today's entry into `_tableWeatherToday`, renders `#wx-toolbar`; refreshed on the `calendar-updated` SSE event.
+- Events calendar (`events.js`) and player calendar (`index-calendar.js`) both load `/api/weather/log` into a `*Weather` map, draw per-day markers in their grid render, and register the map for tooltips. The events weather modal additionally edits weather (roll / manual level+value / save / delete) per `weatherTargetDate`.
 
 ## Application — Stories Module
 

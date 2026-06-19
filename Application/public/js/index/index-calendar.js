@@ -2,6 +2,7 @@
 let pcalView        = { type: 'month', month: 1, year: 1492 };
 let pcalCurrentDate = { frYear: 1492, frMonth: 1, frDay: 1, frFestival: '' };
 let pcalEvents      = [];
+let pcalWeather     = {};   // date-key → weather entry (read-only on the player calendar)
 let pcalLoaded      = false;
 let pcalSelectedDay = null; // { month, day } or { festival } when a cell is clicked
 let pcalEditingId    = null; // id of the journal being edited, or null when adding
@@ -22,6 +23,14 @@ async function pcalFetch() {
     ]);
     if (stateRes.ok) pcalCurrentDate = await stateRes.json();
     if (evRes.ok)    pcalEvents       = await evRes.json();
+  } catch {}
+  // Weather (public read) — drives the calendar hover tooltips for players.
+  try {
+    const wxRes = await fetch('/api/weather/log?_=' + Date.now());
+    const log = wxRes.ok ? await wxRes.json() : [];
+    pcalWeather = {};
+    for (const e of log) pcalWeather[e.id] = e;
+    weatherSetRegistry(pcalWeather);
   } catch {}
   pcalView = frDateToView(pcalCurrentDate);
   pcalRender();
@@ -96,6 +105,8 @@ function pcalRenderGrid() {
     const dots       = pcalEventsForView().map(e =>
       `<span class="cal-dot pub" title="${esc(e.title)}"></span>`
     ).join('');
+    const festKey = `${pcalView.year}-F-${pcalView.festival}`;
+    const festWx  = pcalWeather[festKey];
     area.innerHTML = `
       <div class="cal-festival-row${isToday?' cal-is-today':''}${isSelected?' cal-is-today':''}"
            onclick="pcalDayClick(null,'${pcalView.festival}')" style="cursor:pointer">
@@ -103,6 +114,7 @@ function pcalRenderGrid() {
         <span class="cal-fest-name">${esc(fest ? fest.name : pcalView.festival)}</span>
         ${dots ? `<div class="cal-fest-dots">${dots}</div>` : ''}
         ${isToday ? '<span class="cal-fest-mark">Today</span>' : ''}
+        ${festWx ? weatherDayMarkHTML(festWx, festKey) : ''}
       </div>`;
     return;
   }
@@ -124,10 +136,13 @@ function pcalRenderGrid() {
       const dayEvs     = evByDay[day] || [];
       const dots       = dayEvs.map(e => `<span class="cal-dot pub" title="${esc(e.title)}"></span>`).join('');
       const classes    = ['cal-day-cell', isToday ? 'cal-is-today' : '', isSelected ? 'cal-selected' : ''].filter(Boolean).join(' ');
+      const wxKey      = `${pcalView.year}-${pcalView.month}-${day}`;
+      const wx         = pcalWeather[wxKey];
       cells += `
         <td class="${classes}" onclick="pcalDayClick(${day},null)">
           <span class="cal-day-num">${day}</span>
           ${dots ? `<div class="cal-dots">${dots}</div>` : ''}
+          ${wx ? weatherDayMarkHTML(wx, wxKey) : ''}
         </td>`;
     }
     rows += `<tr>${cells}</tr>`;

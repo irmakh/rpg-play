@@ -69,6 +69,7 @@ async function calLoad() {
     if (stateRes.ok) calCurrentDate = await stateRes.json();
     if (evRes.ok)    calEvents       = await evRes.json();
     calView = frDateToView(calCurrentDate);
+    await weatherLoadLog();
     setSaveStatus('');
   } catch (e) { setSaveStatus('Load error', true); console.error('calLoad:', e); }
   calRender();
@@ -117,12 +118,15 @@ function calRenderGrid() {
     const dots = calEventsForView().map(e =>
       `<span class="cal-dot ${e.isPublic?'pub':'priv'}" title="${esc(e.title)}"></span>`
     ).join('');
+    const festKey = `${calView.year}-F-${calView.festival}`;
+    const festWx  = calWeather[festKey];
     area.innerHTML = `
       <div class="cal-festival-row${isToday?' cal-is-today':''}" onclick="calDayClick(null,null,'${calView.festival}')">
         <span class="cal-fest-icon">✦</span>
         <span class="cal-fest-name">${esc(fest ? fest.name : calView.festival)}</span>
         ${dots ? `<div class="cal-fest-dots">${dots}</div>` : ''}
         ${isToday ? '<span class="cal-fest-mark">Today</span>' : ''}
+        ${festWx ? weatherDayMarkHTML(festWx, festKey) : ''}
       </div>`;
     return;
   }
@@ -144,10 +148,13 @@ function calRenderGrid() {
       const isToday = frDatesEqual(calCurrentDate, { frYear: calView.year, frMonth: calView.month, frDay: day, frFestival: '' });
       const dayEvs  = evByDay[day] || [];
       const dots    = dayEvs.map(e => `<span class="cal-dot ${e.isPublic?'pub':'priv'}" title="${esc(e.title)}"></span>`).join('');
+      const wxKey   = `${calView.year}-${calView.month}-${day}`;
+      const wx      = calWeather[wxKey];
       cells += `
         <td class="cal-day-cell${isToday?' cal-is-today':''}" onclick="calDayClick(${calView.month},${day},null)">
           <span class="cal-day-num">${day}</span>
           ${dots ? `<div class="cal-dots">${dots}</div>` : ''}
+          ${wx ? weatherDayMarkHTML(wx, wxKey) : ''}
         </td>`;
     }
     rows += `<tr>${cells}</tr>`;
@@ -286,6 +293,250 @@ function calSetCurrentDate() {
   }
   calCloseJumpModal();
   calSaveCurrentDate(newDate);
+}
+
+// ── Weather ───────────────────────────────────────────────────────────────────
+// calWeather maps date-key → entry; drives the calendar hover tooltips. The
+// weather modal edits weatherTargetDate (defaults to the campaign date, but a
+// history click re-targets any past day). weatherDateKey / tooltip helpers live
+// in js/lib/weather-ui.js.
+let calWeather = {};
+let weatherTargetDate = null;
+
+async function weatherLoadLog() {
+  try {
+    const res = await fetch('/api/weather/log?_=' + Date.now(), { headers: { 'X-Master-Password': masterPw } });
+    const log = res.ok ? await res.json() : [];
+    calWeather = {};
+    for (const e of log) calWeather[e.id] = e;
+    weatherSetRegistry(calWeather);
+    return log;
+  } catch { return []; }
+}
+
+async function weatherOpenModal() {
+  document.getElementById('weather-modal').style.display = 'flex';
+  try {
+    const cfgRes = await fetch('/api/weather/config?_=' + Date.now(), { headers: { 'X-Master-Password': masterPw } });
+    if (cfgRes.ok) {
+      const cfg = await cfgRes.json();
+      document.getElementById('weather-session-normal').value = cfg.sessionNormal;
+      document.getElementById('weather-l1-min').value = cfg.level1Min;
+      document.getElementById('weather-l2-min').value = cfg.level2Min;
+    }
+  } catch (e) { console.error('weatherOpenModal:', e); }
+  weatherRangeHelp();
+  await weatherLoadLog();
+  weatherSetTarget(calCurrentDate);
+  weatherRenderHistory();
+}
+
+function weatherCloseModal() { document.getElementById('weather-modal').style.display = 'none'; weatherHideTip(); }
+
+// ── Roll date + level-range controls ──────────────────────────────────────────
+function weatherToggleDateTypeView() {
+  const fest = document.getElementById('weather-date-type').value === 'festival';
+  document.getElementById('weather-date-day-fields').style.display  = fest ? 'none' : '';
+  document.getElementById('weather-date-fest-fields').style.display = fest ? '' : 'none';
+}
+function weatherToggleDateType() { weatherToggleDateTypeView(); weatherOnDateChange(); }
+
+function weatherReadDateInputs() {
+  if (document.getElementById('weather-date-type').value === 'festival') {
+    return {
+      frYear: parseInt(document.getElementById('weather-date-fest-year').value) || 1492,
+      frMonth: null, frDay: null,
+      frFestival: document.getElementById('weather-date-festival').value,
+    };
+  }
+  return {
+    frYear: parseInt(document.getElementById('weather-date-year').value) || 1492,
+    frMonth: parseInt(document.getElementById('weather-date-month').value) || 1,
+    frDay: Math.min(30, Math.max(1, parseInt(document.getElementById('weather-date-day').value) || 1)),
+    frFestival: '',
+  };
+}
+// Date inputs changed → re-target and load that day's existing weather.
+function weatherOnDateChange() {
+  weatherTargetDate = weatherReadDateInputs();
+  document.getElementById('weather-target-date').textContent = frFormatDate(weatherTargetDate);
+  const existing = calWeather[weatherDateKey(weatherTargetDate)];
+  if (existing) weatherFillForm(existing); else weatherClearForm();
+}
+
+// Point the editor at a date: reflect it into the date inputs, then load its
+// existing weather (if any) into the form.
+function weatherSetTarget(date) {
+  weatherTargetDate = date;
+  if (date.frFestival) {
+    document.getElementById('weather-date-type').value      = 'festival';
+    document.getElementById('weather-date-fest-year').value = date.frYear;
+    document.getElementById('weather-date-festival').value  = date.frFestival;
+  } else {
+    document.getElementById('weather-date-type').value  = 'day';
+    document.getElementById('weather-date-year').value  = date.frYear;
+    document.getElementById('weather-date-month').value = date.frMonth || 1;
+    document.getElementById('weather-date-day').value   = date.frDay || 1;
+  }
+  weatherToggleDateTypeView();
+  document.getElementById('weather-target-date').textContent = frFormatDate(date);
+  const existing = calWeather[weatherDateKey(date)];
+  if (existing) weatherFillForm(existing); else weatherClearForm();
+}
+function weatherUseCurrentDate() { weatherSetTarget(calCurrentDate); }
+
+// Clamp the two thresholds (1 ≤ l1 ≤ l2 ≤ 20), refresh the range hint, persist.
+function weatherOnThresholds() {
+  let l1 = parseInt(document.getElementById('weather-l1-min').value);
+  let l2 = parseInt(document.getElementById('weather-l2-min').value);
+  l1 = Math.min(20, Math.max(1, Number.isFinite(l1) ? l1 : 15));
+  l2 = Math.min(20, Math.max(l1, Number.isFinite(l2) ? l2 : 18));
+  document.getElementById('weather-l1-min').value = l1;
+  document.getElementById('weather-l2-min').value = l2;
+  weatherRangeHelp();
+  fetch('/api/weather/config', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', 'X-Master-Password': masterPw },
+    body: JSON.stringify({ level1Min: l1, level2Min: l2 }),
+  }).catch(e => console.error('weatherOnThresholds:', e));
+}
+function weatherRangeHelp() {
+  const l1 = parseInt(document.getElementById('weather-l1-min').value) || 15;
+  const l2 = parseInt(document.getElementById('weather-l2-min').value) || 18;
+  const rng = (a, b) => a > b ? 'never' : a === b ? String(a) : `${a}–${b}`;
+  document.getElementById('weather-range-help').textContent =
+    `Normal ${rng(1, l1 - 1)} · Level 1 ${rng(l1, l2 - 1)} · Level 2 ${rng(l2, 20)}`;
+}
+
+function weatherFillForm(e) {
+  document.getElementById('weather-temp-level').value  = e.temperature.level || 'normal';
+  document.getElementById('weather-temp-value').value  = e.temperature.value;
+  document.getElementById('weather-wind-value').value  = e.wind.value || 'Normal';
+  document.getElementById('weather-precip-value').value = e.precipitation.value || 'None';
+}
+function weatherClearForm() {
+  document.getElementById('weather-temp-level').value  = 'normal';
+  document.getElementById('weather-temp-value').value  = parseInt(document.getElementById('weather-session-normal').value) || 60;
+  document.getElementById('weather-wind-value').value  = 'Normal';
+  document.getElementById('weather-precip-value').value = 'None';
+}
+// When the temperature level is set back to Normal, reset the value to the base.
+function weatherOnTempLevel() {
+  if (document.getElementById('weather-temp-level').value === 'normal') {
+    document.getElementById('weather-temp-value').value = parseInt(document.getElementById('weather-session-normal').value) || 60;
+  }
+}
+
+async function weatherSaveConfig() {
+  const n = parseInt(document.getElementById('weather-session-normal').value);
+  if (!Number.isFinite(n)) return;
+  try {
+    await fetch('/api/weather/config', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'X-Master-Password': masterPw },
+      body: JSON.stringify({ sessionNormal: n }),
+    });
+  } catch (e) { console.error('weatherSaveConfig:', e); }
+}
+
+async function weatherRoll() {
+  const n = parseInt(document.getElementById('weather-session-normal').value);
+  if (!Number.isFinite(n)) { setSaveStatus('Enter a Session Normal value', true); return; }
+  weatherTargetDate = weatherReadDateInputs();   // honour any just-typed date
+  const btn = document.getElementById('weather-roll-btn');
+  btn.disabled = true;
+  try {
+    const res = await fetch('/api/weather/roll', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Master-Password': masterPw },
+      body: JSON.stringify({
+        date: weatherTargetDate,
+        sessionNormal: n,
+        level1Min: parseInt(document.getElementById('weather-l1-min').value),
+        level2Min: parseInt(document.getElementById('weather-l2-min').value),
+        dateLabel: frFormatDate(weatherTargetDate),
+      }),
+    });
+    if (!res.ok) { setSaveStatus('Weather roll failed', true); return; }
+    weatherFillForm(await res.json());
+    await weatherLoadLog();
+    weatherRenderHistory();
+    calRenderGrid();
+  } catch (e) { console.error('weatherRoll:', e); setSaveStatus('Weather roll failed', true); }
+  finally { btn.disabled = false; }
+}
+
+// Derive a severity level from a chosen wind / precipitation value.
+function _weatherWindLevel(v) { return v === 'Strong' ? 'level2' : v === 'Light' ? 'level1' : 'normal'; }
+function _weatherPrecipLevel(v) {
+  const s = String(v).toLowerCase();
+  if (s.startsWith('heavy')) return 'level2';
+  if (s.startsWith('light')) return 'level1';
+  return 'normal';
+}
+
+async function weatherSave() {
+  const tempVal = parseInt(document.getElementById('weather-temp-value').value);
+  if (!Number.isFinite(tempVal)) { setSaveStatus('Enter a temperature', true); return; }
+  weatherTargetDate = weatherReadDateInputs();   // honour any just-typed date
+  const windVal   = document.getElementById('weather-wind-value').value;
+  const precipVal = document.getElementById('weather-precip-value').value;
+  const body = {
+    date: weatherTargetDate,
+    dateLabel: frFormatDate(weatherTargetDate),
+    sessionNormal: parseInt(document.getElementById('weather-session-normal').value) || 60,
+    temperature:   { level: document.getElementById('weather-temp-level').value, value: tempVal },
+    wind:          { level: _weatherWindLevel(windVal), value: windVal },
+    precipitation: { level: _weatherPrecipLevel(precipVal), value: precipVal },
+  };
+  try {
+    const res = await fetch('/api/weather/set', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Master-Password': masterPw },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) { setSaveStatus('Weather save failed', true); return; }
+    setSaveStatus('Weather saved');
+    setTimeout(() => setSaveStatus(''), 1500);
+    await weatherLoadLog();
+    weatherRenderHistory();
+    calRenderGrid();
+  } catch (e) { console.error('weatherSave:', e); setSaveStatus('Weather save failed', true); }
+}
+
+async function weatherDeleteEntry(id) {
+  try {
+    await fetch('/api/weather/log/' + encodeURIComponent(id), {
+      method: 'DELETE', headers: { 'X-Master-Password': masterPw },
+    });
+    await weatherLoadLog();
+    weatherRenderHistory();
+    calRenderGrid();
+  } catch (e) { console.error('weatherDeleteEntry:', e); }
+}
+
+function weatherRenderHistory() {
+  const el = document.getElementById('weather-history');
+  const log = Object.values(calWeather);
+  if (!log.length) {
+    el.innerHTML = '<div style="font-size:12px;color:var(--txd);padding:6px 0">No weather recorded yet.</div>';
+    return;
+  }
+  el.innerHTML = log.map(e => `
+    <div style="display:flex;justify-content:space-between;gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid var(--sep);font-size:12px">
+      <span style="flex:1;min-width:0;cursor:pointer" onclick="weatherEditFromHistory('${escJs(e.id)}')" title="Edit this day">
+        ${weatherIconSpan(weatherTempIconClass(e), 18)}
+        <b style="margin-left:4px">${esc(e.dateLabel || frFormatDate(e))}</b>
+        <span style="color:var(--txd)"> — ${esc(weatherSummary(e))}</span>
+      </span>
+      <button class="btn sm" style="flex-shrink:0" onclick="weatherDeleteEntry('${escJs(e.id)}')" title="Delete">✕</button>
+    </div>`).join('');
+}
+
+function weatherEditFromHistory(id) {
+  const e = calWeather[id];
+  if (!e) return;
+  weatherSetTarget({ frYear: e.frYear, frMonth: e.frMonth, frDay: e.frDay, frFestival: e.frFestival || '' });
 }
 
 // ── Events CRUD ───────────────────────────────────────────────────────────────

@@ -50,6 +50,20 @@ export function makeLdb() {
       author_char_id TEXT DEFAULT '', author_name TEXT DEFAULT '', media_json TEXT DEFAULT '[]',
       created_at TEXT DEFAULT (datetime('now'))
     );
+    CREATE TABLE IF NOT EXISTS weather_config (
+      id TEXT PRIMARY KEY, session_normal INTEGER DEFAULT 60,
+      level1_min INTEGER DEFAULT 15, level2_min INTEGER DEFAULT 18
+    );
+    CREATE TABLE IF NOT EXISTS weather_log (
+      id TEXT PRIMARY KEY,
+      fr_year INTEGER, fr_month INTEGER, fr_day INTEGER, fr_festival TEXT DEFAULT '',
+      date_label TEXT DEFAULT '',
+      session_normal INTEGER DEFAULT 60,
+      temp_roll INTEGER, temp_level TEXT, temp_dice TEXT DEFAULT '[]', temperature INTEGER,
+      wind_roll INTEGER, wind_level TEXT, wind TEXT,
+      precip_roll INTEGER, precip_level TEXT, precipitation TEXT,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
   `);
 
   // Singleton rows
@@ -222,6 +236,61 @@ export function makeLdb() {
     db.prepare('DELETE FROM calendar_events WHERE id = ?').run(id);
   }
 
+  // ── weather (mirror db/localdb.js) ──────────────────────────────────────────
+  function getWeatherConfig() {
+    const r = db.prepare("SELECT * FROM weather_config WHERE id = 'singleton'").get();
+    return {
+      sessionNormal: r ? r.session_normal : 60,
+      level1Min: r && r.level1_min != null ? r.level1_min : 15,
+      level2Min: r && r.level2_min != null ? r.level2_min : 18,
+    };
+  }
+  function saveWeatherConfig(cfg) {
+    const cur = getWeatherConfig();
+    const sessionNormal = cfg.sessionNormal != null ? (parseInt(cfg.sessionNormal) || 60) : cur.sessionNormal;
+    const level1Min = cfg.level1Min != null ? parseInt(cfg.level1Min) : cur.level1Min;
+    const level2Min = cfg.level2Min != null ? parseInt(cfg.level2Min) : cur.level2Min;
+    db.prepare('INSERT OR REPLACE INTO weather_config (id, session_normal, level1_min, level2_min) VALUES (?,?,?,?)')
+      .run('singleton', sessionNormal, level1Min, level2Min);
+  }
+  function _weatherRow(r) {
+    if (!r) return null;
+    let tempDice = [];
+    try { tempDice = JSON.parse(r.temp_dice || '[]'); } catch {}
+    return {
+      id: r.id,
+      frYear: r.fr_year, frMonth: r.fr_month, frDay: r.fr_day, frFestival: r.fr_festival || '',
+      dateLabel: r.date_label || '', sessionNormal: r.session_normal,
+      temperature: { roll: r.temp_roll, level: r.temp_level, dice: tempDice, value: r.temperature },
+      wind: { roll: r.wind_roll, level: r.wind_level, value: r.wind },
+      precipitation: { roll: r.precip_roll, level: r.precip_level, value: r.precipitation },
+      createdAt: r.created_at,
+    };
+  }
+  function listWeatherLog() {
+    return db.prepare('SELECT * FROM weather_log ORDER BY created_at DESC').all().map(_weatherRow);
+  }
+  function getWeatherForDate(id) {
+    return _weatherRow(db.prepare('SELECT * FROM weather_log WHERE id = ?').get(id));
+  }
+  function saveWeatherEntry(e) {
+    db.prepare(`INSERT OR REPLACE INTO weather_log
+      (id, fr_year, fr_month, fr_day, fr_festival, date_label, session_normal,
+       temp_roll, temp_level, temp_dice, temperature,
+       wind_roll, wind_level, wind, precip_roll, precip_level, precipitation, created_at)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, datetime('now'))`)
+      .run(
+        e.id, e.frYear, e.frMonth ?? null, e.frDay ?? null, e.frFestival || '', e.dateLabel || '', e.sessionNormal,
+        e.temperature.roll, e.temperature.level, JSON.stringify(e.temperature.dice || []), e.temperature.value,
+        e.wind.roll, e.wind.level, e.wind.value,
+        e.precipitation.roll, e.precipitation.level, e.precipitation.value
+      );
+    return getWeatherForDate(e.id);
+  }
+  function deleteWeatherEntry(id) {
+    db.prepare('DELETE FROM weather_log WHERE id = ?').run(id);
+  }
+
   return {
     // characters
     listCharacters, getCharacter, createCharacter, updateCharacter, deleteCharacter, getLinkedTokens,
@@ -237,5 +306,7 @@ export function makeLdb() {
     createTableToken, updateTableToken, deleteTableToken, clearTableTokens,
     // calendar
     listCalendarEvents, getCalendarEvent, createCalendarEvent, updateCalendarEvent, deleteCalendarEvent,
+    // weather
+    getWeatherConfig, saveWeatherConfig, listWeatherLog, getWeatherForDate, saveWeatherEntry, deleteWeatherEntry,
   };
 }

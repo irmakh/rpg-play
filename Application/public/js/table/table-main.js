@@ -239,6 +239,7 @@ window.addEventListener('load', async () => {
 
   fetchDrawings();
   startSSE();
+  loadTableWeather();
   initMusicPlayer();
   initChatDragDrop();
   initResizablePanels();

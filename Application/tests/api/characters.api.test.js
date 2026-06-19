@@ -637,6 +637,30 @@ describe('PATCH /api/characters/:id/equip', () => {
     expect(stored(ldb)['sk-0']).toBe('+3');
   });
 
+  it('equipping a speed-bonus item adds it to base speed; unequipping reverts (speed-base set)', async () => {
+    const { app, ldb } = makeApp();
+    seedEquip(ldb,
+      [{ id: 1, name: 'Boots of Speed', itemType: 'wondrous', speedBonus: 10, equipped: false }],
+      { 'speed-base': '30', speed: '30 ft' });
+    let res = await dm(request(app).patch('/api/characters/c1/equip')).send({ itemId: 1, equipped: true });
+    expect(res.body.speed).toBe('40 ft');
+    res = await dm(request(app).patch('/api/characters/c1/equip')).send({ itemId: 1, equipped: false });
+    expect(res.body.speed).toBe('30 ft');   // must revert, not stay at 40
+  });
+
+  it('does not accumulate speed when speed-base is missing (regression)', async () => {
+    const { app, ldb } = makeApp();
+    // No speed-base; data.speed already carries a baked-in bonus from a prior equip.
+    seedEquip(ldb,
+      [{ id: 1, name: 'Boots of Speed', itemType: 'wondrous', speedBonus: 10, equipped: true }],
+      { speed: '40 ft' });
+    // Re-equipping must not stack onto the stale "40 ft"; base defaults to 30.
+    let res = await dm(request(app).patch('/api/characters/c1/equip')).send({ itemId: 1, equipped: true });
+    expect(res.body.speed).toBe('40 ft');   // 30 + 10, NOT 50
+    res = await dm(request(app).patch('/api/characters/c1/equip')).send({ itemId: 1, equipped: false });
+    expect(res.body.speed).toBe('30 ft');   // reverts to base 30, NOT 40
+  });
+
   it('rejects an unauthenticated request on a password-locked character', async () => {
     const { app, ldb } = makeApp();
     ldb.createCharacter('c1', {

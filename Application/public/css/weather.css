@@ -1,0 +1,82 @@
+/* Weather sprite + tooltip — shared by events.html, index.html, table.html.
+ * Icons are cropped from /img/weather.png (1305×299, six glyphs in six equal
+ * columns with labels below: HOT · NORMAL · COLD · RAINING · SNOWY · WINDY).
+ * Base box is 48×48 at background-size 313×72 (≈0.24 of the source); the −4px
+ * vertical offset crops the labels out. Markers reuse the SAME positions and
+ * just CSS-scale the 48px tile, so there is only one set of coordinates to
+ * maintain. Tune the -px positions here if a glyph looks off-centre. */
+.wx-ico {
+  display: block;
+  width: 48px;
+  height: 48px;
+  background-image: url(/img/weather.png);
+  background-repeat: no-repeat;
+  background-size: 313px 72px;
+}
+.wx-hot    { background-position: -2px -4px; }
+.wx-normal { background-position: -54px -4px; }
+.wx-cold   { background-position: -107px -4px; }
+.wx-rain   { background-position: -159px -4px; }
+.wx-snow   { background-position: -211px -4px; }
+.wx-wind   { background-position: -263px -4px; }
+
+/* Fixed-size clipping wrapper so a 48px tile can be CSS-scaled to any size. */
+.wx-mark {
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: middle;
+  border-radius: 6px;
+}
+
+/* Day cells must be a positioning context for the absolute marker. */
+.cal-day-cell, .cal-festival-row { position: relative; }
+
+/* Small weather marker shown on a calendar day cell. Must keep pointer events
+ * so the onmouseenter/move/leave hover handlers fire (a click still bubbles to
+ * the day cell). */
+.wx-day-mark {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  line-height: 0;
+  cursor: help;
+}
+
+/* Floating tooltip (singleton, appended to <body>). */
+#wx-tooltip {
+  position: fixed;
+  z-index: 99999;
+  display: none;
+  pointer-events: none;
+  min-width: 168px;
+  max-width: 240px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--bg2, #1d1d2b);
+  border: 1px solid var(--a44, #4a4a66);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, .45);
+  font-size: 12px;
+  color: var(--tx, #e8e8f0);
+}
+#wx-tooltip .wx-tip-date { font-weight: bold; margin-bottom: 6px; }
+#wx-tooltip .wx-tip-icons { display: flex; gap: 8px; margin-bottom: 7px; }
+#wx-tooltip .wx-tip-row { display: flex; justify-content: space-between; gap: 10px; margin: 2px 0; }
+#wx-tooltip .wx-tip-lbl { color: var(--txd, #9a9ab0); }
+#wx-tooltip .wx-tip-val { font-weight: 600; }
+
+/* Table-screen toolbar weather widget. */
+#wx-toolbar {
+  display: none;
+  align-items: center;
+  gap: 6px;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--a22, rgba(255, 255, 255, .05));
+  border: 1px solid var(--a44, #4a4a66);
+  cursor: default;
+  font-size: 12px;
+  white-space: nowrap;
+}
+#wx-toolbar .wx-tb-icons { display: flex; gap: 3px; }
+#wx-toolbar .wx-tb-text { color: var(--ac, #d4af37); font-weight: 600; }

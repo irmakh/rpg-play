@@ -10,6 +10,7 @@
 <script>if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js');</script>
 <link rel="stylesheet" href="/css/table.css">
 <link rel="stylesheet" href="/css/table-theme-modern.css">
+<link rel="stylesheet" href="/css/weather.css">
 </head>
 <body>
 
@@ -27,6 +28,12 @@
   <button class="btn" onclick="logout()" style="margin-left:4px" title="Logout">
     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;display:inline-block"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
   </button>
+
+  <!-- Today's weather (read from the campaign calendar; hover for detail) -->
+  <div id="wx-toolbar" onmouseenter="weatherShowTipEntry(event, _tableWeatherToday)" onmousemove="weatherMoveTip(event)" onmouseleave="weatherHideTip()" title="Today's weather">
+    <span class="wx-tb-icons" id="wx-toolbar-icons"></span>
+    <span class="wx-tb-text" id="wx-toolbar-text"></span>
+  </div>
 
   <div style="flex:1"></div>
 
@@ -720,6 +727,8 @@
 <script src="/js/lib/chat-render.js" defer></script>
 <script src="/js/lib/dnd-data.js" defer></script>
 <script src="/js/lib/realtime.js" defer></script>
+<script src="/js/lib/fr_calendar.js" defer></script>
+<script src="/js/lib/weather-ui.js" defer></script>
 <script src="/js/table/table-state.js" defer></script>
 <script src="/js/table/table-utils.js" defer></script>
 <script src="/js/table/table-auth.js" defer></script>
@@ -734,6 +743,7 @@
 <script src="/js/table/table-addtoken.js" defer></script>
 <script src="/js/table/table-music.js" defer></script>
 <script src="/js/table/table-popout.js" defer></script>
+<script src="/js/table/table-weather.js" defer></script>
 <script src="/js/table/table-main.js" defer></script>
 </body>
 </html>

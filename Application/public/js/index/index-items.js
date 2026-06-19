@@ -377,7 +377,7 @@ function renderWeaponsSummary() {
 function renderEquippedItemsSummary() {
   const el = document.getElementById('main-items-summary');
   if (!el) return;
-  const equipped = items.filter(i => i.equipped && i.itemType !== 'other');
+  const equipped = items.filter(i => i.equipped);
   if (equipped.length === 0) {
     el.innerHTML = '<div style="color:var(--txd);font-size:11px;padding:4px 0">No equipped items — add them in the Inventory tab.</div>';
     return;

@@ -155,9 +155,13 @@ export default function register(app, ctx) {
     // Speed = base + equipped item speed bonuses + manual bonus
     const spdItem = equipped.reduce((s, i) => s + (parseInt(i.speedBonus) || 0), 0);
     const spdManual = parseInt(data['speed-bonus']) || 0;
+    // Base speed must come from speed-base only. NEVER fall back to parsing
+    // data.speed — it already has the previous item bonus baked in, so doing so
+    // makes unequip not subtract the bonus and re-equip accumulate it. Default to
+    // 30 when speed-base is missing/empty, mirroring index-calc.js recalcAll().
     const spdBase = (data['speed-base'] !== undefined && data['speed-base'] !== '')
       ? (parseInt(String(data['speed-base']).replace(/[^0-9]/g, '')) || 30)
-      : (parseInt(String(data.speed || '30').replace(/[^0-9]/g, '')) || 30);
+      : 30;
     data.speed = (spdBase + spdItem + spdManual) + ' ft';
 
     // AC = equipped armor (by type) + DEX mod + flat item bonuses + manual bonus
@@ -352,14 +356,19 @@ export default function register(app, ctx) {
         if (linkedTokens.length > 0) {
           const newHpMax = parseInt(data.hpmax) || 0;
           const newHpCur = Math.min(parseInt(data.hpcur) || 0, newHpMax);
+          // Prefer the already-computed data.speed (index recalcAll() bakes in
+          // base + item + manual bonuses). Only when it's absent, derive it from
+          // speed-base + equipped item bonuses + manual bonus (base defaults 30).
           let newSpeed;
-          if (data['speed-base'] !== undefined) {
+          if (data.speed !== undefined && data.speed !== '') {
+            newSpeed = parseInt(String(data.speed).replace(/[^0-9]/g, '')) || 30;
+          } else {
             let charItems = [];
             try { charItems = JSON.parse(data['_items'] || '[]'); } catch {}
             const itemSpeedBonus = charItems.filter(i => i.equipped).reduce((s, i) => s + (parseInt(i.speedBonus) || 0), 0);
-            newSpeed = (parseInt(String(data['speed-base']).replace(/[^0-9]/g, '')) || 30) + itemSpeedBonus;
-          } else {
-            newSpeed = parseInt(String(data.speed || '30').replace(/[^0-9]/g, '')) || 30;
+            const base = (data['speed-base'] !== undefined && data['speed-base'] !== '')
+              ? (parseInt(String(data['speed-base']).replace(/[^0-9]/g, '')) || 30) : 30;
+            newSpeed = base + itemSpeedBonus + (parseInt(data['speed-bonus']) || 0);
           }
           const newHpTemp = Math.max(0, parseInt(data.hptemp) || 0);
           // data.ac holds the computed total (base + items + bonus). Sync it to the

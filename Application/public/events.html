@@ -10,6 +10,7 @@
 <script>if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js');</script>
 <link rel="stylesheet" href="/css/dm.css">
 <link rel="stylesheet" href="/css/calendar.css">
+<link rel="stylesheet" href="/css/weather.css">
 <style>
   #cal-today-bar-btns { display:flex; gap:6px; align-items:center; flex-shrink:0; }
 </style>
@@ -59,6 +60,7 @@
         <button class="btn sm" onclick="calNextDay()" title="Next day">Day ▶</button>
         <button class="btn sm" onclick="calGoToToday()" title="Navigate to current date">Go to Today</button>
         <button class="btn sm" onclick="calOpenJumpModal()" title="Jump to specific date">Set Date…</button>
+        <button class="btn sm" onclick="weatherOpenModal()" title="Roll daily weather">🌦 Weather</button>
       </div>
     </div>
 
@@ -261,8 +263,120 @@
   </div>
 </div>
 
+<!-- Weather modal -->
+<div class="cal-modal" id="weather-modal" style="display:none" onclick="if(event.target===this)weatherCloseModal()">
+  <div class="cal-modal-box" style="max-width:540px">
+    <div class="cal-modal-title">🌦 Daily Weather</div>
+
+    <div class="cal-form-inline" style="align-items:flex-end">
+      <div class="cal-form-row" style="flex:1.2">
+        <label>Session Normal (base °)</label>
+        <input type="number" id="weather-session-normal" value="60" onchange="weatherSaveConfig()">
+      </div>
+      <div class="cal-form-row" style="flex:1">
+        <label>Level 1 at d20 ≥</label>
+        <input type="number" id="weather-l1-min" min="1" max="20" value="15" onchange="weatherOnThresholds()">
+      </div>
+      <div class="cal-form-row" style="flex:1">
+        <label>Level 2 at d20 ≥</label>
+        <input type="number" id="weather-l2-min" min="1" max="20" value="18" onchange="weatherOnThresholds()">
+      </div>
+    </div>
+    <div style="font-size:11px;color:var(--txd);margin:-2px 0 8px" id="weather-range-help">Normal 1–14 · Level 1 15–17 · Level 2 18–20</div>
+
+    <!-- Roll date selector -->
+    <div class="cal-form-inline" style="align-items:flex-end">
+      <div class="cal-form-row" style="flex-shrink:0">
+        <label>Roll for</label>
+        <select id="weather-date-type" onchange="weatherToggleDateType()">
+          <option value="day">Day</option>
+          <option value="festival">Festival</option>
+        </select>
+      </div>
+      <div class="cal-form-inline" id="weather-date-day-fields" style="flex:1;gap:6px">
+        <div class="cal-form-row" style="flex:1"><label>Year</label>
+          <input type="number" id="weather-date-year" value="1492" min="1" max="9999" onchange="weatherOnDateChange()"></div>
+        <div class="cal-form-row" style="flex:1.4"><label>Month</label>
+          <select id="weather-date-month" onchange="weatherOnDateChange()">
+            <option value="1">Hammer</option><option value="2">Alturiak</option><option value="3">Ches</option>
+            <option value="4">Tarsakh</option><option value="5">Mirtul</option><option value="6">Kythorn</option>
+            <option value="7">Flamerule</option><option value="8">Eleasis</option><option value="9">Eleint</option>
+            <option value="10">Marpenoth</option><option value="11">Uktar</option><option value="12">Nightal</option>
+          </select></div>
+        <div class="cal-form-row" style="flex:.8"><label>Day</label>
+          <input type="number" id="weather-date-day" value="1" min="1" max="30" onchange="weatherOnDateChange()"></div>
+      </div>
+      <div class="cal-form-inline" id="weather-date-fest-fields" style="flex:1;gap:6px;display:none">
+        <div class="cal-form-row" style="flex:1"><label>Year</label>
+          <input type="number" id="weather-date-fest-year" value="1492" min="1" max="9999" onchange="weatherOnDateChange()"></div>
+        <div class="cal-form-row" style="flex:1.7"><label>Festival</label>
+          <select id="weather-date-festival" onchange="weatherOnDateChange()">
+            <option value="midwinter">Midwinter</option><option value="greengrass">Greengrass</option>
+            <option value="midsummer">Midsummer</option><option value="shieldmeet">Shieldmeet</option>
+            <option value="highharvestide">Highharvestide</option><option value="feast_of_moon">The Feast of the Moon</option>
+          </select></div>
+      </div>
+    </div>
+    <div class="cal-form-row" style="margin:4px 0 8px">
+      <label>Weather for: <b id="weather-target-date" style="color:var(--ac)">—</b>
+        <a href="#" onclick="weatherUseCurrentDate();return false" style="font-size:11px;margin-left:8px">↺ campaign date</a>
+        <button class="btn sm" id="weather-roll-btn" onclick="weatherRoll()" style="margin-left:10px">🎲 Roll dice</button></label>
+    </div>
+
+    <!-- Editable result form -->
+    <div class="cal-form-inline">
+      <div class="cal-form-row" style="flex:1.4">
+        <label>🌡 Temperature</label>
+        <select id="weather-temp-level" onchange="weatherOnTempLevel()">
+          <option value="normal">Normal</option>
+          <option value="level1">Level 1 — colder</option>
+          <option value="level2">Level 2 — hotter</option>
+        </select>
+      </div>
+      <div class="cal-form-row" style="flex:1">
+        <label>Value (°)</label>
+        <input type="number" id="weather-temp-value" value="60">
+      </div>
+    </div>
+    <div class="cal-form-inline">
+      <div class="cal-form-row" style="flex:1">
+        <label>💨 Wind</label>
+        <select id="weather-wind-value">
+          <option value="Normal">Normal</option>
+          <option value="Light">Light</option>
+          <option value="Strong">Strong</option>
+        </select>
+      </div>
+      <div class="cal-form-row" style="flex:1">
+        <label>🌧 Precipitation</label>
+        <select id="weather-precip-value">
+          <option value="None">None</option>
+          <option value="Light rain">Light rain</option>
+          <option value="Heavy rain">Heavy rain</option>
+          <option value="Light snow">Light snow</option>
+          <option value="Heavy snow">Heavy snow</option>
+        </select>
+      </div>
+    </div>
+    <div class="cal-modal-btns" style="margin-top:6px">
+      <button class="btn primary sm" id="weather-save-btn" onclick="weatherSave()">💾 Save for this date</button>
+    </div>
+
+    <!-- History -->
+    <div class="cal-form-row" style="margin-top:10px">
+      <label>History (click to edit)</label>
+    </div>
+    <div id="weather-history" style="max-height:220px;overflow-y:auto"></div>
+
+    <div class="cal-modal-btns">
+      <button class="btn sm" onclick="weatherCloseModal()">Close</button>
+    </div>
+  </div>
+</div>
+
 <script src="/js/lib/fr_calendar.js" defer></script>
 <script src="/js/lib/lightbox.js" defer></script>
+<script src="/js/lib/weather-ui.js" defer></script>
 <script src="/js/events.js" defer></script>
 </body>
 </html>

@@ -171,6 +171,8 @@ function startSSE() {
       }
     },
     sound: (d) => { handleSoundEvent(d); },
+    // DM rolled/set weather or moved the campaign date — refresh the toolbar widget.
+    'calendar-updated': () => { if (typeof loadTableWeather === 'function') loadTableWeather(); },
   });
 }
 
