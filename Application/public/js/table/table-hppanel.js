@@ -674,13 +674,10 @@ function applyHpChange(mode) {
     _putHp({ hpCurrent: newHp });
   }
 }
-function quickDmg(n) {
-  document.getElementById('hp-amount').value = n;
-  applyHpChange('dmg');
-}
-function quickHeal(n) {
-  document.getElementById('hp-amount').value = n;
-  applyHpChange('heal');
+// Quick-set buttons: fill the amount field without applying — user then clicks Dmg/Heal.
+function setHpAmount(n) {
+  const el = document.getElementById('hp-amount');
+  if (el) el.value = n;
 }
 async function applyTempHp() {
   const val = Math.max(0, parseInt(document.getElementById('hp-temp-input').value) || 0);

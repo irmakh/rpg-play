@@ -289,16 +289,10 @@
         <div class="rp-blk-body">
           <div class="rp-hp-main">
             <input type="number" id="hp-amount" value="1" min="1" class="rp-num-input" aria-label="HP amount">
-            <button class="btn danger sm" onclick="applyHpChange('dmg')">⚔ Damage</button>
+            <button class="btn sm" onclick="setHpAmount(5)">5</button>
+            <button class="btn sm" onclick="setHpAmount(10)">10</button>
+            <button class="btn danger sm" onclick="applyHpChange('dmg')">✕ Dmg</button>
             <button class="btn success sm" onclick="applyHpChange('heal')">💚 Heal</button>
-          </div>
-          <div class="rp-quick-grid">
-            <button class="btn danger sm" onclick="quickDmg(1)">−1</button>
-            <button class="btn danger sm" onclick="quickDmg(5)">−5</button>
-            <button class="btn danger sm" onclick="quickDmg(10)">−10</button>
-            <button class="btn success sm" onclick="quickHeal(1)">+1</button>
-            <button class="btn success sm" onclick="quickHeal(5)">+5</button>
-            <button class="btn success sm" onclick="quickHeal(10)">+10</button>
           </div>
         </div>
         <div class="rp-flat-hdr">Temp HP</div>
