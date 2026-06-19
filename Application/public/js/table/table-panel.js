@@ -1,6 +1,34 @@
 // ── Side panel Quick Roll ─────────────────────────────────────────────────────
 let _sideCharId = null; // character ID currently displayed in the side panel
 let _sideAllSpells = []; // full parsed _spells of the displayed char (for action spell description posting)
+let _sideActiveTab = 'skills'; // active right-panel sheet tab (skills|combat|spells|items)
+let _sideCombatTab = 'attacks'; // active Combat sub-tab (attacks|action|bonus|reaction|other)
+
+const _SIDE_TABS = ['skills', 'combat', 'spells', 'items'];
+
+// Switch the active right-panel tab without a full re-render (re-renders read
+// _sideActiveTab to restore the same tab on the next paint).
+function setSideTab(name) {
+  if (!_SIDE_TABS.includes(name)) return;
+  _sideActiveTab = name;
+  _SIDE_TABS.forEach(t => {
+    const pane = document.getElementById('rp-tab-' + t);
+    const btn  = document.getElementById('rp-tabbtn-' + t);
+    if (pane) pane.style.display = t === name ? '' : 'none';
+    if (btn)  btn.classList.toggle('active', t === name);
+  });
+}
+
+// Switch the active Combat sub-tab (Attacks / Actions / Bonus / Reaction / Other).
+function setSideCombatTab(name) {
+  _sideCombatTab = name;
+  document.querySelectorAll('.rp-subtab-pane').forEach(p => {
+    p.style.display = (p.id === 'rp-ctab-' + name) ? '' : 'none';
+  });
+  document.querySelectorAll('.rp-subtab').forEach(b => {
+    b.classList.toggle('active', b.id === 'rp-ctabbtn-' + name);
+  });
+}
 function toggleSideSection(name) {
   const el    = document.getElementById(`side-sec-${name}`);
   const arrow = document.getElementById(`side-sec-${name}-arrow`);
@@ -31,7 +59,6 @@ function _abilityModStr(score) {
 
 function renderSideCharacter() {
   const d = qrollData || {};
-  const isModern = document.body.dataset.theme === 'modern';
   const spAtk = d['sp-atk'] !== undefined ? d['sp-atk'] : null;
   const initMod = (parseInt(d['init']) || 0) + (parseInt(d['init-bonus']) || 0);
   const initBonusStr = initMod >= 0 ? '+' + initMod : '' + initMod;
@@ -75,39 +102,18 @@ function renderSideCharacter() {
   } catch {}
   // Actions sections (action-flagged spells [13] + custom actions from _actions)
   const canEditActions = isDM() || isCharSession();
-  const actionSectionsHtml = _buildSidePanelActions(d, canEditActions);
+  const { sections: actionSections, restHtml: actionRestHtml } = _sidePanelActionSections(d, canEditActions);
 
-  // Shared rows (both themes)
+  // Skill rows — rendered inside the Skills tab grid
   const skillRows = SKILL_NAMES.map((name, i) => {
     const val = d[`sk-${i}`] || '+0';
     return `<div class="qroll-row" onclick="qroll('${escJs(name)}','${escJs(val)}')" title="${esc(name)}">`
       + `<span>${esc(name)}</span><span class="qroll-val">${esc(val)}</span></div>`;
   }).join('');
-  const saveRows = SAVE_NAMES.map((name, i) => {
-    const val = d[`save-${SAVE_KEYS[i]}`] || '+0';
-    return `<div class="qroll-row" onclick="qroll('${escJs(name)} Save','${escJs(val)}')" title="${esc(name)} Save">`
-      + `<span>${esc(name)}</span><span class="qroll-val">${esc(val)}</span></div>`;
-  }).join('');
   let weapons = [];
   try { weapons = JSON.parse(d['_weapons'] || '[]'); } catch {}
-  const atkRows = weapons.filter(r => r[0]).map(r => {
-    const [wName, wAtk, wDmg, wNote] = [r[0]||'', r[1]||'+0', r[2]||'', r[3]||''];
-    const wNoteJs = escJs(wNote);
-    const dmgRow = wDmg
-      ? `<div class="qroll-row" onclick="rollDamageStr('${escJs(wName)} Dmg','${escJs(wDmg)}'${wNoteJs ? `,'${wNoteJs}'` : ''})" style="padding-left:20px;background:rgba(0,0,0,.15)">`
-        + `<span style="font-size:11px;color:var(--txd)">↳ Damage</span>`
-        + `<span class="qroll-val" style="color:#ff9966;font-size:13px">${esc(wDmg)}</span></div>`
-      : '';
-    return `<div class="qroll-row" onclick="qroll('${escJs(wName)} Atk','${escJs(wAtk)}','${escJs(wDmg)}'${wNoteJs ? `,'${wNoteJs}'` : ''})" title="Attack roll — then choose Miss / Roll Damage">`
-      + `<span>${esc(wName)}</span><span class="qroll-val">${esc(wAtk)}</span></div>${dmgRow}`;
-  }).join('');
-  const spAtkRow = spAtk !== null
-    ? `<div class="qroll-row" onclick="qroll('Spell Attack','${escJs(String(spAtk))}')" title="Spell Attack">`
-      + `<span>Spell Atk</span><span class="qroll-val">${parseInt(spAtk) >= 0 ? '+' : ''}${esc(String(spAtk))}</span></div>`
-    : '';
-  const atkSection = (atkRows + spAtkRow) || `<div style="padding:4px 8px;font-size:11px;color:var(--txd)">No weapons.</div>`;
 
-  // Ability grid HTML (shared) — clickable to roll ability check
+  // Ability grid HTML — clickable to roll ability check
   const abilityGridHtml = hasAbilities
     ? `<div class="rp-ability-grid">`
       + abilities.map((a, i) => a
@@ -168,99 +174,102 @@ function renderSideCharacter() {
     }
   }
 
-  if (isModern) {
-    // ── Modern HUD: secondary stats bar + flat (non-collapsible) sections ──
+  // ── Secondary stats bar: Initiative (clickable) | Prof | Passive Perc | Spell DC ──
+  const secStats = [];
+  secStats.push({ val: initBonusStr, lbl: 'INITIATIVE', onclick: 'rollInitiativeFromPanel()' });
+  if (pb != null) {
+    const pbN = parseInt(pb);
+    secStats.push({ val: isNaN(pbN) ? pb : (pbN >= 0 ? '+' + pbN : '' + pbN), lbl: 'PROF. BONUS' });
+  }
+  if (pp != null) secStats.push({ val: pp, lbl: 'PASS. PERC' });
+  if (spDC != null) secStats.push({ val: spDC, lbl: 'SPELL DC' });
 
-    // Build secondary stats: Initiative (clickable) | Prof Bonus | Passive Perc | Spell DC
-    const secStats = [];
-    secStats.push({ val: initBonusStr, lbl: 'INITIATIVE', onclick: 'rollInitiativeFromPanel()' });
-    if (pb != null) {
-      const pbN = parseInt(pb);
-      secStats.push({ val: isNaN(pbN) ? pb : (pbN >= 0 ? '+' + pbN : '' + pbN), lbl: 'PROF. BONUS' });
-    }
-    if (pp != null) secStats.push({ val: pp, lbl: 'PASS. PERC' });
-    if (spDC != null) secStats.push({ val: spDC, lbl: 'SPELL DC' });
+  const secStatsHtml = `<div class="rp-sec-stats">`
+    + secStats.map((s, i) =>
+        (i > 0 ? '<div class="rp-sec-divider"></div>' : '')
+        + `<div class="rp-sec-stat"${s.onclick ? ` onclick="${s.onclick}" title="Roll initiative"` : ''}>`
+        + `<div class="rp-sec-val">${esc(String(s.val))}</div>`
+        + `<div class="rp-sec-lbl">${esc(s.lbl)}</div></div>`
+      ).join('')
+    + `</div>`;
 
-    const secStatsHtml = `<div class="rp-sec-stats">`
-      + secStats.map((s, i) =>
-          (i > 0 ? '<div class="rp-sec-divider"></div>' : '')
-          + `<div class="rp-sec-stat"${s.onclick ? ` onclick="${s.onclick}" title="Roll initiative"` : ''}>`
-          + `<div class="rp-sec-val">${esc(String(s.val))}</div>`
-          + `<div class="rp-sec-lbl">${esc(s.lbl)}</div></div>`
-        ).join('')
-      + `</div>`;
+  // ── Always-visible block: Abilities only (outside the tabs) ──
+  const abilitiesSection = hasAbilities
+    ? `<div class="rp-flat-hdr rp-abil-hdr">Abilities</div>${abilityGridHtml}`
+    : '';
 
-    const abilitiesSection = hasAbilities
-      ? `<div class="rp-flat-hdr rp-abil-hdr">Abilities</div>${abilityGridHtml}`
-      : '';
+  const saveGridHtml = `<div class="rp-save-grid">`
+    + SAVE_NAMES.map((name, i) => {
+        const val = d[`save-${SAVE_KEYS[i]}`] || '+0';
+        return `<div class="rp-save-cell" onclick="qroll('${escJs(name)} Save','${escJs(val)}')" title="${esc(name)} Saving Throw">`
+          + `<div class="rp-save-val">${esc(val)}</div>`
+          + `<div class="rp-save-name">${esc(name)}</div>`
+          + `</div>`;
+      }).join('')
+    + `</div>`;
 
-    const saveGridHtml = `<div class="rp-save-grid">`
-      + SAVE_NAMES.map((name, i) => {
-          const val = d[`save-${SAVE_KEYS[i]}`] || '+0';
-          return `<div class="rp-save-cell" onclick="qroll('${escJs(name)} Save','${escJs(val)}')" title="${esc(name)} Saving Throw">`
-            + `<div class="rp-save-val">${esc(val)}</div>`
-            + `<div class="rp-save-name">${esc(name)}</div>`
+  // ── Combat tab content: Attacks + Actions sections ──
+  const atkCompactHtml = (weapons.some(r => r[0]) || spAtk !== null)
+    ? `<div class="rp-atk-list">`
+      + weapons.filter(r => r[0]).map(r => {
+          const [wName, wAtk, wDmg, wNote] = [r[0]||'', r[1]||'+0', r[2]||'', r[3]||''];
+          const wNoteJs = escJs(wNote);
+          const atkClick = `qroll('${escJs(wName)} Atk','${escJs(wAtk)}','${escJs(wDmg)}'${wNoteJs ? `,'${wNoteJs}'` : ''})`;
+          const dmgClick = wDmg ? `rollDamageStr('${escJs(wName)} Dmg','${escJs(wDmg)}'${wNoteJs ? `,'${wNoteJs}'` : ''})` : '';
+          return `<div class="rp-atk-row">`
+            + `<span class="rp-atk-name" onclick="${atkClick}" title="${esc(wName)}">${esc(wName)}</span>`
+            + `<span class="rp-atk-hit" onclick="${atkClick}" title="Attack: d20${esc(wAtk)}">${esc(wAtk)}</span>`
+            + (wDmg ? `<span class="rp-atk-sep">·</span><span class="rp-atk-dmg" onclick="${dmgClick}" title="Damage: ${esc(wDmg)}">${esc(wDmg)}</span>` : '')
             + `</div>`;
         }).join('')
-      + `</div>`;
+      + (spAtk !== null
+          ? `<div class="rp-atk-row"><span class="rp-atk-name">Spell Atk</span><span class="rp-atk-hit" onclick="qroll('Spell Attack','${escJs(String(spAtk))}')">${parseInt(spAtk) >= 0 ? '+' : ''}${esc(String(spAtk))}</span></div>`
+          : '')
+      + `</div>`
+    : `<div class="rp-tab-empty">No weapons.</div>`;
 
-    const atkCompactHtml = (weapons.some(r => r[0]) || spAtk !== null)
-      ? `<div class="rp-atk-list">`
-        + weapons.filter(r => r[0]).map(r => {
-            const [wName, wAtk, wDmg, wNote] = [r[0]||'', r[1]||'+0', r[2]||'', r[3]||''];
-            const wNoteJs = escJs(wNote);
-            const atkClick = `qroll('${escJs(wName)} Atk','${escJs(wAtk)}','${escJs(wDmg)}'${wNoteJs ? `,'${wNoteJs}'` : ''})`;
-            const dmgClick = wDmg ? `rollDamageStr('${escJs(wName)} Dmg','${escJs(wDmg)}'${wNoteJs ? `,'${wNoteJs}'` : ''})` : '';
-            return `<div class="rp-atk-row">`
-              + `<span class="rp-atk-name" onclick="${atkClick}" title="${esc(wName)}">${esc(wName)}</span>`
-              + `<span class="rp-atk-hit" onclick="${atkClick}" title="Attack: d20${esc(wAtk)}">${esc(wAtk)}</span>`
-              + (wDmg ? `<span class="rp-atk-sep">·</span><span class="rp-atk-dmg" onclick="${dmgClick}" title="Damage: ${esc(wDmg)}">${esc(wDmg)}</span>` : '')
-              + `</div>`;
-          }).join('')
-        + (spAtk !== null
-            ? `<div class="rp-atk-row"><span class="rp-atk-name">Spell Atk</span><span class="rp-atk-hit" onclick="qroll('Spell Attack','${escJs(String(spAtk))}')">${parseInt(spAtk) >= 0 ? '+' : ''}${esc(String(spAtk))}</span></div>`
-            : '')
-        + `</div>`
-      : `<div style="padding:4px 10px;font-size:11px;color:var(--txd)">No weapons.</div>`;
-
-    return secStatsHtml
-      + abilitiesSection
-      + `<div class="rp-flat-hdr">Saving Throws</div>${saveGridHtml}`
-      + `<div class="rp-flat-hdr">Skills</div><div class="rp-skill-grid">${skillRows}</div>`
-      + `<div class="rp-flat-hdr">Attacks</div>${atkCompactHtml}`
-      + actionSectionsHtml
-      + itemsHtml
-      + spellSlotsHtml
-      + spellListHtml;
-  }
-
-  // ── Classic: collapsible sections ──
-  const extraStatsHtml = (pb || pp)
-    ? `<div style="display:flex;gap:6px;padding:5px 8px;border-top:1px solid var(--a44);font-size:11px">`
-      + (pb ? `<span style="color:var(--txd)">Prof: <strong style="color:var(--ac)">${parseInt(pb) >= 0 ? '+' + parseInt(pb) : pb}</strong></span>` : '')
-      + (pp ? `<span style="color:var(--txd)">Passive Perc: <strong style="color:var(--ac)">${pp}</strong></span>` : '')
+  // ── Tab panes ──
+  // Skills tab now also holds Saving Throws (moved out of the always-visible block).
+  const skillsPane = `<div class="rp-flat-hdr">Saving Throws</div>${saveGridHtml}`
+                   + `<div class="rp-flat-hdr">Skills</div><div class="rp-skill-grid">${skillRows}</div>`;
+  // Combat tab: Attacks + each non-empty action category as sub-tabs (one shown
+  // at a time). The Short/Long rest control sits below the sub-tab panes.
+  const combatSecs = [{ key: 'attacks', label: 'Attacks', body: atkCompactHtml }]
+    .concat(actionSections.map(s => ({ key: s.key, label: _RP_ACT_SHORT[s.key] || s.label, body: s.body })));
+  if (!combatSecs.some(c => c.key === _sideCombatTab)) _sideCombatTab = combatSecs[0].key;
+  const combatSubBar = combatSecs.length > 1
+    ? `<div class="rp-subtabs">`
+      + combatSecs.map(c =>
+          `<button id="rp-ctabbtn-${c.key}" class="rp-subtab${_sideCombatTab === c.key ? ' active' : ''}" onclick="setSideCombatTab('${c.key}')">${esc(c.label)}</button>`
+        ).join('')
       + `</div>`
     : '';
+  const combatSubPanes = combatSecs.map(c =>
+    `<div id="rp-ctab-${c.key}" class="rp-subtab-pane"${_sideCombatTab === c.key ? '' : ' style="display:none"'}>${c.body}</div>`
+  ).join('');
+  const combatPane = combatSubBar + combatSubPanes + actionRestHtml;
+  const spellsPane = (spellSlotsHtml || spellListHtml)
+    ? `${spellSlotsHtml}${spellListHtml}`
+    : `<div class="rp-tab-empty">No spells or spell slots.</div>`;
+  const itemsPane  = itemsHtml || `<div class="rp-tab-empty">No items.</div>`;
 
-  const classicAbilityHtml = hasAbilities
-    ? `<div style="font-size:10px;color:var(--ac);text-transform:uppercase;letter-spacing:.5px;padding:6px 8px 3px;border-top:1px solid var(--a44)">Ability Scores</div>${abilityGridHtml}`
-    : '';
+  const TABS = [['skills', 'Skills'], ['combat', 'Combat'], ['spells', 'Spells'], ['items', 'Items']];
+  const tabBarHtml = `<div class="rp-tabs">`
+    + TABS.map(([id, lbl]) =>
+        `<button id="rp-tabbtn-${id}" class="rp-tab${_sideActiveTab === id ? ' active' : ''}" onclick="setSideTab('${id}')">${lbl}</button>`
+      ).join('')
+    + `</div>`;
 
-  return `<div style="display:flex;align-items:center;justify-content:flex-end;padding:4px 8px;border-top:1px solid var(--a44)">`
-    + `<button class="btn sm" onclick="rollInitiativeFromPanel()" title="Roll Initiative (d20${initBonusStr})" style="font-size:10px;padding:2px 6px">🎲 Init ${esc(initBonusStr)}</button>`
-    + `</div>`
-    + classicAbilityHtml
-    + extraStatsHtml
-    + `<div class="qroll-section"><div class="qroll-section-hdr" onclick="toggleSideSection('skills')">Skills <span id="side-sec-skills-arrow">${_sideSecArrow('skills')}</span></div>`
-    + `<div id="side-sec-skills" class="qroll-rows" style="${_sideSecStyle('skills')}">${skillRows}</div></div>`
-    + `<div class="qroll-section"><div class="qroll-section-hdr" onclick="toggleSideSection('saves')">Saves <span id="side-sec-saves-arrow">${_sideSecArrow('saves')}</span></div>`
-    + `<div id="side-sec-saves" class="qroll-rows" style="${_sideSecStyle('saves')}">${saveRows}</div></div>`
-    + `<div class="qroll-section"><div class="qroll-section-hdr" onclick="toggleSideSection('attacks')">Attacks <span id="side-sec-attacks-arrow">${_sideSecArrow('attacks')}</span></div>`
-    + `<div id="side-sec-attacks" class="qroll-rows" style="${_sideSecStyle('attacks')}">${atkSection}</div></div>`
-    + (actionSectionsHtml ? `<div class="qroll-section">${actionSectionsHtml}</div>` : '')
-    + (itemsHtml ? `<div class="qroll-section">${itemsHtml}</div>` : '')
-    + (spellSlotsHtml ? `<div class="qroll-section">${spellSlotsHtml}</div>` : '')
-    + (spellListHtml ? `<div class="qroll-section">${spellListHtml}</div>` : '');
+  const pane = (id, body) =>
+    `<div id="rp-tab-${id}" class="rp-tab-pane"${_sideActiveTab === id ? '' : ' style="display:none"'}>${body}</div>`;
+
+  const panesHtml = pane('skills', skillsPane) + pane('combat', combatPane)
+                  + pane('spells', spellsPane) + pane('items', itemsPane);
+
+  return secStatsHtml
+    + abilitiesSection
+    + tabBarHtml
+    + panesHtml;
 }
 
 function clickSpellSlotPip(level, pipIndex) {
@@ -341,12 +350,15 @@ async function _syncEquip(itemId, equipped) {
 }
 
 // ── Actions sections (Actions / Bonus / Reactions / Other) ────────────────────
-const _RP_ACT_CATS = [['action', 'Actions'], ['bonus', 'Bonus Actions'], ['reaction', 'Reactions'], ['other', 'Other']];
+const _RP_ACT_CATS  = [['action', 'Actions'], ['bonus', 'Bonus Actions'], ['reaction', 'Reactions'], ['other', 'Other']];
+const _RP_ACT_SHORT = { action: 'Actions', bonus: 'Bonus', reaction: 'Reaction', other: 'Other' };
 
-function _buildSidePanelActions(d, canEdit) {
+// Returns the action categories that have content as Combat sub-tab sections,
+// plus the (optional) Short/Long rest control HTML.
+function _sidePanelActionSections(d, canEdit) {
   let acts = [];
   try { acts = JSON.parse(d['_actions'] || '[]'); } catch {}
-  let html = '';
+  const sections = [];
   const hasLimited = acts.some(a => a && (parseInt(a.uses) || 0) > 0);
   for (const [key, label] of _RP_ACT_CATS) {
     const spells = _sideAllSpells
@@ -354,17 +366,17 @@ function _buildSidePanelActions(d, canEdit) {
       .filter(o => o.s && o.s[13] === key);
     const customs = acts.filter(a => a && a.category === key);
     if (!spells.length && !customs.length) continue;
-    html += `<div class="rp-flat-hdr">${label}</div>`;
-    html += spells.map(o => _renderSidePanelSpell(o.s, o.idx, d)).join('');
-    html += customs.map(a => _renderSidePanelCustom(a, canEdit)).join('');
+    const body = spells.map(o => _renderSidePanelSpell(o.s, o.idx, d)).join('')
+               + customs.map(a => _renderSidePanelCustom(a, canEdit)).join('');
+    sections.push({ key, label, body });
   }
-  if (html && canEdit && hasLimited) {
-    html += `<div class="rp-act-rest">`
+  const restHtml = (sections.length && canEdit && hasLimited)
+    ? `<div class="rp-act-rest">`
       + `<button class="btn sm" onclick="tableActionRest('short')" title="Restore short-rest uses">↻ Short</button>`
       + `<button class="btn sm" onclick="tableActionRest('long')" title="Restore short- and long-rest uses">↻ Long</button>`
-      + `</div>`;
-  }
-  return html;
+      + `</div>`
+    : '';
+  return { sections, restHtml };
 }
 
 function _renderSidePanelSpell(s, idx, d) {
@@ -503,8 +515,8 @@ async function loadSideQroll() {
   }
 
   if (targetId === _sideQrollTokenId) return; // already rendered (data unchanged)
-  // Only reset section state when switching to a genuinely different token
-  if (targetId !== _sidePrevTokenId) _sideOpenSections.clear();
+  // Only reset section/tab state when switching to a genuinely different token
+  if (targetId !== _sidePrevTokenId) { _sideOpenSections.clear(); _sideActiveTab = 'skills'; _sideCombatTab = 'attacks'; }
   _sidePrevTokenId = targetId;
   _sideQrollTokenId = targetId;
 

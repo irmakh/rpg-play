@@ -8,25 +8,11 @@ function closeDMToolsModal() {
   if (m) m.style.display = 'none';
 }
 
-// ── Theme toggle ──────────────────────────────────────────────────────────────
+// ── Theme ─────────────────────────────────────────────────────────────────────
+// The classic HUD has been retired — the modern HUD is the only theme now.
 function initTheme() {
-  const theme = localStorage.getItem('tableTheme') || 'modern';
-  document.body.dataset.theme = theme;
-  _updateThemeBtn(theme);
-}
-function toggleTheme() {
-  const current = document.body.dataset.theme || 'classic';
-  const next = current === 'modern' ? 'classic' : 'modern';
-  localStorage.setItem('tableTheme', next);
-  document.body.dataset.theme = next;
-  _updateThemeBtn(next);
-  renderInitiativeTracker(); // switch row style immediately
-}
-function _updateThemeBtn(theme) {
-  const btn = document.getElementById('btn-theme-toggle');
-  if (!btn) return;
-  btn.title = theme === 'modern' ? 'Switch to Classic' : 'Switch to Modern HUD';
-  btn.textContent = theme === 'modern' ? '🖥' : '🎨';
+  document.body.dataset.theme = 'modern';
+  localStorage.setItem('tableTheme', 'modern'); // migrate any stored 'classic'
 }
 
 // ── Dice animation on/off ─────────────────────────────────────────────────────

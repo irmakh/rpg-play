@@ -181,6 +181,38 @@ export default function register(app, ctx) {
       data['sp-atk'] = _signed(prof + spMod + spAtkItem);
       data['sp-mod'] = _signed(spMod);
     }
+
+    // Saving throws / skills / passive perception (+ equipped item bonuses).
+    // Mirrors aggregateItemBonuses() + the save/skill formulas in index-calc.js.
+    // Ability-check bonuses are applied live on the table from _items, so they
+    // are not stored here.
+    const SKILL_AB  = ['dex','wis','int','str','cha','int','wis','cha','int','wis','int','wis','cha','cha','int','dex','dex','wis'];
+    const SAVE_KEYS = ['str','dex','con','int','wis','cha'];
+    const truthy = v => v === true || v === 'true' || v === 1 || v === '1';
+    const saveBon = { str:0, dex:0, con:0, int:0, wis:0, cha:0 };
+    const skillBon = {};
+    for (let i = 0; i < 18; i++) skillBon[i] = 0;
+    for (const it of equipped) {
+      if (!Array.isArray(it.bonuses)) continue;
+      for (const b of it.bonuses) {
+        const v = parseInt(b && b.value) || 0;
+        if (!v || !b || !b.target) continue;
+        const tg = b.target;
+        if (tg === 'save-all')               SAVE_KEYS.forEach(k => saveBon[k] += v);
+        else if (tg.indexOf('save-')  === 0) { const k = tg.slice(5);           if (k in saveBon)  saveBon[k]  += v; }
+        else if (tg === 'skill-all')         { for (let i = 0; i < 18; i++) skillBon[i] += v; }
+        else if (tg.indexOf('skill-') === 0) { const i = parseInt(tg.slice(6)); if (i >= 0 && i < 18) skillBon[i] += v; }
+      }
+    }
+    for (const s of SAVE_KEYS) {
+      data['save-' + s] = _signed(_abilMod(data[s]) + (truthy(data['save-prof-' + s]) ? prof : 0) + (saveBon[s] || 0));
+    }
+    for (let i = 0; i < 18; i++) {
+      const mult = truthy(data['sk-exp-' + i]) ? 2 : (truthy(data['sk-prof-' + i]) ? 1 : 0);
+      data['sk-' + i] = _signed(_abilMod(data[SKILL_AB[i]]) + prof * mult + (skillBon[i] || 0));
+    }
+    data.pp = 10 + _abilMod(data.wis) + (truthy(data['sk-prof-11']) ? prof : 0) + (skillBon[11] || 0);
+
     return data;
   }
 

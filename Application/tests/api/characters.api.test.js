@@ -615,6 +615,28 @@ describe('PATCH /api/characters/:id/equip', () => {
     expect(items(ldb)[0].equipped).toBe(true);
   });
 
+  it('equipping recomputes a saving throw from the item save bonus', async () => {
+    const { app, ldb } = makeApp();
+    // DEX 16 (+3), proficient DEX save, prof 2 → base +5; cloak adds +2 → +7
+    seedEquip(ldb,
+      [{ id: 1, name: 'Cloak of Saving', itemType: 'wondrous', equipped: false, bonuses: [{ target: 'save-dex', value: 2 }] }],
+      { 'save-prof-dex': true });
+    const res = await dm(request(app).patch('/api/characters/c1/equip')).send({ itemId: 1, equipped: true });
+    expect(res.status).toBe(200);
+    expect(stored(ldb)['save-dex']).toBe('+7');
+  });
+
+  it('equipping recomputes a skill from an "All Skills" bonus, unequipping reverts it', async () => {
+    const { app, ldb } = makeApp();
+    // sk-0 Acrobatics (DEX 16 → +3); skill-all +1 → +4
+    seedEquip(ldb,
+      [{ id: 1, name: 'Lucky Charm', itemType: 'wondrous', equipped: false, bonuses: [{ target: 'skill-all', value: 1 }] }]);
+    await dm(request(app).patch('/api/characters/c1/equip')).send({ itemId: 1, equipped: true });
+    expect(stored(ldb)['sk-0']).toBe('+4');
+    await dm(request(app).patch('/api/characters/c1/equip')).send({ itemId: 1, equipped: false });
+    expect(stored(ldb)['sk-0']).toBe('+3');
+  });
+
   it('rejects an unauthenticated request on a password-locked character', async () => {
     const { app, ldb } = makeApp();
     ldb.createCharacter('c1', {
