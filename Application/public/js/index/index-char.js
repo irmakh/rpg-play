@@ -751,7 +751,7 @@ function characterToXML(d) {
   p('  </attunement>');
   p('  <items>');
   items.forEach(item => {
-    p(`    <item id="${item.id}" type="${xe(item.itemType)}" armorType="${xe(item.armorType||'')}" acBase="${item.acBase||0}" equipped="${item.equipped}" requiresAttunement="${item.requiresAttunement}" attuned="${item.attuned}" acBonus="${item.acBonus||0}" initBonus="${item.initBonus||0}" speedBonus="${item.speedBonus||0}" weaponAtk="${xe(item.weaponAtk||'')}" weaponDmg="${xe(item.weaponDmg||'')}" weaponProperties="${xe(JSON.stringify(item.weaponProperties||[]))}">`);
+    p(`    <item id="${item.id}" type="${xe(item.itemType)}" armorType="${xe(item.armorType||'')}" acBase="${item.acBase||0}" equipped="${item.equipped}" requiresAttunement="${item.requiresAttunement}" attuned="${item.attuned}" acBonus="${item.acBonus||0}" initBonus="${item.initBonus||0}" speedBonus="${item.speedBonus||0}" spellAtkBonus="${item.spellAtkBonus||0}" spellDcBonus="${item.spellDcBonus||0}" weaponAtk="${xe(item.weaponAtk||'')}" weaponDmg="${xe(item.weaponDmg||'')}" weaponProperties="${xe(JSON.stringify(item.weaponProperties||[]))}" bonuses="${xe(JSON.stringify(item.bonuses||[]))}">`);
     p(`      <name>${xe(item.name)}</name><notes>${xe(item.notes)}</notes>`);
     p(`    </item>`);
   });
@@ -992,9 +992,12 @@ function xmlToCharacterData(xmlText) {
       acBonus: parseInt(el.getAttribute('acBonus')) || 0,
       initBonus: parseInt(el.getAttribute('initBonus')) || 0,
       speedBonus: parseInt(el.getAttribute('speedBonus')) || 0,
+      spellAtkBonus: parseInt(el.getAttribute('spellAtkBonus')) || 0,
+      spellDcBonus: parseInt(el.getAttribute('spellDcBonus')) || 0,
       weaponAtk: el.getAttribute('weaponAtk') || '',
       weaponDmg: el.getAttribute('weaponDmg') || '',
       weaponProperties: (() => { try { return JSON.parse(el.getAttribute('weaponProperties') || '[]'); } catch { return []; } })(),
+      bonuses: (() => { try { return JSON.parse(el.getAttribute('bonuses') || '[]'); } catch { return []; } })(),
       notes: el.querySelector('notes')?.textContent?.trim() || ''
     });
   });

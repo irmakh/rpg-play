@@ -214,6 +214,74 @@ describe('recalcAll — skills', () => {
   });
 });
 
+// ── recalcAll — equipped-item save/skill/check bonuses ────────────────────────
+describe('recalcAll — item bonuses to saves / skills / checks', () => {
+  function run(textIn, checkedIn, itemsArr) {
+    const defaults = { 'speed-base': '30', 'sp-ability': '' };
+    const { recalcAll, text, byId } = load({ ...defaults, ...textIn }, checkedIn || {}, itemsArr || []);
+    recalcAll();
+    return { text, byId };
+  }
+
+  it('equipped item adds to a specific save', () => {
+    // DEX 14 (+2), proficient (prof 2) → +4, plus +2 cloak = +6
+    const cloak = { equipped: true, bonuses: [{ target: 'save-dex', value: 2 }] };
+    const { text } = run({ profbonus: '2', dex: '14' }, { 'save-prof-dex': true }, [cloak]);
+    expect(text['save-dex']).toBe('+6');
+  });
+
+  it('"All Saves" bonus applies to every save', () => {
+    const ring = { equipped: true, bonuses: [{ target: 'save-all', value: 1 }] };
+    const { text } = run({ profbonus: '2', str: '10', cha: '10' }, {}, [ring]);
+    expect(text['save-str']).toBe('+1');  // 0 + 1
+    expect(text['save-cha']).toBe('+1');
+  });
+
+  it('equipped item adds to a specific skill', () => {
+    // sk-0 Acrobatics (DEX 16 → +3), +2 item = +5
+    const boots = { equipped: true, bonuses: [{ target: 'skill-0', value: 2 }] };
+    const { text } = run({ profbonus: '2', dex: '16' }, {}, [boots]);
+    expect(text['sk-0']).toBe('+5');
+  });
+
+  it('"All Skills" bonus applies to every skill and passive perception', () => {
+    // WIS 10 (+0); skill-all +1; Perception sk-11 → +1, PP = 10 + 0 + 1 = 11
+    const item = { equipped: true, bonuses: [{ target: 'skill-all', value: 1 }] };
+    const { text } = run({ profbonus: '2', wis: '10', dex: '10' }, {}, [item]);
+    expect(text['sk-0']).toBe('+1');
+    expect(text['sk-11']).toBe('+1');
+    expect(text['pp']).toBe('11');
+  });
+
+  it('ability-check bonus is baked into the ability mod circle', () => {
+    // WIS 14 (+2) + check-wis +1 → circle shows +3
+    const item = { equipped: true, bonuses: [{ target: 'check-wis', value: 1 }] };
+    const { byId } = run({ profbonus: '2', wis: '14' }, {}, [item]);
+    expect(byId['mod-wis'].value).toBe('+3');
+  });
+
+  it('check bonus does NOT leak into saves or skills', () => {
+    // check-wis +5 must not change WIS save or Perception skill
+    const item = { equipped: true, bonuses: [{ target: 'check-wis', value: 5 }] };
+    const { text } = run({ profbonus: '2', wis: '14' }, { 'save-prof-wis': true }, [item]);
+    expect(text['save-wis']).toBe('+4');  // +2 + 2, no check bonus
+    expect(text['sk-11']).toBe('+2');     // +2, no check bonus
+  });
+
+  it('unequipped item bonuses are ignored', () => {
+    const item = { equipped: false, bonuses: [{ target: 'save-str', value: 5 }] };
+    const { text } = run({ profbonus: '2', str: '10' }, {}, [item]);
+    expect(text['save-str']).toBe('+0');
+  });
+
+  it('bonuses from multiple equipped items stack', () => {
+    const a = { equipped: true, bonuses: [{ target: 'save-str', value: 1 }] };
+    const b = { equipped: true, bonuses: [{ target: 'save-all', value: 2 }] };
+    const { text } = run({ profbonus: '2', str: '10' }, {}, [a, b]);
+    expect(text['save-str']).toBe('+3');  // 0 + 1 + 2
+  });
+});
+
 // ── recalcAll — AC ────────────────────────────────────────────────────────────
 describe('recalcAll — AC', () => {
   function runAC(textIn, itemsArr = []) {

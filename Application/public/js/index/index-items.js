@@ -24,6 +24,7 @@ function openItemModal(id) {
     document.getElementById('im-weapon-atk').value = '0';
     document.getElementById('im-weapon-dmg').value = '';
     initItemPropsGrid(); setSelectedItemProps([]);
+    setItemBonusRows([]);
     document.getElementById('im-notes').value = '';
   } else {
     const item = items.find(i => i.id === id);
@@ -44,6 +45,7 @@ function openItemModal(id) {
     document.getElementById('im-weapon-atk').value = item.weaponAtk || '0';
     document.getElementById('im-weapon-dmg').value = item.weaponDmg || '';
     initItemPropsGrid(); setSelectedItemProps(item.weaponProperties || []);
+    setItemBonusRows(item.bonuses || []);
     document.getElementById('im-notes').value = item.notes || '';
   }
   itemTypeChange();
@@ -65,6 +67,49 @@ function initItemPropsGrid() {
       <input type="checkbox" id="iw-prop-${p.replace(/[^a-zA-Z]/g,'').toLowerCase()}" value="${p}" onchange="onItemPropChange()" style="width:13px;height:13px;accent-color:var(--ac)">
       ${p}</label>`
   ).join('');
+}
+
+// ── Generic item bonuses (saves / skills / ability checks) ────────────────────
+function _bonusTargetOptionsHtml(selected) {
+  return ITEM_BONUS_GROUPS.map(g =>
+    `<optgroup label="${g.label}">` +
+    g.opts.map(([v, l]) => `<option value="${v}"${v === selected ? ' selected' : ''}>${esc(l)}</option>`).join('') +
+    `</optgroup>`
+  ).join('');
+}
+
+function addBonusRow(target = 'save-str', value = 1) {
+  const list = document.getElementById('im-bonus-list');
+  if (!list) return;
+  const row = document.createElement('div');
+  row.className = 'im-bonus-row';
+  row.style.cssText = 'display:flex;gap:6px;margin-bottom:4px;align-items:center';
+  row.innerHTML =
+    `<select class="im-bonus-target" style="flex:1;font-size:12px">${_bonusTargetOptionsHtml(target)}</select>`
+    + `<input type="number" class="im-bonus-value" value="${parseInt(value) || 0}" style="width:64px">`
+    + `<button type="button" class="del-btn" onclick="removeBonusRow(this)">✕</button>`;
+  list.appendChild(row);
+}
+
+function removeBonusRow(btn) {
+  const row = btn.closest('.im-bonus-row');
+  if (row) row.remove();
+}
+
+function setItemBonusRows(bonuses) {
+  const list = document.getElementById('im-bonus-list');
+  if (list) list.innerHTML = '';
+  (bonuses || []).forEach(b => addBonusRow(b.target, b.value));
+}
+
+function getItemBonusRows() {
+  const rows = [];
+  document.querySelectorAll('#im-bonus-list .im-bonus-row').forEach(r => {
+    const target = r.querySelector('.im-bonus-target')?.value;
+    const value  = parseInt(r.querySelector('.im-bonus-value')?.value) || 0;
+    if (target && value) rows.push({ target, value });
+  });
+  return rows;
 }
 
 function getSelectedItemProps() {
@@ -188,6 +233,7 @@ function saveItemModal() {
     speedBonus: parseInt(document.getElementById('im-speed-bonus').value) || 0,
     spellAtkBonus: parseInt(document.getElementById('im-sp-atk-bonus').value) || 0,
     spellDcBonus: parseInt(document.getElementById('im-sp-dc-bonus').value) || 0,
+    bonuses: getItemBonusRows(),
     notes: document.getElementById('im-notes').value
   };
   if (editingItemId !== null) {
@@ -237,6 +283,11 @@ function openItemDetail(id) {
   if (item.acBonus)    rows.push(['AC Bonus',         (item.acBonus   > 0 ? '+' : '') + item.acBonus]);
   if (item.initBonus)  rows.push(['Initiative Bonus', (item.initBonus > 0 ? '+' : '') + item.initBonus]);
   if (item.speedBonus) rows.push(['Speed Bonus',      (item.speedBonus > 0 ? '+' : '') + item.speedBonus + ' ft']);
+  if (item.spellAtkBonus) rows.push(['Spell Atk Bonus', (item.spellAtkBonus > 0 ? '+' : '') + item.spellAtkBonus]);
+  if (item.spellDcBonus)  rows.push(['Spell DC Bonus',  (item.spellDcBonus  > 0 ? '+' : '') + item.spellDcBonus]);
+  (item.bonuses || []).forEach(b => {
+    if (b && b.value) rows.push([itemBonusTargetLabel(b.target), (b.value > 0 ? '+' : '') + b.value]);
+  });
   rows.push(['Equipped', item.equipped ? 'Yes' : 'No']);
   if (item.requiresAttunement) rows.push(['Attuned', item.attuned ? 'Yes' : 'No']);
   let html = `<table style="width:100%;border-collapse:collapse;font-size:12px">` +
@@ -289,6 +340,10 @@ function renderItems() {
     if (item.acBonus) bonusParts.push(`AC${item.acBonus > 0 ? '+' : ''}${item.acBonus}`);
     if (item.initBonus) bonusParts.push(`Init${item.initBonus > 0 ? '+' : ''}${item.initBonus}`);
     if (item.speedBonus) bonusParts.push(`Spd${item.speedBonus > 0 ? '+' : ''}${item.speedBonus}`);
+    if (item.spellAtkBonus) bonusParts.push(`SpAtk${item.spellAtkBonus > 0 ? '+' : ''}${item.spellAtkBonus}`);
+    if (item.spellDcBonus) bonusParts.push(`SpDC${item.spellDcBonus > 0 ? '+' : ''}${item.spellDcBonus}`);
+    const nBonus = (item.bonuses || []).filter(b => b && b.value).length;
+    if (nBonus) bonusParts.push(`✦${nBonus}`);
     const bonusStr = bonusParts.join(' ');
     const attuneStr = item.attuned ? ' 🔮' : '';
     const equippedStyle = item.equipped ? 'color:var(--ahi);font-weight:bold' : 'color:var(--txd)';
@@ -334,6 +389,11 @@ function renderEquippedItemsSummary() {
     if (item.acBonus)    chips.push(`<span style="background:var(--a44);padding:1px 5px;border-radius:3px;font-size:10px">AC ${item.acBonus > 0 ? '+' : ''}${item.acBonus}</span>`);
     if (item.initBonus)  chips.push(`<span style="background:var(--a44);padding:1px 5px;border-radius:3px;font-size:10px">Init ${item.initBonus > 0 ? '+' : ''}${item.initBonus}</span>`);
     if (item.speedBonus) chips.push(`<span style="background:var(--a44);padding:1px 5px;border-radius:3px;font-size:10px">Speed ${item.speedBonus > 0 ? '+' : ''}${item.speedBonus} ft</span>`);
+    if (item.spellAtkBonus) chips.push(`<span style="background:var(--a44);padding:1px 5px;border-radius:3px;font-size:10px">Spell Atk ${item.spellAtkBonus > 0 ? '+' : ''}${item.spellAtkBonus}</span>`);
+    if (item.spellDcBonus)  chips.push(`<span style="background:var(--a44);padding:1px 5px;border-radius:3px;font-size:10px">Spell DC ${item.spellDcBonus > 0 ? '+' : ''}${item.spellDcBonus}</span>`);
+    (item.bonuses || []).forEach(b => {
+      if (b && b.value) chips.push(`<span style="background:var(--a44);padding:1px 5px;border-radius:3px;font-size:10px">${esc(itemBonusTargetLabel(b.target))} ${b.value > 0 ? '+' : ''}${b.value}</span>`);
+    });
     const attuneStr = item.attuned ? ' 🔮' : '';
     const notesSnip = item.notes ? `<div style="font-size:10px;color:var(--txd);margin-top:2px">${esc(item.notes.slice(0,80))}${item.notes.length > 80 ? '…' : ''}</div>` : '';
     return `<div style="display:flex;align-items:flex-start;gap:6px;padding:4px 0;border-bottom:1px solid var(--sep)">

@@ -36,11 +36,21 @@ function renderSideCharacter() {
   const initMod = (parseInt(d['init']) || 0) + (parseInt(d['init-bonus']) || 0);
   const initBonusStr = initMod >= 0 ? '+' + initMod : '' + initMod;
 
+  // Equipped-item ability-check bonuses (saves/skills already baked into the
+  // saved sk-*/save-* values this panel reads). Applied on top of the score mod.
+  let _itemBonuses = null;
+  try { _itemBonuses = aggregateItemBonuses(JSON.parse(d['_items'] || '[]')); } catch {}
   const abilities = _ABILITY_KEYS.map((k, i) => {
     const raw = d[k] || d[k + '-score'] || d[k + '-val'] || null;
     if (!raw) return null;
     const parsed = _abilityModStr(raw);
-    return parsed ? { name: _ABILITY_LABELS[i], ...parsed } : null;
+    if (!parsed) return null;
+    const cb = _itemBonuses ? (_itemBonuses.checks[k] || 0) : 0;
+    if (cb) {
+      const n = (parseInt(String(parsed.mod).replace(/[^-\d]/g, '')) || 0) + cb;
+      parsed.mod = (n >= 0 ? '+' : '') + n;
+    }
+    return { name: _ABILITY_LABELS[i], ...parsed };
   });
   const hasAbilities = abilities.some(Boolean);
 

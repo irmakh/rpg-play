@@ -11,32 +11,40 @@ function recalcProfBonus() {
 function recalcAll() {
   const prof = parseInt(document.querySelector('[data-key="profbonus"]')?.value) || 0;
 
-  // Ability modifier circles
+  // Equipped-item bonuses to saves / skills / ability checks. Baked into the
+  // displayed value fields so every consumer (display + dice rolls on both the
+  // character sheet and the table right-panel, which reads these saved values)
+  // automatically picks them up.
+  const itemBonuses = aggregateItemBonuses(items);
+
+  // Ability modifier circles (also the value rolled for ability checks → add
+  // any check bonus here). Saves/skills are derived from getMod (ability score),
+  // not from this field, so they are unaffected by the check bonus.
   ['str','dex','con','int','wis','cha'].forEach(s => {
     const el = document.getElementById('mod-' + s);
-    if (el) el.value = fmt(getMod(s));
+    if (el) el.value = fmt(getMod(s) + (itemBonuses.checks[s] || 0));
   });
 
-  // Saving throws: ability mod + proficiency bonus if proficient
+  // Saving throws: ability mod + proficiency bonus if proficient + item bonus
   ['str','dex','con','int','wis','cha'].forEach(s => {
     const isProficient = document.querySelector(`[data-key="save-prof-${s}"]`)?.checked;
     const el = document.querySelector(`[data-key="save-${s}"]`);
-    if (el) el.value = fmt(getMod(s) + (isProficient ? prof : 0));
+    if (el) el.value = fmt(getMod(s) + (isProficient ? prof : 0) + (itemBonuses.saves[s] || 0));
   });
 
-  // Skills: ability mod + prof (×2 if expertise, ×1 if proficient, ×0 otherwise)
+  // Skills: ability mod + prof (×2 expertise, ×1 proficient, ×0 otherwise) + item bonus
   SKILL_AB.forEach((ab, i) => {
     const isProficient = document.querySelector(`[data-key="sk-prof-${i}"]`)?.checked;
     const isExpert     = document.querySelector(`[data-key="sk-exp-${i}"]`)?.checked;
     const mult = isExpert ? 2 : (isProficient ? 1 : 0);
     const el = document.querySelector(`[data-key="sk-${i}"]`);
-    if (el) el.value = fmt(getMod(ab) + prof * mult);
+    if (el) el.value = fmt(getMod(ab) + prof * mult + (itemBonuses.skills[i] || 0));
   });
 
-  // Passive Perception = 10 + Perception modifier (skill index 11, WIS)
+  // Passive Perception = 10 + Perception modifier (skill index 11, WIS) + item bonus
   const percProf = document.querySelector('[data-key="sk-prof-11"]')?.checked;
   const ppEl = document.querySelector('[data-key="pp"]');
-  if (ppEl) ppEl.value = 10 + getMod('wis') + (percProf ? prof : 0);
+  if (ppEl) ppEl.value = 10 + getMod('wis') + (percProf ? prof : 0) + (itemBonuses.skills[11] || 0);
 
   // Spellcasting: DC = 8 + prof + mod, Atk = prof + mod, Modifier = mod
   const ABILITY_MAP = {

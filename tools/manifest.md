@@ -25,6 +25,10 @@
 - **extToMime(fileUrl)** - Infers MIME type from a file URL's extension; used during backup restore
 - **broadcast(channel, data)** - Sends a JSON event to all SSE/WebSocket clients subscribed to a named channel
 
+## Application — Shared Frontend Lib (`Application/public/js/lib/`)
+
+- **dnd-data.js** — D&D 5e constants (SKILL_NAMES/SKILL_AB/SAVE_KEYS/CONDITIONS, etc.) shared by index + table. Also exposes the item-bonus helpers: `ITEM_BONUS_GROUPS` (picker option groups), `itemBonusTargetLabel(target)` (encoded target → label), and `aggregateItemBonuses(items)` which sums EQUIPPED items' `bonuses` (`{target,value}` where target is `save-*`/`skill-*`/`check-*`, plus `*-all`) into `{saves, skills, checks}` totals. recalcAll bakes these into the displayed save/skill/mod fields; table-panel applies check totals to ability mods.
+
 ## Application — Frontend Modules (`Application/public/js/table/`)
 
 - **table-console.js** - BroadcastChannel bridge for console theme Screen 1 (map); opens secondary window, broadcasts TOKEN_SELECTED
