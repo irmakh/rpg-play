@@ -52,6 +52,12 @@
     .row .v{text-align:right;word-break:break-word}
     .page-v{color:var(--ahi);font-family:ui-monospace,Consolas,monospace}
     .ip-v{font-family:ui-monospace,Consolas,monospace}
+    .ver-ok{color:var(--ok)}
+    .ver-stale{color:#e06a6a;font-weight:700}
+    #btn-reload-all{background:#7a2e2e;border-color:#a04a4a;color:#fff}
+    #btn-reload-all:hover{background:#9a3a3a}
+    #btn-reload-outdated{background:var(--bg3)}
+    .top button:disabled{opacity:.45;cursor:not-allowed}
     .ua{color:var(--txd);font-size:11px;margin-top:8px;word-break:break-word}
     #empty{color:var(--txd);padding:40px;text-align:center}
   </style>
@@ -76,8 +82,11 @@
       <div class="top">
         <h1>🔧 Connected clients</h1>
         <span class="pill" id="count-pill">0 connected</span>
+        <span class="pill" id="ver-pill" title="Current deployed frontend version"></span>
         <span class="muted" id="updated"></span>
         <span class="spacer"></span>
+        <button id="btn-reload-outdated" title="Reload only clients running an old version">Reload outdated</button>
+        <button id="btn-reload-all" title="Reload every connected client">Force reload all</button>
         <button id="btn-refresh">Refresh now</button>
         <button id="btn-logout">Lock</button>
       </div>

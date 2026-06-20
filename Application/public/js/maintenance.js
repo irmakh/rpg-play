@@ -5,6 +5,8 @@
 
 let _pw = null;            // DM master password, kept in memory only
 let _pollTimer = null;
+let _serverVersion = null; // current deployed frontend version
+let _outdatedCount = 0;
 const POLL_MS = 4000;
 
 const $ = id => document.getElementById(id);
@@ -44,6 +46,28 @@ $('btn-logout').addEventListener('click', () => {
   $('gate-pw').value = '';
   $('gate-pw').focus();
 });
+
+$('btn-reload-all').addEventListener('click', () => {
+  if (confirm('Force EVERY connected client to reload now?')) sendReload('all');
+});
+$('btn-reload-outdated').addEventListener('click', () => {
+  if (_outdatedCount === 0) return;
+  if (confirm(`Reload ${_outdatedCount} client(s) running an old version?`)) sendReload('outdated');
+});
+
+async function sendReload(mode) {
+  if (!_pw) return;
+  try {
+    const res = await fetch('/api/maintenance/reload', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Master-Password': _pw },
+      body: JSON.stringify({ mode }),
+    });
+    if (!res.ok) { alert('Reload request failed.'); return; }
+    // Give clients a moment to drop & reconnect, then refresh the list.
+    setTimeout(loadClients, 2500);
+  } catch { alert('Reload request failed — network error.'); }
+}
 
 // ── Polling ───────────────────────────────────────────────────────────────────
 function startPolling() {
@@ -90,9 +114,17 @@ function absTime(ts) {
 }
 
 function render(data) {
-  const { clients = [], now = Date.now(), count = 0 } = data;
+  const { clients = [], now = Date.now(), count = 0, serverVersion = null } = data;
+  _serverVersion = serverVersion;
   $('count-pill').textContent = count + ' connected';
+  $('ver-pill').textContent = serverVersion != null ? ('server v' + serverVersion) : '';
   $('updated').textContent = 'updated ' + new Date(now).toLocaleTimeString();
+
+  const sv = serverVersion != null ? String(serverVersion) : null;
+  _outdatedCount = clients.filter(c => c.ver && sv && c.ver !== sv).length;
+  const outBtn = $('btn-reload-outdated');
+  outBtn.disabled = _outdatedCount === 0;
+  outBtn.textContent = _outdatedCount > 0 ? `Reload outdated (${_outdatedCount})` : 'Reload outdated';
 
   const cards = $('cards');
   const empty = $('empty');
@@ -111,6 +143,8 @@ function render(data) {
                : 'Anonymous';
     const badgeLabel = role === 'dm' ? 'DM' : role === 'character' ? 'Player' : 'Not logged in';
     const page = c.page || '(unknown)';
+    const stale = c.ver && sv && c.ver !== sv;
+    const verStr = c.ver ? ('v' + c.ver + (stale ? ' (outdated)' : '')) : 'unknown';
     const loginRow = loggedIn
       ? `<div class="row"><span class="k">Logged in</span><span class="v" title="${esc(absTime(c.loginAt))}">${relTime(c.loginAt, now)}</span></div>`
       : '';
@@ -121,6 +155,7 @@ function render(data) {
           <span class="name">${esc(name)}</span>
         </div>
         <div class="row"><span class="k">Current page</span><span class="v page-v">${esc(page)}</span></div>
+        <div class="row"><span class="k">Version</span><span class="v ${stale ? 'ver-stale' : 'ver-ok'}">${esc(verStr)}</span></div>
         ${loginRow}
         <div class="row"><span class="k">Connected</span><span class="v" title="${esc(absTime(c.connectedAt))}">${relTime(c.connectedAt, now)}</span></div>
         <div class="row"><span class="k">IP address</span><span class="v ip-v">${esc(c.ip || '—')}</span></div>

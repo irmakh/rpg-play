@@ -235,7 +235,7 @@ const MAX_MEDIA_BYTES = 25 * 1024 * 1024;
 // Bump this number whenever frontend JS or CSS files change.
 // Also bump CACHE in public/sw.js to the same value.
 // Both must always match. See deployment notes in CLAUDE.md.
-const FRONTEND_VERSION = 125;
+const FRONTEND_VERSION = 126;
 
 // ── Express app ───────────────────────────────────────────────────────────────
 const app = express();
@@ -322,6 +322,7 @@ function clientMetaFromReq(req, transport) {
     role:      _cap(q.role || 'none', 16),  // 'dm' | 'character' | 'none'
     charId:    _cap(q.charId, 64),
     charName:  _cap(q.charName, 128),
+    ver:       _cap(q.ver, 16),             // frontend version the client loaded
     userAgent: _cap(req.headers['user-agent'], 512),
   };
 }
@@ -350,7 +351,17 @@ app.get('/api/maintenance/clients', (req, res) => {
   for (const ws of wsClients)  if (ws._meta)  clients.push({ ...ws._meta });
   for (const r  of sseClients) if (r._meta)   clients.push({ ...r._meta });
   clients.sort((a, b) => a.connectedAt - b.connectedAt);
-  res.json({ now: Date.now(), count: clients.length, clients });
+  res.json({ now: Date.now(), count: clients.length, serverVersion: FRONTEND_VERSION, clients });
+});
+
+// Force connected clients to reload (pick up the latest deployed version).
+// mode 'all' reloads everyone; mode 'outdated' only reloads clients whose loaded
+// version differs from the current FRONTEND_VERSION (the client decides). DM-only.
+app.post('/api/maintenance/reload', (req, res) => {
+  if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
+  const mode = req.body && req.body.mode === 'outdated' ? 'outdated' : 'all';
+  broadcast('force-reload', { mode, version: FRONTEND_VERSION });
+  res.json({ ok: true, mode, version: FRONTEND_VERSION });
 });
 
 // ── Console relay ─────────────────────────────────────────────────────────────
