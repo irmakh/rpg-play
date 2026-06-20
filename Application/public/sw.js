@@ -1,4 +1,4 @@
-const CACHE = 'rpg-v123';
+const CACHE = 'rpg-v124';
 
 const STATIC = [
   // Core pages

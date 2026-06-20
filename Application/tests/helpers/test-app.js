@@ -69,7 +69,8 @@ export function makeApp() {
   const app = express();
   app.use(express.json({ limit: '10mb' }));
 
-  const broadcast = () => {};
+  const broadcasts = [];
+  const broadcast = (channel, payload) => { broadcasts.push({ channel, payload }); };
 
   function masterAuth(req) {
     const pw = req.headers['x-master-password'];
@@ -126,5 +127,5 @@ export function makeApp() {
   registerAuth(app, ctx);
   registerEvents(app, ctx);
 
-  return { app, ldb, masterPw: TEST_MASTER_PW, hashPassword };
+  return { app, ldb, masterPw: TEST_MASTER_PW, hashPassword, broadcasts };
 }

@@ -234,6 +234,84 @@ describe('PUT /api/characters/:id', () => {
   });
 });
 
+// ── PATCH /api/characters/:id (partial merge) ─────────────────────────────────
+describe('PATCH /api/characters/:id', () => {
+  it('merges patch keys into existing data without touching other keys', async () => {
+    const { app, ldb } = makeApp();
+    ldb.createCharacter('c1', { name: 'Hero', dataJson: JSON.stringify({ name: 'Hero', str: '10', notes: 'orig' }), createdAt: new Date().toISOString() });
+    const res = await request(app).patch('/api/characters/c1').send({ patch: { str: '18' } });
+    expect(res.status).toBe(200);
+    const stored = JSON.parse(ldb.getCharacter('c1').dataJson);
+    expect(stored.str).toBe('18');   // changed
+    expect(stored.notes).toBe('orig'); // untouched
+    expect(stored.name).toBe('Hero');
+  });
+
+  it('two patches to different keys do not clobber each other (the core fix)', async () => {
+    const { app, ldb } = makeApp();
+    ldb.createCharacter('c1', { name: 'Hero', dataJson: JSON.stringify({ name: 'Hero', hpcur: '10', notes: 'a' }), createdAt: new Date().toISOString() });
+    // Person A changes HP
+    await request(app).patch('/api/characters/c1').send({ patch: { hpcur: '5' } });
+    // Person B (who never saw A's change) changes a note
+    await request(app).patch('/api/characters/c1').send({ patch: { notes: 'b' } });
+    const stored = JSON.parse(ldb.getCharacter('c1').dataJson);
+    expect(stored.hpcur).toBe('5'); // A's change survives
+    expect(stored.notes).toBe('b'); // B's change survives
+  });
+
+  it('broadcasts the changed keys so other clients can apply just those fields', async () => {
+    const { app, ldb, broadcasts } = makeApp();
+    ldb.createCharacter('c1', { name: 'Hero', dataJson: '{}', createdAt: new Date().toISOString() });
+    await request(app).patch('/api/characters/c1').send({ patch: { str: '14', dex: '12' } });
+    const charBroadcast = broadcasts.find(b => b.channel === 'characters');
+    expect(charBroadcast).toBeDefined();
+    expect(charBroadcast.payload.id).toBe('c1');
+    expect(charBroadcast.payload.keys.sort()).toEqual(['dex', 'str']);
+  });
+
+  it('syncs linked tokens when the patch touches HP/AC/speed', async () => {
+    const { app, ldb } = makeApp();
+    ldb.createCharacter('c1', { name: 'Fighter', dataJson: JSON.stringify({ name: 'Fighter' }), createdAt: new Date().toISOString() });
+    ldb.createTableToken('tok-1', { name: 'Fighter', linkedId: 'c1', hpCurrent: 10, hpMax: 10, ac: 12 });
+    await request(app).patch('/api/characters/c1').send({ patch: { hpcur: '7', hpmax: '12', ac: '16' } });
+    const tok = ldb.getTableToken('tok-1');
+    expect(tok.hpCurrent).toBe(7);
+    expect(tok.hpMax).toBe(12);
+    expect(tok.ac).toBe(16);
+  });
+
+  it('does not broadcast token-updated when the patch has no sync-relevant keys', async () => {
+    const { app, ldb, broadcasts } = makeApp();
+    ldb.createCharacter('c1', { name: 'Hero', dataJson: '{}', createdAt: new Date().toISOString() });
+    ldb.createTableToken('tok-1', { name: 'Hero', linkedId: 'c1', hpCurrent: 10, hpMax: 10 });
+    await request(app).patch('/api/characters/c1').send({ patch: { notes: 'just a note' } });
+    expect(broadcasts.find(b => b.channel === 'table')).toBeUndefined();
+  });
+
+  it('returns 400 when patch is missing or not an object', async () => {
+    const { app, ldb } = makeApp();
+    ldb.createCharacter('c1', { name: 'Hero', dataJson: '{}', createdAt: new Date().toISOString() });
+    expect((await request(app).patch('/api/characters/c1').send({})).status).toBe(400);
+    expect((await request(app).patch('/api/characters/c1').send({ patch: [1, 2] })).status).toBe(400);
+  });
+
+  it('returns 404 for a non-existent character', async () => {
+    const { app } = makeApp();
+    const res = await request(app).patch('/api/characters/ghost').send({ patch: { str: '1' } });
+    expect(res.status).toBe(404);
+  });
+
+  it('requires correct password for a locked character', async () => {
+    const { app } = makeApp();
+    const createRes = await request(app).post('/api/characters').send({ name: 'Paladin', password: 'holy' });
+    const id = createRes.body.id;
+    const res1 = await request(app).patch(`/api/characters/${id}`).send({ patch: { str: '1' } });
+    expect(res1.status).toBe(401);
+    const res2 = await request(app).patch(`/api/characters/${id}`).set('X-Character-Password', 'holy').send({ patch: { str: '1' } });
+    expect(res2.status).toBe(200);
+  });
+});
+
 // ── PUT /api/characters/:id/password ─────────────────────────────────────────
 describe('PUT /api/characters/:id/password', () => {
   it('sets a password on a character that had none', async () => {

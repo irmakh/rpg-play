@@ -30,6 +30,12 @@ let _actionFilter = 'all';
 // SSE suppression (set by saveCharacter, read by realtime handler)
 let _suppressSSEReload = false;
 
+// Snapshot of the last-persisted character data (keyed like collectData()).
+// Autosave diffs against this to PATCH only changed keys; applyPartial uses it
+// to detect locally-dirty fields so an incoming change never clobbers an edit
+// in progress. Reset on load / full save / applyData.
+let _lastSavedData = {};
+
 // Media (shared between index-char.js clearSheet and index-media.js)
 let mediaList = [];
 

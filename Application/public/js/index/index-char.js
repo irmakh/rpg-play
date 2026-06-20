@@ -5,7 +5,7 @@ function scheduleAutoSave() {
   clearTimeout(_autoSaveTimer);
   const el = document.getElementById('save-status');
   if (el) { clearTimeout(statusTimer); el.textContent = '…'; el.className = 'info'; }
-  _autoSaveTimer = setTimeout(() => saveCharacter(true), 800);
+  _autoSaveTimer = setTimeout(() => autoSaveCharacter(), 800);
 }
 
 function indexLogout() {
@@ -87,20 +87,28 @@ function clearSheet() {
   _applyingData = false;
 }
 
-function applyData(d) {
-  if (!d) return;
-  _applyingData = true;
+// Apply scalar [data-key] fields from d. When `guard(el, key)` is supplied and
+// returns true for a field, that field is skipped (used by applyPartial to leave
+// focused / locally-dirty / unchanged fields untouched).
+function _applyScalars(d, guard) {
   document.querySelectorAll('[data-key]').forEach(el => {
-    const v = d[el.dataset.key];
+    const k = el.dataset.key;
+    const v = d[k];
     if (v === undefined) return;
+    if (guard && guard(el, k)) return;
     if (el.type === 'checkbox') el.checked = !!v;
     else el.value = v;
   });
-  // Inspiration
-  if (d['_inspire']) document.getElementById('inspire').classList.add('on');
-  else document.getElementById('inspire').classList.remove('on');
+}
+
+// Rebuild the list-backed sections (weapons / spells / items / actions / roll
+// history / loots) from d. `which` (a Set of section names) limits the rebuild;
+// omit it to rebuild all. Summaries are always re-rendered since they derive
+// from these lists.
+function _applyLists(d, which) {
+  const want = name => !which || which.has(name);
   // Weapons
-  if (d['_weapons']) {
+  if (want('weapons') && d['_weapons']) {
     let rows; try { rows = JSON.parse(d['_weapons']); } catch { rows = []; }
     const tbl = document.getElementById('wpn-tbl');
     tbl.querySelectorAll('tr:not(:first-child)').forEach(r => r.remove());
@@ -112,7 +120,7 @@ function applyData(d) {
     });
   }
   // Spells — index 7 = prepared checkbox
-  if (d['_spells']) {
+  if (want('spells') && d['_spells']) {
     let rows; try { rows = JSON.parse(d['_spells']); } catch { rows = []; }
     const tbl = document.getElementById('spell-tbl');
     tbl.querySelectorAll('tr:not(:first-child)').forEach(r => r.remove());
@@ -129,40 +137,105 @@ function applyData(d) {
       tbl.appendChild(tr);
     });
   }
+  // Items — migrate legacy 'item' type to 'wondrous'
+  if (want('items')) {
+    items = [];
+    itemIdCounter = 0;
+    if (d['_items']) {
+      try { items = JSON.parse(d['_items']); } catch {}
+    }
+    items.forEach(i => { if (i.itemType === 'item') i.itemType = 'wondrous'; });
+    itemIdCounter = parseInt(d['_itemIdCounter']) || (items.length > 0 ? Math.max(...items.map(i => i.id)) : 0);
+    renderItems();
+  }
+  // Custom actions
+  if (want('actions')) {
+    actions = [];
+    if (d['_actions']) { try { actions = JSON.parse(d['_actions']); } catch {} }
+    actionIdCounter = parseInt(d['_actionIdCounter']) || (actions.length > 0 ? Math.max(...actions.map(a => a.id || 0)) : 0);
+  }
+  // Roll history
+  if (want('rollHistory')) {
+    rollHistory.length = 0;
+    if (d['_rollHistory']) {
+      let hist; try { hist = JSON.parse(d['_rollHistory']); } catch { hist = []; }
+      hist.forEach(e => rollHistory.push({...e, time: new Date(e.time)}));
+    }
+    renderRollHistory();
+  }
+  // Loots
+  if (want('loots')) {
+    claimedLoots = [];
+    if (d['_loots']) { try { claimedLoots = JSON.parse(d['_loots']); } catch {} }
+    renderClaimedLoots();
+  }
+  renderWeaponsSummary();
+  renderEquippedItemsSummary();
+  if (typeof renderActionsTab === 'function') renderActionsTab();
+}
+
+function applyData(d) {
+  if (!d) return;
+  _applyingData = true;
+  _applyScalars(d);
+  // Inspiration
+  if (d['_inspire']) document.getElementById('inspire').classList.add('on');
+  else document.getElementById('inspire').classList.remove('on');
   // Migrate speed: if speed-base not saved, derive from speed field
   if (!d['speed-base'] && d['speed']) {
     const parsed = parseInt(d['speed']);
     if (!isNaN(parsed)) d['speed-base'] = String(parsed);
   }
-  // Items — migrate legacy 'item' type to 'wondrous'
-  items = [];
-  itemIdCounter = 0;
-  if (d['_items']) {
-    try { items = JSON.parse(d['_items']); } catch {}
-  }
-  items.forEach(i => { if (i.itemType === 'item') i.itemType = 'wondrous'; });
-  itemIdCounter = parseInt(d['_itemIdCounter']) || (items.length > 0 ? Math.max(...items.map(i => i.id)) : 0);
-  renderItems();
-  // Custom actions
-  actions = [];
-  if (d['_actions']) { try { actions = JSON.parse(d['_actions']); } catch {} }
-  actionIdCounter = parseInt(d['_actionIdCounter']) || (actions.length > 0 ? Math.max(...actions.map(a => a.id || 0)) : 0);
-  // Roll history
-  rollHistory.length = 0;
-  if (d['_rollHistory']) {
-    let hist; try { hist = JSON.parse(d['_rollHistory']); } catch { hist = []; }
-    hist.forEach(e => rollHistory.push({...e, time: new Date(e.time)}));
-  }
-  renderRollHistory();
-  renderWeaponsSummary();
-  renderEquippedItemsSummary();
-  if (typeof renderActionsTab === 'function') renderActionsTab();
-  // Loots
-  claimedLoots = [];
-  if (d['_loots']) { try { claimedLoots = JSON.parse(d['_loots']); } catch {} }
-  renderClaimedLoots();
+  _applyLists(d);
   recalcAll();
   _applyingData = false;
+  _lastSavedData = collectData();
+}
+
+// Apply ONLY the named keys from an incoming SSE update, leaving every other
+// field — and any field the local user is currently editing — untouched. This
+// is what lets two people edit different parts of the same sheet without one
+// reload nuking the other's in-progress change.
+function applyPartial(keys, d) {
+  if (!d || !Array.isArray(keys) || keys.length === 0) return;
+  const changed = new Set(keys);
+  const cur = collectData();           // current DOM state (detects local edits)
+  const active = document.activeElement;
+  _applyingData = true;
+
+  // Scalar fields: apply a changed key only when it isn't focused and isn't
+  // locally dirty (current value already differs from the last saved value).
+  _applyScalars(d, (el, k) => !changed.has(k) || el === active || cur[k] !== _lastSavedData[k]);
+  // Inspiration toggle
+  if (changed.has('_inspire') && cur['_inspire'] === _lastSavedData['_inspire']) {
+    document.getElementById('inspire').classList.toggle('on', !!d['_inspire']);
+  }
+
+  // List sections: rebuild a list only if its blob changed AND the user has no
+  // unsaved edits to that same list (else the local edit wins — last-writer on a
+  // shared list, the documented blob-granularity limitation).
+  const listMap = { _weapons:'weapons', _spells:'spells', _items:'items', _itemIdCounter:'items',
+                    _actions:'actions', _actionIdCounter:'actions', _loots:'loots', _rollHistory:'rollHistory' };
+  const which = new Set();
+  for (const k of keys) {
+    const name = listMap[k];
+    if (!name) continue;
+    if (cur[k] !== _lastSavedData[k]) continue;   // local unsaved list edit — keep it
+    which.add(name);
+  }
+  if (which.size) _applyLists(d, which);
+
+  recalcAll();
+  _applyingData = false;
+
+  // Advance the saved-state snapshot for every field that wasn't locally dirty
+  // before this apply (including derived fields recalcAll just refreshed). Dirty
+  // fields are left stale so the pending autosave still ships the user's edit.
+  const after = collectData();
+  for (const k in after) {
+    if (cur[k] !== _lastSavedData[k]) continue;
+    _lastSavedData[k] = after[k];
+  }
 }
 
 // ── API + Password state ───────────────────────────────────────────────────────
@@ -368,6 +441,7 @@ async function saveCharacter(silent = false) {
     });
     if (!res.ok) { setStatus('Save failed', true); return; }
     const result = await res.json();
+    _lastSavedData = data;   // full save — snapshot now matches the server
     const lockPfx = charHasPassword[currentCharId] ? '🔒 ' : '';
     const typePfx = charTypes[currentCharId] === 'npc' ? '[NPC] ' : '';
     const opt = document.querySelector(`#char-select option[value="${currentCharId}"]`);
@@ -378,6 +452,48 @@ async function saveCharacter(silent = false) {
     setStatus('Save failed', true);
   } finally {
     if (!silent) hideLoading();
+    setTimeout(() => { _suppressSSEReload = false; }, 1500);
+  }
+}
+
+// Autosave path: PATCH only the keys that actually changed since the last save,
+// so two people editing different fields of the same character never overwrite
+// each other (the full-document PUT did). The server merges the patch into the
+// stored data and broadcasts the changed keys so other open sheets apply just
+// those fields via applyPartial().
+async function autoSaveCharacter() {
+  if (!currentCharId) return;
+  const data = collectData();
+  const patch = {};
+  for (const k in data) {
+    if (data[k] !== _lastSavedData[k]) patch[k] = data[k];
+  }
+  const keys = Object.keys(patch);
+  if (keys.length === 0) { setStatus('Saved!', false); return; }
+  _suppressSSEReload = true;
+  const sEl = document.getElementById('save-status');
+  if (sEl) { clearTimeout(statusTimer); sEl.textContent = 'Saving…'; sEl.className = 'info'; }
+  const headers = { 'Content-Type': 'application/json' };
+  if (charPasswords[currentCharId]) headers['X-Character-Password'] = charPasswords[currentCharId];
+  else if (indexMasterPw()) headers['X-Character-Password'] = indexMasterPw();
+  try {
+    const res = await fetch(`/api/characters/${currentCharId}`, {
+      method: 'PATCH', headers, body: JSON.stringify({ patch })
+    });
+    if (!res.ok) { setStatus('Save failed', true); return; }
+    const result = await res.json();
+    for (const k of keys) _lastSavedData[k] = patch[k];   // advance snapshot
+    if ('name' in patch && result.name) {
+      const lockPfx = charHasPassword[currentCharId] ? '🔒 ' : '';
+      const typePfx = charTypes[currentCharId] === 'npc' ? '[NPC] ' : '';
+      const opt = document.querySelector(`#char-select option[value="${currentCharId}"]`);
+      if (opt) opt.textContent = lockPfx + typePfx + result.name;
+      document.getElementById('char-title').textContent = result.name;
+    }
+    setStatus('Saved!', false);
+  } catch(e) {
+    setStatus('Save failed', true);
+  } finally {
     setTimeout(() => { _suppressSSEReload = false; }, 1500);
   }
 }

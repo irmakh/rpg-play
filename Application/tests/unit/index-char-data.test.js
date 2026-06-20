@@ -34,7 +34,10 @@ function extractFunctions(src, ...names) {
   }).join('\n');
 }
 
-const FN_SRC = extractFunctions(CHAR_SRC, 'collectData', 'applyData');
+// applyData now delegates to _applyScalars / _applyLists and snapshots via
+// collectData(), so all four must be loaded into the vm context together.
+// applyPartial is the concurrency-safe SSE applier.
+const FN_SRC = extractFunctions(CHAR_SRC, 'collectData', '_applyScalars', '_applyLists', 'applyData', 'applyPartial');
 
 // ── DOM stub factory ──────────────────────────────────────────────────────────
 
@@ -196,6 +199,7 @@ function load({
     claimedLoots:  claimedLoots.map(l => ({ ...l })),
     actions:       actions.map(a => ({ ...a })),
     actionIdCounter,
+    _lastSavedData: {},
     document:      dom,
     // side-effect stubs (called by applyData but not under test here)
     renderItems:                 () => {},
@@ -212,8 +216,9 @@ function load({
   runInContext(FN_SRC,  ctx);
 
   return {
-    collectData: ctx.collectData,
-    applyData:   ctx.applyData,
+    collectData:  ctx.collectData,
+    applyData:    ctx.applyData,
+    applyPartial: ctx.applyPartial,
     dom,
     get rollHistory()  { return ctx.rollHistory; },
     get items()        { return ctx.items; },
@@ -617,5 +622,45 @@ describe('applyData — spell action category', () => {
     applyData({ _spells: JSON.stringify([['1', 'Entangle', 'Action', '90 ft', true, false, '', true, 'Conj', false, false, false, '', 'action', '1 minute']]) });
     expect(dom.spellAppended[0].innerHTML).toContain('class="spell-duration"');
     expect(dom.spellAppended[0].innerHTML).toContain('value="1 minute"');
+  });
+});
+
+// ── applyPartial — concurrency guard (the cross-editor fix) ───────────────────
+describe('applyPartial', () => {
+  const elFor = (env, key) => env.dom.keyEls.find(e => e.dataset.key === key);
+
+  it('applies a changed scalar key from an incoming update', () => {
+    const env = load({ keyValues: { str: '10', notes: 'orig' } });
+    env.applyData({ str: '10', notes: 'orig' });   // establish saved snapshot
+    env.applyPartial(['str'], { str: '18', notes: 'orig' });
+    expect(elFor(env, 'str').value).toBe('18');
+  });
+
+  it('does NOT overwrite a field the local user has edited but not yet saved', () => {
+    const env = load({ keyValues: { str: '10', notes: 'orig' } });
+    env.applyData({ str: '10', notes: 'orig' });   // snapshot: str=10, notes=orig
+    // user types a new note locally — this is now locally dirty
+    elFor(env, 'notes').value = 'my local edit';
+    // a remote change for BOTH str and notes arrives
+    env.applyPartial(['str', 'notes'], { str: '18', notes: 'someone else' });
+    expect(elFor(env, 'str').value).toBe('18');           // not dirty → applied
+    expect(elFor(env, 'notes').value).toBe('my local edit'); // dirty → preserved
+  });
+
+  it('ignores keys not listed in the changed-keys array', () => {
+    const env = load({ keyValues: { str: '10', dex: '12' } });
+    env.applyData({ str: '10', dex: '12' });
+    // incoming data carries a new dex, but only str is flagged as changed
+    env.applyPartial(['str'], { str: '14', dex: '99' });
+    expect(elFor(env, 'str').value).toBe('14');
+    expect(elFor(env, 'dex').value).toBe('12'); // untouched — not in keys
+  });
+
+  it('is a no-op when keys is empty or not an array', () => {
+    const env = load({ keyValues: { str: '10' } });
+    env.applyData({ str: '10' });
+    expect(() => env.applyPartial([], { str: '99' })).not.toThrow();
+    expect(() => env.applyPartial(null, { str: '99' })).not.toThrow();
+    expect(elFor(env, 'str').value).toBe('10');
   });
 });

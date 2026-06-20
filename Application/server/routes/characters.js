@@ -220,6 +220,48 @@ export default function register(app, ctx) {
     return data;
   }
 
+  // Push HP / AC / speed from a character's data onto its linked table tokens and
+  // broadcast token-updated. Shared by PUT (full save) and PATCH (partial save).
+  async function syncLinkedTokens(charId, data) {
+    try {
+      const linkedTokens = DB_PROVIDER === 'localdb'
+        ? ldb.getLinkedTokens(charId)
+        : (await idb.query({ tableTokens: { $: { where: { linkedId: charId } } } })).tableTokens || [];
+      if (linkedTokens.length === 0) return;
+      const newHpMax = parseInt(data.hpmax) || 0;
+      const newHpCur = Math.min(parseInt(data.hpcur) || 0, newHpMax);
+      // Prefer the already-computed data.speed (index recalcAll() bakes in
+      // base + item + manual bonuses). Only when it's absent, derive it from
+      // speed-base + equipped item bonuses + manual bonus (base defaults 30).
+      let newSpeed;
+      if (data.speed !== undefined && data.speed !== '') {
+        newSpeed = parseInt(String(data.speed).replace(/[^0-9]/g, '')) || 30;
+      } else {
+        let charItems = [];
+        try { charItems = JSON.parse(data['_items'] || '[]'); } catch {}
+        const itemSpeedBonus = charItems.filter(i => i.equipped).reduce((s, i) => s + (parseInt(i.speedBonus) || 0), 0);
+        const base = (data['speed-base'] !== undefined && data['speed-base'] !== '')
+          ? (parseInt(String(data['speed-base']).replace(/[^0-9]/g, '')) || 30) : 30;
+        newSpeed = base + itemSpeedBonus + (parseInt(data['speed-bonus']) || 0);
+      }
+      const newHpTemp = Math.max(0, parseInt(data.hptemp) || 0);
+      // data.ac holds the computed total (base + items + bonus). Sync it to the
+      // token so the table HP panel / initiative tracker reflect AC live over SSE.
+      const newAc = data.ac != null && data.ac !== '' ? (parseInt(data.ac) || null) : null;
+      const updFields = { hpCurrent: newHpCur, hpMax: newHpMax, hpTemp: newHpTemp, speed: newSpeed };
+      if (newAc != null) updFields.ac = newAc;
+      if (DB_PROVIDER === 'localdb') {
+        for (const t of linkedTokens) {
+          ldb.updateTableToken(t.id, updFields);
+          broadcast('table', { action: 'token-updated', token: { ...t, ...updFields } });
+        }
+      } else {
+        await idb.transact(linkedTokens.map(t => idb.tx.tableTokens[t.id].update(updFields)));
+        for (const t of linkedTokens) broadcast('table', { action: 'token-updated', token: { ...t, ...updFields } });
+      }
+    } catch (syncErr) { console.error('token sync:', syncErr); }
+  }
+
   // Wear / unwear an inventory item from the table side panel.
   app.patch('/api/characters/:id/equip', async (req, res) => {
     try {
@@ -349,44 +391,44 @@ export default function register(app, ctx) {
       }
       broadcast('characters', { action: 'updated', id: req.params.id });
 
-      try {
-        const linkedTokens = DB_PROVIDER === 'localdb'
-          ? ldb.getLinkedTokens(req.params.id)
-          : (await idb.query({ tableTokens: { $: { where: { linkedId: req.params.id } } } })).tableTokens || [];
-        if (linkedTokens.length > 0) {
-          const newHpMax = parseInt(data.hpmax) || 0;
-          const newHpCur = Math.min(parseInt(data.hpcur) || 0, newHpMax);
-          // Prefer the already-computed data.speed (index recalcAll() bakes in
-          // base + item + manual bonuses). Only when it's absent, derive it from
-          // speed-base + equipped item bonuses + manual bonus (base defaults 30).
-          let newSpeed;
-          if (data.speed !== undefined && data.speed !== '') {
-            newSpeed = parseInt(String(data.speed).replace(/[^0-9]/g, '')) || 30;
-          } else {
-            let charItems = [];
-            try { charItems = JSON.parse(data['_items'] || '[]'); } catch {}
-            const itemSpeedBonus = charItems.filter(i => i.equipped).reduce((s, i) => s + (parseInt(i.speedBonus) || 0), 0);
-            const base = (data['speed-base'] !== undefined && data['speed-base'] !== '')
-              ? (parseInt(String(data['speed-base']).replace(/[^0-9]/g, '')) || 30) : 30;
-            newSpeed = base + itemSpeedBonus + (parseInt(data['speed-bonus']) || 0);
-          }
-          const newHpTemp = Math.max(0, parseInt(data.hptemp) || 0);
-          // data.ac holds the computed total (base + items + bonus). Sync it to the
-          // token so the table HP panel / initiative tracker reflect AC live over SSE.
-          const newAc = data.ac != null && data.ac !== '' ? (parseInt(data.ac) || null) : null;
-          const updFields = { hpCurrent: newHpCur, hpMax: newHpMax, hpTemp: newHpTemp, speed: newSpeed };
-          if (newAc != null) updFields.ac = newAc;
-          if (DB_PROVIDER === 'localdb') {
-            for (const t of linkedTokens) {
-              ldb.updateTableToken(t.id, updFields);
-              broadcast('table', { action: 'token-updated', token: { ...t, ...updFields } });
-            }
-          } else {
-            await idb.transact(linkedTokens.map(t => idb.tx.tableTokens[t.id].update(updFields)));
-            for (const t of linkedTokens) broadcast('table', { action: 'token-updated', token: { ...t, ...updFields } });
-          }
-        }
-      } catch (syncErr) { console.error('token sync:', syncErr); }
+      await syncLinkedTokens(req.params.id, data);
+
+      res.json({ ok: true, name });
+    } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
+  });
+
+  // Partial save: merge only the supplied keys into the stored data instead of
+  // replacing the whole document. This is what autosave uses so two people
+  // editing different fields of the same character don't clobber each other.
+  // The broadcast carries `keys` so other open sheets apply just those fields.
+  app.patch('/api/characters/:id', async (req, res) => {
+    try {
+      const charId = req.params.id;
+      const char = await getCharacter(charId);
+      if (!char) return res.status(404).json({ error: 'Not found' });
+      if (char.passwordHash) {
+        const pw = req.headers['x-character-password'];
+        if (!pw || (!verifyPassword(pw, char.passwordHash) && !isMasterPassword(pw)))
+          return res.status(401).json({ error: 'Wrong password' });
+      }
+      const patch = req.body && req.body.patch;
+      if (!patch || typeof patch !== 'object' || Array.isArray(patch))
+        return res.status(400).json({ error: 'patch object required' });
+      let data = {};
+      try { data = JSON.parse(char.dataJson || '{}'); } catch {}
+      const keys = Object.keys(patch);
+      for (const k of keys) data[k] = patch[k];
+      const name = (data.name || '').trim() || 'Unnamed';
+      if (DB_PROVIDER === 'localdb') {
+        ldb.updateCharacter(charId, { name, dataJson: JSON.stringify(data) });
+      } else {
+        await idb.transact([idb.tx.characters[charId].update({ name, dataJson: JSON.stringify(data) })]);
+      }
+      broadcast('characters', { action: 'updated', id: charId, keys });
+
+      // Only touch linked tokens when the patch could have changed HP/AC/speed.
+      const SYNC_KEYS = ['hpcur','hpmax','hptemp','speed','speed-base','speed-bonus','ac','ac-bonus','_items'];
+      if (keys.some(k => SYNC_KEYS.includes(k))) await syncLinkedTokens(charId, data);
 
       res.json({ ok: true, name });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }

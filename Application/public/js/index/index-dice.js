@@ -112,7 +112,7 @@ function pushRoll(entry) {
   if (rollHistory.length > 100) rollHistory.pop();
   renderRollHistory();
   clearTimeout(_autoSaveTimer);
-  _autoSaveTimer = setTimeout(() => saveCharacter(true), 600);
+  _autoSaveTimer = setTimeout(() => autoSaveCharacter(), 600);
 }
 
 function renderRollHistory() {

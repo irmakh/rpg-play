@@ -2,7 +2,12 @@
 window.addEventListener('load', function startRealtime() {
   connectRealtime({
     characters: async (payload) => {
-      loadCharacterList(true, _suppressSSEReload);
+      // Refresh the DM dropdown metadata only (names/locks/new chars). Pass
+      // skipLoad=true so this NEVER reloads the open sheet — an unrelated
+      // character's edit used to force a full reload of your own sheet here,
+      // wiping in-progress edits. The open sheet is refreshed only by the
+      // id-matched block below.
+      loadCharacterList(true, true);
       if (currentCharId && payload.id === currentCharId && !_suppressSSEReload) {
         try {
           const headers = {};
@@ -10,7 +15,11 @@ window.addEventListener('load', function startRealtime() {
           const res = await fetch(`/api/characters/${currentCharId}`, { headers });
           if (res.ok) {
             const char = await res.json();
-            applyData(char.data);
+            // Field-level apply when the broadcast names the changed keys — only
+            // those fields update, and any field you're editing is left alone.
+            // Fall back to a full apply for full saves / older broadcasts.
+            if (Array.isArray(payload.keys) && payload.keys.length) applyPartial(payload.keys, char.data);
+            else applyData(char.data);
             document.getElementById('char-title').textContent = char.name || 'Character Sheet';
             renderShopWallet();
           }
