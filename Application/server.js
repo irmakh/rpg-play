@@ -288,7 +288,22 @@ app.get('/api/config', (req, res) => res.json({ dbProvider: DB_PROVIDER, wsUrl: 
 // ── Connected-client tracking (for the hidden maintenance page) ───────────────
 // Capture per-connection details when a real-time client connects. The client
 // passes its identity (role / character) + current page as query params on the
-// WS / SSE URL — never any password. IP comes from the proxy header or socket.
+// WS / SSE URL — never any password.
+//
+// SECURITY: X-Forwarded-For is client-controlled and MUST NOT be trusted unless
+// a real reverse proxy sits in front and overwrites it. This server terminates
+// TLS itself (no proxy), so we default to the real socket address and only honor
+// the forwarded header when TRUST_PROXY is explicitly set. Without this, any
+// client could forge the IP shown on the maintenance page.
+// NOTE: under default Docker bridge networking the socket address may be the
+// Docker gateway (172.x), not the real client IP — that's a network-config
+// concern (host networking / userland-proxy), independent of this code.
+const TRUST_PROXY = /^(1|true|yes)$/i.test(String(process.env.TRUST_PROXY || ''));
+
+// Length caps on stored, client-supplied metadata — guards against a client
+// sending oversized values that sit in memory per connection. Display-only.
+function _cap(v, n) { return String(v ?? '').slice(0, n); }
+
 function clientMetaFromReq(req, transport) {
   let q = {};
   try {
@@ -296,18 +311,18 @@ function clientMetaFromReq(req, transport) {
     else { const u = new URL(req.url || '', 'http://x'); q = Object.fromEntries(u.searchParams); } // ws upgrade
   } catch {}
   const xff = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
-  const ip  = xff || req.socket?.remoteAddress || '';
+  const ip  = (TRUST_PROXY && xff) ? xff : (req.socket?.remoteAddress || '');
   const loginAt = q.loginAt ? (parseInt(q.loginAt) || null) : null;
   return {
-    ip,
+    ip:        _cap(ip, 64),
     transport,
     connectedAt: Date.now(),
     loginAt,
-    page:      String(q.page || ''),
-    role:      String(q.role || 'none'),    // 'dm' | 'character' | 'none'
-    charId:    String(q.charId || ''),
-    charName:  String(q.charName || ''),
-    userAgent: String(req.headers['user-agent'] || ''),
+    page:      _cap(q.page, 256),
+    role:      _cap(q.role || 'none', 16),  // 'dm' | 'character' | 'none'
+    charId:    _cap(q.charId, 64),
+    charName:  _cap(q.charName, 128),
+    userAgent: _cap(req.headers['user-agent'], 512),
   };
 }
 
