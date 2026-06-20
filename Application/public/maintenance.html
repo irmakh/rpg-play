@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Maintenance</title>
+  <style>
+    :root{
+      --bg:#1a1a2e;--bg2:#16213e;--bg3:#0f3460;--bgd:#0a2040;
+      --ac:#c8a04a;--ahi:#e0b860;--tx:#e0d8c8;--txd:#9a9aae;
+      --line:#ffffff14;--ok:#4ec07a;--warn:#e0b860;--anon:#7a8aa0;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--tx);min-height:100vh}
+    a{color:var(--ahi)}
+    .wrap{max-width:1200px;margin:0 auto;padding:18px}
+
+    /* Login gate */
+    #gate{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
+    #gate .card{background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:28px;width:100%;max-width:360px}
+    #gate h1{margin:0 0 4px;font-size:20px;color:var(--ac)}
+    #gate p{margin:0 0 18px;color:var(--txd);font-size:13px}
+    #gate input{width:100%;padding:11px 12px;border-radius:8px;border:1px solid var(--line);background:var(--bgd);color:var(--tx);font-size:15px}
+    #gate button{width:100%;margin-top:12px;padding:11px;border:0;border-radius:8px;background:var(--ac);color:#1a1a2e;font-weight:700;font-size:15px;cursor:pointer}
+    #gate button:hover{background:var(--ahi)}
+    #gate-err{color:#e06a6a;font-size:13px;margin-top:10px;min-height:16px}
+
+    /* Dashboard */
+    #panel{display:none}
+    .top{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:16px}
+    .top h1{margin:0;font-size:19px;color:var(--ac)}
+    .pill{background:var(--bg3);border:1px solid var(--line);border-radius:999px;padding:4px 12px;font-size:13px;color:var(--tx)}
+    .top .spacer{flex:1}
+    .top button{background:var(--bg3);border:1px solid var(--line);color:var(--tx);padding:7px 14px;border-radius:8px;cursor:pointer;font-size:13px}
+    .top button:hover{border-color:var(--ac)}
+    .muted{color:var(--txd);font-size:12px}
+
+    .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+    .client{background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:14px;border-left:4px solid var(--anon)}
+    .client.dm{border-left-color:var(--ac)}
+    .client.character{border-left-color:var(--ok)}
+    .client .who{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+    .badge{font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;text-transform:uppercase;letter-spacing:.4px}
+    .badge.dm{background:var(--ac);color:#1a1a2e}
+    .badge.character{background:var(--ok);color:#08210f}
+    .badge.none{background:var(--anon);color:#0b1119}
+    .client .name{font-weight:600;font-size:15px}
+    .row{display:flex;justify-content:space-between;gap:10px;font-size:13px;padding:3px 0;border-top:1px dashed var(--line)}
+    .row:first-of-type{border-top:0}
+    .row .k{color:var(--txd)}
+    .row .v{text-align:right;word-break:break-word}
+    .page-v{color:var(--ahi);font-family:ui-monospace,Consolas,monospace}
+    .ip-v{font-family:ui-monospace,Consolas,monospace}
+    .ua{color:var(--txd);font-size:11px;margin-top:8px;word-break:break-word}
+    #empty{color:var(--txd);padding:40px;text-align:center}
+  </style>
+</head>
+<body>
+  <!-- Login gate -->
+  <div id="gate">
+    <div class="card">
+      <h1>🔧 Maintenance</h1>
+      <p>Enter the DM password to view connected clients.</p>
+      <form id="gate-form" autocomplete="off">
+        <input id="gate-pw" type="password" placeholder="DM password" autocomplete="current-password">
+        <button type="submit">Unlock</button>
+        <div id="gate-err"></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Dashboard -->
+  <div id="panel">
+    <div class="wrap">
+      <div class="top">
+        <h1>🔧 Connected clients</h1>
+        <span class="pill" id="count-pill">0 connected</span>
+        <span class="muted" id="updated"></span>
+        <span class="spacer"></span>
+        <button id="btn-refresh">Refresh now</button>
+        <button id="btn-logout">Lock</button>
+      </div>
+      <div id="cards" class="cards"></div>
+      <div id="empty" style="display:none">No clients are currently connected.</div>
+    </div>
+  </div>
+
+  <script src="/js/maintenance.js"></script>
+</body>
+</html>

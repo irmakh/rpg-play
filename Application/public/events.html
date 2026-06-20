@@ -377,6 +377,9 @@
 <script src="/js/lib/fr_calendar.js" defer></script>
 <script src="/js/lib/lightbox.js" defer></script>
 <script src="/js/lib/weather-ui.js" defer></script>
+<script src="/js/lib/realtime.js" defer></script>
 <script src="/js/events.js" defer></script>
+<!-- Presence: register this client so it shows on the maintenance page -->
+<script>window.addEventListener('DOMContentLoaded',function(){if(window.connectRealtime)connectRealtime({});});</script>
 </body>
 </html>

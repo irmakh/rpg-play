@@ -205,6 +205,9 @@
 </div>
 
 <script src="/js/monster-stat-block.js" defer></script>
+<script src="/js/lib/realtime.js" defer></script>
 <script src="/js/monsters.js" defer></script>
+<!-- Presence: register this client so it shows on the maintenance page -->
+<script>window.addEventListener('DOMContentLoaded',function(){if(window.connectRealtime)connectRealtime({});});</script>
 </body>
 </html>

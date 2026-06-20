@@ -235,7 +235,7 @@ const MAX_MEDIA_BYTES = 25 * 1024 * 1024;
 // Bump this number whenever frontend JS or CSS files change.
 // Also bump CACHE in public/sw.js to the same value.
 // Both must always match. See deployment notes in CLAUDE.md.
-const FRONTEND_VERSION = 124;
+const FRONTEND_VERSION = 125;
 
 // ── Express app ───────────────────────────────────────────────────────────────
 const app = express();
@@ -285,6 +285,32 @@ app.get('/gaston.xml', (req, res) => res.sendFile(path.join(__dirname, 'gaston.x
 // ── Config endpoint ───────────────────────────────────────────────────────────
 app.get('/api/config', (req, res) => res.json({ dbProvider: DB_PROVIDER, wsUrl: process.env.WS_URL || null }));
 
+// ── Connected-client tracking (for the hidden maintenance page) ───────────────
+// Capture per-connection details when a real-time client connects. The client
+// passes its identity (role / character) + current page as query params on the
+// WS / SSE URL — never any password. IP comes from the proxy header or socket.
+function clientMetaFromReq(req, transport) {
+  let q = {};
+  try {
+    if (req.query && Object.keys(req.query).length) q = req.query;        // express (SSE)
+    else { const u = new URL(req.url || '', 'http://x'); q = Object.fromEntries(u.searchParams); } // ws upgrade
+  } catch {}
+  const xff = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
+  const ip  = xff || req.socket?.remoteAddress || '';
+  const loginAt = q.loginAt ? (parseInt(q.loginAt) || null) : null;
+  return {
+    ip,
+    transport,
+    connectedAt: Date.now(),
+    loginAt,
+    page:      String(q.page || ''),
+    role:      String(q.role || 'none'),    // 'dm' | 'character' | 'none'
+    charId:    String(q.charId || ''),
+    charName:  String(q.charName || ''),
+    userAgent: String(req.headers['user-agent'] || ''),
+  };
+}
+
 // ── SSE endpoint ──────────────────────────────────────────────────────────────
 app.get('/api/events', (req, res) => {
   res.setHeader('Content-Type', 'text/event-stream');
@@ -292,11 +318,24 @@ app.get('/api/events', (req, res) => {
   res.setHeader('Connection', 'keep-alive');
   res.flushHeaders();
   res.write(': connected\n\n');
+  res._meta = clientMetaFromReq(req, 'sse');
   sseClients.add(res);
   const hb = setInterval(() => {
     try { res.write(': heartbeat\n\n'); } catch { clearInterval(hb); sseClients.delete(res); }
   }, 25000);
   req.on('close', () => { clearInterval(hb); sseClients.delete(res); });
+});
+
+// ── Maintenance: list all connected real-time clients (DM-only) ───────────────
+// Backs the hidden maintenance.html page. Requires the DM master password on
+// every request — never trust the client gate alone.
+app.get('/api/maintenance/clients', (req, res) => {
+  if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
+  const clients = [];
+  for (const ws of wsClients)  if (ws._meta)  clients.push({ ...ws._meta });
+  for (const r  of sseClients) if (r._meta)   clients.push({ ...r._meta });
+  clients.sort((a, b) => a.connectedAt - b.connectedAt);
+  res.json({ now: Date.now(), count: clients.length, clients });
 });
 
 // ── Console relay ─────────────────────────────────────────────────────────────
@@ -386,7 +425,8 @@ if (useSSL) {
 
 if (DB_PROVIDER === 'localdb') {
   const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
-  wss.on('connection', ws => {
+  wss.on('connection', (ws, req) => {
+    ws._meta = clientMetaFromReq(req, 'ws');
     wsClients.add(ws);
     ws.on('close', () => wsClients.delete(ws));
     ws.on('error', () => wsClients.delete(ws));

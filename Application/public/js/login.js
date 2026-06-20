@@ -151,6 +151,7 @@ async function loginDM() {
 // ── Session storage ───────────────────────────────────────────────────────────
 
 function _storeSession(sess) {
+  if (!sess.loginAt) sess.loginAt = Date.now();   // when this user logged in (shown on maintenance page)
   sessionStorage.setItem('rpgSession', JSON.stringify(sess));
   // Keep legacy keys alive for any page that still reads them directly
   if (sess.role === 'dm') {

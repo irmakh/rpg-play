@@ -175,6 +175,10 @@
 
 <div class="pl-add-dropdown" id="pl-add-dropdown"></div>
 
+<!-- Presence: register this client so it shows on the maintenance page -->
+<script src="/js/lib/realtime.js"></script>
+<script>window.addEventListener('DOMContentLoaded',function(){if(window.connectRealtime)connectRealtime({});});</script>
+
 <script>
 // ── Auth ──────────────────────────────────────────────────────────────────────
 let masterPw = '';
