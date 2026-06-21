@@ -18,6 +18,26 @@ let _editTokenIndex = null;
 let pmPortraitDataUrl = null;
 let saveTimer = null;
 let viewScale = 1;
+let moveMode = false;   // explicit "Move" tool toggle (mutually exclusive with draw/place/token)
+let moveState = null;   // active drag-to-move of an existing token / item / fog region
+let _lastDeleted = null;  // {type:'fog'|'token'|'item', obj, index} — single-level undo for deletes
+let _expandedItemId = null;  // id of the hidden item whose description is expanded inline
+const _selectedTokenIds = new Set();  // multi-selected token ids for bulk recolor
+
+// 16-colour token palette — shared by the bulk recolor popup and the add/edit modal.
+const PM_TOKEN_COLORS = [
+  '#c0392b', '#e67e22', '#f39c12', '#f1c40f', '#7cb342', '#27ae60', '#16a085', '#00bcd4',
+  '#2980b9', '#3f51b5', '#8e44ad', '#c2185b', '#e91e63', '#795548', '#607d8b', '#2c3e50',
+];
+
+// Round swatch grid markup; each swatch calls fnName('#hex'). selected gets a ring.
+function _swatchGridHTML(selected, fnName) {
+  const sc = String(selected || '').toLowerCase();
+  return PM_TOKEN_COLORS.map(c => {
+    const sel = sc === c.toLowerCase();
+    return `<div onclick="${fnName}('${c}')" title="${c}" style="width:24px;height:24px;border-radius:50%;background:${c};cursor:pointer;box-sizing:border-box;border:2px solid ${sel ? '#fff' : 'rgba(0,0,0,.35)'};outline:${sel ? '2px solid var(--ac)' : 'none'};outline-offset:1px"></div>`;
+  }).join('');
+}
 
 function genId() {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
@@ -133,24 +153,49 @@ async function loadMaps() {
 }
 
 function renderMapList() {
-  const el = document.getElementById('map-list');
-  if (!maps.length) { el.innerHTML = '<div class="no-map-msg">No maps yet.</div>'; return; }
-  el.innerHTML = maps.map(m => {
-    const regionCount = Array.isArray(m.fogRegions) ? m.fogRegions.length : 0;
-    const itemCount = Array.isArray(m.hiddenItems) ? m.hiddenItems.length : 0;
-    const sel = m.id === currentMapId ? 'selected' : '';
-    return `<div class="map-list-row ${sel}" onclick="selectMap('${escJs(m.id)}')">
-      <div style="flex:1;overflow:hidden">
-        <div class="map-list-name">${esc(m.name || 'Untitled')}</div>
-        <div class="map-list-meta">${m.hasImage ? '🖼 · ' : ''}${regionCount} fog · ${itemCount} item${itemCount !== 1 ? 's' : ''}</div>
-      </div>
-    </div>`;
-  }).join('');
+  const sel = document.getElementById('map-select');
+  if (!sel) return;
+  if (!maps.length) {
+    sel.innerHTML = '<option value="">No maps yet</option>';
+    sel.value = '';
+  } else {
+    sel.innerHTML = '<option value="">— Select a map —</option>' +
+      maps.map(m => `<option value="${esc(m.id)}">${esc(m.name || 'Untitled')}</option>`).join('');
+    sel.value = currentMapId || '';
+  }
+  renderMapMeta();
+  updateSidebarSections();
+}
+
+function renderMapMeta() {
+  const el = document.getElementById('map-meta');
+  if (!el) return;
+  const m = maps.find(x => x.id === currentMapId);
+  if (!m) { el.textContent = ''; return; }
+  const regionCount = Array.isArray(m.fogRegions) ? m.fogRegions.length : 0;
+  const itemCount = Array.isArray(m.hiddenItems) ? m.hiddenItems.length : 0;
+  const tokCount = Array.isArray(m.preparedTokens) ? m.preparedTokens.length : 0;
+  el.textContent = `${m.hasImage ? '🖼 · ' : ''}${regionCount} fog · ${itemCount} item${itemCount !== 1 ? 's' : ''} · ${tokCount} token${tokCount !== 1 ? 's' : ''}`;
+}
+
+// Show the fog/tokens/items sections only when a map is selected; otherwise
+// show a prompt telling the user to pick a map.
+function updateSidebarSections() {
+  const has = !!currentMapId;
+  ['sb-fog-section', 'sb-tokens-section', 'sb-items-section'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = has ? '' : 'none';
+  });
+  const msg = document.getElementById('pm-no-map-msg');
+  if (msg) msg.style.display = has ? 'none' : '';
 }
 
 function selectMap(id) {
   const m = maps.find(x => x.id === id);
   if (!m) return;
+  // Flush any pending debounced save for the current map before switching,
+  // otherwise the timer fires after currentMapId changes and drops the edits.
+  if (saveTimer && currentMapId && currentMapId !== id) saveMap();
   currentMapId = id;
   prepState = {
     name: m.name || '',
@@ -163,6 +208,11 @@ function selectMap(id) {
     hiddenItems: Array.isArray(m.hiddenItems) ? JSON.parse(JSON.stringify(m.hiddenItems)) : [],
     preparedTokens: Array.isArray(m.preparedTokens) ? JSON.parse(JSON.stringify(m.preparedTokens)) : [],
   };
+  prepState.hiddenItems.forEach(it => { if (!it.id) it.id = genId(); });  // older items may lack ids
+  prepState.preparedTokens.forEach(t => { if (!t.id) t.id = genId(); });
+  _lastDeleted = null;       // undo does not cross map boundaries
+  _expandedItemId = null;
+  _selectedTokenIds.clear();
   drawMode = false;
   drawState = null;
   placeItemMode = false;
@@ -196,10 +246,12 @@ function renderEditor() {
   if (placeBtn) { placeBtn.style.background = ''; placeBtn.style.color = ''; }
   const placeHint = document.getElementById('place-hint');
   if (placeHint) placeHint.style.display = 'none';
-  drawCvs.style.pointerEvents = 'none';
   drawMode = false;
   drawState = null;
   placeItemMode = false;
+  _resetMoveMode();
+  drawCvs.style.cursor = 'default';
+  _syncDrawInteractive();
 
   if (prepState.mapWidth && prepState.mapHeight) {
     prepImg.src = `/api/prepared-maps/${currentMapId}/image?t=${Date.now()}`;
@@ -259,6 +311,22 @@ function renderPrepGrid() {
 
 const ITEM_TYPE_ICONS = { trap: '⚠', chest: '◈', door: '▭', note: '✎', other: '◉' };
 
+// Token portrait image cache. Canvas needs a loaded Image to draw synchronously,
+// so we cache by src and re-render the fog/token layer once each image loads.
+const _tokImgCache = {};
+function _getTokImg(src) {
+  if (!src) return null;
+  let entry = _tokImgCache[src];
+  if (entry) return entry.loaded ? entry.img : null;
+  const img = new Image();
+  entry = { img, loaded: false };
+  _tokImgCache[src] = entry;
+  img.onload = () => { entry.loaded = true; renderPrepFog(); };
+  img.onerror = () => { entry.error = true; };
+  img.src = src;
+  return null;
+}
+
 function renderPrepFog() {
   const W = fogCvs.width, H = fogCvs.height;
   const cs = (prepState.cellSize || 50) * viewScale;
@@ -307,47 +375,112 @@ function renderPrepFog() {
     const ty = oy + tok.y * cs + (cs * ts) / 2;
     const r = (cs * ts) / 2 * 0.72;
     const hidden = tok.visibleToPlayers === false;
+    const portImg = _getTokImg(tok.portraitThumb || tok.portrait || null);
+    if (portImg) {
+      // Draw the portrait clipped into the token circle (cover fit).
+      fCtx.save();
+      fCtx.globalAlpha = hidden ? 0.5 : 1;
+      fCtx.beginPath();
+      fCtx.arc(tx, ty, r, 0, Math.PI * 2);
+      fCtx.closePath();
+      fCtx.clip();
+      const iw = portImg.naturalWidth || portImg.width || 1;
+      const ih = portImg.naturalHeight || portImg.height || 1;
+      const scale = Math.max((r * 2) / iw, (r * 2) / ih);
+      const dw = iw * scale, dh = ih * scale;
+      fCtx.drawImage(portImg, tx - dw / 2, ty - dh / 2, dw, dh);
+      fCtx.restore();
+    } else {
+      fCtx.beginPath();
+      fCtx.arc(tx, ty, r, 0, Math.PI * 2);
+      fCtx.fillStyle = tok.color || '#cc3333';
+      fCtx.globalAlpha = hidden ? 0.45 : 0.9;
+      fCtx.fill();
+      fCtx.globalAlpha = 1;
+    }
+    // Border ring — coloured by the token's colour when a portrait is shown.
     fCtx.beginPath();
     fCtx.arc(tx, ty, r, 0, Math.PI * 2);
-    fCtx.fillStyle = tok.color || '#cc3333';
-    fCtx.globalAlpha = hidden ? 0.45 : 0.9;
-    fCtx.fill();
-    fCtx.globalAlpha = 1;
     if (hidden) fCtx.setLineDash([3, 2]);
-    fCtx.strokeStyle = hidden ? 'rgba(255,255,255,.45)' : 'rgba(255,255,255,.8)';
-    fCtx.lineWidth = hidden ? 1 : 1.5;
+    fCtx.strokeStyle = portImg ? (tok.color || 'rgba(255,255,255,.8)') : (hidden ? 'rgba(255,255,255,.45)' : 'rgba(255,255,255,.8)');
+    fCtx.lineWidth = portImg ? 2 : (hidden ? 1 : 1.5);
     fCtx.stroke();
     fCtx.setLineDash([]);
-    const lbl = (tok.label || tok.name || '?').charAt(0).toUpperCase();
-    const fontSize = Math.round(Math.min(r * 0.9, 12));
-    fCtx.globalAlpha = hidden ? 0.6 : 1;
-    fCtx.fillStyle = '#fff';
-    fCtx.font = `bold ${fontSize}px sans-serif`;
-    fCtx.textAlign = 'center';
-    fCtx.textBaseline = 'middle';
-    fCtx.fillText(lbl, tx, ty);
-    fCtx.globalAlpha = 1;
-    fCtx.textAlign = 'start';
-    fCtx.textBaseline = 'alphabetic';
+    if (_selectedTokenIds.has(tok.id)) {
+      fCtx.beginPath();
+      fCtx.arc(tx, ty, r + 3, 0, Math.PI * 2);
+      fCtx.strokeStyle = 'rgba(120,200,255,0.95)';
+      fCtx.lineWidth = 2;
+      fCtx.stroke();
+    }
+    if (!portImg) {
+      const lbl = (tok.label || tok.name || '?').charAt(0).toUpperCase();
+      const fontSize = Math.round(Math.min(r * 0.9, 12));
+      fCtx.globalAlpha = hidden ? 0.6 : 1;
+      fCtx.fillStyle = '#fff';
+      fCtx.font = `bold ${fontSize}px sans-serif`;
+      fCtx.textAlign = 'center';
+      fCtx.textBaseline = 'middle';
+      fCtx.fillText(lbl, tx, ty);
+      fCtx.globalAlpha = 1;
+      fCtx.textAlign = 'start';
+      fCtx.textBaseline = 'alphabetic';
+    }
     fCtx.fillStyle = hidden ? 'rgba(200,160,74,0.55)' : 'rgba(255,200,100,0.95)';
     fCtx.font = `${Math.max(7, Math.round(cs * 0.15))}px sans-serif`;
     fCtx.fillText(tok.name.slice(0, 14), ox + tok.x * cs + 2, oy + (tok.y + ts) * cs - 3);
   }
 }
 
+// Undo affordance shown in place of a just-deleted row (fog / token / item).
+function _undoRowHTML(name) {
+  return `<div style="display:flex;align-items:center;gap:6px;padding:5px 7px;margin-bottom:4px;border:1px dashed var(--a55);border-radius:4px;background:var(--a22)">
+    <span style="flex:1;font-size:11px;color:var(--txd);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">🗑 Deleted "${esc(name)}"</span>
+    <button class="btn sm" onclick="undoDelete()" style="flex-shrink:0;font-size:10px;padding:2px 8px">↶ Undo</button>
+  </div>`;
+}
+
+function _renderListFor(type) {
+  if (type === 'fog') renderFogList();
+  else if (type === 'token') renderTokenList();
+  else if (type === 'item') renderItemList();
+}
+
+// Record a deletion as the single pending undo, replacing any previous one.
+function _recordDelete(type, obj, index) {
+  const prev = _lastDeleted;
+  _lastDeleted = { type, obj, index };
+  _renderListFor(type);
+  if (prev && prev.type !== type) _renderListFor(prev.type);  // clear the stale undo row from its old list
+}
+
+function undoDelete() {
+  if (!_lastDeleted) return;
+  const { type, obj, index } = _lastDeleted;
+  _lastDeleted = null;
+  if (type === 'fog') prepState.fogRegions.splice(Math.min(index, prepState.fogRegions.length), 0, obj);
+  else if (type === 'token') prepState.preparedTokens.splice(Math.min(index, prepState.preparedTokens.length), 0, obj);
+  else if (type === 'item') prepState.hiddenItems.splice(Math.min(index, prepState.hiddenItems.length), 0, obj);
+  _renderListFor(type);
+  renderPrepFog();
+  debounceSave();
+}
+
 function renderFogList() {
   const el = document.getElementById('fog-region-list');
-  if (!prepState.fogRegions.length) {
-    el.innerHTML = '<div style="font-size:11px;color:var(--txd);padding:4px 0">No regions yet. Enable draw mode and drag on the map.</div>';
-    return;
-  }
-  el.innerHTML = prepState.fogRegions.map((r, i) => `
+  const rows = prepState.fogRegions.map((r, i) => `
     <div class="fog-row">
       <input type="text" value="${esc(r.label)}" onchange="updateFogLabel(${i}, this.value)"
         style="flex:1;padding:2px 5px;font-size:11px;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px">
       <span style="font-size:10px;color:var(--txd);white-space:nowrap">${r.w}×${r.h} cells</span>
       <button class="btn danger sm" onclick="deleteFogRegion(${i})">✕</button>
-    </div>`).join('');
+    </div>`);
+  if (_lastDeleted && _lastDeleted.type === 'fog') {
+    rows.splice(Math.min(_lastDeleted.index, rows.length), 0, _undoRowHTML(_lastDeleted.obj.label || 'region'));
+  }
+  el.innerHTML = rows.length
+    ? rows.join('')
+    : '<div style="font-size:11px;color:var(--txd);padding:4px 0">No regions yet. Enable draw mode and drag on the map.</div>';
 }
 
 function updateFogLabel(i, val) {
@@ -357,31 +490,47 @@ function updateFogLabel(i, val) {
 }
 
 function deleteFogRegion(i) {
+  const obj = prepState.fogRegions[i];
   prepState.fogRegions.splice(i, 1);
   renderPrepFog();
-  renderFogList();
+  _recordDelete('fog', obj, i);
   debounceSave();
+}
+
+function toggleItemExpand(id) {
+  _expandedItemId = (_expandedItemId === id) ? null : id;
+  renderItemList();
 }
 
 function renderItemList() {
   const el = document.getElementById('item-list');
   if (!el) return;
-  if (!prepState.hiddenItems.length) {
-    el.innerHTML = '<div style="font-size:11px;color:var(--txd);padding:4px 0">No items yet. Enable place mode and drag on the map.</div>';
-    return;
-  }
-  el.innerHTML = prepState.hiddenItems.map((item, i) => `
-    <div style="border:1px solid var(--a44);border-radius:4px;padding:5px;margin-bottom:4px">
-      <div style="display:flex;align-items:center;gap:4px;margin-bottom:3px">
-        <span style="font-size:12px">${ITEM_TYPE_ICONS[item.type] || '?'}</span>
+  const rows = prepState.hiddenItems.map((item, i) => {
+    const expanded = _expandedItemId === item.id;
+    const hasDesc = !!(item.description && item.description.trim());
+    return `
+    <div style="border:1px solid var(--a44);border-radius:4px;margin-bottom:4px;overflow:hidden">
+      <div style="display:flex;align-items:center;gap:4px;padding:4px 5px">
+        <span style="font-size:12px;flex-shrink:0">${ITEM_TYPE_ICONS[item.type] || '?'}</span>
         <input type="text" value="${esc(item.label)}" onchange="updateItemLabel(${i}, this.value)"
-          style="flex:1;padding:2px 5px;font-size:11px;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px">
-        <button class="btn sm" onclick="cloneItem(${i})" title="Clone item">⎘</button>
-        <button class="btn danger sm" onclick="deleteItem(${i})">✕</button>
+          style="flex:1;min-width:0;padding:2px 5px;font-size:11px;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px">
+        <button class="btn sm" onclick="toggleItemExpand('${escJs(item.id)}')" title="${expanded ? 'Collapse' : 'Edit description'}"
+          style="padding:1px 6px;font-size:10px;flex-shrink:0;${hasDesc && !expanded ? 'color:var(--ac)' : ''}">${expanded ? '▴' : '▾'}</button>
+        <button class="btn sm" onclick="cloneItem(${i})" title="Clone item" style="flex-shrink:0">⎘</button>
+        <button class="btn danger sm" onclick="deleteItem(${i})" style="flex-shrink:0">✕</button>
       </div>
-      <textarea placeholder="DM description (players never see this)…" rows="2" onchange="updateItemDesc(${i}, this.value)"
-        style="width:100%;box-sizing:border-box;font-size:10px;background:var(--bg3);border:1px solid var(--a44);color:var(--txd);border-radius:3px;padding:3px 5px;resize:vertical">${esc(item.description || '')}</textarea>
-    </div>`).join('');
+      ${expanded ? `<div style="padding:0 5px 5px">
+        <textarea placeholder="DM description (players never see this)…" rows="2" onchange="updateItemDesc(${i}, this.value)"
+          style="width:100%;box-sizing:border-box;font-size:10px;background:var(--bg3);border:1px solid var(--a44);color:var(--txd);border-radius:3px;padding:3px 5px;resize:vertical">${esc(item.description || '')}</textarea>
+      </div>` : ''}
+    </div>`;
+  });
+  if (_lastDeleted && _lastDeleted.type === 'item') {
+    rows.splice(Math.min(_lastDeleted.index, rows.length), 0, _undoRowHTML(_lastDeleted.obj.label || 'item'));
+  }
+  el.innerHTML = rows.length
+    ? rows.join('')
+    : '<div style="font-size:11px;color:var(--txd);padding:4px 0">No items yet. Enable place mode and drag on the map.</div>';
 }
 
 function updateItemLabel(i, val) {
@@ -397,19 +546,52 @@ function updateItemDesc(i, val) {
 
 function cloneItem(i) {
   const src = prepState.hiddenItems[i];
-  _pendingClone = { type: src.type, label: src.label + ' (copy)', description: src.description || '' };
+  _pendingClone = { type: src.type, label: src.label + ' (copy)', description: src.description || '', w: src.w || 1, h: src.h || 1 };
   // Enter place mode if not already active
   if (!placeItemMode) togglePlaceItemMode();
-  // Update hint to indicate clone placement
+  // Update hint to indicate clone placement (the copy keeps the source size)
   const hint = document.getElementById('place-hint');
-  if (hint) hint.textContent = `drag to place copy of "${src.label}"`;
+  if (hint) hint.textContent = `click to place copy of "${src.label}" (${_pendingClone.w}×${_pendingClone.h})`;
 }
 
 function deleteItem(i) {
+  const obj = prepState.hiddenItems[i];
+  if (_expandedItemId === obj.id) _expandedItemId = null;
   prepState.hiddenItems.splice(i, 1);
   renderPrepFog();
-  renderItemList();
+  _recordDelete('item', obj, i);
   debounceSave();
+}
+
+// ── Move mode ──
+function _resetMoveMode() {
+  moveMode = false;
+  moveState = null;
+  const btn = document.getElementById('btn-move');
+  if (btn) { btn.style.background = ''; btn.style.color = ''; }
+  const hint = document.getElementById('move-hint');
+  if (hint) hint.style.display = 'none';
+}
+
+function toggleMoveMode() {
+  if (!currentMapId) { showStatus('Select a map first', true); return; }
+  moveMode = !moveMode;
+  const btn = document.getElementById('btn-move');
+  const hint = document.getElementById('move-hint');
+  if (moveMode) {
+    if (drawMode) toggleDrawMode();
+    if (placeItemMode) togglePlaceItemMode();
+    if (tokenPlacementMode) cancelTokenPlacement();
+    if (btn) { btn.style.background = 'var(--ac)'; btn.style.color = 'var(--bg)'; }
+    if (hint) hint.style.display = '';
+    drawCvs.style.cursor = 'grab';
+  } else {
+    if (btn) { btn.style.background = ''; btn.style.color = ''; }
+    if (hint) hint.style.display = 'none';
+    moveState = null;
+    drawCvs.style.cursor = 'default';
+  }
+  _syncDrawInteractive();
 }
 
 // ── Draw mode ──
@@ -417,6 +599,7 @@ function toggleDrawMode() {
   drawMode = !drawMode;
   const btn = document.getElementById('btn-draw-fog');
   const hint = document.getElementById('draw-hint');
+  if (drawMode) _resetMoveMode();
   if (drawMode && tokenPlacementMode) cancelTokenPlacement();
   if (drawMode && placeItemMode) {
     placeItemMode = false;
@@ -425,17 +608,19 @@ function toggleDrawMode() {
     const ph = document.getElementById('place-hint');
     if (ph) ph.style.display = 'none';
   }
-  drawCvs.style.pointerEvents = (drawMode || placeItemMode) ? 'all' : 'none';
+  _syncDrawInteractive();
   if (drawMode) {
     btn.style.background = 'var(--ac)';
     btn.style.color = 'var(--bg)';
     hint.style.display = '';
+    drawCvs.style.cursor = 'crosshair';
   } else {
     btn.style.background = '';
     btn.style.color = '';
     hint.style.display = 'none';
     dCtx.clearRect(0, 0, drawCvs.width, drawCvs.height);
     drawState = null;
+    drawCvs.style.cursor = 'default';
   }
 }
 
@@ -443,6 +628,7 @@ function togglePlaceItemMode() {
   placeItemMode = !placeItemMode;
   const btn = document.getElementById('btn-place-item');
   const hint = document.getElementById('place-hint');
+  if (placeItemMode) _resetMoveMode();
   if (placeItemMode && tokenPlacementMode) cancelTokenPlacement();
   if (placeItemMode && drawMode) {
     drawMode = false;
@@ -453,17 +639,19 @@ function togglePlaceItemMode() {
     drawState = null;
     dCtx.clearRect(0, 0, drawCvs.width, drawCvs.height);
   }
-  drawCvs.style.pointerEvents = (drawMode || placeItemMode) ? 'all' : 'none';
+  _syncDrawInteractive();
   if (placeItemMode) {
     btn.style.background = 'var(--ac)';
     btn.style.color = 'var(--bg)';
     hint.style.display = '';
+    drawCvs.style.cursor = 'crosshair';
   } else {
     btn.style.background = '';
     btn.style.color = '';
     hint.style.display = 'none';
     hint.textContent = 'drag to place';
     _pendingClone = null; // cancel any pending clone
+    drawCvs.style.cursor = 'default';
   }
 }
 
@@ -480,9 +668,85 @@ function pixelToGrid(e) {
   };
 }
 
+// Draw canvas captures pointer whenever a map is loaded so draw/place/token
+// placement AND the default drag-to-move tool all work.
+function _syncDrawInteractive() {
+  drawCvs.style.pointerEvents = currentMapId ? 'all' : 'none';
+}
+
+// Hit-test grid cell (gx,gy) against placed objects, top-most first.
+// Priority: tokens > hidden items > fog regions (matches visual stacking).
+function _hitTestObject(gx, gy) {
+  for (let i = prepState.preparedTokens.length - 1; i >= 0; i--) {
+    const t = prepState.preparedTokens[i];
+    const ts = Math.max(1, t.tokenSize || 1);
+    if (gx >= t.x && gx < t.x + ts && gy >= t.y && gy < t.y + ts) return { type: 'token', index: i };
+  }
+  for (let i = (prepState.hiddenItems || []).length - 1; i >= 0; i--) {
+    const it = prepState.hiddenItems[i];
+    const w = it.w || 1, h = it.h || 1;
+    if (gx >= it.x && gx < it.x + w && gy >= it.y && gy < it.y + h) return { type: 'item', index: i };
+  }
+  for (let i = prepState.fogRegions.length - 1; i >= 0; i--) {
+    const r = prepState.fogRegions[i];
+    if (gx >= r.x && gx < r.x + r.w && gy >= r.y && gy < r.y + r.h) return { type: 'fog', index: i };
+  }
+  return null;
+}
+
+function _objForHit(hit) {
+  if (hit.type === 'token') return prepState.preparedTokens[hit.index];
+  if (hit.type === 'item') return prepState.hiddenItems[hit.index];
+  return prepState.fogRegions[hit.index];
+}
+
+// Dashed outline on the draw canvas marking the object currently being dragged.
+function _drawMoveHighlight(obj, type) {
+  const cs = (prepState.cellSize || 50) * viewScale;
+  const ox = (prepState.offsetX || 0) * viewScale;
+  const oy = (prepState.offsetY || 0) * viewScale;
+  let w, h;
+  if (type === 'token') { const ts = Math.max(1, obj.tokenSize || 1); w = ts; h = ts; }
+  else { w = obj.w || 1; h = obj.h || 1; }
+  dCtx.clearRect(0, 0, drawCvs.width, drawCvs.height);
+  dCtx.setLineDash([5, 4]);
+  dCtx.strokeStyle = 'rgba(120,200,255,0.95)';
+  dCtx.lineWidth = 2;
+  dCtx.strokeRect(ox + obj.x * cs, oy + obj.y * cs, w * cs, h * cs);
+  dCtx.setLineDash([]);
+}
+
 // Use pointer events + setPointerCapture so the drag continues even when
 // the mouse leaves the canvas boundary (fixes "restarts draw" on remote).
 drawCvs.addEventListener('pointerdown', e => {
+  // Ctrl/Shift-click toggles token selection (for bulk recolor). Works in move/idle,
+  // not while actively drawing fog / placing items / placing a token.
+  if ((e.ctrlKey || e.metaKey || e.shiftKey) && !drawMode && !placeItemMode && !tokenPlacementMode) {
+    if (!currentMapId) return;
+    const g = pixelToGrid(e);
+    const hit = _hitTestObject(g.gx, g.gy);
+    if (hit && hit.type === 'token') {
+      e.preventDefault();
+      const id = prepState.preparedTokens[hit.index].id;
+      if (_selectedTokenIds.has(id)) _selectedTokenIds.delete(id); else _selectedTokenIds.add(id);
+      renderTokenList();
+      renderPrepFog();
+    }
+    return;
+  }
+  if (moveMode) {
+    // Move tool: drag an existing token / item / fog region to reposition it.
+    if (!currentMapId) return;
+    const g = pixelToGrid(e);
+    const hit = _hitTestObject(g.gx, g.gy);
+    if (!hit) return;
+    e.preventDefault();
+    drawCvs.setPointerCapture(e.pointerId);
+    const obj = _objForHit(hit);
+    moveState = { type: hit.type, index: hit.index, startGX: g.gx, startGY: g.gy, origX: obj.x, origY: obj.y, moved: false };
+    drawCvs.style.cursor = 'grabbing';
+    return;
+  }
   if (!drawMode && !placeItemMode && !tokenPlacementMode) return;
   e.preventDefault();
   drawCvs.setPointerCapture(e.pointerId);
@@ -491,6 +755,25 @@ drawCvs.addEventListener('pointerdown', e => {
 });
 
 drawCvs.addEventListener('pointermove', e => {
+  if (moveState) {
+    const { gx, gy } = pixelToGrid(e);
+    const dx = gx - moveState.startGX, dy = gy - moveState.startGY;
+    if (dx || dy) moveState.moved = true;
+    const obj = _objForHit(moveState);
+    if (obj) {
+      obj.x = Math.max(0, moveState.origX + dx);
+      obj.y = Math.max(0, moveState.origY + dy);
+      renderPrepFog();
+      _drawMoveHighlight(obj, moveState.type);
+    }
+    return;
+  }
+  if (moveMode) {
+    // Hover feedback: grab cursor over a draggable object.
+    const g = pixelToGrid(e);
+    drawCvs.style.cursor = _hitTestObject(g.gx, g.gy) ? 'grab' : 'default';
+    return;
+  }
   if (tokenPlacementMode) return; // no drag preview for token placement
   if ((!drawMode && !placeItemMode) || !drawState) return;
   const { gx, gy } = pixelToGrid(e);
@@ -512,6 +795,14 @@ drawCvs.addEventListener('pointermove', e => {
 });
 
 drawCvs.addEventListener('pointerup', e => {
+  if (moveState) {
+    const moved = moveState.moved;
+    moveState = null;
+    dCtx.clearRect(0, 0, drawCvs.width, drawCvs.height);
+    drawCvs.style.cursor = 'grab';
+    if (moved) { renderPrepFog(); renderFogList(); renderItemList(); renderTokenList(); debounceSave(); }
+    return;
+  }
   if (tokenPlacementMode && drawState) {
     const { gx, gy } = pixelToGrid(e);
     drawState = null;
@@ -529,8 +820,9 @@ drawCvs.addEventListener('pointerup', e => {
   dCtx.clearRect(0, 0, drawCvs.width, drawCvs.height);
   if (placeItemMode) {
     if (_pendingClone) {
-      // Place the cloned item at the drawn position
-      prepState.hiddenItems.push({ id: genId(), ..._pendingClone, x: minX, y: minY, w, h, visible: false });
+      // Place the cloned item at the drop position, keeping the source's size
+      // (w/h carried on _pendingClone, NOT the dragged rectangle).
+      prepState.hiddenItems.push({ id: genId(), ..._pendingClone, x: minX, y: minY, visible: false });
       _pendingClone = null;
       togglePlaceItemMode(); // exit place mode after placing clone
     } else {
@@ -558,6 +850,15 @@ drawCvs.addEventListener('pointerup', e => {
 
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
+    if (moveState) {
+      const obj = _objForHit(moveState);
+      if (obj) { obj.x = moveState.origX; obj.y = moveState.origY; }
+      moveState = null;
+      dCtx.clearRect(0, 0, drawCvs.width, drawCvs.height);
+      drawCvs.style.cursor = 'default';
+      renderPrepFog();
+      return;
+    }
     if (tokenPlacementMode) { cancelTokenPlacement(); }
     if (placeItemMode && _pendingClone) { _pendingClone = null; togglePlaceItemMode(); }
   }
@@ -606,6 +907,7 @@ async function saveMap() {
       maps[idx].name = prepState.name;
       maps[idx].fogRegions = prepState.fogRegions;
       maps[idx].hiddenItems = prepState.hiddenItems;
+      maps[idx].preparedTokens = prepState.preparedTokens;
       renderMapList();
     }
   } catch { showStatus('Save error', true); }
@@ -881,7 +1183,22 @@ function pmSwitchTab(tab) {
   document.getElementById('pm-tab-monster').style.display = tab === 'monster' ? '' : 'none';
   document.getElementById('pm-tab-custom').style.display  = tab === 'custom'  ? '' : 'none';
   const colorEl = document.getElementById('pm-tok-color');
-  if (colorEl) colorEl.value = tab === 'monster' ? '#cc3333' : '#888888';
+  if (colorEl) colorEl.value = tab === 'monster' ? '#c0392b' : '#607d8b';
+  pmRenderColorSwatches();
+}
+
+// Render the 16-swatch picker inside the add/edit token modal, highlighting the current pick.
+function pmRenderColorSwatches() {
+  const grid = document.getElementById('pm-tok-color-swatches');
+  if (!grid) return;
+  const cur = document.getElementById('pm-tok-color')?.value || '';
+  grid.innerHTML = _swatchGridHTML(cur, 'pmSetTokColor');
+}
+
+function pmSetTokColor(c) {
+  const inp = document.getElementById('pm-tok-color');
+  if (inp) inp.value = c;
+  pmRenderColorSwatches();
 }
 
 function openPmTokModal(editIdx) {
@@ -915,7 +1232,7 @@ function openPmTokModal(editIdx) {
       const hpEl = document.getElementById('pm-tok-custom-hp'); if (hpEl) hpEl.value = tok.hpMax || 10;
       const spdEl = document.getElementById('pm-tok-custom-speed'); if (spdEl) spdEl.value = tok.speed || 30;
     }
-    const colorEl = document.getElementById('pm-tok-color'); if (colorEl) colorEl.value = tok.color || '#cc3333';
+    const colorEl = document.getElementById('pm-tok-color'); if (colorEl) colorEl.value = tok.color || '#c0392b';
     const sizeEl  = document.getElementById('pm-tok-size');  if (sizeEl)  sizeEl.value  = String(tok.tokenSize || 1);
     const visEl   = document.getElementById('pm-tok-visible');
     if (visEl) { visEl.checked = tok.visibleToPlayers !== false; }
@@ -934,12 +1251,13 @@ function openPmTokModal(editIdx) {
     const hpEl = document.getElementById('pm-tok-hp'); if (hpEl) hpEl.value = 10;
     const spdEl = document.getElementById('pm-tok-speed'); if (spdEl) spdEl.value = 30;
     const acEl = document.getElementById('pm-tok-ac'); if (acEl) acEl.value = '';
-    const colorEl = document.getElementById('pm-tok-color'); if (colorEl) colorEl.value = '#cc3333';
+    const colorEl = document.getElementById('pm-tok-color'); if (colorEl) colorEl.value = '#c0392b';
     const sizeEl  = document.getElementById('pm-tok-size');  if (sizeEl)  sizeEl.value  = '1';
     const visEl   = document.getElementById('pm-tok-visible'); if (visEl) visEl.checked = true;
     _updateVisibleLbl();
     _clearPmPortraitPreview();
   }
+  pmRenderColorSwatches();
   document.getElementById('pm-tok-modal').style.display = 'flex';
   loadPmMonsters();
 }
@@ -1067,9 +1385,11 @@ function pmConfirmToken() {
 function enterTokenPlacementMode(config) {
   if (drawMode) toggleDrawMode();
   if (placeItemMode) togglePlaceItemMode();
+  _resetMoveMode();
   tokenPlacementMode = true;
   pendingTokenConfig = config;
   drawCvs.style.pointerEvents = 'all';
+  drawCvs.style.cursor = 'crosshair';
   const hint = document.getElementById('pm-tok-place-hint');
   if (hint) hint.style.display = '';
   const cancelBtn = document.getElementById('pm-cancel-place-btn');
@@ -1080,7 +1400,8 @@ function enterTokenPlacementMode(config) {
 function cancelTokenPlacement() {
   tokenPlacementMode = false;
   pendingTokenConfig = null;
-  if (!drawMode && !placeItemMode) drawCvs.style.pointerEvents = 'none';
+  _syncDrawInteractive();
+  drawCvs.style.cursor = 'default';
   const hint = document.getElementById('pm-tok-place-hint');
   if (hint) hint.style.display = 'none';
   const cancelBtn = document.getElementById('pm-cancel-place-btn');
@@ -1097,7 +1418,73 @@ function _placePrepToken(gx, gy) {
 }
 
 function deleteToken(i) {
+  const obj = prepState.preparedTokens[i];
+  _selectedTokenIds.delete(obj.id);
   prepState.preparedTokens.splice(i, 1);
+  renderPrepFog();
+  _recordDelete('token', obj, i);
+  debounceSave();
+}
+
+function _randomTokenIdentifier() {
+  const letters = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+  return letters[Math.floor(Math.random() * letters.length)] + (Math.floor(Math.random() * 9) + 1);
+}
+
+function cloneToken(i) {
+  const src = prepState.preparedTokens[i];
+  if (!src) return;
+  const config = JSON.parse(JSON.stringify(src));
+  config.id = genId();
+  delete config.x; delete config.y;  // position is chosen by clicking the map
+  // Give the copy a fresh identifier so it doesn't collide with the original.
+  if (config.label) {
+    const oldLabel = config.label;
+    const base = config.name && config.name.endsWith(' ' + oldLabel)
+      ? config.name.slice(0, -(oldLabel.length + 1))
+      : config.name;
+    config.label = _randomTokenIdentifier();
+    config.name = (base ? base + ' ' : '') + config.label;
+  }
+  enterTokenPlacementMode(config);
+}
+
+// ── Token multi-select + bulk recolor ──
+function _selectedTokenCount() {
+  return prepState.preparedTokens.filter(t => _selectedTokenIds.has(t.id)).length;
+}
+
+function toggleTokenSelect(id, checked) {
+  if (checked) _selectedTokenIds.add(id); else _selectedTokenIds.delete(id);
+  renderTokenList();
+  renderPrepFog();
+}
+
+function toggleSelectAllTokens(checked) {
+  _selectedTokenIds.clear();
+  if (checked) prepState.preparedTokens.forEach(t => _selectedTokenIds.add(t.id));
+  renderTokenList();
+  renderPrepFog();
+}
+
+function openRecolorPopup() {
+  if (!_selectedTokenCount()) { showStatus('Select tokens first', true); return; }
+  const grid = document.getElementById('pm-recolor-swatches');
+  if (grid) grid.innerHTML = _swatchGridHTML(null, 'applyBulkColor');
+  const cnt = document.getElementById('pm-recolor-count');
+  if (cnt) cnt.textContent = _selectedTokenCount();
+  const pop = document.getElementById('pm-recolor-popup');
+  if (pop) pop.style.display = 'flex';
+}
+
+function closeRecolorPopup() {
+  const pop = document.getElementById('pm-recolor-popup');
+  if (pop) pop.style.display = 'none';
+}
+
+function applyBulkColor(c) {
+  prepState.preparedTokens.forEach(t => { if (_selectedTokenIds.has(t.id)) t.color = c; });
+  closeRecolorPopup();
   renderPrepFog();
   renderTokenList();
   debounceSave();
@@ -1109,19 +1496,37 @@ function renderTokenList() {
   const countEl = document.getElementById('pm-tok-count');
   const count = prepState.preparedTokens.length;
   if (countEl) countEl.textContent = count > 0 ? `(${count})` : '';
-  if (!count) {
-    el.innerHTML = '<div style="font-size:11px;color:var(--txd);padding:4px 0">No tokens yet. Click + Add Token above.</div>';
-    return;
-  }
-  el.innerHTML = prepState.preparedTokens.map((tok, i) => {
+  const rows = prepState.preparedTokens.map((tok, i) => {
     const hidden = tok.visibleToPlayers === false;
-    return `<div style="display:flex;align-items:center;gap:4px;padding:3px 0;border-bottom:1px solid var(--sep)">
+    const sel = _selectedTokenIds.has(tok.id);
+    return `<div style="display:flex;align-items:center;gap:4px;padding:3px 0;border-bottom:1px solid var(--sep)${sel ? ';background:var(--a22)' : ''}">
+      <input type="checkbox" ${sel ? 'checked' : ''} onchange="toggleTokenSelect('${escJs(tok.id)}', this.checked)" title="Select for recolor" style="cursor:pointer;flex-shrink:0;width:13px;height:13px">
       <div style="width:11px;height:11px;border-radius:50%;background:${esc(tok.color)};flex-shrink:0;border:1px solid rgba(255,255,255,.3);${hidden ? 'opacity:0.4' : ''}"></div>
       <span style="flex:1;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(tok.name)}">${esc(tok.name)}</span>
       <span title="${hidden ? 'Hidden from players' : 'Visible to players'}" style="font-size:10px;flex-shrink:0;${hidden ? 'color:var(--txd)' : 'color:var(--ok)'}">${hidden ? '🚫' : '👁'}</span>
-      <span style="font-size:10px;color:var(--txd);flex-shrink:0">${tok.x},${tok.y}</span>
+      <button class="btn sm" onclick="cloneToken(${i})" title="Duplicate token" style="padding:1px 5px;font-size:10px;flex-shrink:0">⎘</button>
       <button class="btn sm" onclick="openPmTokModal(${i})" style="padding:1px 5px;font-size:10px;flex-shrink:0" title="Edit">✏</button>
       <button class="btn danger sm" onclick="deleteToken(${i})" style="padding:1px 5px;font-size:10px;flex-shrink:0">✕</button>
     </div>`;
-  }).join('');
+  });
+  if (_lastDeleted && _lastDeleted.type === 'token') {
+    rows.splice(Math.min(_lastDeleted.index, rows.length), 0, _undoRowHTML(_lastDeleted.obj.name || 'token'));
+  }
+  if (!count) {
+    el.innerHTML = rows.length
+      ? rows.join('')
+      : '<div style="font-size:11px;color:var(--txd);padding:4px 0">No tokens yet. Click + Add Token above.</div>';
+    return;
+  }
+  const selCount = _selectedTokenCount();
+  const allChecked = selCount > 0 && selCount === count;
+  const controls = `<div style="display:flex;align-items:center;gap:6px;padding:2px 0 5px;border-bottom:1px solid var(--sep);margin-bottom:3px">
+    <label style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--txd);cursor:pointer">
+      <input type="checkbox" ${allChecked ? 'checked' : ''} onchange="toggleSelectAllTokens(this.checked)" style="cursor:pointer;width:13px;height:13px"> all
+    </label>
+    <span style="flex:1"></span>
+    <button class="btn sm" onclick="openRecolorPopup()" ${selCount ? '' : 'disabled'} title="Recolor selected tokens"
+      style="font-size:10px;padding:2px 8px;flex-shrink:0;${selCount ? '' : 'opacity:.45'}">🎨 Recolor${selCount ? ` (${selCount})` : ''}</button>
+  </div>`;
+  el.innerHTML = controls + rows.join('');
 }

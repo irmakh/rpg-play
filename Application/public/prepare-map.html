@@ -98,7 +98,7 @@
     <div class="hdr-right">
       <span id="status-msg" style="font-size:11px"></span>
       <button class="btn" id="btn-controls-toggle" onclick="togglePmControls()" title="Toggle grid controls">Grid ▲</button>
-      <button class="btn" id="btn-sidebar-toggle" onclick="togglePmSidebar()" title="Toggle panel">▶ Panel</button>
+      <button class="btn" id="btn-sidebar-toggle" onclick="togglePmSidebar()" title="Toggle panel">◀ Panel</button>
     </div>
   </div>
 
@@ -106,7 +106,7 @@
   <div id="pm-body">
 
     <!-- Sidebar -->
-    <div id="pm-sidebar" style="display:none">
+    <div id="pm-sidebar">
 
       <!-- New map button -->
       <div id="pm-sidebar-hdr">
@@ -120,17 +120,26 @@
         <div class="sb-section-hdr" onclick="toggleSbSection('maps')">
           <span>Maps</span><span id="sb-sec-maps-arrow">▼</span>
         </div>
-        <div id="sb-sec-maps">
-          <div id="map-list"><div class="no-map-msg">No maps yet.</div></div>
+        <div id="sb-sec-maps" class="sb-section-body">
+          <select id="map-select" onchange="if(this.value)selectMap(this.value)"
+            style="width:100%;box-sizing:border-box;padding:5px 7px;font-size:12px;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px;cursor:pointer">
+            <option value="">No maps yet</option>
+          </select>
+          <div id="map-meta" class="map-list-meta" style="margin-top:5px;min-height:13px"></div>
         </div>
       </div>
 
+      <!-- Prompt shown when no map is selected -->
+      <div id="pm-no-map-msg" style="padding:20px 16px;font-size:12px;color:var(--txd);text-align:center;line-height:1.6">
+        ⬆ Select a map above — or create one — to edit its fog regions, tokens and hidden items.
+      </div>
+
       <!-- Fog Regions section -->
-      <div class="sb-section">
+      <div class="sb-section" id="sb-fog-section" style="display:none">
         <div class="sb-section-hdr" onclick="toggleSbSection('fog')">
-          <span>Fog Regions</span><span id="sb-sec-fog-arrow">▶</span>
+          <span>Fog Regions</span><span id="sb-sec-fog-arrow">▼</span>
         </div>
-        <div id="sb-sec-fog" style="display:none" class="sb-section-body">
+        <div id="sb-sec-fog" class="sb-section-body">
           <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
             <button class="btn" id="btn-draw-fog" onclick="toggleDrawMode()" style="font-size:11px;padding:2px 10px">✏ Draw Fog</button>
             <span id="draw-hint" style="font-size:10px;color:var(--txd);display:none">drag to add region</span>
@@ -140,12 +149,12 @@
       </div>
 
       <!-- Tokens section -->
-      <div class="sb-section">
+      <div class="sb-section" id="sb-tokens-section" style="display:none">
         <div class="sb-section-hdr" onclick="toggleSbSection('tokens')">
           <span>Tokens <span id="pm-tok-count" style="font-size:9px;color:var(--txd);font-weight:normal"></span></span>
-          <span id="sb-sec-tokens-arrow">▶</span>
+          <span id="sb-sec-tokens-arrow">▼</span>
         </div>
-        <div id="sb-sec-tokens" style="display:none" class="sb-section-body">
+        <div id="sb-sec-tokens" class="sb-section-body">
           <div style="display:flex;gap:4px;align-items:center;margin-bottom:5px;flex-wrap:wrap">
             <button class="btn" style="flex:1;font-size:11px;padding:2px 6px" onclick="openPmTokModal()">+ Add Token</button>
             <button class="btn danger" id="pm-cancel-place-btn" style="display:none;font-size:11px;padding:2px 6px" onclick="cancelTokenPlacement()">✕ Cancel</button>
@@ -156,11 +165,11 @@
       </div>
 
       <!-- Hidden Items section -->
-      <div class="sb-section" id="sb-items-section" style="flex:1;display:flex;flex-direction:column;min-height:0">
+      <div class="sb-section" id="sb-items-section" style="flex:1;display:none;flex-direction:column;min-height:0">
         <div class="sb-section-hdr" onclick="toggleSbSection('items')">
-          <span>Hidden Items</span><span id="sb-sec-items-arrow">▶</span>
+          <span>Hidden Items</span><span id="sb-sec-items-arrow">▼</span>
         </div>
-        <div id="sb-sec-items" style="display:none" class="sb-section-body">
+        <div id="sb-sec-items" class="sb-section-body">
           <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin-bottom:6px;flex-shrink:0">
             <select id="item-type-sel" style="padding:2px 5px;font-size:11px;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px">
               <option value="trap">🪤 Trap</option>
@@ -189,6 +198,8 @@
         <button class="btn" id="pm-img-btn" onclick="document.getElementById('map-img-input').click()">📷 Image</button>
         <input type="file" id="map-img-input" accept="image/*" style="display:none" onchange="handleImageUpload(this)">
         <span id="img-status" style="font-size:11px;color:var(--txd)"></span>
+        <button class="btn" id="btn-move" onclick="toggleMoveMode()" title="Move mode — when on, drag any token, hidden item or fog region on the map to reposition it">✋ Move</button>
+        <span id="move-hint" style="font-size:10px;color:var(--txd);display:none">drag tokens · items · fog</span>
         <div style="flex:1"></div>
         <button class="btn primary" onclick="saveMap()">💾 Save</button>
         <button class="btn" onclick="loadToTable()">📂 Load to Table</button>
@@ -201,7 +212,7 @@
           <div style="color:var(--ac);font-size:14px;font-weight:bold">Uploading map image…</div>
           <div style="width:220px;height:4px;background:rgba(255,255,255,.15);border-radius:2px;overflow:hidden"><div style="height:100%;width:35%;background:var(--ac);border-radius:2px;animation:chat-upslide 1.1s ease-in-out infinite"></div></div>
         </div>
-        <div id="editor-placeholder">← Open the panel to select or create a map</div>
+        <div id="editor-placeholder">← Select or create a map to edit</div>
         <div id="editor-wrap">
           <img id="prep-map-img" alt="" style="display:none;pointer-events:none">
           <canvas id="prep-grid-canvas" style="pointer-events:none"></canvas>
@@ -305,9 +316,12 @@
         </div>
       </div>
       <!-- Common -->
+      <div style="margin-top:10px">
+        <label style="font-size:9px;color:var(--ac);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:5px">Color</label>
+        <input type="hidden" id="pm-tok-color" value="#c0392b">
+        <div id="pm-tok-color-swatches" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+      </div>
       <div style="display:flex;gap:8px;align-items:center;margin-top:10px">
-        <label style="font-size:9px;color:var(--ac);text-transform:uppercase;letter-spacing:.5px">Color</label>
-        <input type="color" id="pm-tok-color" value="#cc3333" style="width:28px;height:22px;border:none;background:none;cursor:pointer;padding:0;flex-shrink:0">
         <label style="font-size:9px;color:var(--ac);text-transform:uppercase;letter-spacing:.5px">Size</label>
         <select id="pm-tok-size" style="flex:1;padding:3px 5px;font-size:11px;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px">
           <option value="1">1×1</option><option value="2">2×2</option><option value="3">3×3</option><option value="4">4×4</option>
@@ -323,6 +337,17 @@
       <button class="btn" style="flex:1" onclick="closePmTokModal()">Cancel</button>
       <button id="pm-tok-confirm-btn" class="btn primary" style="flex:2" onclick="pmConfirmToken()">📍 Place on Map</button>
     </div>
+  </div>
+</div>
+
+<!-- Bulk recolor popup -->
+<div id="pm-recolor-popup" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:3500;align-items:center;justify-content:center" onclick="if(event.target===this)closeRecolorPopup()">
+  <div style="background:var(--bg2);border:1px solid var(--ac);border-radius:8px;width:240px;max-width:92vw;padding:14px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <span style="font-weight:bold;font-size:13px">Recolor <span id="pm-recolor-count">0</span> token(s)</span>
+      <button class="btn sm" onclick="closeRecolorPopup()">✕</button>
+    </div>
+    <div id="pm-recolor-swatches" style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center"></div>
   </div>
 </div>
 
