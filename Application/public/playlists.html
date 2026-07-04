@@ -10,35 +10,115 @@
 <script>if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js');</script>
 <link rel="stylesheet" href="/css/dm.css">
 <style>
-.tag-input-wrap{display:flex;gap:6px;flex-wrap:wrap;align-items:center;background:var(--bg3);border:1px solid var(--a55);border-radius:3px;padding:4px 7px;min-height:34px;cursor:text}
-.tag-input-wrap:focus-within{border-color:var(--ac);background:var(--bg4)}
-.tag-chip{display:inline-flex;align-items:center;gap:3px;background:var(--a44);border:1px solid var(--a66);border-radius:3px;padding:1px 5px;font-size:11px;color:var(--ac);white-space:nowrap}
-.tag-chip button{background:none;border:none;color:var(--ac);cursor:pointer;font-size:11px;padding:0;line-height:1;opacity:.7}
-.tag-chip button:hover{opacity:1}
-.tag-bare-input{background:none;border:none;color:var(--tx);font-size:12px;outline:none;min-width:80px;flex:1;padding:0}
-.sound-row{display:flex;align-items:center;gap:6px;padding:7px 10px;border-bottom:1px solid var(--sep);flex-wrap:wrap}
-.sound-row:last-child{border-bottom:none}
-.sound-row:hover{background:var(--a22)}
-.sound-name{min-width:80px;max-width:180px;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex-shrink:0}
-.sound-name-input{min-width:80px;max-width:180px;background:var(--bg3);border:1px solid var(--ac);color:var(--tx);border-radius:3px;padding:2px 5px;font-size:12px;flex-shrink:0}
-.sound-pl-chips{display:flex;gap:3px;flex-wrap:wrap;align-items:center;flex:1;min-width:0}
-.sound-pl-chip{display:inline-flex;align-items:center;gap:2px;background:var(--a44);border:1px solid var(--a66);border-radius:3px;padding:1px 6px;font-size:10px;color:var(--ac);white-space:nowrap}
-.sound-pl-chip button{background:none;border:none;color:var(--ac);cursor:pointer;font-size:11px;padding:0 1px;line-height:1;opacity:.6}
-.sound-pl-chip button:hover{opacity:1}
-.pl-add-dropdown{display:none;position:fixed;z-index:1500;background:var(--bg2);border:1px solid var(--ac);border-radius:4px;padding:4px 0;min-width:160px;max-height:200px;overflow-y:auto;box-shadow:0 4px 12px #0008}
-.pl-drop-item{padding:6px 12px;font-size:12px;cursor:pointer}
-.pl-drop-item:hover{background:var(--a44);color:var(--ac)}
-.pl-row{display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid var(--sep)}
+html,body{height:100%;overflow:hidden;margin:0;padding:0}
+.sheet{display:flex;flex-direction:column;height:100%;width:100%;max-width:none;margin:0;padding:0}
+.hdr{flex-shrink:0;margin-bottom:0;padding:8px 12px;background:var(--bg2);border-bottom:1px solid var(--a44)}
+
+/* ── Two-pane body ── */
+#pl-body{display:flex;flex:1;min-height:0}
+
+/* Sidebar */
+#pl-sidebar{width:300px;flex-shrink:0;display:flex;flex-direction:column;border-right:1px solid var(--a44);background:var(--bg2);min-height:0}
+.sb-hdr{flex-shrink:0;font-size:10px;color:var(--ac);text-transform:uppercase;letter-spacing:.5px;font-weight:bold;display:flex;justify-content:space-between;align-items:center;gap:6px;padding:7px 10px;background:var(--a22);border-bottom:1px solid var(--a44);user-select:none}
+.sb-hdr .btn.sm{text-transform:none;letter-spacing:0}
+.sb-hdr-meta{font-weight:normal;color:var(--txd);text-transform:none;letter-spacing:0;flex:1;text-align:right}
+
+/* Playlist list */
+#pl-list{flex-shrink:0;max-height:34vh;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--a44) transparent;border-bottom:1px solid var(--a44)}
+.pl-row{display:flex;align-items:center;gap:7px;padding:7px 10px;border-bottom:1px solid var(--sep);font-size:12px;cursor:pointer}
 .pl-row:last-child{border-bottom:none}
 .pl-row:hover{background:var(--a22)}
-.pl-name{flex:1;font-size:12px;font-weight:bold;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.pl-meta{font-size:10px;color:var(--txd)}
-.drop-zone{border:2px dashed var(--a55);border-radius:6px;padding:22px;text-align:center;color:var(--txd);font-size:12px;cursor:pointer;transition:border-color .15s}
+.pl-row.selected{background:var(--a22);border-left:3px solid var(--ac);padding-left:7px}
+.pl-row.drop-hint{outline:1px dashed var(--ac);outline-offset:-2px;background:var(--a22)}
+.pl-row-name{flex:1;min-width:0;font-weight:bold;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pl-row-meta{font-size:10px;color:var(--txd);flex-shrink:0;white-space:nowrap}
+.pl-live{color:var(--ok);font-size:10px;flex-shrink:0}
+.sb-empty{font-size:11px;color:var(--txd);padding:12px 10px;text-align:center}
+
+/* Library controls */
+#lib-controls{flex-shrink:0;display:flex;gap:5px;padding:6px 8px;border-bottom:1px solid var(--sep);flex-wrap:wrap}
+#lib-controls input[type=text]{flex:1;min-width:90px;width:auto}
+#lib-controls select{width:auto;font-size:11px;padding:3px 4px;flex-shrink:0}
+#lib-bulk{flex-shrink:0;display:none;align-items:center;gap:5px;padding:6px 8px;background:var(--a22);border-bottom:1px solid var(--a44);font-size:11px;flex-wrap:wrap}
+#lib-bulk select{width:auto;flex:1;min-width:80px;font-size:11px;padding:3px 4px}
+
+/* Library list */
+#lib-list{flex:1;overflow-y:auto;min-height:0;scrollbar-width:thin;scrollbar-color:var(--a44) transparent}
+#lib-list.drag-over{outline:2px dashed var(--ac);outline-offset:-4px}
+.lib-row{display:flex;align-items:center;gap:6px;padding:5px 8px;border-bottom:1px solid var(--sep);font-size:12px}
+.lib-row:last-child{border-bottom:none}
+.lib-row:hover{background:var(--a22)}
+.lib-row input[type=checkbox]{width:13px;height:13px;cursor:pointer;flex-shrink:0;margin:0}
+.lib-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:grab}
+.lib-dur{font-size:10px;color:var(--txd);flex-shrink:0;font-variant-numeric:tabular-nums}
+.lib-row .row-actions{display:none;gap:2px;flex-shrink:0}
+.lib-row:hover .row-actions{display:flex}
+.row-btn{background:none;border:none;color:var(--ac);cursor:pointer;font-size:12px;padding:1px 4px;line-height:1;opacity:.75;flex-shrink:0}
+.row-btn:hover{opacity:1}
+.row-btn.danger{color:#ff8888}
+.name-edit{flex:1;min-width:0;background:var(--bg3);border:1px solid var(--ac);color:var(--tx);border-radius:3px;padding:2px 5px;font-size:12px;width:auto}
+
+/* Detail pane */
+#pl-detail{flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden}
+#det-empty{flex:1;display:flex;align-items:center;justify-content:center;color:var(--txd);font-size:13px;text-align:center;padding:20px}
+#det-hdr{flex-shrink:0;padding:10px 14px;border-bottom:1px solid var(--a44);background:var(--bg2)}
+#det-hdr-row1{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+#det-name{flex:1;min-width:140px;width:auto;font-size:16px;font-weight:bold;background:transparent;border:1px solid transparent;color:var(--ac);padding:3px 6px}
+#det-name:hover{border-color:var(--a55)}
+#det-name:focus{background:var(--bg3);border-color:var(--ac)}
+#det-hdr-row2{display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap;font-size:11px}
+#det-hdr-row2 select,#det-hdr-row2 input[type=text]{width:auto;font-size:11px;padding:3px 5px}
+#det-stats{color:var(--txd);margin-left:auto;white-space:nowrap}
+
+/* Track list */
+#trk-list{flex:1;overflow-y:auto;min-height:0;scrollbar-width:thin;scrollbar-color:var(--a44) transparent}
+.trk-row{display:flex;align-items:center;gap:6px;padding:6px 12px;border-bottom:1px solid var(--sep);font-size:12px;border-top:2px solid transparent}
+.trk-row:hover{background:var(--a22)}
+.trk-row.drag-over{border-top:2px solid var(--ac)}
+.trk-grip{cursor:grab;color:var(--txd);font-size:13px;flex-shrink:0;user-select:none}
+.trk-num{width:20px;text-align:right;color:var(--txd);font-size:10px;flex-shrink:0;font-variant-numeric:tabular-nums}
+.trk-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.trk-dur{font-size:10px;color:var(--txd);flex-shrink:0;font-variant-numeric:tabular-nums}
+.trk-row .trk-btns{display:flex;gap:2px;flex-shrink:0}
+.trk-row .row-btn:disabled{opacity:.2;cursor:default}
+.det-empty-tracks{padding:26px 14px;text-align:center;color:var(--txd);font-size:12px}
+
+/* Live (playing on table) track */
+.trk-row.live .trk-name{color:var(--ok);font-weight:bold}
+
+/* Table (live) badge */
+#table-badge{display:none;align-items:center;gap:4px;font-size:11px;background:var(--a22);border:1px solid var(--a55);border-radius:3px;padding:2px 6px}
+#tb-name{max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ok);font-weight:bold}
+
+/* Modals */
+.modal-body{padding:12px 16px}
+.drop-zone{border:2px dashed var(--a55);border-radius:6px;padding:18px;text-align:center;color:var(--txd);font-size:12px;cursor:pointer;transition:border-color .15s}
 .drop-zone:hover,.drop-zone.drag-over{border-color:var(--ac);color:var(--ac);background:var(--a22)}
-.hdr{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--a44);gap:10px;flex-wrap:wrap}
-.hdr-left{display:flex;align-items:center;gap:10px}
-.nav-back{font-size:12px;color:var(--ac);text-decoration:none;border:1px solid var(--a55);border-radius:3px;padding:4px 10px;background:var(--a22)}
-.nav-back:hover{background:var(--a44)}
+#up-queue{margin-top:10px;max-height:240px;overflow-y:auto}
+.up-row{display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid var(--sep);font-size:12px;flex-wrap:wrap}
+.up-row input[type=text]{flex:1;min-width:120px;width:auto;font-size:12px;padding:3px 5px}
+.up-size{font-size:10px;color:var(--txd);flex-shrink:0}
+.up-state{font-size:10px;flex-shrink:0;min-width:44px;text-align:right}
+.up-bar-wrap{flex-basis:100%;background:var(--a22);border-radius:3px;height:4px;overflow:hidden;display:none}
+.up-bar{height:100%;width:0%;background:var(--ac);transition:width .1s}
+#at-list{max-height:260px;overflow-y:auto;border:1px solid var(--a55);border-radius:3px;background:var(--bg3);margin-top:8px}
+#at-list label{display:flex;align-items:center;gap:8px;padding:5px 8px;cursor:pointer;font-size:12px}
+#at-list label:hover{background:var(--a22)}
+#at-list input[type=checkbox]{width:13px;height:13px;cursor:pointer;flex-shrink:0}
+#at-list .at-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#at-list .at-dur{font-size:10px;color:var(--txd)}
+
+/* Mobile: stack panes, restore page scroll */
+@media (max-width:760px){
+  html,body{overflow:auto}
+  .sheet{height:auto;min-height:100dvh}
+  #pl-body{flex-direction:column}
+  #pl-sidebar{width:100%;border-right:none;border-bottom:1px solid var(--a44)}
+  #pl-list{max-height:200px}
+  #lib-list{max-height:280px;flex:none}
+  #pl-detail{overflow:visible}
+  #trk-list{overflow:visible}
+}
 </style>
 </head>
 <body>
@@ -58,143 +138,186 @@
 
 <div class="sheet" id="main-content" style="display:none">
 
-  <div class="hdr" style="background:var(--bg2);border-radius:6px;margin-bottom:14px;border:1px solid var(--a44)">
+  <!-- Header -->
+  <div class="hdr">
     <div class="hdr-left">
-      <a href="/dm.html" class="nav-back">← DM Panel</a>
+      <button class="btn" onclick="location.href='/dm.html'">← DM</button>
       <h1>🎵 Playlists</h1>
+      <select id="theme-sel" onchange="applyTheme(this.value)" title="Theme">
+        <option value="dark-gold">🌙</option>
+        <option value="parchment">📜</option>
+        <option value="midnight">🌌</option>
+      </select>
     </div>
-    <div id="status-msg" style="font-size:11px;color:var(--txd)"></div>
+    <div class="hdr-right">
+      <span id="status-msg" style="font-size:11px;color:var(--txd)"></span>
+      <span id="table-badge">
+        📡 <span id="tb-name"></span>
+        <button class="row-btn" id="tb-pp" onclick="tablePauseResume()" title="Pause / resume on table">⏸</button>
+        <button class="row-btn" onclick="tableNext()" title="Next track on table">⏭</button>
+        <button class="row-btn" onclick="tableStop()" title="Stop on table">⏹</button>
+      </span>
+    </div>
   </div>
 
-  <!-- Upload Sound -->
-  <div class="card">
-    <div class="ct">📤 Upload Sound File</div>
-    <div class="cb">
-      <div class="drop-zone" id="upload-drop" onclick="document.getElementById('upload-file').click()"
-           ondragover="event.preventDefault();this.classList.add('drag-over')"
+  <!-- Body: sidebar + detail -->
+  <div id="pl-body">
+
+    <div id="pl-sidebar">
+      <div class="sb-hdr">
+        <span>Playlists</span>
+        <button class="btn sm primary" onclick="openNewPl()">+ New</button>
+      </div>
+      <div id="pl-list"><div class="sb-empty">Loading…</div></div>
+
+      <div class="sb-hdr">
+        <span>Sound Library</span>
+        <span class="sb-hdr-meta" id="lib-count"></span>
+        <button class="btn sm" onclick="openUploadModal()">⬆ Upload</button>
+      </div>
+      <div id="lib-controls">
+        <input type="text" id="lib-search" placeholder="Search…" oninput="renderLibrary()">
+        <select id="lib-sort" onchange="renderLibrary()" title="Sort">
+          <option value="name">A–Z</option>
+          <option value="newest">Newest</option>
+          <option value="oldest">Oldest</option>
+        </select>
+        <select id="lib-filter" onchange="renderLibrary()" title="Filter">
+          <option value="all">All</option>
+          <option value="orphan">Not in any playlist</option>
+        </select>
+      </div>
+      <div id="lib-bulk">
+        <span id="bulk-count"></span>
+        <select id="bulk-pl"></select>
+        <button class="btn sm primary" onclick="bulkAddToPl()">Add</button>
+        <button class="btn sm" onclick="clearLibSel()">✕</button>
+      </div>
+      <div id="lib-list"
+           ondragover="if(event.dataTransfer.types.includes('Files')){event.preventDefault();this.classList.add('drag-over')}"
            ondragleave="this.classList.remove('drag-over')"
-           ondrop="handleFileDrop(event)">
-        Click or drag &amp; drop audio file (MP3, WAV, OGG, FLAC, M4A, AAC — max 50 MB)
-      </div>
-      <input type="file" id="upload-file" accept="audio/*,.mp3,.mpeg,.mp4,.m4a,.wav,.ogg,.flac,.aac,.webm" style="display:none" onchange="handleFileSelect(this.files[0])">
-
-      <div id="upload-form" style="display:none;margin-top:12px">
-        <div class="field">
-          <label class="lbl">Sound Name *</label>
-          <input type="text" id="upload-name" maxlength="120" placeholder="e.g. Tavern Ambience">
-        </div>
-        <div style="display:flex;gap:8px;align-items:center">
-          <button class="btn primary" id="upload-btn" onclick="doUpload()">⬆ Upload</button>
-          <button class="btn" onclick="clearUploadForm()">✕ Cancel</button>
-          <span id="upload-status" style="font-size:11px;color:var(--txd)"></span>
-        </div>
-        <div id="upload-progress-wrap" style="display:none;margin-top:8px">
-          <div style="background:var(--a22);border-radius:3px;height:6px;overflow:hidden">
-            <div id="upload-progress-bar" style="height:100%;width:0%;background:var(--acc);transition:width 0.1s"></div>
-          </div>
-          <div id="upload-progress-pct" style="font-size:10px;color:var(--txd);margin-top:3px;text-align:right">0%</div>
-        </div>
-      </div>
+           ondrop="handleLibDrop(event)"></div>
     </div>
-  </div>
 
-  <!-- Sound Library -->
-  <div class="card">
-    <div class="ct">🎶 Sound Library</div>
-    <div class="cb" style="padding:0">
-      <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid var(--a44)">
-        <input type="text" id="sound-search" placeholder="Search sounds…" oninput="renderSounds()" style="flex:1">
-      </div>
-      <div id="sound-list"><div style="padding:14px;text-align:center;color:var(--txd);font-size:12px">Loading…</div></div>
-    </div>
-  </div>
-
-  <!-- Playlists -->
-  <div class="card">
-    <div class="ct">📋 Playlists</div>
-    <div class="cb">
-      <div style="display:grid;grid-template-columns:1fr 1fr auto auto;gap:8px;align-items:end;margin-bottom:10px;flex-wrap:wrap">
-        <div class="field" style="margin:0">
-          <label class="lbl">Name *</label>
-          <input type="text" id="pl-name" maxlength="80" placeholder="e.g. Combat Music">
-        </div>
-        <div class="field" style="margin:0">
-          <label class="lbl">Type</label>
-          <select id="pl-type" onchange="toggleMapField()">
-            <option value="generic">Generic</option>
-            <option value="map">Map-based</option>
-          </select>
-        </div>
-        <div class="field" style="margin:0;display:none" id="pl-mapname-field">
-          <label class="lbl">Map Name</label>
-          <input type="text" id="pl-mapname" maxlength="80" placeholder="Map name">
-        </div>
-        <button class="btn primary" onclick="createPlaylist()" style="white-space:nowrap;height:30px">+ Create</button>
-      </div>
-      <div id="pl-status" style="font-size:11px;color:var(--txd);min-height:14px;margin-bottom:8px"></div>
-
-      <div id="pl-list"><div style="padding:10px;text-align:center;color:var(--txd);font-size:12px">No playlists yet.</div></div>
-    </div>
+    <div id="pl-detail"></div>
   </div>
 
 </div>
 
-<!-- Edit Playlist Modal -->
-<div class="modal-overlay" id="edit-pl-modal" style="display:none">
-  <div class="modal-box" style="max-width:420px;width:96%">
-    <div class="ct">Edit Playlist</div>
+<!-- New playlist modal -->
+<div class="modal-overlay" id="new-pl-modal" style="display:none">
+  <div class="modal-box">
+    <div class="ct">New Playlist</div>
     <div class="modal-body">
       <div class="field">
         <label class="lbl">Name *</label>
-        <input type="text" id="edit-pl-name" maxlength="80">
+        <input type="text" id="np-name" maxlength="80" placeholder="e.g. Combat Music"
+               onkeydown="if(event.key==='Enter')createPl()">
       </div>
       <div class="field">
         <label class="lbl">Type</label>
-        <select id="edit-pl-type" onchange="toggleEditMapField()">
+        <select id="np-type" onchange="document.getElementById('np-map-field').style.display=this.value==='map'?'':'none'">
           <option value="generic">Generic</option>
           <option value="map">Map-based</option>
         </select>
       </div>
-      <div class="field" id="edit-pl-mapname-field" style="display:none">
+      <div class="field" id="np-map-field" style="display:none">
         <label class="lbl">Map Name</label>
-        <input type="text" id="edit-pl-mapname" maxlength="80">
+        <input type="text" id="np-mapname" maxlength="80" placeholder="Map name">
       </div>
-      <div class="field">
-        <label class="lbl">Sounds in playlist</label>
-        <div id="edit-pl-sound-list" style="max-height:220px;overflow-y:auto;border:1px solid var(--a55);border-radius:3px;background:var(--bg3)">
-          <div style="color:var(--txd);font-size:11px;padding:8px">No sounds uploaded yet.</div>
-        </div>
-      </div>
+      <div id="np-err" style="font-size:11px;color:var(--err);min-height:14px"></div>
     </div>
     <div class="modal-btns">
-      <button class="btn" onclick="closeEditPl()">Cancel</button>
-      <button class="btn primary" onclick="saveEditPl()">Save</button>
+      <button class="btn" onclick="closeNewPl()">Cancel</button>
+      <button class="btn primary" onclick="createPl()">Create</button>
     </div>
   </div>
 </div>
 
-<div class="pl-add-dropdown" id="pl-add-dropdown"></div>
+<!-- Upload modal -->
+<div class="modal-overlay" id="upload-modal" style="display:none">
+  <div class="modal-box" style="max-width:520px">
+    <div class="ct">Upload Sounds</div>
+    <div class="modal-body">
+      <div class="drop-zone" onclick="document.getElementById('up-file').click()"
+           ondragover="event.preventDefault();this.classList.add('drag-over')"
+           ondragleave="this.classList.remove('drag-over')"
+           ondrop="event.preventDefault();this.classList.remove('drag-over');upAddFiles(event.dataTransfer.files)">
+        Click or drop audio files here (MP3, WAV, OGG, FLAC, M4A, AAC — max 50 MB each)
+      </div>
+      <input type="file" id="up-file" multiple accept="audio/*,.mp3,.mpeg,.mp4,.m4a,.wav,.ogg,.flac,.aac,.webm"
+             style="display:none" onchange="upAddFiles(this.files);this.value=''">
+      <div id="up-queue"></div>
+    </div>
+    <div class="modal-btns">
+      <span id="up-status" style="font-size:11px;color:var(--txd);margin-right:auto;align-self:center"></span>
+      <button class="btn" id="up-close" onclick="closeUploadModal()">Close</button>
+      <button class="btn primary" id="up-start" onclick="upStart()" disabled>⬆ Upload all</button>
+    </div>
+  </div>
+</div>
 
-<!-- Presence: register this client so it shows on the maintenance page -->
+<!-- Add tracks modal -->
+<div class="modal-overlay" id="addtracks-modal" style="display:none">
+  <div class="modal-box" style="max-width:460px">
+    <div class="ct">Add Tracks</div>
+    <div class="modal-body">
+      <input type="text" id="at-search" placeholder="Search sounds…" oninput="renderAtList()">
+      <div id="at-list"></div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn" onclick="closeAddTracks()">Cancel</button>
+      <button class="btn primary" id="at-add" onclick="atAdd()">Add selected</button>
+    </div>
+  </div>
+</div>
+
 <script src="/js/lib/realtime.js"></script>
-<script>window.addEventListener('DOMContentLoaded',function(){if(window.connectRealtime)connectRealtime({});});</script>
-
 <script>
+// ── Utils ─────────────────────────────────────────────────────────────────────
+function el(id) { return document.getElementById(id); }
+function esc(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+// Escape for a single-quoted JS string inside an HTML attribute: onclick="fn('${escJs(v)}')".
+function escJs(s) { return String(s == null ? '' : s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\r\n|\r|\n/g,'\\n').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function fmtDur(s) {
+  if (s == null || !isFinite(s)) return '–:––';
+  s = Math.round(s);
+  return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+}
+function fmtSize(b) { return (b / 1024 / 1024).toFixed(1) + ' MB'; }
+function showStatus(msg, isErr = false) {
+  const e = el('status-msg');
+  e.textContent = msg;
+  e.style.color = isErr ? 'var(--err)' : 'var(--ok)';
+  setTimeout(() => { if (e.textContent === msg) e.textContent = ''; }, 3000);
+}
+function plSoundIds(pl) { return (pl.sounds || []).map(s => typeof s === 'string' ? s : s.id); }
+
+// ── Theme ─────────────────────────────────────────────────────────────────────
+function applyTheme(name) {
+  document.body.className = name === 'dark-gold' ? '' : 'theme-' + name;
+  localStorage.setItem('dm-theme', name);
+  const sel = el('theme-sel');
+  if (sel) sel.value = name;
+}
+(function(){ applyTheme(localStorage.getItem('dm-theme') || 'dark-gold'); })();
+
 // ── Auth ──────────────────────────────────────────────────────────────────────
 let masterPw = '';
 function authenticate() {
-  const pw = document.getElementById('gate-pw').value;
-  if (!pw) { document.getElementById('gate-err').textContent = 'Enter password.'; return; }
+  const pw = el('gate-pw').value;
+  if (!pw) { el('gate-err').textContent = 'Enter password.'; return; }
   fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'dm', password: pw }) })
     .then(r => r.json()).then(d => {
       if (d.ok || d.role === 'dm') { masterPw = pw; unlock(); }
-      else document.getElementById('gate-err').textContent = d.error || 'Wrong password.';
-    }).catch(() => { document.getElementById('gate-err').textContent = 'Connection error.'; });
+      else el('gate-err').textContent = d.error || 'Wrong password.';
+    }).catch(() => { el('gate-err').textContent = 'Connection error.'; });
 }
 function unlock() {
-  document.getElementById('gate').style.display = 'none';
-  document.getElementById('main-content').style.display = '';
+  el('gate').style.display = 'none';
+  el('main-content').style.display = '';
   loadAll();
+  fetchTableState();
 }
 function authHeaders() { return { 'Content-Type': 'application/json', 'X-Master-Password': masterPw }; }
 
@@ -207,135 +330,9 @@ function authHeaders() { return { 'Content-Type': 'application/json', 'X-Master-
 // ── State ─────────────────────────────────────────────────────────────────────
 let sounds = [];
 let playlists = [];
+let selectedPlId = null;
+let libSelected = new Set();
 
-// Tag state per widget context
-const _tags = {};
-function getTags(ctx) { return _tags[ctx] || (_tags[ctx] = []); }
-
-// ── Tag widget ────────────────────────────────────────────────────────────────
-function renderTagChips(ctx) {
-  const wrap = document.getElementById(ctx + '-tags-wrap');
-  if (!wrap) return;
-  const bare = document.getElementById(ctx + '-tag-bare');
-  // Remove old chips
-  wrap.querySelectorAll('.tag-chip').forEach(c => c.remove());
-  getTags(ctx).forEach((t, i) => {
-    const chip = document.createElement('span');
-    chip.className = 'tag-chip';
-    chip.innerHTML = `${t} <button onclick="removeTag('${escJs(ctx)}',${i})">×</button>`;
-    wrap.insertBefore(chip, bare);
-  });
-}
-function addTag(ctx, val) {
-  const tag = val.trim().toLowerCase().replace(/[^a-z0-9-_ ]/g, '').slice(0, 30);
-  if (!tag) return;
-  if (!getTags(ctx).includes(tag)) { getTags(ctx).push(tag); renderTagChips(ctx); }
-}
-function removeTag(ctx, idx) {
-  getTags(ctx).splice(idx, 1);
-  renderTagChips(ctx);
-}
-function handleTagKey(e, ctx) {
-  if (e.key === 'Enter' || e.key === ',') {
-    e.preventDefault();
-    addTag(ctx, e.target.value);
-    e.target.value = '';
-  } else if (e.key === 'Backspace' && !e.target.value && getTags(ctx).length) {
-    getTags(ctx).pop(); renderTagChips(ctx);
-  }
-}
-function handleTagInput(e, ctx) {
-  if (e.target.value.endsWith(',')) {
-    addTag(ctx, e.target.value.slice(0, -1));
-    e.target.value = '';
-  }
-}
-function setTagsCtx(ctx, tags) {
-  _tags[ctx] = [...tags];
-  renderTagChips(ctx);
-}
-
-// ── Upload ────────────────────────────────────────────────────────────────────
-let _pendingFile = null;
-const MAX_AUDIO_MB = 50;
-
-function handleFileDrop(e) {
-  e.preventDefault();
-  document.getElementById('upload-drop').classList.remove('drag-over');
-  const f = e.dataTransfer.files[0];
-  if (f) prepareUpload(f);
-}
-function handleFileSelect(f) { if (f) prepareUpload(f); }
-function prepareUpload(f) {
-  if (f.size > MAX_AUDIO_MB * 1024 * 1024) { showStatus('File too large (max 50 MB)', true); return; }
-  _pendingFile = f;
-  document.getElementById('upload-form').style.display = '';
-  const nameEl = document.getElementById('upload-name');
-  if (!nameEl.value) nameEl.value = f.name.replace(/\.[^.]+$/, '');
-  document.getElementById('upload-status').textContent = f.name + ' (' + (f.size / 1024 / 1024).toFixed(1) + ' MB)';
-}
-function clearUploadForm() {
-  _pendingFile = null;
-  document.getElementById('upload-form').style.display = 'none';
-  document.getElementById('upload-file').value = '';
-  document.getElementById('upload-name').value = '';
-  document.getElementById('upload-status').textContent = '';
-  document.getElementById('upload-progress-wrap').style.display = 'none';
-  document.getElementById('upload-progress-bar').style.width = '0%';
-}
-async function doUpload() {
-  if (!_pendingFile) return;
-  const name = document.getElementById('upload-name').value.trim();
-  if (!name) { document.getElementById('upload-status').textContent = 'Name is required.'; return; }
-  const btn = document.getElementById('upload-btn');
-  const progressWrap = document.getElementById('upload-progress-wrap');
-  const progressBar = document.getElementById('upload-progress-bar');
-  const progressPct = document.getElementById('upload-progress-pct');
-  btn.disabled = true;
-  document.getElementById('upload-status').textContent = 'Reading file…';
-  try {
-    const dataUrl = await new Promise((res, rej) => {
-      const r = new FileReader();
-      r.onload = e => res(e.target.result);
-      r.onerror = rej;
-      r.readAsDataURL(_pendingFile);
-    });
-    document.getElementById('upload-status').textContent = 'Uploading…';
-    progressWrap.style.display = '';
-    progressBar.style.width = '0%';
-    progressPct.textContent = '0%';
-    await new Promise((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-      xhr.upload.onprogress = e => {
-        if (e.lengthComputable) {
-          const pct = Math.round(e.loaded / e.total * 100);
-          progressBar.style.width = pct + '%';
-          progressPct.textContent = pct + '%';
-        }
-      };
-      xhr.onload = () => {
-        try {
-          const d = JSON.parse(xhr.responseText);
-          if (xhr.status >= 200 && xhr.status < 300) resolve(d);
-          else reject(new Error(d.error || 'Upload failed'));
-        } catch { reject(new Error('Upload failed')); }
-      };
-      xhr.onerror = () => reject(new Error('Network error'));
-      const hdrs = authHeaders();
-      xhr.open('POST', '/api/sounds');
-      Object.entries(hdrs).forEach(([k, v]) => xhr.setRequestHeader(k, v));
-      xhr.send(JSON.stringify({ name, dataUrl, tags: [] }));
-    });
-    showStatus('Uploaded: ' + name);
-    clearUploadForm();
-    await loadAll();
-  } catch (err) {
-    document.getElementById('upload-status').textContent = err.message;
-    progressWrap.style.display = 'none';
-  } finally { btn.disabled = false; }
-}
-
-// ── Load ──────────────────────────────────────────────────────────────────────
 async function loadAll() {
   const [sRes, pRes] = await Promise.all([
     fetch('/api/sounds', { headers: authHeaders() }),
@@ -343,275 +340,585 @@ async function loadAll() {
   ]);
   sounds = sRes.ok ? await sRes.json() : [];
   playlists = pRes.ok ? await pRes.json() : [];
-  renderSounds();
-  renderPlaylists();
+  if (selectedPlId && !playlists.find(p => p.id === selectedPlId)) selectedPlId = null;
+  for (const id of [...libSelected]) if (!sounds.find(s => s.id === id)) libSelected.delete(id);
+  renderAll();
+  queueDurations();
+}
+function renderAll() {
+  renderPlaylistList();
+  renderLibrary();
+  renderDetail();
 }
 
-function renderSounds() {
-  const q = (document.getElementById('sound-search')?.value || '').toLowerCase();
-  const list = sounds.filter(s => !q || s.name.toLowerCase().includes(q));
-  const el = document.getElementById('sound-list');
-  if (!list.length) { el.innerHTML = '<div style="padding:14px;text-align:center;color:var(--txd);font-size:12px">No sounds yet.</div>'; return; }
-  el.innerHTML = list.map(s => `
-    <div class="sound-row" data-sound-id="${s.id}">
-      <span class="sound-name" title="${esc(s.name)}">${esc(s.name)}</span>
-      <audio src="${esc(s.url)}" controls preload="none" style="height:28px;width:140px;flex-shrink:0"></audio>
-      <div class="sound-pl-chips" data-sound-id="${s.id}"></div>
-      <button class="btn sm" onclick="openAddDropdown('${escJs(s.id)}',this)" title="Add to playlist" style="flex-shrink:0">+</button>
-      <button class="btn sm sound-edit-btn" onclick="startRename('${escJs(s.id)}')" title="Rename" style="flex-shrink:0">✏</button>
-      <button class="btn sm success sound-save-btn" onclick="saveRename('${escJs(s.id)}')" title="Save" style="display:none;flex-shrink:0">✓</button>
-      <button class="btn sm sound-cancel-btn" onclick="cancelRename('${escJs(s.id)}')" title="Cancel" style="display:none;flex-shrink:0">✕</button>
-      <button class="btn sm danger" onclick="deleteSound('${escJs(s.id)}','${escJs(s.name)}')" title="Delete" style="flex-shrink:0">🗑</button>
-    </div>`).join('');
-  renderAllPlChips();
+// ── Durations (lazy, cached in localStorage) ─────────────────────────────────
+let durations = {};
+try { durations = JSON.parse(localStorage.getItem('plSoundDur') || '{}'); } catch {}
+const _durQueue = [];
+let _durActive = 0;
+function queueDurations() {
+  sounds.forEach(s => { if (durations[s.id] == null && !_durQueue.includes(s.id)) _durQueue.push(s.id); });
+  pumpDurations();
 }
-
-function renderPlChips(soundId) {
-  const el = document.querySelector(`.sound-pl-chips[data-sound-id="${soundId}"]`);
-  if (!el) return;
-  const inPl = playlists.filter(pl => {
-    const ids = (pl.sounds || []).map(s => typeof s === 'string' ? s : s.id);
-    return ids.includes(soundId);
-  });
-  el.innerHTML = inPl.map(pl =>
-    `<span class="sound-pl-chip">${esc(pl.name)} <button onclick="removeSoundFromPl('${escJs(soundId)}','${escJs(pl.id)}')" title="Remove from ${esc(pl.name)}">×</button></span>`
-  ).join('');
-}
-
-function renderAllPlChips() {
-  sounds.forEach(s => renderPlChips(s.id));
-}
-
-async function addSoundToPl(soundId, plId) {
-  closeAddDropdown();
-  const pl = playlists.find(p => p.id === plId);
-  if (!pl) return;
-  const currentIds = (pl.sounds || []).map(s => typeof s === 'string' ? s : s.id);
-  if (currentIds.includes(soundId)) return;
-  const newIds = [...currentIds, soundId];
-  const resp = await fetch('/api/playlists/' + plId, {
-    method: 'PUT', headers: authHeaders(),
-    body: JSON.stringify({ name: pl.name, type: pl.type, sounds: newIds, map_name: pl.map_name || '' })
-  });
-  if (resp.ok) {
-    pl.sounds = newIds.map(id => sounds.find(s => s.id === id) || { id });
-    renderPlChips(soundId);
+function pumpDurations() {
+  while (_durActive < 2 && _durQueue.length) {
+    const id = _durQueue.shift();
+    const s = sounds.find(x => x.id === id);
+    if (!s) continue;
+    _durActive++;
+    const a = new Audio();
+    a.preload = 'metadata';
+    const done = d => {
+      _durActive--;
+      a.onloadedmetadata = a.onerror = null;
+      a.removeAttribute('src');
+      if (d != null && isFinite(d)) {
+        durations[id] = d;
+        try { localStorage.setItem('plSoundDur', JSON.stringify(durations)); } catch {}
+        updateDurLabels(id);
+      }
+      pumpDurations();
+    };
+    a.onloadedmetadata = () => done(a.duration);
+    a.onerror = () => done(null);
+    a.src = s.url;
   }
 }
-
-async function removeSoundFromPl(soundId, plId) {
-  const pl = playlists.find(p => p.id === plId);
-  if (!pl) return;
-  const currentIds = (pl.sounds || []).map(s => typeof s === 'string' ? s : s.id);
-  const newIds = currentIds.filter(id => id !== soundId);
-  const resp = await fetch('/api/playlists/' + plId, {
-    method: 'PUT', headers: authHeaders(),
-    body: JSON.stringify({ name: pl.name, type: pl.type, sounds: newIds, map_name: pl.map_name || '' })
-  });
-  if (resp.ok) {
-    pl.sounds = newIds.map(id => sounds.find(s => s.id === id) || { id });
-    renderPlChips(soundId);
+function updateDurLabels(id) {
+  document.querySelectorAll(`[data-dur-for="${id}"]`).forEach(e => { e.textContent = fmtDur(durations[id]); });
+  updateLibHeader();
+  updateDetailStats();
+}
+// Sum durations for a set of ids; returns '' unless all are known
+function totalDurLabel(ids) {
+  let total = 0;
+  for (const id of ids) {
+    if (durations[id] == null) return '';
+    total += durations[id];
   }
+  return ids.length ? ' · ' + fmtDur(total) : '';
 }
 
-let _addDropSoundId = null;
-function openAddDropdown(soundId, btn) {
-  const drop = document.getElementById('pl-add-dropdown');
-  if (_addDropSoundId === soundId) { closeAddDropdown(); return; }
-  _addDropSoundId = soundId;
-  const available = playlists.filter(pl => {
-    const ids = (pl.sounds || []).map(s => typeof s === 'string' ? s : s.id);
-    return !ids.includes(soundId);
-  });
-  drop.innerHTML = available.length
-    ? available.map(p => `<div class="pl-drop-item" onclick="addSoundToPl('${escJs(soundId)}','${escJs(p.id)}')">${esc(p.name)}</div>`).join('')
-    : '<div style="padding:8px 12px;font-size:11px;color:var(--txd)">In all playlists</div>';
-  const rect = btn.getBoundingClientRect();
-  drop.style.top = (rect.bottom + 4) + 'px';
-  drop.style.left = rect.left + 'px';
-  drop.style.display = 'block';
-}
-function closeAddDropdown() {
-  document.getElementById('pl-add-dropdown').style.display = 'none';
-  _addDropSoundId = null;
-}
-
-function startRename(soundId) {
-  const row = document.querySelector(`.sound-row[data-sound-id="${soundId}"]`);
-  if (!row) return;
-  const nameEl = row.querySelector('.sound-name');
-  const s = sounds.find(s => s.id === soundId);
-  if (!nameEl || !s) return;
-  const input = document.createElement('input');
-  input.className = 'sound-name-input';
-  input.value = s.name;
-  input.maxLength = 120;
-  input.onkeydown = e => { if (e.key === 'Enter') saveRename(soundId); else if (e.key === 'Escape') cancelRename(soundId); };
-  nameEl.replaceWith(input);
-  input.focus();
-  input.select();
-  row.querySelector('.sound-edit-btn').style.display = 'none';
-  row.querySelector('.sound-save-btn').style.display = '';
-  row.querySelector('.sound-cancel-btn').style.display = '';
-}
-
-async function saveRename(soundId) {
-  const row = document.querySelector(`.sound-row[data-sound-id="${soundId}"]`);
-  if (!row) return;
-  const input = row.querySelector('.sound-name-input');
-  if (!input) return;
-  const newName = input.value.trim();
-  if (!newName) { input.focus(); return; }
-  const resp = await fetch('/api/sounds/' + soundId, {
-    method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ name: newName })
-  });
-  if (resp.ok) {
-    const s = sounds.find(s => s.id === soundId);
-    if (s) s.name = newName;
-    const span = document.createElement('span');
-    span.className = 'sound-name';
-    span.title = newName;
-    span.textContent = newName;
-    input.replaceWith(span);
-    row.querySelector('.sound-edit-btn').style.display = '';
-    row.querySelector('.sound-save-btn').style.display = 'none';
-    row.querySelector('.sound-cancel-btn').style.display = 'none';
+// ── Playlist sidebar ─────────────────────────────────────────────────────────
+function renderPlaylistList() {
+  const listEl = el('pl-list');
+  if (!playlists.length) {
+    listEl.innerHTML = '<div class="sb-empty">No playlists yet — create one.</div>';
+    return;
   }
-}
-
-function cancelRename(soundId) {
-  const row = document.querySelector(`.sound-row[data-sound-id="${soundId}"]`);
-  if (!row) return;
-  const input = row.querySelector('.sound-name-input');
-  const s = sounds.find(s => s.id === soundId);
-  if (!input || !s) return;
-  const span = document.createElement('span');
-  span.className = 'sound-name';
-  span.title = s.name;
-  span.textContent = s.name;
-  input.replaceWith(span);
-  row.querySelector('.sound-edit-btn').style.display = '';
-  row.querySelector('.sound-save-btn').style.display = 'none';
-  row.querySelector('.sound-cancel-btn').style.display = 'none';
-}
-
-async function deleteSound(id, name) {
-  if (!confirm('Delete "' + name + '"?')) return;
-  await fetch('/api/sounds/' + id, { method: 'DELETE', headers: authHeaders() });
-  await loadAll();
-}
-
-function renderPlaylists() {
-  const el = document.getElementById('pl-list');
-  if (!playlists.length) { el.innerHTML = '<div style="padding:10px;text-align:center;color:var(--txd);font-size:12px">No playlists yet.</div>'; return; }
-  el.innerHTML = playlists.map(pl => {
-    const typeLabel = pl.type === 'map' ? '🗺 Map' : '🎶 Generic';
-    const mapLabel = pl.type === 'map' && pl.map_name ? ' — ' + esc(pl.map_name) : '';
-    const cnt = pl.sounds ? pl.sounds.length : 0;
-    return `
-      <div class="pl-row">
-        <div style="flex:1;min-width:0">
-          <div class="pl-name">${esc(pl.name)}</div>
-          <div class="pl-meta">${typeLabel}${mapLabel} &nbsp;·&nbsp; ${cnt} track${cnt === 1 ? '' : 's'}</div>
-        </div>
-        <button class="btn sm" onclick="openEditPl('${escJs(pl.id)}')" style="white-space:nowrap">✏ Edit</button>
-        <button class="btn sm danger" onclick="deletePlaylist('${escJs(pl.id)}','${escJs(pl.name)}')" style="white-space:nowrap">🗑</button>
-      </div>`;
+  listEl.innerHTML = playlists.map(pl => {
+    const cnt = (pl.sounds || []).length;
+    const icon = pl.type === 'map' ? '🗺' : '🎶';
+    const live = (tableState && tableState.url && tableState.playlistId === pl.id)
+      ? `<span class="pl-live">${tableState.isPlaying ? '📡' : '⏸'}</span>` : '';
+    return `<div class="pl-row${pl.id === selectedPlId ? ' selected' : ''}" onclick="selectPl('${escJs(pl.id)}')"
+      ondragover="plRowDragOver(event,this)" ondragleave="this.classList.remove('drop-hint')"
+      ondrop="plRowDrop(event,'${escJs(pl.id)}',this)">
+      <span>${icon}</span>
+      <span class="pl-row-name" title="${esc(pl.name)}">${esc(pl.name)}</span>
+      ${live}
+      <span class="pl-row-meta">${cnt}</span>
+    </div>`;
   }).join('');
 }
-
-// ── Playlist CRUD ─────────────────────────────────────────────────────────────
-function toggleMapField() {
-  const t = document.getElementById('pl-type').value;
-  document.getElementById('pl-mapname-field').style.display = t === 'map' ? '' : 'none';
-}
-function toggleEditMapField() {
-  const t = document.getElementById('edit-pl-type').value;
-  document.getElementById('edit-pl-mapname-field').style.display = t === 'map' ? '' : 'none';
+function selectPl(id) {
+  selectedPlId = id;
+  renderPlaylistList();
+  renderDetail();
 }
 
-async function createPlaylist() {
-  const name = document.getElementById('pl-name').value.trim();
-  if (!name) { document.getElementById('pl-status').textContent = 'Name is required.'; return; }
-  const type = document.getElementById('pl-type').value;
-  const map_name = document.getElementById('pl-mapname')?.value.trim() || '';
-  const resp = await fetch('/api/playlists', { method: 'POST', headers: authHeaders(), body: JSON.stringify({ name, type, sounds: [], map_name }) });
-  if (resp.ok) {
-    document.getElementById('pl-name').value = '';
-    document.getElementById('pl-mapname').value = '';
-    document.getElementById('pl-status').textContent = '';
-    await loadAll();
-  } else {
-    const d = await resp.json();
-    document.getElementById('pl-status').textContent = d.error || 'Failed';
-  }
+// Drag a library sound onto a playlist row
+let _dragSoundId = null;
+function plRowDragOver(e, row) {
+  if (_dragSoundId == null) return;
+  e.preventDefault();
+  row.classList.add('drop-hint');
+}
+async function plRowDrop(e, plId, row) {
+  e.preventDefault();
+  row.classList.remove('drop-hint');
+  if (_dragSoundId == null) return;
+  const soundId = _dragSoundId;
+  _dragSoundId = null;
+  await addSoundsToPl(plId, [soundId]);
 }
 
-async function deletePlaylist(id, name) {
-  if (!confirm('Delete playlist "' + name + '"?')) return;
+// ── New / delete playlist ────────────────────────────────────────────────────
+function openNewPl() {
+  el('np-name').value = '';
+  el('np-type').value = 'generic';
+  el('np-mapname').value = '';
+  el('np-map-field').style.display = 'none';
+  el('np-err').textContent = '';
+  el('new-pl-modal').style.display = 'flex';
+  el('np-name').focus();
+}
+function closeNewPl() { el('new-pl-modal').style.display = 'none'; }
+async function createPl() {
+  const name = el('np-name').value.trim();
+  if (!name) { el('np-err').textContent = 'Name is required.'; return; }
+  const body = { name, type: el('np-type').value, sounds: [], map_name: el('np-mapname').value.trim() };
+  const resp = await fetch('/api/playlists', { method: 'POST', headers: authHeaders(), body: JSON.stringify(body) });
+  const d = await resp.json().catch(() => ({}));
+  if (!resp.ok) { el('np-err').textContent = d.error || 'Failed'; return; }
+  closeNewPl();
+  selectedPlId = d.id;
+  showStatus('Playlist created: ' + name);
+  await loadAll();
+}
+async function deletePl(id, name) {
+  if (!confirm('Delete playlist "' + name + '"?\n(Sounds stay in the library.)')) return;
   await fetch('/api/playlists/' + id, { method: 'DELETE', headers: authHeaders() });
+  if (selectedPlId === id) selectedPlId = null;
+  showStatus('Playlist deleted');
   await loadAll();
 }
 
-let _editPlId = null;
-function openEditPl(id) {
-  const pl = playlists.find(p => p.id === id);
+// ── Playlist saves ───────────────────────────────────────────────────────────
+async function savePlMeta() {
+  const pl = playlists.find(p => p.id === selectedPlId);
   if (!pl) return;
-  _editPlId = id;
-  document.getElementById('edit-pl-name').value = pl.name;
-  document.getElementById('edit-pl-type').value = pl.type || 'generic';
-  document.getElementById('edit-pl-mapname').value = pl.map_name || '';
-  toggleEditMapField();
-  // Build sound checklist
-  const currentIds = new Set((pl.sounds || []).map(s => typeof s === 'string' ? s : s.id));
-  const listEl = document.getElementById('edit-pl-sound-list');
-  if (listEl) {
-    if (!sounds.length) {
-      listEl.innerHTML = '<div style="color:var(--txd);font-size:11px;padding:6px">No sounds uploaded yet.</div>';
-    } else {
-      listEl.innerHTML = sounds.map(s => `
-        <label style="display:flex;align-items:center;gap:8px;padding:5px 7px;cursor:pointer;border-radius:2px;font-size:12px">
-          <input type="checkbox" value="${s.id}" ${currentIds.has(s.id) ? 'checked' : ''} style="width:14px;height:14px;cursor:pointer;flex-shrink:0">
-          <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(s.name)}</span>
-        </label>`).join('');
-    }
-  }
-  document.getElementById('edit-pl-modal').style.display = 'flex';
-}
-function closeEditPl() { document.getElementById('edit-pl-modal').style.display = 'none'; _editPlId = null; }
-async function saveEditPl() {
-  if (!_editPlId) return;
-  const name = document.getElementById('edit-pl-name').value.trim();
-  if (!name) return;
-  const soundIds = Array.from(document.querySelectorAll('#edit-pl-sound-list input[type="checkbox"]:checked'))
-    .map(cb => cb.value);
-  await fetch('/api/playlists/' + _editPlId, {
+  const name = el('det-name').value.trim();
+  if (!name) { el('det-name').value = pl.name; return; }
+  const type = el('det-type').value;
+  const map_name = el('det-mapname').value.trim();
+  const resp = await fetch('/api/playlists/' + pl.id, {
     method: 'PUT', headers: authHeaders(),
-    body: JSON.stringify({ name, type: document.getElementById('edit-pl-type').value, sounds: soundIds, map_name: document.getElementById('edit-pl-mapname').value.trim() })
+    body: JSON.stringify({ name, type, map_name })
   });
-  closeEditPl();
+  if (!resp.ok) { showStatus('Save failed', true); return; }
+  pl.name = name; pl.type = type; pl.map_name = map_name;
+  el('det-mapname').style.display = type === 'map' ? '' : 'none';
+  renderPlaylistList();
+}
+async function savePlSounds(pl, ids) {
+  const resp = await fetch('/api/playlists/' + pl.id, {
+    method: 'PUT', headers: authHeaders(),
+    body: JSON.stringify({ sounds: ids })
+  });
+  if (!resp.ok) { showStatus('Save failed', true); return false; }
+  pl.sounds = ids.map(id => sounds.find(s => s.id === id) || { id, name: '?' });
+  return true;
+}
+async function addSoundsToPl(plId, soundIds) {
+  const pl = playlists.find(p => p.id === plId);
+  if (!pl) return;
+  const current = plSoundIds(pl);
+  const merged = [...current, ...soundIds.filter(id => !current.includes(id))];
+  if (merged.length === current.length) { showStatus('Already in playlist'); return; }
+  if (await savePlSounds(pl, merged)) {
+    showStatus('Added to ' + pl.name);
+    renderPlaylistList();
+    if (plId === selectedPlId) renderDetail();
+    if (el('lib-filter').value === 'orphan') renderLibrary();
+  }
+}
+
+// ── Detail pane ──────────────────────────────────────────────────────────────
+function renderDetail() {
+  const pane = el('pl-detail');
+  const pl = playlists.find(p => p.id === selectedPlId);
+  if (!pl) {
+    pane.innerHTML = '<div id="det-empty">Select a playlist on the left,<br>or create a new one.</div>';
+    return;
+  }
+  const ids = plSoundIds(pl);
+  const rows = ids.length ? ids.map((id, i) => {
+    const s = (pl.sounds || [])[i];
+    const nm = (s && typeof s === 'object' && s.name) ? s.name : (sounds.find(x => x.id === id)?.name || '?');
+    const live = tableState && tableState.url && tableState.playlistId === pl.id && tableState.trackIndex === i;
+    const playBtn = (live && tableState.isPlaying)
+      ? `<button class="row-btn" onclick="tablePauseResume()" title="Pause on table">⏸</button>`
+      : `<button class="row-btn" onclick="playOnTable('${escJs(pl.id)}',${i})" title="Play on table (all players)">▶</button>`;
+    return `<div class="trk-row${live ? ' live' : ''}" draggable="true" data-idx="${i}"
+      ondragstart="trkDragStart(event,${i})" ondragend="trkDragEnd()"
+      ondragover="trkDragOver(event,this)" ondragleave="this.classList.remove('drag-over')"
+      ondrop="trkDrop(event,${i},this)">
+      <span class="trk-grip" title="Drag to reorder">⠿</span>
+      <span class="trk-num">${i + 1}.</span>
+      ${playBtn}
+      <span class="trk-name" title="${esc(nm)}">${esc(nm)}${live ? ' 📡' : ''}</span>
+      <span class="trk-dur" data-dur-for="${esc(id)}">${fmtDur(durations[id])}</span>
+      <span class="trk-btns">
+        <button class="row-btn" onclick="moveTrackBtn(${i},-1)" ${i === 0 ? 'disabled' : ''} title="Move up">▲</button>
+        <button class="row-btn" onclick="moveTrackBtn(${i},1)" ${i === ids.length - 1 ? 'disabled' : ''} title="Move down">▼</button>
+        <button class="row-btn danger" onclick="removeTrack(${i})" title="Remove from playlist">✕</button>
+      </span>
+    </div>`;
+  }).join('')
+  : '<div class="det-empty-tracks">No tracks yet.<br>Use <b>+ Add tracks</b>, or drag sounds from the library onto this playlist.</div>';
+
+  pane.innerHTML = `
+    <div id="det-hdr">
+      <div id="det-hdr-row1">
+        <input type="text" id="det-name" maxlength="80" value="${esc(pl.name)}" onchange="savePlMeta()" title="Click to rename">
+        <button class="btn sm primary" onclick="playOnTable('${escJs(pl.id)}',0)" ${ids.length ? '' : 'disabled'} title="Play playlist on table (all players)">📡 Play on table</button>
+        <button class="btn sm" onclick="openAddTracks()">+ Add tracks</button>
+        <button class="btn sm danger" onclick="deletePl('${escJs(pl.id)}','${escJs(pl.name)}')" title="Delete playlist">🗑</button>
+      </div>
+      <div id="det-hdr-row2">
+        <select id="det-type" onchange="savePlMeta()">
+          <option value="generic" ${pl.type !== 'map' ? 'selected' : ''}>🎶 Generic</option>
+          <option value="map" ${pl.type === 'map' ? 'selected' : ''}>🗺 Map-based</option>
+        </select>
+        <input type="text" id="det-mapname" maxlength="80" placeholder="Map name" value="${esc(pl.map_name || '')}"
+               onchange="savePlMeta()" style="${pl.type === 'map' ? '' : 'display:none'}">
+        <span id="det-stats"></span>
+      </div>
+    </div>
+    <div id="trk-list">${rows}</div>`;
+  updateDetailStats();
+}
+function updateDetailStats() {
+  const e = el('det-stats');
+  const pl = playlists.find(p => p.id === selectedPlId);
+  if (!e || !pl) return;
+  const ids = plSoundIds(pl);
+  e.textContent = ids.length + ' track' + (ids.length === 1 ? '' : 's') + totalDurLabel(ids);
+}
+
+// Track reorder / remove
+let _dragTrkIdx = null;
+function trkDragStart(e, idx) {
+  _dragTrkIdx = idx;
+  e.dataTransfer.setData('text/plain', String(idx));
+  e.dataTransfer.effectAllowed = 'move';
+}
+function trkDragEnd() { _dragTrkIdx = null; }
+function trkDragOver(e, row) {
+  if (_dragTrkIdx == null) return;
+  e.preventDefault();
+  row.classList.add('drag-over');
+}
+function trkDrop(e, toIdx, row) {
+  e.preventDefault();
+  row.classList.remove('drag-over');
+  if (_dragTrkIdx == null || _dragTrkIdx === toIdx) return;
+  moveTrack(_dragTrkIdx, toIdx);
+  _dragTrkIdx = null;
+}
+async function moveTrack(from, to) {
+  const pl = playlists.find(p => p.id === selectedPlId);
+  if (!pl) return;
+  const ids = plSoundIds(pl);
+  if (from < 0 || from >= ids.length || to < 0 || to >= ids.length) return;
+  const [item] = ids.splice(from, 1);
+  ids.splice(to, 0, item);
+  if (await savePlSounds(pl, ids)) renderDetail();
+}
+function moveTrackBtn(i, dir) { moveTrack(i, i + dir); }
+async function removeTrack(i) {
+  const pl = playlists.find(p => p.id === selectedPlId);
+  if (!pl) return;
+  const ids = plSoundIds(pl);
+  ids.splice(i, 1);
+  if (await savePlSounds(pl, ids)) {
+    renderDetail();
+    renderPlaylistList();
+    if (el('lib-filter').value === 'orphan') renderLibrary();
+  }
+}
+
+// ── Add-tracks picker ────────────────────────────────────────────────────────
+function openAddTracks() {
+  el('at-search').value = '';
+  renderAtList();
+  el('addtracks-modal').style.display = 'flex';
+  el('at-search').focus();
+}
+function closeAddTracks() { el('addtracks-modal').style.display = 'none'; }
+function renderAtList() {
+  const pl = playlists.find(p => p.id === selectedPlId);
+  if (!pl) return;
+  const inPl = new Set(plSoundIds(pl));
+  const q = el('at-search').value.toLowerCase();
+  const avail = sounds.filter(s => !inPl.has(s.id) && (!q || s.name.toLowerCase().includes(q)));
+  el('at-list').innerHTML = avail.length
+    ? avail.map(s => `<label>
+        <input type="checkbox" value="${esc(s.id)}">
+        <span class="at-name">${esc(s.name)}</span>
+        <span class="at-dur">${fmtDur(durations[s.id])}</span>
+      </label>`).join('')
+    : '<div style="padding:10px;font-size:11px;color:var(--txd)">' + (q ? 'No matches.' : 'All sounds are already in this playlist.') + '</div>';
+}
+async function atAdd() {
+  const ids = Array.from(document.querySelectorAll('#at-list input[type=checkbox]:checked')).map(cb => cb.value);
+  if (!ids.length) { closeAddTracks(); return; }
+  closeAddTracks();
+  await addSoundsToPl(selectedPlId, ids);
+}
+
+// ── Sound library ────────────────────────────────────────────────────────────
+function libFilteredSounds() {
+  const q = (el('lib-search').value || '').toLowerCase();
+  const filter = el('lib-filter').value;
+  const sort = el('lib-sort').value;
+  let list = sounds.filter(s => !q || s.name.toLowerCase().includes(q));
+  if (filter === 'orphan') {
+    const used = new Set();
+    playlists.forEach(pl => plSoundIds(pl).forEach(id => used.add(id)));
+    list = list.filter(s => !used.has(s.id));
+  }
+  list = [...list];
+  if (sort === 'name') list.sort((a, b) => a.name.localeCompare(b.name));
+  else if (sort === 'newest') list.sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')));
+  else list.sort((a, b) => String(a.created_at || '').localeCompare(String(b.created_at || '')));
+  return list;
+}
+function renderLibrary() {
+  const list = libFilteredSounds();
+  const e = el('lib-list');
+  e.innerHTML = list.length ? list.map(s => `
+    <div class="lib-row" draggable="true"
+         ondragstart="_dragSoundId='${escJs(s.id)}';event.dataTransfer.setData('text/plain','${escJs(s.id)}');event.dataTransfer.effectAllowed='copy'"
+         ondragend="_dragSoundId=null">
+      <input type="checkbox" ${libSelected.has(s.id) ? 'checked' : ''} onchange="toggleLibSel('${escJs(s.id)}',this.checked)">
+      <span class="lib-name" id="lib-name-${esc(s.id)}" title="${esc(s.name)} — drag onto a playlist" ondblclick="startRename('${escJs(s.id)}')">${esc(s.name)}</span>
+      <span class="lib-dur" data-dur-for="${esc(s.id)}">${fmtDur(durations[s.id])}</span>
+      <span class="row-actions">
+        <button class="row-btn" onclick="startRename('${escJs(s.id)}')" title="Rename">✏</button>
+        <button class="row-btn danger" onclick="deleteSound('${escJs(s.id)}','${escJs(s.name)}')" title="Delete sound">🗑</button>
+      </span>
+    </div>`).join('')
+    : '<div class="sb-empty">' + (sounds.length ? 'No matches.' : 'No sounds yet — upload some.') + '</div>';
+  updateLibHeader();
+  renderBulkBar();
+}
+function updateLibHeader() {
+  el('lib-count').textContent = sounds.length + totalDurLabel(sounds.map(s => s.id));
+}
+
+// Multi-select + bulk add
+function toggleLibSel(id, on) {
+  if (on) libSelected.add(id); else libSelected.delete(id);
+  renderBulkBar();
+}
+function clearLibSel() {
+  libSelected.clear();
+  renderLibrary();
+}
+function renderBulkBar() {
+  const bar = el('lib-bulk');
+  if (!libSelected.size) { bar.style.display = 'none'; return; }
+  bar.style.display = 'flex';
+  el('bulk-count').textContent = libSelected.size + ' selected →';
+  const sel = el('bulk-pl');
+  const keep = sel.value;
+  sel.innerHTML = playlists.map(pl => `<option value="${esc(pl.id)}">${esc(pl.name)}</option>`).join('');
+  if (playlists.find(p => p.id === keep)) sel.value = keep;
+}
+async function bulkAddToPl() {
+  const plId = el('bulk-pl').value;
+  if (!plId || !libSelected.size) return;
+  // Visible selection first (keeps current sort order), then any selected sounds the filter hides
+  const ids = libFilteredSounds().filter(s => libSelected.has(s.id)).map(s => s.id);
+  for (const id of libSelected) if (!ids.includes(id)) ids.push(id);
+  await addSoundsToPl(plId, ids);
+  clearLibSel();
+}
+
+// Rename / delete sound
+function startRename(id) {
+  const span = el('lib-name-' + id);
+  const s = sounds.find(x => x.id === id);
+  if (!span || !s) return;
+  const input = document.createElement('input');
+  input.className = 'name-edit';
+  input.value = s.name;
+  input.maxLength = 120;
+  let done = false;
+  const finish = async save => {
+    if (done) return;
+    done = true;
+    const newName = input.value.trim();
+    if (save && newName && newName !== s.name) {
+      const resp = await fetch('/api/sounds/' + id, { method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ name: newName }) });
+      if (resp.ok) { s.name = newName; renderPlaylistList(); renderDetail(); }
+      else showStatus('Rename failed', true);
+    }
+    renderLibrary();
+  };
+  input.onkeydown = e => {
+    if (e.key === 'Enter') finish(true);
+    else if (e.key === 'Escape') finish(false);
+  };
+  input.onblur = () => finish(true);
+  span.replaceWith(input);
+  input.focus();
+  input.select();
+}
+async function deleteSound(id, name) {
+  if (!confirm('Delete "' + name + '"?\nIt is removed from all playlists too.')) return;
+  await fetch('/api/sounds/' + id, { method: 'DELETE', headers: authHeaders() });
+  delete durations[id];
+  showStatus('Deleted: ' + name);
   await loadAll();
 }
 
-// ── Utils ─────────────────────────────────────────────────────────────────────
-function esc(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-// Escape for a single-quoted JS string inside an HTML attribute: onclick="fn('${escJs(v)}')".
-function escJs(s) { return String(s == null ? '' : s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\r\n|\r|\n/g,'\\n').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-function showStatus(msg, isErr = false) {
-  const el = document.getElementById('status-msg');
-  el.textContent = msg;
-  el.style.color = isErr ? 'var(--err)' : 'var(--ok)';
-  setTimeout(() => { if (el.textContent === msg) el.textContent = ''; }, 3000);
+// ── Upload (multi-file queue) ────────────────────────────────────────────────
+const MAX_AUDIO_MB = 50;
+let upQueue = [];       // { file, name, status: pending|uploading|done|error, pct, err }
+let _uploading = false;
+
+function openUploadModal(files) {
+  upQueue = upQueue.filter(q => q.status === 'pending' || q.status === 'uploading');
+  el('up-status').textContent = '';
+  renderUpQueue();
+  el('upload-modal').style.display = 'flex';
+  if (files && files.length) upAddFiles(files);
+}
+function closeUploadModal() {
+  if (_uploading) { el('up-status').textContent = 'Wait for uploads to finish…'; return; }
+  el('upload-modal').style.display = 'none';
+}
+function handleLibDrop(e) {
+  e.preventDefault();
+  el('lib-list').classList.remove('drag-over');
+  if (e.dataTransfer.files && e.dataTransfer.files.length) openUploadModal(e.dataTransfer.files);
+}
+function upAddFiles(fileList) {
+  for (const f of fileList) {
+    const item = { file: f, name: f.name.replace(/\.[^.]+$/, ''), status: 'pending', pct: 0, err: '' };
+    if (f.size > MAX_AUDIO_MB * 1024 * 1024) { item.status = 'error'; item.err = 'Too large (max ' + MAX_AUDIO_MB + ' MB)'; }
+    upQueue.push(item);
+  }
+  renderUpQueue();
+}
+function upRemove(i) {
+  if (upQueue[i] && upQueue[i].status !== 'uploading') { upQueue.splice(i, 1); renderUpQueue(); }
+}
+function renderUpQueue() {
+  const e = el('up-queue');
+  e.innerHTML = upQueue.map((q, i) => {
+    const state = q.status === 'pending' ? '' :
+      q.status === 'uploading' ? q.pct + '%' :
+      q.status === 'done' ? '✓' : '✕ ' + esc(q.err);
+    const color = q.status === 'done' ? 'var(--ok)' : q.status === 'error' ? 'var(--err)' : 'var(--txd)';
+    return `<div class="up-row">
+      <input type="text" value="${esc(q.name)}" maxlength="120" placeholder="Sound name"
+             onchange="upQueue[${i}].name=this.value" ${q.status !== 'pending' ? 'disabled' : ''}>
+      <span class="up-size">${fmtSize(q.file.size)}</span>
+      <span class="up-state" style="color:${color}">${state}</span>
+      ${q.status === 'pending' || q.status === 'error' ? `<button class="row-btn danger" onclick="upRemove(${i})" title="Remove">✕</button>` : ''}
+      <div class="up-bar-wrap" id="up-bar-wrap-${i}" style="${q.status === 'uploading' ? 'display:block' : ''}"><div class="up-bar" id="up-bar-${i}" style="width:${q.pct}%"></div></div>
+    </div>`;
+  }).join('');
+  const pending = upQueue.filter(q => q.status === 'pending').length;
+  el('up-start').disabled = _uploading || !pending;
+  el('up-start').textContent = _uploading ? 'Uploading…' : '⬆ Upload ' + (pending || 'all');
+}
+async function upStart() {
+  if (_uploading) return;
+  _uploading = true;
+  renderUpQueue();
+  let ok = 0, fail = 0;
+  for (let i = 0; i < upQueue.length; i++) {
+    const q = upQueue[i];
+    if (q.status !== 'pending') continue;
+    q.name = q.name.trim();
+    if (!q.name) { q.status = 'error'; q.err = 'Name required'; fail++; renderUpQueue(); continue; }
+    q.status = 'uploading';
+    renderUpQueue();
+    try {
+      const dataUrl = await new Promise((res, rej) => {
+        const r = new FileReader();
+        r.onload = e => res(e.target.result);
+        r.onerror = () => rej(new Error('Read failed'));
+        r.readAsDataURL(q.file);
+      });
+      await new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.upload.onprogress = e => {
+          if (e.lengthComputable) {
+            q.pct = Math.round(e.loaded / e.total * 100);
+            const bar = el('up-bar-' + i);
+            if (bar) { bar.style.width = q.pct + '%'; el('up-bar-wrap-' + i).style.display = 'block'; }
+            const rows = document.querySelectorAll('#up-queue .up-state');
+            if (rows[i]) rows[i].textContent = q.pct + '%';
+          }
+        };
+        xhr.onload = () => {
+          try {
+            const d = JSON.parse(xhr.responseText);
+            if (xhr.status >= 200 && xhr.status < 300) resolve(d);
+            else reject(new Error(d.error || 'Upload failed'));
+          } catch { reject(new Error('Upload failed')); }
+        };
+        xhr.onerror = () => reject(new Error('Network error'));
+        xhr.open('POST', '/api/sounds');
+        Object.entries(authHeaders()).forEach(([k, v]) => xhr.setRequestHeader(k, v));
+        xhr.send(JSON.stringify({ name: q.name, dataUrl, tags: [] }));
+      });
+      q.status = 'done';
+      ok++;
+    } catch (err) {
+      q.status = 'error';
+      q.err = err.message;
+      fail++;
+    }
+    renderUpQueue();
+  }
+  _uploading = false;
+  el('up-status').textContent = ok + ' uploaded' + (fail ? ', ' + fail + ' failed' : '');
+  renderUpQueue();
+  if (ok) { showStatus(ok + ' sound' + (ok === 1 ? '' : 's') + ' uploaded'); await loadAll(); }
 }
 
-// Close modal on backdrop click
-document.getElementById('edit-pl-modal').addEventListener('click', function(e) { if (e.target === this) closeEditPl(); });
+// ── Table playback (live for all players) ────────────────────────────────────
+let tableState = null;
+async function fetchTableState() {
+  try { tableState = await fetch('/api/sound/state').then(r => r.json()); } catch {}
+  renderTableBadge();
+  renderPlaylistList();
+  renderDetail();
+}
+function handleSoundEvent(d) {
+  if (!d || !d.action) return;
+  if (d.action === 'play') {
+    tableState = { ...(tableState || {}), isPlaying: true, url: d.url, name: d.name, playlistId: d.playlistId || null, trackIndex: d.trackIndex || 0, position: d.position || 0 };
+  } else if (d.action === 'pause') {
+    tableState = { ...(tableState || {}), isPlaying: false, position: d.position ?? (tableState?.position || 0) };
+  } else if (d.action === 'stop') {
+    tableState = { ...(tableState || {}), isPlaying: false, url: null, name: null, playlistId: null, trackIndex: 0, position: 0 };
+  } else return;
+  renderTableBadge();
+  renderPlaylistList();
+  renderDetail();
+}
+function renderTableBadge() {
+  const badge = el('table-badge');
+  if (!tableState || !tableState.url) { badge.style.display = 'none'; return; }
+  badge.style.display = 'inline-flex';
+  el('tb-name').textContent = tableState.name || '';
+  el('tb-name').title = 'Playing on table: ' + (tableState.name || '');
+  el('tb-pp').textContent = tableState.isPlaying ? '⏸' : '▶';
+}
+async function soundControl(body) {
+  await fetch('/api/sound/control', { method: 'POST', headers: authHeaders(), body: JSON.stringify(body) }).catch(() => {});
+}
+async function playOnTable(plId, idx) {
+  await soundControl({ action: 'play', playlistId: plId, trackIndex: idx });
+  showStatus('Playing on table');
+}
+async function tablePauseResume() {
+  let st = null;
+  try { st = await fetch('/api/sound/state').then(r => r.json()); } catch {}
+  if (!st || !st.url) return;
+  if (st.isPlaying) await soundControl({ action: 'pause', position: st.currentPosition || 0 });
+  else await soundControl({ action: 'play', playlistId: st.playlistId, trackIndex: st.trackIndex, position: st.position || 0 });
+}
+async function tableNext() { await soundControl({ action: 'next' }); }
+async function tableStop() { await soundControl({ action: 'stop' }); }
 
-// Close add-to-playlist dropdown when clicking outside
-document.addEventListener('click', e => {
-  const drop = document.getElementById('pl-add-dropdown');
-  if (drop && drop.style.display !== 'none' && !drop.contains(e.target) && !e.target.closest('.sound-row')) closeAddDropdown();
+// ── Realtime: presence + live table playback state ───────────────────────────
+window.addEventListener('DOMContentLoaded', function() {
+  if (window.connectRealtime) connectRealtime({ sound: handleSoundEvent });
 });
+
+// ── Modal backdrop close ─────────────────────────────────────────────────────
+el('new-pl-modal').addEventListener('click', function(e) { if (e.target === this) closeNewPl(); });
+el('upload-modal').addEventListener('click', function(e) { if (e.target === this) closeUploadModal(); });
+el('addtracks-modal').addEventListener('click', function(e) { if (e.target === this) closeAddTracks(); });
 </script>
 </body>
 </html>
