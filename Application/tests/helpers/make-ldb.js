@@ -7,6 +7,7 @@ import Database from 'better-sqlite3';
 
 const INIT_STATE_ID  = 'c8a04a12-4372-4c78-9abc-def012345601';
 const TABLE_STATE_ID = 'c8a04a12-4372-4c78-9abc-def012345601';
+const SHOP_CONFIG_ID = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
 
 export function makeLdb() {
   const db = new Database(':memory:');
@@ -54,6 +55,31 @@ export function makeLdb() {
       id TEXT PRIMARY KEY, session_normal INTEGER DEFAULT 60,
       level1_min INTEGER DEFAULT 15, level2_min INTEGER DEFAULT 18
     );
+    CREATE TABLE IF NOT EXISTS shop_config (
+      id TEXT PRIMARY KEY, isOpen INTEGER DEFAULT 1,
+      activeTag TEXT DEFAULT '', activeTags TEXT DEFAULT '[]'
+    );
+    CREATE TABLE IF NOT EXISTS treasury_items (
+      id TEXT PRIMARY KEY, name TEXT DEFAULT '', tag TEXT DEFAULT '',
+      mode TEXT DEFAULT 'hidden', description TEXT DEFAULT '', descVisible INTEGER DEFAULT 0,
+      itemType TEXT DEFAULT 'other', armorType TEXT DEFAULT 'light', acBase INTEGER DEFAULT 10,
+      valueCp INTEGER DEFAULT 0, quantity INTEGER DEFAULT 1,
+      acBonus INTEGER DEFAULT 0, initBonus INTEGER DEFAULT 0, speedBonus INTEGER DEFAULT 0,
+      spellAtkBonus INTEGER DEFAULT 0, spellDcBonus INTEGER DEFAULT 0,
+      requiresAttunement INTEGER DEFAULT 0,
+      weaponAtk TEXT DEFAULT '', weaponDmg TEXT DEFAULT '', weaponPropertiesJson TEXT DEFAULT '[]',
+      imageUrl TEXT DEFAULT '', imageThumb TEXT DEFAULT '', imageMedium TEXT DEFAULT '',
+      createdAt TEXT DEFAULT (datetime('now'))
+    );
+    CREATE TABLE IF NOT EXISTS loot_logs (
+      id TEXT PRIMARY KEY, charId TEXT NOT NULL DEFAULT '', charName TEXT DEFAULT '',
+      itemName TEXT DEFAULT '', itemId TEXT DEFAULT '', claimedAt TEXT DEFAULT (datetime('now'))
+    );
+    CREATE TABLE IF NOT EXISTS purchase_logs (
+      id TEXT PRIMARY KEY, charId TEXT NOT NULL DEFAULT '', charName TEXT DEFAULT '',
+      itemName TEXT DEFAULT '', itemId TEXT DEFAULT '', qty INTEGER DEFAULT 1,
+      totalCp INTEGER DEFAULT 0, purchasedAt TEXT DEFAULT (datetime('now'))
+    );
     CREATE TABLE IF NOT EXISTS weather_log (
       id TEXT PRIMARY KEY,
       fr_year INTEGER, fr_month INTEGER, fr_day INTEGER, fr_festival TEXT DEFAULT '',
@@ -69,6 +95,7 @@ export function makeLdb() {
   // Singleton rows
   db.prepare("INSERT OR IGNORE INTO initiative_state (id, currentId) VALUES (?, '')").run(INIT_STATE_ID);
   db.prepare('INSERT OR IGNORE INTO table_state (id) VALUES (?)').run(TABLE_STATE_ID);
+  db.prepare('INSERT OR IGNORE INTO shop_config (id, isOpen, activeTag) VALUES (?, 1, ?)').run(SHOP_CONFIG_ID, '');
 
   // ── helpers ────────────────────────────────────────────────────────────────
   function normTok(r) {
@@ -236,6 +263,101 @@ export function makeLdb() {
     db.prepare('DELETE FROM calendar_events WHERE id = ?').run(id);
   }
 
+  // ── treasury (mirror db/localdb.js) ─────────────────────────────────────────
+  function _treasuryRow(r) {
+    if (!r) return null;
+    return { ...r, descVisible: !!r.descVisible, requiresAttunement: !!r.requiresAttunement };
+  }
+  function getShopConfig() {
+    const r = db.prepare('SELECT * FROM shop_config WHERE id = ?').get(SHOP_CONFIG_ID)
+      || { id: SHOP_CONFIG_ID, isOpen: 1, activeTag: '', activeTags: '[]' };
+    let list = [];
+    try { const a = JSON.parse(r.activeTags || '[]'); if (Array.isArray(a)) list = a.filter(Boolean).map(String); } catch {}
+    if (list.length === 0 && r.activeTag) list = [r.activeTag];
+    return { ...r, activeTags: list, activeTag: list[0] || '' };
+  }
+  function setShopConfig(isOpen, activeTags = []) {
+    const list = Array.isArray(activeTags) ? activeTags : (activeTags ? [activeTags] : []);
+    const uniq = [...new Set(list.map(t => String(t).trim().slice(0, 40)).filter(Boolean))].slice(0, 50);
+    db.prepare('UPDATE shop_config SET isOpen = ?, activeTag = ?, activeTags = ? WHERE id = ?')
+      .run(isOpen ? 1 : 0, uniq[0] || '', JSON.stringify(uniq), SHOP_CONFIG_ID);
+  }
+  function listTreasuryItems() {
+    return db.prepare('SELECT * FROM treasury_items ORDER BY createdAt').all().map(_treasuryRow);
+  }
+  function getTreasuryItem(id) {
+    return _treasuryRow(db.prepare('SELECT * FROM treasury_items WHERE id = ?').get(id));
+  }
+  function getTreasuryItemsByIds(ids) {
+    if (!ids || ids.length === 0) return [];
+    const ph = ids.map(() => '?').join(', ');
+    return db.prepare(`SELECT * FROM treasury_items WHERE id IN (${ph})`).all(...ids).map(_treasuryRow);
+  }
+  function createTreasuryItem(id, f) {
+    db.prepare(`INSERT INTO treasury_items
+      (id, name, tag, mode, description, descVisible, itemType, armorType, acBase, valueCp, quantity,
+       acBonus, initBonus, speedBonus, spellAtkBonus, spellDcBonus, requiresAttunement,
+       weaponAtk, weaponDmg, weaponPropertiesJson, imageUrl, imageThumb, imageMedium, createdAt)
+      VALUES (@id, @name, @tag, @mode, @description, @descVisible, @itemType, @armorType, @acBase, @valueCp, @quantity,
+       @acBonus, @initBonus, @speedBonus, @spellAtkBonus, @spellDcBonus, @requiresAttunement,
+       @weaponAtk, @weaponDmg, @weaponPropertiesJson, @imageUrl, @imageThumb, @imageMedium, @createdAt)`)
+      .run({
+        id,
+        name: f.name || '', tag: f.tag || '', mode: f.mode || 'hidden',
+        description: f.description || '', descVisible: f.descVisible ? 1 : 0,
+        itemType: f.itemType || 'other', armorType: f.armorType || 'light',
+        acBase: f.acBase ?? 10, valueCp: f.valueCp ?? 0, quantity: f.quantity ?? 1,
+        acBonus: f.acBonus ?? 0, initBonus: f.initBonus ?? 0, speedBonus: f.speedBonus ?? 0,
+        spellAtkBonus: f.spellAtkBonus ?? 0, spellDcBonus: f.spellDcBonus ?? 0,
+        requiresAttunement: f.requiresAttunement ? 1 : 0,
+        weaponAtk: f.weaponAtk || '', weaponDmg: f.weaponDmg || '',
+        weaponPropertiesJson: f.weaponPropertiesJson || '[]',
+        imageUrl: f.imageUrl || '', imageThumb: f.imageThumb || '', imageMedium: f.imageMedium || '',
+        createdAt: f.createdAt || new Date().toISOString(),
+      });
+  }
+  function updateTreasuryItem(id, fields) {
+    const mapped = { ...fields };
+    for (const k of ['descVisible', 'requiresAttunement']) if (k in mapped) mapped[k] = mapped[k] ? 1 : 0;
+    dynUpdate('treasury_items', id, mapped);
+  }
+  function deleteTreasuryItem(id) {
+    db.prepare('DELETE FROM treasury_items WHERE id = ?').run(id);
+  }
+  function bulkUpdateTreasuryTag(ids, tag) {
+    const stmt = db.prepare('UPDATE treasury_items SET tag = ? WHERE id = ?');
+    for (const id of ids) stmt.run(tag, id);
+  }
+  function bulkUpdateTreasuryMode(ids, mode) {
+    const stmt = db.prepare('UPDATE treasury_items SET mode = ? WHERE id = ?');
+    for (const id of ids) stmt.run(mode, id);
+  }
+  function bulkDeleteTreasuryItems(ids) {
+    const stmt = db.prepare('DELETE FROM treasury_items WHERE id = ?');
+    for (const id of ids) stmt.run(id);
+  }
+  function bulkCreateTreasuryItems(rows) {
+    for (const { id, fields } of rows) createTreasuryItem(id, fields);
+  }
+  function listLootLogs() {
+    return db.prepare('SELECT * FROM loot_logs ORDER BY claimedAt DESC LIMIT 500').all();
+  }
+  function createLootLog(id, f) {
+    db.prepare('INSERT INTO loot_logs (id, charId, charName, itemName, itemId, claimedAt) VALUES (?, ?, ?, ?, ?, ?)')
+      .run(id, f.charId || '', f.charName || '', f.itemName || '', f.itemId || '', f.claimedAt || new Date().toISOString());
+  }
+  function listClaimedItemIds(charId) {
+    return db.prepare("SELECT DISTINCT itemId FROM loot_logs WHERE charId = ? AND itemId != ''").all(charId)
+      .map(r => r.itemId);
+  }
+  function listPurchaseLogs() {
+    return db.prepare('SELECT * FROM purchase_logs ORDER BY purchasedAt DESC LIMIT 500').all();
+  }
+  function createPurchaseLog(id, f) {
+    db.prepare('INSERT INTO purchase_logs (id, charId, charName, itemName, itemId, qty, totalCp, purchasedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+      .run(id, f.charId || '', f.charName || '', f.itemName || '', f.itemId || '', f.qty || 1, f.totalCp || 0, f.purchasedAt || new Date().toISOString());
+  }
+
   // ── weather (mirror db/localdb.js) ──────────────────────────────────────────
   function getWeatherConfig() {
     const r = db.prepare("SELECT * FROM weather_config WHERE id = 'singleton'").get();
@@ -306,6 +428,12 @@ export function makeLdb() {
     createTableToken, updateTableToken, deleteTableToken, clearTableTokens,
     // calendar
     listCalendarEvents, getCalendarEvent, createCalendarEvent, updateCalendarEvent, deleteCalendarEvent,
+    // treasury
+    getShopConfig, setShopConfig,
+    listTreasuryItems, getTreasuryItem, getTreasuryItemsByIds,
+    createTreasuryItem, updateTreasuryItem, deleteTreasuryItem,
+    bulkUpdateTreasuryTag, bulkUpdateTreasuryMode, bulkDeleteTreasuryItems, bulkCreateTreasuryItems,
+    listLootLogs, createLootLog, listClaimedItemIds, listPurchaseLogs, createPurchaseLog,
     // weather
     getWeatherConfig, saveWeatherConfig, listWeatherLog, getWeatherForDate, saveWeatherEntry, deleteWeatherEntry,
   };

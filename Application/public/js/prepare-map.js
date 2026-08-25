@@ -122,7 +122,7 @@ async function authenticate() {
   if (!pw) { errEl.textContent = 'Enter the master password.'; return; }
   errEl.textContent = '';
   try {
-    const res = await fetch('/api/loot/all', { headers: { 'X-Master-Password': pw } });
+    const res = await fetch('/api/treasury/all', { headers: { 'X-Master-Password': pw } });
     if (res.status === 401) { errEl.textContent = 'Wrong password.'; return; }
     if (!res.ok) { errEl.textContent = 'Server error.'; return; }
     masterPw = pw;

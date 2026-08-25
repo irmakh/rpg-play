@@ -48,7 +48,7 @@ async function authenticate() {
   errEl.textContent = '';
   try {
     // Validate against an endpoint that requires master password
-    const res = await fetch('/api/loot/all', { headers: { 'X-Master-Password': pw } });
+    const res = await fetch('/api/treasury/all', { headers: { 'X-Master-Password': pw } });
     if (res.status === 401) { errEl.textContent = 'Wrong password.'; return; }
     if (!res.ok) { errEl.textContent = 'Server error.'; return; }
     masterPw = pw;
@@ -110,7 +110,7 @@ function closeBackupModal() {
 let _backupInFlight = false;
 async function runSelectiveBackup() {
   if (_backupInFlight) return;
-  const parts = ['characters', 'monsters', 'shop', 'loot', 'maps'].filter(p =>
+  const parts = ['characters', 'monsters', 'treasury', 'maps'].filter(p =>
     document.getElementById('bk-' + p)?.checked
   );
   if (parts.length === 0) {

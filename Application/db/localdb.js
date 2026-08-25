@@ -50,6 +50,18 @@ db.exec(`
     id TEXT PRIMARY KEY, charId TEXT NOT NULL DEFAULT '', charName TEXT DEFAULT '',
     itemName TEXT DEFAULT '', claimedAt TEXT DEFAULT (datetime('now'))
   );
+  CREATE TABLE IF NOT EXISTS treasury_items (
+    id TEXT PRIMARY KEY, name TEXT DEFAULT '', tag TEXT DEFAULT '',
+    mode TEXT DEFAULT 'hidden', description TEXT DEFAULT '', descVisible INTEGER DEFAULT 0,
+    itemType TEXT DEFAULT 'other', armorType TEXT DEFAULT 'light', acBase INTEGER DEFAULT 10,
+    valueCp INTEGER DEFAULT 0, quantity INTEGER DEFAULT 1,
+    acBonus INTEGER DEFAULT 0, initBonus INTEGER DEFAULT 0, speedBonus INTEGER DEFAULT 0,
+    spellAtkBonus INTEGER DEFAULT 0, spellDcBonus INTEGER DEFAULT 0,
+    requiresAttunement INTEGER DEFAULT 0,
+    weaponAtk TEXT DEFAULT '', weaponDmg TEXT DEFAULT '', weaponPropertiesJson TEXT DEFAULT '[]',
+    imageUrl TEXT DEFAULT '', imageThumb TEXT DEFAULT '', imageMedium TEXT DEFAULT '',
+    createdAt TEXT DEFAULT (datetime('now'))
+  );
   CREATE TABLE IF NOT EXISTS monsters (
     id TEXT PRIMARY KEY, name TEXT DEFAULT '', cr TEXT DEFAULT '?',
     dataJson TEXT DEFAULT '{}', createdAt TEXT DEFAULT (datetime('now'))
@@ -146,6 +158,9 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_table_tokens_linkedId      ON table_tokens(linkedId);
   CREATE INDEX IF NOT EXISTS idx_table_tokens_initiativeId  ON table_tokens(initiativeId);
   CREATE INDEX IF NOT EXISTS idx_loot_items_visible         ON loot_items(visible);
+  CREATE INDEX IF NOT EXISTS idx_treasury_items_mode        ON treasury_items(mode);
+  CREATE INDEX IF NOT EXISTS idx_treasury_items_tag         ON treasury_items(tag);
+  CREATE INDEX IF NOT EXISTS idx_loot_logs_charId           ON loot_logs(charId);
 `);
 
 // One-time migrations
@@ -167,6 +182,10 @@ try { db.exec(`ALTER TABLE table_tokens ADD COLUMN customPortrait INTEGER DEFAUL
 try { db.exec(`ALTER TABLE calendar_events ADD COLUMN author_char_id TEXT DEFAULT ''`); } catch {}
 try { db.exec(`ALTER TABLE calendar_events ADD COLUMN author_name    TEXT DEFAULT ''`); } catch {}
 try { db.exec(`ALTER TABLE calendar_events ADD COLUMN media_json     TEXT DEFAULT '[]'`); } catch {}
+// Treasury: logs record which catalogue item was taken, so claim-once dedupe and
+// the merged ledger can resolve back to it (legacy rows keep an empty itemId).
+try { db.exec(`ALTER TABLE loot_logs     ADD COLUMN itemId TEXT DEFAULT ''`); } catch {}
+try { db.exec(`ALTER TABLE purchase_logs ADD COLUMN itemId TEXT DEFAULT ''`); } catch {}
 
 // Singleton IDs (match server.js constants)
 const SHOP_CONFIG_ID  = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
@@ -178,6 +197,15 @@ const CAL_STATE_ID    = 'calendar-global';
 // Ensure singleton rows exist
 db.prepare("INSERT OR IGNORE INTO shop_config (id, isOpen) VALUES (?, 1)").run(SHOP_CONFIG_ID);
 try { db.prepare("ALTER TABLE shop_config ADD COLUMN activeTag TEXT DEFAULT ''").run(); } catch {}
+// The shop can be opened for several tags at once; activeTags (a JSON array) is
+// the source of truth and activeTag keeps the first of them for older readers.
+try { db.prepare("ALTER TABLE shop_config ADD COLUMN activeTags TEXT DEFAULT '[]'").run(); } catch {}
+try {
+  const _sc = db.prepare('SELECT activeTag, activeTags FROM shop_config WHERE id = ?').get(SHOP_CONFIG_ID);
+  if (_sc && _sc.activeTag && (!_sc.activeTags || _sc.activeTags === '[]')) {
+    db.prepare('UPDATE shop_config SET activeTags = ? WHERE id = ?').run(JSON.stringify([_sc.activeTag]), SHOP_CONFIG_ID);
+  }
+} catch {}
 try { db.prepare("ALTER TABLE shop_items ADD COLUMN spellAtkBonus INTEGER DEFAULT 0").run(); } catch {}
 try { db.prepare("ALTER TABLE shop_items ADD COLUMN spellDcBonus INTEGER DEFAULT 0").run(); } catch {}
 try { db.prepare("ALTER TABLE prepared_maps ADD COLUMN preparedTokens TEXT DEFAULT '[]'").run(); } catch {}
@@ -187,6 +215,58 @@ db.prepare("INSERT OR IGNORE INTO initiative_state (id, currentId) VALUES (?, ''
 db.prepare("INSERT OR IGNORE INTO table_state (id) VALUES (?)").run(TABLE_STATE_ID);
 db.prepare("INSERT OR IGNORE INTO events_state (id, dataJson) VALUES (?, '{}')").run(EVENTS_ID);
 db.prepare("INSERT OR IGNORE INTO calendar_state (id, fr_year, fr_month, fr_day, fr_festival) VALUES (?, 1492, 1, 1, '')").run(CAL_STATE_ID);
+
+// ── Legacy → treasury converters ──────────────────────────────────────────────
+// Shared by the one-time boot migration and by backup restore, so an old
+// loot/shop backup file lands in exactly the same shape as a migrated row.
+const TREASURY_BLANK = {
+  itemType: 'other', armorType: 'light', acBase: 10, valueCp: 0, quantity: 1,
+  acBonus: 0, initBonus: 0, speedBonus: 0, spellAtkBonus: 0, spellDcBonus: 0,
+  requiresAttunement: 0, weaponAtk: '', weaponDmg: '', weaponPropertiesJson: '[]',
+  imageUrl: '', imageThumb: '', imageMedium: '',
+};
+export function lootRowToTreasury(r) {
+  return {
+    ...TREASURY_BLANK,
+    name: r.name || '', tag: r.tag || '',
+    mode: r.visible ? 'loot' : 'hidden',
+    description: r.description || '', descVisible: !!r.descVisible,
+    createdAt: r.createdAt || new Date().toISOString(),
+  };
+}
+export function shopRowToTreasury(r) {
+  return {
+    name: r.name || '', tag: r.tag || '', mode: 'shop',
+    // Shop notes were always player-visible, so they migrate as a visible description.
+    description: r.notes || '', descVisible: true,
+    itemType: r.itemType || 'wondrous', armorType: r.armorType || 'light', acBase: r.acBase ?? 10,
+    valueCp: r.valueCp ?? 0, quantity: r.quantity ?? 1,
+    acBonus: r.acBonus ?? 0, initBonus: r.initBonus ?? 0, speedBonus: r.speedBonus ?? 0,
+    spellAtkBonus: r.spellAtkBonus ?? 0, spellDcBonus: r.spellDcBonus ?? 0,
+    requiresAttunement: !!r.requiresAttunement,
+    weaponAtk: r.weaponAtk || '', weaponDmg: r.weaponDmg || '',
+    weaponPropertiesJson: r.weaponPropertiesJson || '[]',
+    imageUrl: '', imageThumb: '', imageMedium: '',
+    createdAt: r.createdAt || new Date().toISOString(),
+  };
+}
+
+// ── Treasury migration ────────────────────────────────────────────────────────
+// loot_items + shop_items fold into the unified treasury_items catalogue. Runs
+// once, while treasury_items is still empty. Ids are preserved so existing
+// _loots entries and log rows still resolve. The legacy tables are deliberately
+// left intact as a rollback path; they are dropped in a later release.
+(function migrateTreasury() {
+  if (db.prepare('SELECT COUNT(*) AS n FROM treasury_items').get().n > 0) return;
+  const lootRows = db.prepare('SELECT * FROM loot_items').all();
+  const shopRows = db.prepare('SELECT * FROM shop_items').all();
+  if (lootRows.length === 0 && shopRows.length === 0) return;
+  db.transaction(() => {
+    for (const r of lootRows) createTreasuryItem(r.id, lootRowToTreasury(r));
+    for (const r of shopRows) createTreasuryItem(r.id, shopRowToTreasury(r));
+  })();
+  console.log(`[treasury] migrated ${lootRows.length} loot + ${shopRows.length} shop items`);
+})();
 
 // ── Characters ────────────────────────────────────────────────────────────────
 export function listCharacters() {
@@ -234,11 +314,26 @@ export function deleteMedia(id) {
 }
 
 // ── Shop Config ───────────────────────────────────────────────────────────────
-export function getShopConfig() {
-  return db.prepare('SELECT * FROM shop_config WHERE id = ?').get(SHOP_CONFIG_ID) || { id: SHOP_CONFIG_ID, isOpen: 1, activeTag: '' };
+export const SHOP_MAX_ACTIVE_TAGS = 50;
+// Accepts an array, a single string, or nothing; returns a clean, deduped list.
+export function normalizeShopTags(tags) {
+  const list = Array.isArray(tags) ? tags : (tags ? [tags] : []);
+  return [...new Set(list.map(t => String(t).trim().slice(0, 40)).filter(Boolean))]
+    .slice(0, SHOP_MAX_ACTIVE_TAGS);
 }
-export function setShopConfig(isOpen, activeTag = '') {
-  db.prepare('UPDATE shop_config SET isOpen = ?, activeTag = ? WHERE id = ?').run(isOpen ? 1 : 0, String(activeTag).trim().slice(0, 40), SHOP_CONFIG_ID);
+export function getShopConfig() {
+  const r = db.prepare('SELECT * FROM shop_config WHERE id = ?').get(SHOP_CONFIG_ID)
+    || { id: SHOP_CONFIG_ID, isOpen: 1, activeTag: '', activeTags: '[]' };
+  let list = [];
+  try { const a = JSON.parse(r.activeTags || '[]'); if (Array.isArray(a)) list = a.filter(Boolean).map(String); } catch {}
+  // Fall back to the legacy single tag when the list has not been written yet.
+  if (list.length === 0 && r.activeTag) list = [r.activeTag];
+  return { ...r, activeTags: list, activeTag: list[0] || '' };
+}
+export function setShopConfig(isOpen, activeTags = []) {
+  const uniq = normalizeShopTags(activeTags);
+  db.prepare('UPDATE shop_config SET isOpen = ?, activeTag = ?, activeTags = ? WHERE id = ?')
+    .run(isOpen ? 1 : 0, uniq[0] || '', JSON.stringify(uniq), SHOP_CONFIG_ID);
 }
 
 // ── Shop Items ────────────────────────────────────────────────────────────────
@@ -274,8 +369,8 @@ export function listPurchaseLogs() {
   return db.prepare('SELECT * FROM purchase_logs ORDER BY purchasedAt DESC LIMIT 500').all();
 }
 export function createPurchaseLog(id, fields) {
-  db.prepare('INSERT INTO purchase_logs (id, charId, charName, itemName, qty, totalCp, purchasedAt) VALUES (?, ?, ?, ?, ?, ?, ?)')
-    .run(id, fields.charId || '', fields.charName || '', fields.itemName || '', fields.qty || 1, fields.totalCp || 0, fields.purchasedAt || new Date().toISOString());
+  db.prepare('INSERT INTO purchase_logs (id, charId, charName, itemName, itemId, qty, totalCp, purchasedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+    .run(id, fields.charId || '', fields.charName || '', fields.itemName || '', fields.itemId || '', fields.qty || 1, fields.totalCp || 0, fields.purchasedAt || new Date().toISOString());
 }
 
 // ── Loot Items ────────────────────────────────────────────────────────────────
@@ -324,8 +419,83 @@ export function listLootLogs() {
   return db.prepare('SELECT * FROM loot_logs ORDER BY claimedAt DESC LIMIT 500').all();
 }
 export function createLootLog(id, fields) {
-  db.prepare('INSERT INTO loot_logs (id, charId, charName, itemName, claimedAt) VALUES (?, ?, ?, ?, ?)')
-    .run(id, fields.charId || '', fields.charName || '', fields.itemName || '', fields.claimedAt || new Date().toISOString());
+  db.prepare('INSERT INTO loot_logs (id, charId, charName, itemName, itemId, claimedAt) VALUES (?, ?, ?, ?, ?, ?)')
+    .run(id, fields.charId || '', fields.charName || '', fields.itemName || '', fields.itemId || '', fields.claimedAt || new Date().toISOString());
+}
+export function listClaimedItemIds(charId) {
+  return db.prepare("SELECT DISTINCT itemId FROM loot_logs WHERE charId = ? AND itemId != ''").all(charId)
+    .map(r => r.itemId);
+}
+
+// ── Treasury Items ────────────────────────────────────────────────────────────
+// Unified catalogue replacing loot_items + shop_items. `mode` is one of
+// 'hidden' (DM only), 'loot' (free claim) or 'shop' (for sale).
+const TREASURY_BOOLS = ['descVisible', 'requiresAttunement'];
+function treasuryRow(r) {
+  if (!r) return null;
+  return { ...r, descVisible: !!r.descVisible, requiresAttunement: !!r.requiresAttunement };
+}
+export function listTreasuryItems() {
+  return db.prepare('SELECT * FROM treasury_items ORDER BY createdAt').all().map(treasuryRow);
+}
+export function listTreasuryItemsByMode(mode) {
+  return db.prepare('SELECT * FROM treasury_items WHERE mode = ? ORDER BY createdAt').all(mode).map(treasuryRow);
+}
+export function getTreasuryItem(id) {
+  return treasuryRow(db.prepare('SELECT * FROM treasury_items WHERE id = ?').get(id));
+}
+export function getTreasuryItemsByIds(ids) {
+  if (!ids || ids.length === 0) return [];
+  const placeholders = ids.map(() => '?').join(', ');
+  return db.prepare(`SELECT * FROM treasury_items WHERE id IN (${placeholders})`).all(...ids).map(treasuryRow);
+}
+export function createTreasuryItem(id, fields) {
+  db.prepare(`INSERT INTO treasury_items
+    (id, name, tag, mode, description, descVisible, itemType, armorType, acBase, valueCp, quantity,
+     acBonus, initBonus, speedBonus, spellAtkBonus, spellDcBonus, requiresAttunement,
+     weaponAtk, weaponDmg, weaponPropertiesJson, imageUrl, imageThumb, imageMedium, createdAt)
+    VALUES (@id, @name, @tag, @mode, @description, @descVisible, @itemType, @armorType, @acBase, @valueCp, @quantity,
+     @acBonus, @initBonus, @speedBonus, @spellAtkBonus, @spellDcBonus, @requiresAttunement,
+     @weaponAtk, @weaponDmg, @weaponPropertiesJson, @imageUrl, @imageThumb, @imageMedium, @createdAt)`)
+    .run({
+      id,
+      name: fields.name || '', tag: fields.tag || '', mode: fields.mode || 'hidden',
+      description: fields.description || '', descVisible: fields.descVisible ? 1 : 0,
+      itemType: fields.itemType || 'other', armorType: fields.armorType || 'light',
+      acBase: fields.acBase ?? 10, valueCp: fields.valueCp ?? 0, quantity: fields.quantity ?? 1,
+      acBonus: fields.acBonus ?? 0, initBonus: fields.initBonus ?? 0, speedBonus: fields.speedBonus ?? 0,
+      spellAtkBonus: fields.spellAtkBonus ?? 0, spellDcBonus: fields.spellDcBonus ?? 0,
+      requiresAttunement: fields.requiresAttunement ? 1 : 0,
+      weaponAtk: fields.weaponAtk || '', weaponDmg: fields.weaponDmg || '',
+      weaponPropertiesJson: fields.weaponPropertiesJson || '[]',
+      imageUrl: fields.imageUrl || '', imageThumb: fields.imageThumb || '', imageMedium: fields.imageMedium || '',
+      createdAt: fields.createdAt || new Date().toISOString(),
+    });
+}
+export function updateTreasuryItem(id, fields) {
+  if (!fields || Object.keys(fields).length === 0) return;
+  const mapped = { ...fields };
+  for (const k of TREASURY_BOOLS) if (k in mapped) mapped[k] = mapped[k] ? 1 : 0;
+  const sets = Object.keys(mapped).map(k => `"${k}" = ?`).join(', ');
+  db.prepare(`UPDATE treasury_items SET ${sets} WHERE id = ?`).run(...Object.values(mapped), id);
+}
+export function deleteTreasuryItem(id) {
+  db.prepare('DELETE FROM treasury_items WHERE id = ?').run(id);
+}
+export function bulkUpdateTreasuryTag(ids, tag) {
+  const stmt = db.prepare('UPDATE treasury_items SET tag = ? WHERE id = ?');
+  db.transaction(() => { for (const id of ids) stmt.run(tag, id); })();
+}
+export function bulkUpdateTreasuryMode(ids, mode) {
+  const stmt = db.prepare('UPDATE treasury_items SET mode = ? WHERE id = ?');
+  db.transaction(() => { for (const id of ids) stmt.run(mode, id); })();
+}
+export function bulkDeleteTreasuryItems(ids) {
+  const stmt = db.prepare('DELETE FROM treasury_items WHERE id = ?');
+  db.transaction(() => { for (const id of ids) stmt.run(id); })();
+}
+export function bulkCreateTreasuryItems(rows) {
+  db.transaction(() => { for (const { id, fields } of rows) createTreasuryItem(id, fields); })();
 }
 
 // ── Monsters ──────────────────────────────────────────────────────────────────
@@ -484,6 +654,7 @@ export function importAll(data) {
     db.prepare('DELETE FROM purchase_logs').run();
     db.prepare('DELETE FROM loot_items').run();
     db.prepare('DELETE FROM loot_logs').run();
+    db.prepare('DELETE FROM treasury_items').run();
     db.prepare('DELETE FROM monsters').run();
     db.prepare('DELETE FROM initiative_entries').run();
     db.prepare('DELETE FROM table_tokens').run();
@@ -500,7 +671,8 @@ export function importAll(data) {
     }
 
     if (data.shopConfig && data.shopConfig.length > 0) {
-      db.prepare('UPDATE shop_config SET isOpen = ? WHERE id = ?').run(data.shopConfig[0].isOpen ? 1 : 0, SHOP_CONFIG_ID);
+      const sc = data.shopConfig[0];
+      setShopConfig(sc.isOpen, sc.activeTags ?? sc.activeTag);
     }
 
     const insShop = db.prepare('INSERT OR REPLACE INTO shop_items (id, name, itemType, armorType, acBase, valueCp, quantity, acBonus, initBonus, speedBonus, requiresAttunement, notes, weaponAtk, weaponDmg, weaponPropertiesJson, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
@@ -508,9 +680,9 @@ export function importAll(data) {
       insShop.run(r.id, r.name || '', r.itemType || 'wondrous', r.armorType || 'light', r.acBase ?? 10, r.valueCp ?? 0, r.quantity ?? 1, r.acBonus ?? 0, r.initBonus ?? 0, r.speedBonus ?? 0, r.requiresAttunement ? 1 : 0, r.notes || '', r.weaponAtk || '', r.weaponDmg || '', r.weaponPropertiesJson || '[]', r.createdAt || new Date().toISOString());
     }
 
-    const insPurch = db.prepare('INSERT OR REPLACE INTO purchase_logs (id, charId, charName, itemName, qty, totalCp, purchasedAt) VALUES (?, ?, ?, ?, ?, ?, ?)');
+    const insPurch = db.prepare('INSERT OR REPLACE INTO purchase_logs (id, charId, charName, itemName, itemId, qty, totalCp, purchasedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
     for (const r of (data.purchaseLogs || [])) {
-      insPurch.run(r.id, r.charId || '', r.charName || '', r.itemName || '', r.qty || 1, r.totalCp || 0, r.purchasedAt || r.createdAt || new Date().toISOString());
+      insPurch.run(r.id, r.charId || '', r.charName || '', r.itemName || '', r.itemId || '', r.qty || 1, r.totalCp || 0, r.purchasedAt || r.createdAt || new Date().toISOString());
     }
 
     const insLoot = db.prepare('INSERT OR REPLACE INTO loot_items (id, name, description, visible, descVisible, tag, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?)');
@@ -518,9 +690,18 @@ export function importAll(data) {
       insLoot.run(r.id, r.name || '', r.description || '', r.visible ? 1 : 0, r.descVisible ? 1 : 0, r.tag || '', r.createdAt || new Date().toISOString());
     }
 
-    const insLootLog = db.prepare('INSERT OR REPLACE INTO loot_logs (id, charId, charName, itemName, claimedAt) VALUES (?, ?, ?, ?, ?)');
+    const insLootLog = db.prepare('INSERT OR REPLACE INTO loot_logs (id, charId, charName, itemName, itemId, claimedAt) VALUES (?, ?, ?, ?, ?, ?)');
     for (const r of (data.lootLogs || [])) {
-      insLootLog.run(r.id, r.charId || '', r.charName || '', r.itemName || '', r.claimedAt || r.createdAt || new Date().toISOString());
+      insLootLog.run(r.id, r.charId || '', r.charName || '', r.itemName || '', r.itemId || '', r.claimedAt || r.createdAt || new Date().toISOString());
+    }
+
+    // Treasury: a current backup carries treasuryItems directly; an older one
+    // only has shopItems/lootItems, which convert on the way in.
+    if (Array.isArray(data.treasuryItems) && data.treasuryItems.length > 0) {
+      for (const r of data.treasuryItems) createTreasuryItem(r.id, r);
+    } else {
+      for (const r of (data.lootItems || [])) createTreasuryItem(r.id, lootRowToTreasury(r));
+      for (const r of (data.shopItems || [])) createTreasuryItem(r.id, shopRowToTreasury(r));
     }
 
     const insMon = db.prepare('INSERT OR REPLACE INTO monsters (id, name, cr, dataJson, createdAt) VALUES (?, ?, ?, ?, ?)');
@@ -596,35 +777,36 @@ export function importMonsters(monsters) {
   })();
 }
 
-export function importShop(shopConfig, shopItems, purchaseLogs) {
-  const getItem  = db.prepare('SELECT name FROM shop_items WHERE id = ?');
-  const rekeyItem = db.prepare('UPDATE shop_items SET id = ?, name = ? WHERE id = ?');
-  const insShop  = db.prepare('INSERT OR IGNORE INTO shop_items (id, name, itemType, armorType, acBase, valueCp, quantity, acBonus, initBonus, speedBonus, requiresAttunement, notes, weaponAtk, weaponDmg, weaponPropertiesJson, tag, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
-  const insPurch = db.prepare('INSERT OR IGNORE INTO purchase_logs (id, charId, charName, itemName, qty, totalCp, purchasedAt) VALUES (?, ?, ?, ?, ?, ?, ?)');
+// Treasury restore. `items` are already in treasury shape; legacy shop/loot
+// backups reach this through importShop/importLoot below, which convert first.
+export function importTreasury(items, shopConfig, purchaseLogs, lootLogs) {
+  const getItem   = db.prepare('SELECT name FROM treasury_items WHERE id = ?');
+  const rekeyItem = db.prepare('UPDATE treasury_items SET id = ?, name = ? WHERE id = ?');
+  const insPurch  = db.prepare('INSERT OR IGNORE INTO purchase_logs (id, charId, charName, itemName, itemId, qty, totalCp, purchasedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
+  const insLoot   = db.prepare('INSERT OR IGNORE INTO loot_logs (id, charId, charName, itemName, itemId, claimedAt) VALUES (?, ?, ?, ?, ?, ?)');
   db.transaction(() => {
-    if (shopConfig && shopConfig.length > 0) db.prepare('UPDATE shop_config SET isOpen = ? WHERE id = ?').run(shopConfig[0].isOpen ? 1 : 0, SHOP_CONFIG_ID);
-    for (const r of (shopItems || [])) {
+    if (shopConfig && shopConfig.length > 0) {
+      const sc = shopConfig[0];
+      setShopConfig(sc.isOpen, sc.activeTags ?? sc.activeTag);
+    }
+    for (const r of (items || [])) {
       const ex = getItem.get(r.id);
       if (ex) rekeyItem.run(crypto.randomUUID(), _oldName(ex.name), r.id);
-      insShop.run(r.id, r.name || '', r.itemType || 'wondrous', r.armorType || 'light', r.acBase ?? 10, r.valueCp ?? 0, r.quantity ?? 1, r.acBonus ?? 0, r.initBonus ?? 0, r.speedBonus ?? 0, r.requiresAttunement ? 1 : 0, r.notes || '', r.weaponAtk || '', r.weaponDmg || '', r.weaponPropertiesJson || '[]', r.tag || '', r.createdAt || new Date().toISOString());
+      createTreasuryItem(r.id, r);
     }
-    for (const r of (purchaseLogs || [])) insPurch.run(r.id, r.charId || '', r.charName || '', r.itemName || '', r.qty || 1, r.totalCp || 0, r.purchasedAt || r.createdAt || new Date().toISOString());
+    for (const r of (purchaseLogs || [])) insPurch.run(r.id, r.charId || '', r.charName || '', r.itemName || '', r.itemId || '', r.qty || 1, r.totalCp || 0, r.purchasedAt || r.createdAt || new Date().toISOString());
+    for (const r of (lootLogs || []))     insLoot.run(r.id, r.charId || '', r.charName || '', r.itemName || '', r.itemId || '', r.claimedAt || r.createdAt || new Date().toISOString());
   })();
 }
 
+// Legacy backup types — kept so old backup files still restore. Their rows are
+// converted into the unified catalogue rather than into the retired tables.
+export function importShop(shopConfig, shopItems, purchaseLogs) {
+  importTreasury((shopItems || []).map(r => ({ ...shopRowToTreasury(r), id: r.id })), shopConfig, purchaseLogs, []);
+}
+
 export function importLoot(lootItems, lootLogs) {
-  const getItem  = db.prepare('SELECT name FROM loot_items WHERE id = ?');
-  const rekeyItem = db.prepare('UPDATE loot_items SET id = ?, name = ? WHERE id = ?');
-  const insLoot  = db.prepare('INSERT OR IGNORE INTO loot_items (id, name, description, visible, descVisible, tag, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?)');
-  const insLog   = db.prepare('INSERT OR IGNORE INTO loot_logs (id, charId, charName, itemName, claimedAt) VALUES (?, ?, ?, ?, ?)');
-  db.transaction(() => {
-    for (const r of (lootItems || [])) {
-      const ex = getItem.get(r.id);
-      if (ex) rekeyItem.run(crypto.randomUUID(), _oldName(ex.name), r.id);
-      insLoot.run(r.id, r.name || '', r.description || '', r.visible ? 1 : 0, r.descVisible ? 1 : 0, r.tag || '', r.createdAt || new Date().toISOString());
-    }
-    for (const r of (lootLogs || [])) insLog.run(r.id, r.charId || '', r.charName || '', r.itemName || '', r.claimedAt || r.createdAt || new Date().toISOString());
-  })();
+  importTreasury((lootItems || []).map(r => ({ ...lootRowToTreasury(r), id: r.id })), null, [], lootLogs);
 }
 
 export function importMaps(preparedMaps) {

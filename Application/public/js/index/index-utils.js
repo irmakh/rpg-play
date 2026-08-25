@@ -55,8 +55,7 @@ function showTab(name, el) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.getElementById('tab-' + name).classList.add('active');
   el.classList.add('active');
-  if (name === 'shop')     loadShopTab();
-  if (name === 'loot')     loadLootTab();
+  if (name === 'treasury') loadTreasuryTab();
   if (name === 'calendar') pcalLoad();
   if (name === 'actions' && typeof renderActionsTab === 'function') renderActionsTab();
 }

@@ -26,11 +26,8 @@ window.addEventListener('load', function startRealtime() {
         } catch {}
       }
     },
-    shop: () => {
-      loadShopTab();
-    },
-    loot: () => {
-      loadLootTab();
+    treasury: () => {
+      loadTreasuryTab();
       syncLootDescVisibility();
     },
     initiative: async () => {

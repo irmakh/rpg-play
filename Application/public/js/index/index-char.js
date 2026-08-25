@@ -501,8 +501,8 @@ async function autoSaveCharacter() {
 async function reloadCharacter() {
   if (!currentCharId) return;
   await loadCharacter(currentCharId);
-  const shopTabActive = document.getElementById('tab-shop')?.classList.contains('active');
-  if (shopTabActive) await loadShopTab();
+  const treasuryTabActive = document.getElementById('tab-treasury')?.classList.contains('active');
+  if (treasuryTabActive) await loadTreasuryTab();
   setStatus('Reloaded', false);
 }
 

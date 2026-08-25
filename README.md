@@ -1,6 +1,6 @@
 # RPG Play — D&D 5e Virtual Tabletop
 
-A self-hosted web app for running D&D 5e sessions. It bundles a full character sheet, a shared virtual battle map, a real-time initiative tracker, a monster library, loot and merchant managers, a synced music player, an AI Dungeon Master, a comic-style story builder, and a mobile companion — all kept live across every connected browser with no external cloud required.
+A self-hosted web app for running D&D 5e sessions. It bundles a full character sheet, a shared virtual battle map, a real-time initiative tracker, a monster library, a treasury for loot and shop items, a synced music player, an AI Dungeon Master, a comic-style story builder, and a mobile companion — all kept live across every connected browser with no external cloud required.
 
 Vanilla JS, no build step, no framework. Runs on SQLite by default; nothing to provision.
 
@@ -20,7 +20,7 @@ Vanilla JS, no build step, no framework. Runs on SQLite by default; nothing to p
 - Dice rolling with full 3D animation, broadcast live to the virtual table; advantage / disadvantage dual-die rolls; per-character roll history
 - Import / export character as XML (D&D Beyond–compatible) — round-trips custom actions and spell action/duration fields, and prompts update-vs-new-copy on a same-name import
 - Per-character password protection (set / change / remove); multiple characters selectable from a list
-- Player-facing tabs: **Shop** (browse by tag, cart, buy with in-character currency), **Loot** (claim dropped items), **Initiative** (slide-out tracker with roll submission), **Calendar** (Calendar of Harptos — DM events plus your own journals with media)
+- Player-facing tabs: **Treasury** (one tab with a Free Loot / Shop switch — claim dropped items for free or buy with in-character currency; item images, and unidentified items shown as such), **Initiative** (slide-out tracker with roll submission), **Calendar** (Calendar of Harptos — DM events plus your own journals with media)
 - Real-time chat: free text or `/r NdS+M [label]` dice rolls (e.g. `/r 2d6+3`, `/r d20 Stealth`)
 - Three themes: Dark Gold, Parchment, Midnight; quick-nav buttons to the Table and Stories
 
@@ -54,7 +54,7 @@ Vanilla JS, no build step, no framework. Runs on SQLite by default; nothing to p
 - Monster stat-block popup with correct multi-line trait/action rendering
 - Media sharing: drag-and-drop image / video → shared instantly to the table
 - DM chat: free text or `/r` rolls (broadcasts the 3D animation to all screens); **per-message delete** removes it from every client live
-- Data backup / restore: per-section JSON export, non-destructive merge import
+- Data backup / restore: per-section JSON export (characters, monsters, treasury, maps), non-destructive merge import; treasury backups carry item images, and older `shop` / `loot` backup files still restore
 - **Raw database backup:** one-click download of all SQLite databases (`localdb`, `media`, `stories`, `aiDM`) as-is, bundled into a single streamed `.tar.gz` for full off-site backup (uploaded media under `uploads/` is stored separately and not yet included)
 - Multiple themes
 
@@ -65,21 +65,39 @@ Vanilla JS, no build step, no framework. Runs on SQLite by default; nothing to p
 - **Campaign date control:** advance a day at a time or jump to any date/festival; current date highlighted in gold
 - **Events:** title, description, type (session / combat / travel / milestone / rest / note), public or DM-only; public events broadcast live to player calendars over SSE
 - **Media attachments:** attach images, video, or audio to any event (one per upload, 25 MB cap; images get auto-generated thumbnails)
+- **Daily weather roller:** roll temperature, wind and precipitation for any date — each gets its own d20 against configurable thresholds, with temperature swinging from a "session normal" baseline and precipitation falling as snow below freezing. Set a day manually instead if you prefer. Results are logged per day and shown as icons on the calendar grid with a hover breakdown
 
 ### Player Calendar (tab on `/`)
 - Calendar showing DM-published public events, the player's own journals, and the current campaign date (live via SSE)
 - **Player journals** — players author their own dated entries from the calendar (**+Journal** button). A journal defaults to **shared** (visible to everyone) or can be kept **private** (visible only to the DM and its author); each entry can carry media attachments. Players can edit and delete only their own journals
 - Visibility rule: a viewer sees an event if they are the DM, the event is public, or they authored it
 - Click a day to filter its events; **Go to Today** jumps back to the campaign date; ← / → month navigation
+- Weather icons on each day the DM has rolled, with the same hover breakdown; the virtual table also carries a toolbar widget showing the current day's weather
 
-### Merchant Shop (`/merchant.html`) — DM only
-- Add / edit / delete items with full D&D data: type, price (PP/GP/EP/SP/CP), quantity, AC / initiative / speed / spell bonuses, attunement, weapon properties, notes
-- Tagging into collapsible sections, bulk tag assignment, bulk delete, tag autocomplete
-- Shop open / closed toggle; **open shop directly to a tag** for players; real-time purchase log and inventory sync
+### Treasury (`/treasury.html`) — DM only
+One catalogue for everything you hand out, replacing the separate Merchant and Loot managers. Every item carries the full D&D data set — type, price (PP/GP/EP/SP/CP), stock, AC / initiative / speed / spell bonuses, attunement, weapon damage and properties, description — plus a **distribution mode** you flip in place:
 
-### Loot Manager (`/loot.html`) — DM only
-- Add / edit / delete loot (name, description, quantity, value); tagging with collapsible sections and bulk ops
-- Import loot from JSON; show / hide the loot panel to players; players claim from their sheet; claim log records who and when
+| Mode | Players see it | Cost |
+|---|---|---|
+| **Hidden** | no | — |
+| **Free Loot** | yes | free, claimed once per character |
+| **Shop** | while the shop is open and its tag is on sale | in-character currency |
+
+- **Master–detail workspace:** searchable, tag-grouped sidebar with mode filter chips; the selected item is edited inline (no modal)
+- **Claiming free loot creates a real inventory item**, exactly like a purchase — a claimed weapon arrives with its attack and damage worked out against the character's own stats. Stock governs how many can take it: `1` disappears after the first claim, a higher number counts down, `-1` is an open offer to the whole party
+- **Item images:** drop or pick a picture per item (JPEG/PNG/GIF/WebP, 25 MB); players see a thumbnail in the list, the full size in the detail view, and can open it in the lightbox — and it follows the item into their inventory
+- **Unidentified items:** leave *description visible* off and players see the item's name marked **(unidentified)** along with its kind, price and stock — the description, magic bonus, damage dice, properties and bonuses stay hidden, even from anyone who claims or buys it. The redaction happens server-side, so nothing identifying is sent to the browser at all. Turn it on and everything is revealed at once, including on copies players already hold
+- **Multi-tag shop:** open the shop for any combination of tags (or all of it); a tag picker shows how many items each tag has for sale
+- Bulk text import, bulk tag / mode assignment, bulk delete, multi-select
+- **Ledger:** claims and purchases interleaved in one history — who took what, when, and for how much
+- Legacy `/merchant.html` and `/loot.html` redirect here
+
+### Maintenance (`/maintenance.html`) — DM only, unlisted
+- Hidden diagnostics page (no link anywhere) gated by the master password on every request
+- Lists every connected real-time client: IP, identity (DM or character name), login time, current page, transport (WebSocket / SSE), user agent
+- Shows the **frontend version each client has loaded** against the server's, highlighting anyone running stale assets
+- **Force reload** — push a refresh to every client, or only to the outdated ones, so a release reaches phones without chasing people
+- Connection identity is self-reported by the client and therefore spoofable: the page is informational, **not** an access control
 
 ### Map Prep (`/prepare-map.html`) — DM only
 - Upload a map and set grid size; draw fog regions; **place tokens** (with portrait and visible/hidden state) and hidden items on the prep canvas
@@ -146,9 +164,9 @@ Vanilla JS, no build step, no framework. Runs on SQLite by default; nothing to p
 | DM Calendar | `/events.html` | DM |
 | Monster Library | `/monsters.html` | DM |
 | Map Prep | `/prepare-map.html` | DM |
-| Merchant | `/merchant.html` | DM |
-| Loot | `/loot.html` | DM |
+| Treasury (loot + shop) | `/treasury.html` | DM |
 | Music & Sounds | `/playlists.html` | DM |
+| Maintenance (unlisted) | `/maintenance.html` | DM |
 | Stories | `/stories.html` | Any (password gated) |
 | Story Builder | `/story-builder.html` | Any (password gated) |
 | Story Viewer | `/story-viewer.html` | Any (password gated) |
@@ -290,14 +308,14 @@ High-level layout — see **[structure.md](structure.md)** for the complete, ann
 char_sheet/
 ├── Application/            # The web app
 │   ├── server.js           #   Express entry point — loads route modules + shared context
-│   ├── server/routes/      #   12 Express route modules
+│   ├── server/routes/      #   13 Express route modules
 │   ├── db/                 #   SQLite layers (localdb.js, storiesdb.js)
 │   ├── aiDM/               #   AI Dungeon Master module (own DB + routes)
-│   ├── tests/              #   ~20 Vitest unit + API suites
+│   ├── tests/              #   21 Vitest unit + API suites
 │   └── public/             #   Served frontend
-│       ├── *.html          #     Page entry points (index, table, dm, events, monsters, …)
-│       ├── js/index/       #     15 character-sheet modules
-│       ├── js/table/       #     14 virtual-table modules
+│       ├── *.html          #     Page entry points (index, table, dm, treasury, events, …)
+│       ├── js/index/       #     14 character-sheet modules
+│       ├── js/table/       #     15 virtual-table modules
 │       ├── js/lib/         #     Shared utilities (dice engine, chat render, calendar, …)
 │       ├── console/        #     Mobile companion PWA
 │       ├── css/  img/      #     Styles and static images

@@ -74,6 +74,44 @@
 - **`public/js/table/table-weather.js`** — table-screen toolbar widget: `loadTableWeather()` reads calendar state + weather log, finds today's entry into `_tableWeatherToday`, renders `#wx-toolbar`; refreshed on the `calendar-updated` SSE event.
 - Events calendar (`events.js`) and player calendar (`index-calendar.js`) both load `/api/weather/log` into a `*Weather` map, draw per-day markers in their grid render, and register the map for tooltips. The events weather modal additionally edits weather (roll / manual level+value / save / delete) per `weatherTargetDate`.
 
+## Application — Treasury (unified loot + shop)
+
+> Replaces the separate loot and shop systems (session 80). One catalogue table
+> `treasury_items`; each row's `mode` decides how players reach it —
+> `hidden` (DM only), `loot` (free claim) or `shop` (for sale). Claiming and
+> buying both produce real inventory items.
+
+### DB (`Application/db/localdb.js`)
+- **listTreasuryItems / listTreasuryItemsByMode / getTreasuryItem / getTreasuryItemsByIds** — catalogue reads
+- **createTreasuryItem / updateTreasuryItem / deleteTreasuryItem** — catalogue CRUD
+- **bulkUpdateTreasuryTag / bulkUpdateTreasuryMode / bulkDeleteTreasuryItems / bulkCreateTreasuryItems** — multi-select operations, each in one transaction
+- **listClaimedItemIds(charId)** — distinct `itemId`s this character has claimed; backs claim-once dedupe and the `✓ Claimed` marker (replaces the old check against the character's `_loots` list)
+- **lootRowToTreasury(r) / shopRowToTreasury(r)** — legacy→unified field mapping, shared by the one-time boot migration and by backup restore so both produce identical rows
+- **importTreasury(items, shopConfig, purchaseLogs, lootLogs)** — merge-style restore; `importShop`/`importLoot` now convert old backup files through the same path
+- A boot migration folds `loot_items` + `shop_items` into `treasury_items` once, preserving ids. The legacy tables are left intact as a rollback path and are dropped in a later release.
+
+### API Routes (`Application/server/routes/treasury.js`)
+- `GET /api/treasury` — player view: `{ shopOpen, activeTag, loot[], shop[], claimedIds[] }`. Unrevealed descriptions are blanked server-side; `claimedIds` is only returned to a caller who authenticates as that character
+- `GET /api/treasury/all` — DM catalogue (master password)
+- `POST /api/treasury` · `PUT /:id` · `DELETE /:id` — CRUD; PUT is partial, and replacing or clearing an image deletes the old files
+- `POST /api/treasury/bulk-update-tag` · `/bulk-mode` · `/bulk-delete` — multi-select operations
+- `POST /api/treasury/import` — blank-line-separated text import (first line = name, rest = description)
+- `GET`/`PUT /api/treasury/status` — shop open/closed + which tags are on sale. `activeTags` (a JSON array on `shop_config`) is the source of truth and the shop can be open for **several tags at once**; an empty list means the whole shop is open. The legacy `activeTag` column keeps the first tag so older readers still work, and a `PUT` carrying only `activeTag` is still accepted. A pre-existing single `activeTag` is seeded into `activeTags` once on boot.
+- `POST /api/treasury/claim` — free claim; dedupes against the claim log, decrements stock, grants real items
+- `POST /api/treasury/purchase` — paid; currency, stock, weapon ATK/DMG
+- `GET /api/treasury/logs` — merged ledger of claims + purchases, newest first
+- `GET /api/treasury/visibility` — reveal-state map so already-held items pick up a description the DM reveals later
+- `POST /api/treasury/media` — one item image (images only, 25 MB cap) through `processImageSizes` into `uploads/treasury/`
+- **grantItems(charData, item, qty)** — internal helper shared by claim and purchase; builds the `_items` entry (and the `_weapons` row with computed ATK/DMG for weapons), stamps `srcId` and the image, bumps `_itemIdCounter`
+
+### Screens
+- **treasury.html** (`js/treasury.js`, `css/treasury.css`) — DM master-detail manager: searchable tag-grouped sidebar with mode filter chips, inline editor with a 3-way mode selector and image drop zone, bulk bar, merged ledger, bulk-import modal. Replaces `loot.html` + `merchant.html`, which now 301-redirect here.
+- **Player `💰 Treasury` tab** (`js/index/index-treasury.js`) — one tab with a Free Loot / Shop segmented control, shared detail modal, thumbnails that open the shared lightbox. Replaces the separate Shop and Loot tabs; the Main-tab "Loots" card still holds manual entries and pre-merge claims.
+- **Unidentified items** — `descVisible: false` means the item is UNIDENTIFIED, and the redaction happens in `playerObj()` on the **server**, never in the browser. The player receives the item's real **name** (a placeholder name was tried and dropped as confusing — the client appends a ` - (unidentified)` marker instead), its kind (`itemType`/`armorType`), `valueCp`, `quantity` and the image. The description, magic bonus, damage dice, weapon properties, AC/init/speed/spell bonuses and attunement are all replaced with neutral defaults, so none of it appears in the network payload.
+  - `grantItems()` stores a claimed or bought unidentified item **redacted too** (`unidentified: true`, no stats, and no `_weapons` attack row) — acquiring something must not reveal what browsing it would not.
+  - `identifyHeldCopies()` / `identifyForEveryone()` run from `PUT /api/treasury/:id` the moment `descVisible` flips false→true: every character holding a copy (matched by `srcId`) gets the real name, notes, stats and — for weapons — a freshly computed attack row, followed by a `characters` broadcast so open sheets update live.
+  - `GET /api/treasury/visibility` is public, so it returns a description **only** for revealed items; sending them all would hand out exactly what the redaction withholds.
+
 ## Application — Stories Module
 
 > Stories is a self-contained image-generation module. Prompt files live in `Application/stories/{character}/`, generated images in `Application/public/story-images/`, and records in `stories.db`.

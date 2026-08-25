@@ -201,10 +201,15 @@ td input[type=checkbox]{accent-color:var(--ac)}
 .char-btn.danger{border-color:#ff444466;color:#ff8888;background:#ff444411}
 .char-btn.danger:hover{background:#ff444433}
 /* Password modal */
-.modal-overlay{position:fixed;inset:0;background:var(--ov);display:flex;align-items:center;justify-content:center;z-index:1000}
-.modal-box{background:var(--bg2);border:1px solid var(--ac);border-radius:6px;overflow:hidden;min-width:300px;max-width:380px;width:90%}
-.modal-body{padding:14px 16px 6px}
-.modal-btns{display:flex;gap:8px;justify-content:flex-end;padding:10px 16px}
+/* The box is capped to the viewport and lays out as a column so the title and
+   the button row stay put while only the body scrolls — a long description used
+   to stretch the box past the screen and carry the buttons off with it. */
+.modal-overlay{position:fixed;inset:0;background:var(--ov);display:flex;align-items:center;justify-content:center;z-index:1000;padding:16px;overflow-y:auto}
+.modal-box{background:var(--bg2);border:1px solid var(--ac);border-radius:6px;overflow:hidden;min-width:min(300px,100%);max-width:380px;width:90%;
+           max-height:calc(100vh - 32px);display:flex;flex-direction:column}
+.modal-box>.ct{flex:0 0 auto}
+.modal-body{padding:14px 16px 6px;overflow-y:auto;overscroll-behavior:contain;flex:1 1 auto;min-height:0}
+.modal-btns{display:flex;gap:8px;justify-content:flex-end;padding:10px 16px;flex:0 0 auto;border-top:1px solid var(--sep);background:var(--bg2)}
 .modal-btns .primary{background:var(--ac)!important;color:var(--bg)!important;border-color:var(--ac)!important}
 /* Save / Reload bar */
 .btn-bar{display:flex;gap:10px;align-items:center;justify-content:center;margin-top:16px;padding:12px 0;border-top:1px solid var(--a44)}
@@ -507,3 +512,18 @@ body.theme-mobile .media-gallery{grid-template-columns:repeat(auto-fill,minmax(1
 .dice-result-sub.show{opacity:1}
 .dice-dismiss-hint{font-size:10px;color:var(--txd);letter-spacing:1px;opacity:0;transition:opacity .35s ease .35s}
 .dice-dismiss-hint.show{opacity:.5}
+
+/* ── Treasury tab: Free Loot / Shop segmented control ─────────────────────── */
+#treasury-seg{display:flex;gap:0;border:1px solid var(--a66);border-radius:5px;
+              overflow:hidden;margin-bottom:12px}
+#treasury-seg .seg-btn{flex:1;background:var(--bg3);border:none;border-right:1px solid var(--a44);
+                       color:var(--txd);padding:9px 10px;font-size:13px;font-weight:bold;
+                       cursor:pointer;font-family:inherit}
+#treasury-seg .seg-btn:last-child{border-right:none}
+#treasury-seg .seg-btn:hover{background:var(--bg4)}
+#treasury-seg .seg-btn.on{background:var(--ac);color:var(--bg)}
+.tr-thumb{width:34px;height:34px;border-radius:4px;object-fit:cover;flex-shrink:0;
+          border:1px solid var(--a44);background:var(--bg3);cursor:zoom-in}
+/* Stands in for a description the DM has not revealed yet. */
+.tr-unid{font-size:10px;color:var(--txd);font-style:italic;opacity:.85;margin-top:2px;
+         white-space:nowrap;overflow:hidden;text-overflow:ellipsis}

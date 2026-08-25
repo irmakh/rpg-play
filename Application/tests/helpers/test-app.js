@@ -19,11 +19,28 @@ import registerTable       from '../../server/routes/table.js';
 import registerCharacters  from '../../server/routes/characters.js';
 import registerAuth        from '../../server/routes/auth.js';
 import registerEvents      from '../../server/routes/events.js';
+import registerTreasury    from '../../server/routes/treasury.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
 
 export const TEST_MASTER_PW = 'test-master-pw-123';
+const SHOP_CONFIG_ID = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
+
+// ── Shop/treasury helpers (mirror server.js implementations) ──────────────────
+function deductCurrency(wallet, amountCp) {
+  let remaining = wallet.cp + wallet.sp * 10 + wallet.ep * 50 + wallet.gp * 100 + wallet.pp * 1000 - amountCp;
+  const pp = Math.floor(remaining / 1000); remaining -= pp * 1000;
+  const gp = Math.floor(remaining / 100);  remaining -= gp * 100;
+  const ep = Math.floor(remaining / 50);   remaining -= ep * 50;
+  const sp = Math.floor(remaining / 10);   remaining -= sp * 10;
+  return { pp, gp, ep, sp, cp: remaining };
+}
+function cpToGpString(valueCp) {
+  if (valueCp === 0) return '0 gp';
+  if (valueCp % 100 === 0) return `${valueCp / 100} gp`;
+  return `${(valueCp / 100).toFixed(2)} gp`;
+}
 
 // ── Auth helpers (mirror server.js implementations) ───────────────────────────
 function isMasterPassword(pw) {
@@ -71,6 +88,8 @@ export function makeApp() {
 
   const broadcasts = [];
   const broadcast = (channel, payload) => { broadcasts.push({ channel, payload }); };
+  // Records every deleteUploadFile() call so image-cleanup can be asserted.
+  const deletedFiles = [];
 
   function masterAuth(req) {
     const pw = req.headers['x-master-password'];
@@ -108,7 +127,15 @@ export function makeApp() {
     MAX_MEDIA_BYTES,
     processImageSizes,
     saveUploadFile: () => '/uploads/test/stub.jpg',
-    deleteUploadFile: () => {},
+    deleteUploadFile: (url) => { deletedFiles.push(url); },
+    // Shop/treasury helpers
+    getShopConfig: async () => {
+      const cfg = ldb.getShopConfig();
+      return { isOpen: !!cfg.isOpen, activeTag: cfg.activeTag || '', activeTags: cfg.activeTags || [] };
+    },
+    deductCurrency,
+    cpToGpString,
+    SHOP_CONFIG_ID,
     mediaDb: mediaDbStub,
     _mediaGet: _mediaGetStub,
     _mapUpsert: _mapUpsertStub,
@@ -126,6 +153,7 @@ export function makeApp() {
   registerCharacters(app, ctx);
   registerAuth(app, ctx);
   registerEvents(app, ctx);
+  registerTreasury(app, ctx);
 
-  return { app, ldb, masterPw: TEST_MASTER_PW, hashPassword, broadcasts };
+  return { app, ldb, masterPw: TEST_MASTER_PW, hashPassword, broadcasts, deletedFiles };
 }

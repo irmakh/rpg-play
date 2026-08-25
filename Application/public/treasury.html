@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Treasury — Loot &amp; Shop Manager</title>
+<script>(function(){try{var s=JSON.parse(sessionStorage.getItem('rpgSession')||'null');if(!s||s.role!=='dm'){location.replace('/login.html?next='+encodeURIComponent(location.pathname));}}catch(e){location.replace('/login.html');}})();</script>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#1a1a2e">
+<script>if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js');</script>
+<link rel="stylesheet" href="/css/treasury.css">
+</head>
+<body>
+
+<!-- Password gate -->
+<div class="gate" id="gate">
+  <div class="gate-box">
+    <div style="font-size:36px;margin-bottom:10px">💰</div>
+    <h2>Treasury</h2>
+    <p>Enter master password to manage loot and shop stock.</p>
+    <input type="password" id="gate-pw" placeholder="Master password…" autocomplete="off"
+           onkeydown="if(event.key==='Enter')authenticate()">
+    <div id="gate-err"></div>
+    <button class="btn primary" style="width:100%" onclick="authenticate()">Unlock</button>
+  </div>
+</div>
+
+<div id="shell" style="display:none">
+
+  <div class="hdr">
+    <div class="hdr-left">
+      <button class="btn" onclick="location.href='/dm.html'" title="Back to DM Panel">← DM</button>
+      <h1>💰 Treasury</h1>
+      <select id="theme-sel" onchange="applyTheme(this.value)" title="Theme">
+        <option value="dark-gold">🌙</option>
+        <option value="parchment">📜</option>
+        <option value="midnight">🌌</option>
+      </select>
+      <span id="status-msg"></span>
+    </div>
+    <div class="hdr-right">
+      <button class="btn" id="shop-status-btn" onclick="toggleShopStatus()">Loading…</button>
+      <div class="pop-wrap">
+        <button class="btn" id="open-tags-btn" onclick="toggleTagsPopup()" title="Choose which tags are on sale">🏷 Tags ▾</button>
+        <div class="pop" id="tags-popup">
+          <div class="pop-hdr">
+            <span>Open the shop for…</span>
+            <button class="btn sm" onclick="setAllOpenTags(true)">All</button>
+            <button class="btn sm" onclick="setAllOpenTags(false)">None</button>
+          </div>
+          <div id="tags-popup-list"></div>
+          <div class="pop-note">With nothing ticked the entire shop is open.</div>
+          <div class="pop-btns">
+            <button class="btn sm" onclick="closeTagsPopup()">Cancel</button>
+            <button class="btn sm primary" onclick="applyOpenTags()">Open Shop</button>
+          </div>
+        </div>
+      </div>
+      <button class="btn" id="btn-ledger" onclick="toggleLedger()" title="Claim &amp; purchase history">📋 Ledger</button>
+      <button class="btn" onclick="openImportModal()" title="Bulk text import">⬇ Import</button>
+      <button class="btn" onclick="refreshAll()" title="Refresh">↻</button>
+      <button class="btn primary" onclick="createItem()">+ Add Item</button>
+    </div>
+  </div>
+
+  <div id="body">
+
+    <!-- ── Sidebar ─────────────────────────────────────────────────────────── -->
+    <div id="sidebar">
+      <div id="sb-controls">
+        <input type="text" id="search" placeholder="Search items…" oninput="renderList()">
+        <div id="mode-filter">
+          <span class="chip on" data-mode="all"    onclick="setModeFilter('all',this)">All</span>
+          <span class="chip"    data-mode="hidden" onclick="setModeFilter('hidden',this)">Hidden</span>
+          <span class="chip"    data-mode="loot"   onclick="setModeFilter('loot',this)">Loot</span>
+          <span class="chip"    data-mode="shop"   onclick="setModeFilter('shop',this)">Shop</span>
+        </div>
+      </div>
+      <div id="item-list"><div class="sb-empty">Loading…</div></div>
+    </div>
+
+    <!-- ── Detail ──────────────────────────────────────────────────────────── -->
+    <div id="detail">
+      <div id="detail-empty">Select an item on the left, or click <strong>+ Add Item</strong>.</div>
+
+      <div id="detail-form" style="display:none">
+        <div class="d-hdr">
+          <input type="text" id="f-name" placeholder="Item name" oninput="markDirty()">
+          <button class="btn danger" onclick="deleteCurrent()">Delete</button>
+        </div>
+
+        <div class="sect">
+          <div class="sect-hdr">Distribution</div>
+          <div class="sect-body">
+            <div id="mode-seg">
+              <button type="button" data-mode="hidden" onclick="setMode('hidden')">Hidden</button>
+              <button type="button" data-mode="loot"   onclick="setMode('loot')">Free Loot</button>
+              <button type="button" data-mode="shop"   onclick="setMode('shop')">Shop</button>
+            </div>
+            <div class="mode-help" id="mode-help"></div>
+            <div class="g2" style="margin-top:10px">
+              <div class="field">
+                <label class="lbl">Tag</label>
+                <select id="f-tag-sel" onchange="onTagPick('f-tag');markDirty()"></select>
+                <input type="text" id="f-tag-new" placeholder="New tag name…" style="display:none;margin-top:5px"
+                       oninput="markDirty()">
+              </div>
+              <div class="field">
+                <label class="lbl">Type</label>
+                <select id="f-type" onchange="onTypeChange();markDirty()">
+                  <option value="wondrous">Wondrous / Magic</option>
+                  <option value="weapon">Weapon</option>
+                  <option value="armor">Armor</option>
+                  <option value="shield">Shield</option>
+                  <option value="other">Other / Consumable</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sect">
+          <div class="sect-hdr">Description</div>
+          <div class="sect-body">
+            <textarea id="f-desc" placeholder="What the players read…" oninput="markDirty()"></textarea>
+            <label class="chk" style="margin-top:8px">
+              <input type="checkbox" id="f-desc-visible" onchange="markDirty()">
+              Description visible to players
+            </label>
+            <div class="mode-help">Leave this off and the item is <strong>unidentified</strong>: players see its name marked “(unidentified)”, plus its kind, price and stock — the description, bonuses, damage dice and properties stay hidden, even from anyone who claims or buys it. Switch it on and everything is revealed, including on copies players already hold.</div>
+          </div>
+        </div>
+
+        <div class="sect">
+          <div class="sect-hdr">Image</div>
+          <div class="sect-body">
+            <div id="img-drop">
+              <img id="img-preview" alt="" style="display:none">
+              <div id="img-zone"
+                   onclick="document.getElementById('img-file').click()"
+                   ondragover="event.preventDefault();this.classList.add('drag')"
+                   ondragleave="this.classList.remove('drag')"
+                   ondrop="handleImgDrop(event)">
+                Drop an image here or click to choose<br>
+                <span style="font-size:10px">JPEG, PNG, GIF or WebP · max 25 MB</span>
+              </div>
+              <div id="img-actions" style="display:none">
+                <button class="btn sm" onclick="document.getElementById('img-file').click()">Replace</button>
+                <button class="btn sm danger" onclick="removeImage()">Remove</button>
+              </div>
+            </div>
+            <input type="file" id="img-file" accept="image/*" style="display:none" onchange="handleImgPick(this)">
+            <div id="img-err"></div>
+          </div>
+        </div>
+
+        <div class="sect" id="sect-armor" style="display:none">
+          <div class="sect-hdr">Armor</div>
+          <div class="sect-body g2">
+            <div class="field">
+              <label class="lbl">Armor Category</label>
+              <select id="f-armor-type" onchange="markDirty()">
+                <option value="light">Light</option>
+                <option value="medium">Medium</option>
+                <option value="heavy">Heavy</option>
+              </select>
+            </div>
+            <div class="field">
+              <label class="lbl">Base AC</label>
+              <input type="number" id="f-ac-base" value="10" min="0" oninput="markDirty()">
+            </div>
+          </div>
+        </div>
+
+        <div class="sect" id="sect-weapon" style="display:none">
+          <div class="sect-hdr">Weapon</div>
+          <div class="sect-body">
+            <div class="g2">
+              <div class="field">
+                <label class="lbl">Magic Bonus (ATK &amp; DMG)</label>
+                <input type="number" id="f-weapon-atk" value="0" placeholder="0 = none, 1 = +1 sword" oninput="markDirty()">
+              </div>
+              <div class="field">
+                <label class="lbl">Damage (dice + type)</label>
+                <input type="text" id="f-weapon-dmg" placeholder="e.g. 1d8 slashing" oninput="markDirty()">
+              </div>
+            </div>
+            <label class="lbl" style="margin-top:6px">Properties (max 3)</label>
+            <div id="props-grid" class="props-grid"></div>
+            <div id="props-err"></div>
+          </div>
+        </div>
+
+        <div class="sect" id="sect-price">
+          <div class="sect-hdr">Price &amp; Stock</div>
+          <div class="sect-body">
+            <label class="lbl">Price</label>
+            <div class="price-row">
+              <div><label class="lbl">PP</label><input type="number" id="f-pp" value="0" min="0" oninput="updatePricePreview();markDirty()"></div>
+              <div><label class="lbl">GP</label><input type="number" id="f-gp" value="0" min="0" oninput="updatePricePreview();markDirty()"></div>
+              <div><label class="lbl">EP</label><input type="number" id="f-ep" value="0" min="0" oninput="updatePricePreview();markDirty()"></div>
+              <div><label class="lbl">SP</label><input type="number" id="f-sp" value="0" min="0" oninput="updatePricePreview();markDirty()"></div>
+              <div><label class="lbl">CP</label><input type="number" id="f-cp" value="0" min="0" oninput="updatePricePreview();markDirty()"></div>
+            </div>
+            <div class="price-preview" id="price-preview"></div>
+            <div class="field" style="margin-top:8px;max-width:220px">
+              <label class="lbl">Stock (−1 = unlimited)</label>
+              <input type="number" id="f-qty" value="1" oninput="markDirty()">
+            </div>
+          </div>
+        </div>
+
+        <div class="sect">
+          <div class="sect-hdr">Bonuses</div>
+          <div class="sect-body">
+            <div class="g3">
+              <div class="field"><label class="lbl">AC Bonus</label><input type="number" id="f-ac-bonus" value="0" oninput="markDirty()"></div>
+              <div class="field"><label class="lbl">Initiative</label><input type="number" id="f-init-bonus" value="0" oninput="markDirty()"></div>
+              <div class="field"><label class="lbl">Speed (ft)</label><input type="number" id="f-speed-bonus" value="0" oninput="markDirty()"></div>
+              <div class="field"><label class="lbl">Spell Atk</label><input type="number" id="f-sp-atk-bonus" value="0" oninput="markDirty()"></div>
+              <div class="field"><label class="lbl">Spell DC</label><input type="number" id="f-sp-dc-bonus" value="0" oninput="markDirty()"></div>
+            </div>
+            <label class="chk" style="margin-top:6px">
+              <input type="checkbox" id="f-attune" onchange="markDirty()"> Requires attunement
+            </label>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:20px">
+          <button class="btn primary" onclick="saveCurrent()">Save</button>
+          <span id="save-hint" style="font-size:11px;color:var(--txd)"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Ledger ──────────────────────────────────────────────────────────── -->
+    <div id="ledger">
+      <table>
+        <thead><tr><th>When</th><th>Type</th><th>Character</th><th>Item</th><th>Qty</th><th>Amount</th></tr></thead>
+        <tbody id="ledger-body"><tr><td colspan="6" style="color:var(--txd)">Loading…</td></tr></tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <!-- Bulk bar -->
+  <div id="bulk-bar">
+    <span class="lbl-inline" id="bulk-count">0 selected</span>
+    <select id="bulk-tag-sel" onchange="onTagPick('bulk-tag')"></select>
+    <input type="text" id="bulk-tag-new" placeholder="New tag name…" style="display:none">
+    <button class="btn sm" onclick="applyBulkTag()">Apply Tag</button>
+    <select id="bulk-mode">
+      <option value="">Set mode…</option>
+      <option value="hidden">Hidden</option>
+      <option value="loot">Free Loot</option>
+      <option value="shop">Shop</option>
+    </select>
+    <button class="btn sm" onclick="applyBulkMode()">Apply Mode</button>
+    <button class="btn sm danger" onclick="bulkDelete()">Delete</button>
+    <button class="btn sm" onclick="clearSelection()">Clear</button>
+  </div>
+
+</div>
+
+<!-- Bulk import modal -->
+<div class="modal-overlay" id="import-modal" style="display:none">
+  <div class="modal-box">
+    <div class="ct">Bulk Import</div>
+    <div class="modal-body">
+      <div class="field">
+        <label class="lbl">One item per block, blank line between items. First line = name, the rest = description.</label>
+        <textarea id="import-text" style="min-height:150px;font-family:monospace"
+                  placeholder="Gold Coins&#10;A handful of gold coins found in the chest.&#10;&#10;Rusty Sword&#10;An old blade, still somewhat sharp."></textarea>
+      </div>
+      <div class="g2">
+        <div class="field">
+          <label class="lbl">Tag (optional)</label>
+          <select id="import-tag-sel" onchange="onTagPick('import-tag')"></select>
+          <input type="text" id="import-tag-new" placeholder="New tag name…" style="display:none;margin-top:5px">
+        </div>
+        <div class="field">
+          <label class="lbl">Import as</label>
+          <select id="import-mode">
+            <option value="hidden">Hidden</option>
+            <option value="loot">Free Loot</option>
+            <option value="shop">Shop</option>
+          </select>
+        </div>
+      </div>
+      <div id="import-status"></div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn" onclick="closeImportModal()">Cancel</button>
+      <button class="btn primary" onclick="runImport()">Import</button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/lib/realtime.js" defer></script>
+<script src="/js/treasury.js" defer></script>
+</body>
+</html>

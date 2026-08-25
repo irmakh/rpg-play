@@ -15,6 +15,7 @@ import registerAuth       from './server/routes/auth.js';
 import registerCharacters from './server/routes/characters.js';
 import registerShop       from './server/routes/shop.js';
 import registerLoot       from './server/routes/loot.js';
+import registerTreasury   from './server/routes/treasury.js';
 import registerInitiative from './server/routes/initiative.js';
 import registerChat       from './server/routes/chat.js';
 import registerMonsters   from './server/routes/monsters.js';
@@ -189,12 +190,16 @@ async function getShopConfig() {
   try {
     if (DB_PROVIDER === 'localdb') {
       const cfg = ldb.getShopConfig();
-      return { isOpen: !!cfg.isOpen, activeTag: cfg.activeTag || '' };
+      return { isOpen: !!cfg.isOpen, activeTag: cfg.activeTag || '', activeTags: cfg.activeTags || [] };
     }
     const result = await idb.query({ shopConfig: { $: { where: { id: SHOP_CONFIG_ID } } } });
     const cfg = result.shopConfig?.[0];
-    return cfg ? { isOpen: !!cfg.isOpen, activeTag: cfg.activeTag || '' } : { isOpen: true, activeTag: '' };
-  } catch { return { isOpen: true, activeTag: '' }; }
+    if (!cfg) return { isOpen: true, activeTag: '', activeTags: [] };
+    // activeTags is the source of truth; activeTag is the legacy single value.
+    const tags = Array.isArray(cfg.activeTags) ? cfg.activeTags.filter(Boolean)
+               : (cfg.activeTag ? [cfg.activeTag] : []);
+    return { isOpen: !!cfg.isOpen, activeTag: tags[0] || '', activeTags: tags };
+  } catch { return { isOpen: true, activeTag: '', activeTags: [] }; }
 }
 
 function shopObjFromRecord(r) {
@@ -235,7 +240,7 @@ const MAX_MEDIA_BYTES = 25 * 1024 * 1024;
 // Bump this number whenever frontend JS or CSS files change.
 // Also bump CACHE in public/sw.js to the same value.
 // Both must always match. See deployment notes in CLAUDE.md.
-const FRONTEND_VERSION = 129;
+const FRONTEND_VERSION = 133;
 
 // ── Express app ───────────────────────────────────────────────────────────────
 const app = express();
@@ -243,6 +248,14 @@ app.use(express.json({ limit: '200mb' }));
 app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads'), {
   maxAge: '5m', etag: true, lastModified: true,
 }));
+
+// The loot and merchant managers merged into the treasury page. Redirect the
+// retired URLs so bookmarks and cached PWA shells still land somewhere useful.
+// Must sit ahead of the HTML middleware and express.static, which would
+// otherwise keep serving the old files.
+for (const legacy of ['/loot.html', '/merchant.html']) {
+  app.get(legacy, (req, res) => res.redirect(301, '/treasury.html'));
+}
 
 // Inject ?v=N into all local .js and .css references in HTML pages so
 // browsers always load fresh assets after a version bump.
@@ -421,6 +434,11 @@ const ctx = {
 // ── Register all route modules ────────────────────────────────────────────────
 registerAuth(app, ctx);
 registerCharacters(app, ctx);
+registerTreasury(app, ctx);
+// Legacy loot/shop routes stay registered for one release so clients still
+// running the cached pre-treasury frontend keep working until they reload.
+// They operate on the retired loot_items/shop_items tables; both are deleted
+// once every client reports the new FRONTEND_VERSION.
 registerShop(app, ctx);
 registerLoot(app, ctx);
 registerInitiative(app, ctx);

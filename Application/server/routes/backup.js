@@ -32,7 +32,36 @@ export default function register(app, ctx) {
     path, fs, __dirname,
   } = ctx;
 
-  const BACKUP_PARTS = ['characters', 'monsters', 'shop', 'loot', 'maps'];
+  // 'shop' and 'loot' are no longer exported — they merged into 'treasury' —
+  // but restore still accepts backup files carrying those older types.
+  const BACKUP_PARTS = ['characters', 'monsters', 'treasury', 'maps'];
+
+  // Legacy → treasury field mapping for the InstantDB restore path. The localdb
+  // path uses the exported converters in db/localdb.js; ldb is not loaded in
+  // instantdb mode, so the same rules are repeated here.
+  const TREASURY_DEFAULTS = {
+    itemType: 'other', armorType: 'light', acBase: 10, valueCp: 0, quantity: 1,
+    acBonus: 0, initBonus: 0, speedBonus: 0, spellAtkBonus: 0, spellDcBonus: 0,
+    requiresAttunement: false, weaponAtk: '', weaponDmg: '', weaponPropertiesJson: '[]',
+    imageUrl: '', imageThumb: '', imageMedium: '',
+  };
+  function treasuryFields(r) {
+    const out = { ...TREASURY_DEFAULTS };
+    for (const k of Object.keys(out)) if (r[k] !== undefined) out[k] = r[k];
+    return {
+      ...out,
+      name: r.name || '', tag: r.tag || '', mode: r.mode || 'hidden',
+      description: r.description || '', descVisible: !!r.descVisible,
+      createdAt: r.createdAt,
+    };
+  }
+  function lootToTreasuryFields(r) {
+    return treasuryFields({ ...r, mode: r.visible ? 'loot' : 'hidden', ...TREASURY_DEFAULTS });
+  }
+  function shopToTreasuryFields(r) {
+    // Shop notes were always player-visible, so they become a visible description.
+    return treasuryFields({ ...r, mode: 'shop', description: r.notes || '', descVisible: true });
+  }
 
   function _sharedMediaWithData(rows) {
     return rows.map(r => {
@@ -72,19 +101,32 @@ export default function register(app, ctx) {
         const mr = await idb.query({ monsters: {} });
         return { ...base, monsters: mr.monsters || [] };
       }
-      case 'shop': {
+      case 'treasury': {
         if (DB_PROVIDER === 'localdb') {
-          return { ...base, shopConfig: [ldb.getShopConfig()], shopItems: ldb.listShopItems(), purchaseLogs: ldb.listPurchaseLogs() };
+          // Item images travel as base64 like monster portraits do; the derived
+          // thumb/medium are stripped and regenerated on restore.
+          const treasuryItems = ldb.listTreasuryItems().map(r => {
+            const { imageThumb, imageMedium, ...rest } = r;
+            return { ...rest, imageB64: readUploadAsBase64(r.imageUrl) };
+          });
+          return {
+            ...base, treasuryItems,
+            shopConfig: [ldb.getShopConfig()],
+            purchaseLogs: ldb.listPurchaseLogs(),
+            lootLogs: ldb.listLootLogs(),
+          };
         }
-        const [cr, ir, lr] = await Promise.all([idb.query({ shopConfig: {} }), idb.query({ shopItems: {} }), idb.query({ purchaseLogs: {} })]);
-        return { ...base, shopConfig: cr.shopConfig || [], shopItems: ir.shopItems || [], purchaseLogs: lr.purchaseLogs || [] };
-      }
-      case 'loot': {
-        if (DB_PROVIDER === 'localdb') {
-          return { ...base, lootItems: ldb.listLootItems(), lootLogs: ldb.listLootLogs() };
-        }
-        const [ir, lr] = await Promise.all([idb.query({ lootItems: {} }), idb.query({ lootLogs: {} })]);
-        return { ...base, lootItems: ir.lootItems || [], lootLogs: lr.lootLogs || [] };
+        const [tr, cr, pr, lr] = await Promise.all([
+          idb.query({ treasuryItems: {} }), idb.query({ shopConfig: {} }),
+          idb.query({ purchaseLogs: {} }), idb.query({ lootLogs: {} }),
+        ]);
+        return {
+          ...base,
+          treasuryItems: tr.treasuryItems || [],
+          shopConfig: cr.shopConfig || [],
+          purchaseLogs: pr.purchaseLogs || [],
+          lootLogs: lr.lootLogs || [],
+        };
       }
       case 'maps': {
         const preparedMaps = DB_PROVIDER === 'localdb' ? ldb.listPreparedMaps() : [];
@@ -254,14 +296,36 @@ export default function register(app, ctx) {
               broadcast('monsters', { action: 'reload' });
               break;
             }
+            case 'treasury': {
+              const restored = [];
+              for (const r of (backup.treasuryItems || [])) {
+                const it = { ...r };
+                if (r.imageB64 && r.imageUrl) {
+                  writeUploadFile(r.imageUrl, r.imageB64);
+                  try {
+                    const buf = Buffer.from(r.imageB64, 'base64');
+                    const baseId = path.basename(r.imageUrl, path.extname(r.imageUrl));
+                    const urls = await processImageSizes(extToMime(r.imageUrl), buf, 'treasury', baseId);
+                    it.imageThumb = urls.thumb;
+                    it.imageMedium = urls.medium;
+                  } catch {}
+                }
+                delete it.imageB64;
+                restored.push(it);
+              }
+              ldb.importTreasury(restored, backup.shopConfig, backup.purchaseLogs, backup.lootLogs);
+              broadcast('treasury', { action: 'reload' });
+              break;
+            }
+            // Pre-merge backup files: their rows convert into treasury_items.
             case 'shop': {
               ldb.importShop(backup.shopConfig, backup.shopItems, backup.purchaseLogs);
-              broadcast('shop', { action: 'reload' });
+              broadcast('treasury', { action: 'reload' });
               break;
             }
             case 'loot': {
               ldb.importLoot(backup.lootItems, backup.lootLogs);
-              broadcast('loot', { action: 'reload' });
+              broadcast('treasury', { action: 'reload' });
               break;
             }
             case 'maps': {
@@ -293,21 +357,23 @@ export default function register(app, ctx) {
             ops.push(...(exM.monsters || []).map(r => idb.tx.monsters[r.id].delete()));
             ops.push(...(backup.monsters || []).map(r => idb.tx.monsters[r.id].update({ name: r.name || '', cr: r.cr || '?', dataJson: r.dataJson || '{}', createdAt: r.createdAt })));
             broadcast('monsters', { action: 'reload' });
-          } else if (backup.type === 'shop') {
-            const [exI, exL] = await Promise.all([idb.query({ shopItems: {} }), idb.query({ purchaseLogs: {} })]);
-            ops.push(...(exI.shopItems || []).map(r => idb.tx.shopItems[r.id].delete()));
-            ops.push(...(exL.purchaseLogs || []).map(r => idb.tx.purchaseLogs[r.id].delete()));
-            ops.push(...(backup.shopConfig || []).map(r => idb.tx.shopConfig[r.id].update({ isOpen: !!r.isOpen })));
-            ops.push(...(backup.shopItems || []).map(r => idb.tx.shopItems[r.id].update({ name: r.name || '', itemType: r.itemType || 'wondrous', armorType: r.armorType || 'light', acBase: r.acBase ?? 10, valueCp: r.valueCp ?? 0, quantity: r.quantity ?? 1, acBonus: r.acBonus ?? 0, initBonus: r.initBonus ?? 0, speedBonus: r.speedBonus ?? 0, requiresAttunement: !!r.requiresAttunement, notes: r.notes || '', weaponAtk: r.weaponAtk || '', weaponDmg: r.weaponDmg || '', weaponPropertiesJson: r.weaponPropertiesJson || '[]', tag: r.tag || '', createdAt: r.createdAt })));
-            ops.push(...(backup.purchaseLogs || []).map(r => idb.tx.purchaseLogs[r.id].update({ charId: r.charId || '', charName: r.charName || '', itemName: r.itemName || '', qty: r.qty || 1, totalCp: r.totalCp || 0, purchasedAt: r.purchasedAt || r.createdAt })));
-            broadcast('shop', { action: 'reload' });
-          } else if (backup.type === 'loot') {
-            const [exI, exL] = await Promise.all([idb.query({ lootItems: {} }), idb.query({ lootLogs: {} })]);
-            ops.push(...(exI.lootItems || []).map(r => idb.tx.lootItems[r.id].delete()));
+          } else if (backup.type === 'treasury' || backup.type === 'shop' || backup.type === 'loot') {
+            const [exT, exP, exL] = await Promise.all([
+              idb.query({ treasuryItems: {} }), idb.query({ purchaseLogs: {} }), idb.query({ lootLogs: {} }),
+            ]);
+            ops.push(...(exT.treasuryItems || []).map(r => idb.tx.treasuryItems[r.id].delete()));
+            ops.push(...(exP.purchaseLogs || []).map(r => idb.tx.purchaseLogs[r.id].delete()));
             ops.push(...(exL.lootLogs || []).map(r => idb.tx.lootLogs[r.id].delete()));
-            ops.push(...(backup.lootItems || []).map(r => idb.tx.lootItems[r.id].update({ name: r.name || '', description: r.description || '', visible: !!r.visible, descVisible: !!r.descVisible, tag: r.tag || '', createdAt: r.createdAt })));
-            ops.push(...(backup.lootLogs || []).map(r => idb.tx.lootLogs[r.id].update({ charId: r.charId || '', charName: r.charName || '', itemName: r.itemName || '', claimedAt: r.claimedAt || r.createdAt })));
-            broadcast('loot', { action: 'reload' });
+            ops.push(...(backup.shopConfig || []).map(r => idb.tx.shopConfig[r.id].update({ isOpen: !!r.isOpen, activeTag: r.activeTag || '' })));
+
+            // A current backup carries treasuryItems; older shop/loot files convert.
+            ops.push(...(backup.treasuryItems || []).map(r => idb.tx.treasuryItems[r.id].update(treasuryFields(r))));
+            ops.push(...(backup.shopItems     || []).map(r => idb.tx.treasuryItems[r.id].update(shopToTreasuryFields(r))));
+            ops.push(...(backup.lootItems     || []).map(r => idb.tx.treasuryItems[r.id].update(lootToTreasuryFields(r))));
+
+            ops.push(...(backup.purchaseLogs || []).map(r => idb.tx.purchaseLogs[r.id].update({ charId: r.charId || '', charName: r.charName || '', itemName: r.itemName || '', itemId: r.itemId || '', qty: r.qty || 1, totalCp: r.totalCp || 0, purchasedAt: r.purchasedAt || r.createdAt })));
+            ops.push(...(backup.lootLogs     || []).map(r => idb.tx.lootLogs[r.id].update({ charId: r.charId || '', charName: r.charName || '', itemName: r.itemName || '', itemId: r.itemId || '', claimedAt: r.claimedAt || r.createdAt })));
+            broadcast('treasury', { action: 'reload' });
           }
           for (let i = 0; i < ops.length; i += 100) await idb.transact(ops.slice(i, i + 100));
         }
@@ -323,27 +389,28 @@ export default function register(app, ctx) {
       if (DB_PROVIDER === 'localdb') {
         ldb.importAll(data);
       } else {
-        const [exChars, exMedia, exShopItems, exPurchLogs, exLootItems, exLootLogs, exMonsters] = await Promise.all([
-          idb.query({ characters: {} }), idb.query({ media: {} }), idb.query({ shopItems: {} }),
-          idb.query({ purchaseLogs: {} }), idb.query({ lootItems: {} }), idb.query({ lootLogs: {} }), idb.query({ monsters: {} }),
+        const [exChars, exMedia, exTreasury, exPurchLogs, exLootLogs, exMonsters] = await Promise.all([
+          idb.query({ characters: {} }), idb.query({ media: {} }), idb.query({ treasuryItems: {} }),
+          idb.query({ purchaseLogs: {} }), idb.query({ lootLogs: {} }), idb.query({ monsters: {} }),
         ]);
         const delOps = [
           ...(exChars.characters || []).map(r => idb.tx.characters[r.id].delete()),
           ...(exMedia.media || []).map(r => idb.tx.media[r.id].delete()),
-          ...(exShopItems.shopItems || []).map(r => idb.tx.shopItems[r.id].delete()),
+          ...(exTreasury.treasuryItems || []).map(r => idb.tx.treasuryItems[r.id].delete()),
           ...(exPurchLogs.purchaseLogs || []).map(r => idb.tx.purchaseLogs[r.id].delete()),
-          ...(exLootItems.lootItems || []).map(r => idb.tx.lootItems[r.id].delete()),
           ...(exLootLogs.lootLogs || []).map(r => idb.tx.lootLogs[r.id].delete()),
           ...(exMonsters.monsters || []).map(r => idb.tx.monsters[r.id].delete()),
         ];
         const insOps = [
           ...(data.characters || []).map(r => idb.tx.characters[r.id].update({ name: r.name || '', dataJson: r.dataJson || '{}', charType: r.charType || 'pc', passwordHash: r.passwordHash || '', createdAt: r.createdAt })),
           ...(data.media || []).map(r => idb.tx.media[r.id].update({ charId: r.charId || '', name: r.originalName || '', mimeType: r.mimeType || '', dataJson: r.dataUrl || '', createdAt: r.createdAt })),
-          ...(data.shopConfig || []).map(r => idb.tx.shopConfig[r.id].update({ isOpen: !!r.isOpen })),
-          ...(data.shopItems || []).map(r => idb.tx.shopItems[r.id].update({ name: r.name || '', itemType: r.itemType || 'wondrous', armorType: r.armorType || 'light', acBase: r.acBase ?? 10, valueCp: r.valueCp ?? 0, quantity: r.quantity ?? 1, acBonus: r.acBonus ?? 0, initBonus: r.initBonus ?? 0, speedBonus: r.speedBonus ?? 0, requiresAttunement: !!r.requiresAttunement, notes: r.notes || '', weaponAtk: r.weaponAtk || '', weaponDmg: r.weaponDmg || '', weaponPropertiesJson: r.weaponPropertiesJson || '[]', createdAt: r.createdAt })),
-          ...(data.purchaseLogs || []).map(r => idb.tx.purchaseLogs[r.id].update({ charId: r.charId || '', charName: r.charName || '', itemName: r.itemName || '', qty: r.qty || 1, totalCp: r.totalCp || 0, purchasedAt: r.purchasedAt || r.createdAt })),
-          ...(data.lootItems || []).map(r => idb.tx.lootItems[r.id].update({ name: r.name || '', description: r.description || '', visible: !!r.visible, descVisible: !!r.descVisible, tag: r.tag || '', createdAt: r.createdAt })),
-          ...(data.lootLogs || []).map(r => idb.tx.lootLogs[r.id].update({ charId: r.charId || '', charName: r.charName || '', itemName: r.itemName || '', claimedAt: r.claimedAt || r.createdAt })),
+          ...(data.shopConfig || []).map(r => idb.tx.shopConfig[r.id].update({ isOpen: !!r.isOpen, activeTag: r.activeTag || '' })),
+          // Current backups carry treasuryItems; older ones convert on the way in.
+          ...(data.treasuryItems || []).map(r => idb.tx.treasuryItems[r.id].update(treasuryFields(r))),
+          ...(data.shopItems || []).map(r => idb.tx.treasuryItems[r.id].update(shopToTreasuryFields(r))),
+          ...(data.lootItems || []).map(r => idb.tx.treasuryItems[r.id].update(lootToTreasuryFields(r))),
+          ...(data.purchaseLogs || []).map(r => idb.tx.purchaseLogs[r.id].update({ charId: r.charId || '', charName: r.charName || '', itemName: r.itemName || '', itemId: r.itemId || '', qty: r.qty || 1, totalCp: r.totalCp || 0, purchasedAt: r.purchasedAt || r.createdAt })),
+          ...(data.lootLogs || []).map(r => idb.tx.lootLogs[r.id].update({ charId: r.charId || '', charName: r.charName || '', itemName: r.itemName || '', itemId: r.itemId || '', claimedAt: r.claimedAt || r.createdAt })),
           ...(data.monsters || []).map(r => idb.tx.monsters[r.id].update({ name: r.name || '', cr: r.cr || '?', dataJson: r.dataJson || '{}', createdAt: r.createdAt })),
         ];
         const allOps = [...delOps, ...insOps];
@@ -359,8 +426,7 @@ export default function register(app, ctx) {
       }
 
       broadcast('characters', { action: 'reload' });
-      broadcast('shop', { action: 'reload' });
-      broadcast('loot', { action: 'reload' });
+      broadcast('treasury', { action: 'reload' });
       broadcast('initiative', { action: 'reload' });
       broadcast('table', { action: 'state-updated' });
       broadcast('table', { action: 'map-updated' });

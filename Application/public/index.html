@@ -76,8 +76,7 @@
     <div class="tab" onclick="showTab('inventory',this)">🎒 Items</div>
     <div class="tab" onclick="showTab('rolls',this)">🎲 Rolls</div>
     <div class="tab" id="tab-btn-media" onclick="showTab('media',this)">📸 Media</div>
-    <div class="tab" id="tab-btn-shop" onclick="showTab('shop',this)">🛒 Shop</div>
-    <div class="tab" id="tab-btn-loot" onclick="showTab('loot',this)">⚔️ Loot</div>
+    <div class="tab" id="tab-btn-treasury" onclick="showTab('treasury',this)">💰 Treasury</div>
     <div class="tab" id="tab-btn-calendar" onclick="showTab('calendar',this)">📅 Cal</div>
   </div>
 
@@ -373,10 +372,15 @@
 
   </div>
 
-  <!-- SHOP -->
-  <div id="tab-shop" class="page">
+  <!-- TREASURY (free loot + shop) -->
+  <div id="tab-treasury" class="page">
 
-    <div class="card">
+    <div id="treasury-seg">
+      <button class="seg-btn on" data-seg="loot" onclick="setTreasurySeg('loot')">⚔️ Free Loot</button>
+      <button class="seg-btn" data-seg="shop" onclick="setTreasurySeg('shop')">🛒 Shop</button>
+    </div>
+
+    <div class="card" id="treasury-wallet-card" style="display:none">
       <div class="ct">Your Wallet</div>
       <div class="cb">
         <div id="shop-wallet" style="font-size:12px;color:var(--txd)">Load a character to see wallet.</div>
@@ -384,42 +388,20 @@
     </div>
 
     <div class="card">
-      <div class="ct">Shop Inventory</div>
+      <div class="ct" id="treasury-list-title">Available Loot</div>
       <div class="cb">
-        <div id="shop-loading" style="font-size:11px;color:var(--txd)">Loading…</div>
-        <div id="shop-items-body"></div>
+        <div id="treasury-loading" style="font-size:11px;color:var(--txd)">Loading…</div>
+        <div id="treasury-items-body"></div>
       </div>
     </div>
 
     <div class="card">
-      <div class="ct">Shopping Cart</div>
+      <div class="ct">Cart</div>
       <div class="cb">
-        <div id="shop-cart-body"><div style="color:var(--txd);font-size:11px">Cart is empty — click "Add to Cart" on items above.</div></div>
-        <div id="shop-cart-total" style="font-size:12px;color:var(--ac);margin-top:8px;font-weight:bold"></div>
-        <div id="shop-purchase-err" style="color:var(--err);font-size:11px;min-height:14px;margin-top:4px"></div>
-        <button class="save-btn" style="margin-top:10px;width:100%" onclick="purchaseCart()" id="shop-buy-btn" disabled>Purchase All</button>
-      </div>
-    </div>
-
-  </div>
-
-  <!-- LOOTS -->
-  <div id="tab-loot" class="page">
-
-    <div class="card">
-      <div class="ct">Available Loot</div>
-      <div class="cb">
-        <div id="loot-loading" style="font-size:11px;color:var(--txd)">Loading…</div>
-        <div id="loot-items-body"></div>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="ct">Loot Cart</div>
-      <div class="cb">
-        <div id="loot-cart-body"><div style="color:var(--txd);font-size:11px">Cart is empty — click "+ Cart" on items above.</div></div>
-        <div id="loot-claim-err" style="color:var(--err);font-size:11px;min-height:14px;margin-top:4px"></div>
-        <button class="save-btn" style="margin-top:10px;width:100%" onclick="claimLoot()" id="loot-claim-btn" disabled>Claim All</button>
+        <div id="treasury-cart-body"><div style="color:var(--txd);font-size:11px">Cart is empty — click "+ Cart" on items above.</div></div>
+        <div id="treasury-cart-total" style="font-size:12px;color:var(--ac);margin-top:8px;font-weight:bold"></div>
+        <div id="treasury-err" style="color:var(--err);font-size:11px;min-height:14px;margin-top:4px"></div>
+        <button class="save-btn" style="margin-top:10px;width:100%" onclick="treasuryAction()" id="treasury-action-btn" disabled>Claim All</button>
       </div>
     </div>
 
@@ -837,8 +819,7 @@
 <script src="/js/index/index-items.js" defer></script>
 <script src="/js/index/index-actions.js" defer></script>
 <script src="/js/index/index-media.js" defer></script>
-<script src="/js/index/index-shop.js" defer></script>
-<script src="/js/index/index-loot.js" defer></script>
+<script src="/js/index/index-treasury.js" defer></script>
 <script src="/js/index/index-initiative.js" defer></script>
 <script src="/js/index/index-dice3d.js" defer></script>
 <script src="/js/index/index-realtime.js" defer></script>

@@ -37,13 +37,15 @@ char_sheet/
 │   │   │   ├── calendar.css            #     Calendar of Harptos styles
 │   │   │   ├── dm.css                  #     DM dashboard styles
 │   │   │   ├── index.css               #     Character sheet styles
-│   │   │   ├── loot.css                #     Loot manager styles
-│   │   │   ├── merchant.css            #     Merchant shop styles
+│   │   │   ├── loot.css                #     Retired loot manager styles (page redirects to Treasury)
+│   │   │   ├── merchant.css            #     Retired merchant shop styles (page redirects to Treasury)
 │   │   │   ├── monsters.css            #     Monster library styles
 │   │   │   ├── stories.css             #     Stories (dashboard/builder/viewer) styles
 │   │   │   ├── table-sheet-popout.css  #     Scoped layout for the popped-out character sheet
 │   │   │   ├── table-theme-modern.css  #     Modern HUD table theme
-│   │   │   └── table.css               #     Virtual table styles
+│   │   │   ├── table.css               #     Virtual table styles
+│   │   │   ├── treasury.css            #     Treasury manager styles (master-detail)
+│   │   │   └── weather.css             #     Weather sprite icons, tooltip, table widget
 │   │   ├── img/                        #   Static images & PWA icons
 │   │   │   ├── parchment/              #     Parchment theme assets
 │   │   │   │   ├── bg.jpeg             #       Theme background
@@ -54,7 +56,7 @@ char_sheet/
 │   │   │   ├── console/                #     Companion PWA scripts
 │   │   │   │   ├── secondary.js        #       Secondary info screen (own SSE + state)
 │   │   │   │   └── table-console.js    #       Primary↔secondary sync bridge
-│   │   │   ├── index/                  #     Character sheet — 15 modules
+│   │   │   ├── index/                  #     Character sheet — 14 modules
 │   │   │   │   ├── index-actions.js    #       Actions tab (weapons + action spells + custom actions)
 │   │   │   │   ├── index-calc.js       #       AC / init / speed / derived stat calc
 │   │   │   │   ├── index-calendar.js   #       Player calendar tab
@@ -63,12 +65,11 @@ char_sheet/
 │   │   │   │   ├── index-dice3d.js     #       3D dice animation
 │   │   │   │   ├── index-initiative.js #       Player initiative tracker panel
 │   │   │   │   ├── index-items.js      #       Inventory / equipment
-│   │   │   │   ├── index-loot.js       #       Loot claim tab
 │   │   │   │   ├── index-main.js       #       Bootstrap + event wiring
 │   │   │   │   ├── index-media.js      #       Portrait + media attachments
 │   │   │   │   ├── index-realtime.js   #       SSE/WS sync
-│   │   │   │   ├── index-shop.js       #       Shop tab (browse/cart/buy)
 │   │   │   │   ├── index-state.js      #       Shared mutable state + session
+│   │   │   │   ├── index-treasury.js   #       Treasury tab — Free Loot / Shop segments, carts, claimed loots
 │   │   │   │   └── index-utils.js      #       Ability/modifier helpers
 │   │   │   ├── lib/                    #     Shared frontend utilities
 │   │   │   │   ├── chat-render.js      #       Render chat messages (text / dice / html)
@@ -77,8 +78,9 @@ char_sheet/
 │   │   │   │   ├── esc.js              #       HTML escaping helper
 │   │   │   │   ├── fr_calendar.js      #       Calendar of Harptos logic
 │   │   │   │   ├── lightbox.js         #       Fullscreen image/video viewer
-│   │   │   │   └── realtime.js         #       WS (localdb) / SSE (instantdb) transport
-│   │   │   ├── table/                  #     Virtual table — 14 modules
+│   │   │   │   ├── realtime.js         #       WS (localdb) / SSE (instantdb) transport + force-reload
+│   │   │   │   └── weather-ui.js       #       Shared weather icons, tooltip, day markers
+│   │   │   ├── table/                  #     Virtual table — 15 modules
 │   │   │   │   ├── table-addtoken.js   #       Add-token modal
 │   │   │   │   ├── table-auth.js       #       Session load + DM unlock
 │   │   │   │   ├── table-chat.js       #       Table chat + info cards
@@ -92,22 +94,26 @@ char_sheet/
 │   │   │   │   ├── table-popout.js     #       Pop panels into separate windows
 │   │   │   │   ├── table-realtime.js   #       SSE/WS event handling
 │   │   │   │   ├── table-state.js      #       Shared state + session
-│   │   │   │   └── table-utils.js      #       Helpers (canvas pos, display names)
+│   │   │   │   ├── table-utils.js      #       Helpers (canvas pos, display names)
+│   │   │   │   └── table-weather.js    #       Toolbar weather widget for the current date
 │   │   │   ├── dm.js                   #     DM dashboard
-│   │   │   ├── events.js               #     DM calendar
+│   │   │   ├── events.js               #     DM calendar + weather roller
 │   │   │   ├── login.js                #     Login screen logic
-│   │   │   ├── loot.js                 #     Loot manager (DM)
-│   │   │   ├── merchant.js             #     Merchant shop manager (DM)
+│   │   │   ├── loot.js                 #     Retired loot manager (page redirects to Treasury)
+│   │   │   ├── maintenance.js          #     Maintenance page — client list, versions, force reload
+│   │   │   ├── merchant.js             #     Retired merchant manager (page redirects to Treasury)
 │   │   │   ├── monster-stat-block.js   #     Shared monster stat-block renderer
 │   │   │   ├── monsters.js             #     Monster library (DM)
-│   │   │   └── prepare-map.js          #     Map prep tool (DM)
+│   │   │   ├── prepare-map.js          #     Map prep tool (DM)
+│   │   │   └── treasury.js             #     Treasury manager (DM) — master-detail, images, ledger
 │   │   ├── dm.html                     #   DM dashboard page
 │   │   ├── events.html                 #   DM calendar page
 │   │   ├── index.html                  #   Character sheet page
 │   │   ├── login.html                  #   Login page (all users)
-│   │   ├── loot.html                   #   Loot manager page
+│   │   ├── loot.html                   #   Retired — server 301-redirects /loot.html to /treasury.html
+│   │   ├── maintenance.html            #   Unlisted DM diagnostics (clients, versions, force reload)
 │   │   ├── manifest.json               #   Main app PWA manifest
-│   │   ├── merchant.html               #   Merchant shop page
+│   │   ├── merchant.html               #   Retired — server 301-redirects /merchant.html to /treasury.html
 │   │   ├── monsters.html               #   Monster library page
 │   │   ├── music-player.html           #   Standalone now-playing popup
 │   │   ├── playlists.html              #   Music & playlist manager page (DM)
@@ -116,27 +122,32 @@ char_sheet/
 │   │   ├── story-builder.html          #   Story editor page (panels, cast, images)
 │   │   ├── story-viewer.html           #   Story viewer page (grid / strip)
 │   │   ├── sw.js                       #   Service worker (PWA cache; version-synced with FRONTEND_VERSION)
-│   │   └── table.html                  #   Virtual table page
+│   │   ├── table.html                  #   Virtual table page
+│   │   └── treasury.html               #   Treasury manager page (loot + shop, DM)
 │   ├── server/                         # Backend
-│   │   └── routes/                     #   12 Express route modules (each exports register(app, ctx))
+│   │   └── routes/                     #   13 Express route modules (each exports register(app, ctx))
 │   │       ├── auth.js                 #     Login, passwords, stories gate
 │   │       ├── backup.js               #     Per-section JSON export / restore
 │   │       ├── characters.js           #     Character CRUD + quick-roll + action use
 │   │       ├── chat.js                 #     Chat messages + image sharing
-│   │       ├── events.js               #     Calendar dates, events, player journals & media
+│   │       ├── events.js               #     Calendar dates, events, journals & media, weather
 │   │       ├── initiative.js           #     Initiative CRUD + turn control
-│   │       ├── loot.js                 #     Loot items & claims
+│   │       ├── loot.js                 #     Legacy loot API — kept one release for cached clients
 │   │       ├── monsters.js             #     Monster library + XML/JSON import
-│   │       ├── shop.js                 #     Merchant items & purchases
+│   │       ├── shop.js                 #     Legacy shop API — kept one release for cached clients
 │   │       ├── sound.js                #     Playlists & synced playback
 │   │       ├── stories.js              #     Stories & panels
-│   │       └── table.js                #     Tokens, map, fog, drawing
+│   │       ├── table.js                #     Tokens, map, fog, drawing
+│   │       └── treasury.js             #     Unified catalogue: modes, claim, purchase, images, ledger
 │   ├── tests/                          # Vitest suites
 │   │   ├── api/                        #   API / integration tests
 │   │   │   ├── auth.api.test.js        #     Auth route tests
+│   │   │   ├── calendar.api.test.js    #     Calendar events & journal visibility tests
 │   │   │   ├── characters.api.test.js  #     Characters route tests
 │   │   │   ├── initiative.api.test.js  #     Initiative route tests
-│   │   │   └── table.api.test.js       #     Table route tests
+│   │   │   ├── table.api.test.js       #     Table route tests
+│   │   │   ├── treasury.api.test.js    #     Treasury: modes, claim/purchase, redaction, images
+│   │   │   └── weather.api.test.js     #     Weather config, roll and log tests
 │   │   ├── helpers/                    #   Shared test scaffolding
 │   │   │   ├── make-ldb.js             #     In-memory localdb factory
 │   │   │   ├── setup.test.js           #     Global test setup
@@ -151,8 +162,7 @@ char_sheet/
 │   │       ├── index-dice.test.js      #     Dice rolling tests
 │   │       ├── index-initiative.test.js#     Initiative panel tests
 │   │       ├── index-items.test.js     #     Inventory/equipment tests
-│   │       ├── index-loot.test.js      #     Loot tab tests
-│   │       ├── index-shop.test.js      #     Shop tab tests
+│   │       ├── index-treasury.test.js  #     Treasury tab: carts, rendering, unidentified marker
 │   │       ├── index-utils.test.js     #     Ability/modifier helper tests
 │   │       ├── lib-esc.test.js         #     HTML-escape helper tests
 │   │       ├── table-map.test.js       #     Table map/canvas tests
@@ -224,14 +234,27 @@ char_sheet/
 
 | Path | Purpose |
 |---|---|
-| `server.js` | Express entry point; injects the cache-busting `?v=N` and wires route modules |
-| `server/routes/` | 12 route modules, each `register(app, ctx)` |
+| `server.js` | Express entry point; injects the cache-busting `?v=N`, redirects retired pages, wires route modules |
+| `server/routes/` | 13 route modules, each `register(app, ctx)` |
 | `db/localdb.js`, `db/storiesdb.js` | SQLite data layers |
 | `aiDM/` | Self-contained AI Dungeon Master (own DB, routes, frontend) |
 | `public/` | All served HTML/CSS/JS and the companion PWA |
-| `public/js/index/` | 15 character-sheet modules |
-| `public/js/table/` | 14 virtual-table modules |
-| `public/js/lib/` | Shared frontend helpers (dice engine, chat render, calendar, …) |
-| `tests/` | Vitest unit + API suites |
+| `public/js/index/` | 14 character-sheet modules |
+| `public/js/table/` | 15 virtual-table modules |
+| `public/js/lib/` | 8 shared frontend helpers (dice engine, chat render, calendar, weather, …) |
+| `tests/` | 21 Vitest unit + API suites |
+
+## Retired pages
+
+The loot and merchant managers merged into the **Treasury** (`/treasury.html`). Their files are still in the tree for one release:
+
+| Still present | State |
+|---|---|
+| `public/loot.html`, `public/merchant.html` | Unreachable — `server.js` 301-redirects both to `/treasury.html` |
+| `public/js/loot.js`, `public/js/merchant.js`, `public/css/loot.css`, `public/css/merchant.css` | Orphaned assets, no longer loaded by any page |
+| `server/routes/loot.js`, `server/routes/shop.js` | Still registered so a browser running cached pre-merge assets keeps working |
+| `loot_items`, `shop_items` tables | Left intact as a rollback path after the one-time migration into `treasury_items` |
+
+All of the above are removed once every client reports the current `FRONTEND_VERSION`.
 
 > **Not in the tree:** runtime content created at install/use time is git-ignored — `node_modules/`, the working SQLite databases (`localdb.db`, `characters.db`, `media.db`, `stories.db`, `aiDM/aiDM.db`), uploaded assets under `public/uploads/` and `public/story-images/`, environment files (`.env`), and the dated memory logs under `memory/logs/`. These are created on first run / during play.
