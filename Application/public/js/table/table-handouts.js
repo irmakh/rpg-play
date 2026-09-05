@@ -147,6 +147,42 @@ let _sideHandouts = [];        // raw API rows (DM shape or player shape)
 let _sideHandoutsFor = null;   // charId the cache belongs to
 let _sideHandoutsLoading = false;
 
+// The right panel is narrow, so rows collapse to a single title line. Anything
+// that wants attention opens itself; everything else stays shut until clicked.
+// Explicit clicks are remembered so a repaint (or a realtime refresh) does not
+// snap a row the DM just opened back closed.
+const _sideHandoutOpen = new Set();     // ids explicitly opened
+const _sideHandoutShut = new Set();     // ids explicitly closed
+
+function _sideHandoutWantsAttention(h, rec) {
+  if (isDM()) return !!rec && rec.outcome === 'rolled';
+  return h.canRoll || ((h.outcome === 'success' || h.outcome === 'fail') && !h.seenAt);
+}
+function _sideHandoutIsOpen(h, rec) {
+  if (_sideHandoutOpen.has(h.id)) return true;
+  if (_sideHandoutShut.has(h.id)) return false;
+  return _sideHandoutWantsAttention(h, rec);
+}
+function toggleSideHandout(id) {
+  // Toggle from what is actually on screen, not just from the explicit sets. A
+  // row that opened itself (because it wants attention) is in neither set, so
+  // keying off _sideHandoutOpen alone would swallow the first click and take
+  // two presses to close.
+  const { given } = _sideHandoutSplit(_sideCharId);
+  const entry = given.find(({ h }) => h.id === id);
+  const isOpen = entry ? _sideHandoutIsOpen(entry.h, entry.rec) : _sideHandoutOpen.has(id);
+  if (isOpen) { _sideHandoutOpen.delete(id); _sideHandoutShut.add(id); }
+  else { _sideHandoutShut.delete(id); _sideHandoutOpen.add(id); }
+  refreshSideHandoutsPane();
+}
+/** Collapse or expand every row at once. */
+function setAllSideHandouts(open) {
+  _sideHandoutOpen.clear(); _sideHandoutShut.clear();
+  const { given } = _sideHandoutSplit(_sideCharId);
+  for (const { h } of given) (open ? _sideHandoutOpen : _sideHandoutShut).add(h.id);
+  refreshSideHandoutsPane();
+}
+
 /** What this character holds, and (DM only) what they could still be given. */
 function _sideHandoutSplit(charId) {
   if (isDM()) {
@@ -203,13 +239,23 @@ function renderSideHandoutsPane(charId) {
   const { given, available } = _sideHandoutSplit(charId);
   let html = '';
 
+  // Toolbar: the modal (multi-character hand-out) plus expand/collapse all.
+  html += '<div class="ho-rp-bar">'
+    + (isDM() ? '<button class="btn sm primary" onclick="openHandoutModal()">＋ Hand out…</button>' : '')
+    + '<span style="flex:1"></span>'
+    + (given.length
+        ? '<button class="btn sm" title="Expand all" onclick="setAllSideHandouts(true)">⌄</button>'
+          + '<button class="btn sm" title="Collapse all" onclick="setAllSideHandouts(false)">⌃</button>'
+        : '')
+    + '</div>';
+
   html += given.length
     ? given.map(({ h, rec }) => isDM() ? _sideHandoutDmRow(h, rec, charId) : _sideHandoutPlayerRow(h)).join('')
     : '<div class="rp-tab-empty">Nothing handed to this character yet.</div>';
 
-  // DM only: hand something out without leaving the map.
+  // DM only: the quick per-character Give list, kept alongside the modal.
   if (isDM()) {
-    html += '<div class="rp-flat-hdr">Hand Out</div><div class="rp-blk-body">';
+    html += '<div class="rp-flat-hdr">Give To This Character</div><div class="rp-blk-body">';
     html += available.length
       ? available.map(h =>
           '<div class="ho-rp-avail">'
@@ -236,23 +282,29 @@ function _sideHandoutDmRow(h, rec, charId) {
     '<button class="btn sm ' + cls + '"' + (title ? ' title="' + title + '"' : '')
     + ' onclick="sideHandoutTag(\'' + escJs(h.id) + '\',\'' + escJs(charId) + '\',\'' + o + '\')">' + label + '</button>';
 
-  return '<div class="ho-rp-item">'
-    + '<div class="ho-rp-top">'
+  const open = _sideHandoutIsOpen(h, rec);
+  return '<div class="ho-rp-item' + (open ? ' open' : '') + '">'
+    + '<div class="ho-rp-top" onclick="toggleSideHandout(\'' + escJs(h.id) + '\')" title="' + (open ? 'Collapse' : 'Expand') + '">'
+    +   '<span class="ho-rp-caret">' + (open ? '⌄' : '›') + '</span>'
     +   '<span class="ho-rp-title">' + esc(h.title) + '</span>'
     +   '<span class="ho-rp-pill ' + esc(rec.outcome) + '">' + esc(rec.outcome) + '</span>'
     + '</div>'
-    + '<div class="ho-rp-sub">' + check
-    +   (rolled
-          ? ' · rolled <b>' + rec.rollTotal + '</b> <span class="ho-rp-detail">' + esc(rec.rollDetail || '') + '</span>'
-          : ' · not rolled')
-    +   suggest
-    + '</div>'
-    + '<div class="ho-rp-btns">'
-    +   tag('success', 'ho-ok', 'Success')
-    +   tag('fail', 'ho-bad', 'Fail')
-    +   (rolled ? tag('pending', '', '↺', 'Clear the roll so they can try again') : '')
-    +   '<button class="btn sm" title="Take it back" onclick="sideHandoutRecall(\'' + escJs(h.id) + '\',\'' + escJs(charId) + '\')">✕</button>'
-    + '</div>'
+    + (open
+        ? '<div class="ho-rp-detail-wrap">'
+          + '<div class="ho-rp-sub">' + check
+          +   (rolled
+                ? ' · rolled <b>' + rec.rollTotal + '</b> <span class="ho-rp-detail">' + esc(rec.rollDetail || '') + '</span>'
+                : ' · not rolled')
+          +   suggest
+          + '</div>'
+          + '<div class="ho-rp-btns">'
+          +   tag('success', 'ho-ok', 'Success')
+          +   tag('fail', 'ho-bad', 'Fail')
+          +   (rolled ? tag('pending', '', '↺', 'Clear the roll so they can try again') : '')
+          +   '<button class="btn sm" title="Take it back" onclick="sideHandoutRecall(\'' + escJs(h.id) + '\',\'' + escJs(charId) + '\')">✕</button>'
+          + '</div>'
+          + '</div>'
+        : '')
     + '</div>';
 }
 
@@ -273,12 +325,14 @@ function _sideHandoutPlayerRow(h) {
         : '')
       + '<div class="ho-rp-body">' + esc(h.text || '') + '</div>';
   }
-  return '<div class="ho-rp-item' + (unread ? ' unread' : '') + '">'
-    + '<div class="ho-rp-top">'
+  const open = _sideHandoutIsOpen(h, null);
+  return '<div class="ho-rp-item' + (unread ? ' unread' : '') + (open ? ' open' : '') + '">'
+    + '<div class="ho-rp-top" onclick="toggleSideHandout(\'' + escJs(h.id) + '\')" title="' + (open ? 'Collapse' : 'Expand') + '">'
+    +   '<span class="ho-rp-caret">' + (open ? '⌄' : '›') + '</span>'
     +   '<span class="ho-rp-title">' + esc(h.title) + '</span>'
     +   (unread ? '<span class="ho-rp-new">new</span>' : '')
     + '</div>'
-    + body
+    + (open ? '<div class="ho-rp-detail-wrap">' + body + '</div>' : '')
     + '</div>';
 }
 
@@ -335,4 +389,145 @@ async function sideHandoutsMarkSeen() {
     } catch {}
   }
   refreshSideHandoutsPane();
+}
+
+// ── Hand-out modal (DM) ───────────────────────────────────────────────────────
+// Pick one handout, tick any number of characters, hand it to all of them at
+// once. Reachable from the toolbar, so it does not need a token selected first
+// — the per-character Give buttons in the right panel remain for the quick
+// "give this one to whoever I have open" case.
+
+let _hoModalPick = null;   // handout id selected in the modal
+
+function openHandoutModal(preselectId) {
+  if (!isDM()) return;
+  _hoModalPick = preselectId || null;
+  let modal = document.getElementById('handout-give-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'handout-give-modal';
+    modal.className = 'ho-modal';
+    // Backdrop click closes: nothing here is typed, so there is no work to lose.
+    modal.addEventListener('click', e => { if (e.target === modal) closeHandoutModal(); });
+    document.body.appendChild(modal);
+  }
+  modal.style.display = 'flex';
+  renderHandoutModal();
+  // Refresh the catalogue in the background so a newly authored handout appears.
+  _hoModalLoad();
+}
+
+async function _hoModalLoad() {
+  try {
+    const res = await fetch('/api/handouts', { headers: authHeaders() });
+    if (res.ok) {
+      const list = await res.json();
+      if (Array.isArray(list)) { _sideHandouts = list; _sideHandoutsFor = _sideCharId || _sideHandoutsFor; }
+    }
+  } catch {}
+  if (document.getElementById('handout-give-modal')?.style.display === 'flex') renderHandoutModal();
+}
+
+function closeHandoutModal() {
+  const m = document.getElementById('handout-give-modal');
+  if (m) m.style.display = 'none';
+}
+
+function renderHandoutModal() {
+  const modal = document.getElementById('handout-give-modal');
+  if (!modal) return;
+
+  const chars = (_charList || []).filter(c => (c.char_type || c.charType || 'pc') === 'pc');
+  const picked = _sideHandouts.find(h => h.id === _hoModalPick) || null;
+
+  const handoutRows = _sideHandouts.length
+    ? _sideHandouts.map(h => {
+        const n = (h.recipients || []).length;
+        const check = h.checkSkill >= 0
+          ? esc(h.checkSkillName) + (h.checkDc ? ' DC ' + h.checkDc : '')
+          : 'No check';
+        return '<button class="ho-mo-pick' + (_hoModalPick === h.id ? ' active' : '') + '"'
+          + ' onclick="hoModalPick(\'' + escJs(h.id) + '\')">'
+          + '<span class="ho-mo-pick-name">' + esc(h.title) + '</span>'
+          + '<span class="ho-mo-pick-sub">' + check + (n ? ' · with ' + n : '') + '</span>'
+          + '</button>';
+      }).join('')
+    : '<div class="ho-rp-none">No handouts yet. <a href="/handouts.html" style="color:var(--ac)">Create one →</a></div>';
+
+  // Who already holds the picked handout — shown ticked and disabled, so it is
+  // obvious the DM is adding rather than replacing.
+  const already = new Set(picked ? (picked.recipients || []).map(r => r.charId) : []);
+  const charRows = chars.length
+    ? chars.map(c => {
+        const has = already.has(c.id);
+        return '<label class="ho-mo-char' + (has ? ' has' : '') + '">'
+          + '<input type="checkbox" class="ho-mo-cb" value="' + esc(c.id) + '"'
+          + (has ? ' checked disabled' : '') + '>'
+          + '<span>' + esc(c.name) + '</span>'
+          + (has ? '<span class="ho-mo-has">already has it</span>' : '')
+          + '</label>';
+      }).join('')
+    : '<div class="ho-rp-none">No player characters in this campaign.</div>';
+
+  modal.innerHTML =
+      '<div class="ho-mo-box">'
+    +   '<div class="ho-mo-hdr">'
+    +     '<span class="ho-mo-title">📜 Hand Out</span>'
+    +     '<button class="btn sm" onclick="closeHandoutModal()">✕</button>'
+    +   '</div>'
+    +   '<div class="ho-mo-body">'
+    +     '<div class="ho-mo-lbl">Handout</div>'
+    +     '<div class="ho-mo-list">' + handoutRows + '</div>'
+    +     '<div class="ho-mo-lbl" style="margin-top:12px">Characters'
+    +       '<span class="ho-mo-bulk">'
+    +         '<button class="btn sm" onclick="hoModalAll(true)">All</button>'
+    +         '<button class="btn sm" onclick="hoModalAll(false)">None</button>'
+    +       '</span>'
+    +     '</div>'
+    +     '<div class="ho-mo-chars">' + charRows + '</div>'
+    +     '<div class="ho-mo-status" id="ho-mo-status"></div>'
+    +   '</div>'
+    +   '<div class="ho-mo-ft">'
+    +     '<button class="btn primary" id="ho-mo-go" onclick="hoModalSubmit()"'
+    +       (picked ? '' : ' disabled') + '>Hand Out</button>'
+    +     '<button class="btn" onclick="closeHandoutModal()">Cancel</button>'
+    +   '</div>'
+    + '</div>';
+}
+
+function hoModalPick(id) {
+  _hoModalPick = id;
+  renderHandoutModal();
+}
+
+function hoModalAll(on) {
+  document.querySelectorAll('#handout-give-modal .ho-mo-cb:not(:disabled)')
+    .forEach(cb => { cb.checked = on; });
+}
+
+async function hoModalSubmit() {
+  if (!_hoModalPick) return;
+  const ids = [...document.querySelectorAll('#handout-give-modal .ho-mo-cb:not(:disabled)')]
+    .filter(cb => cb.checked).map(cb => cb.value);
+  const status = document.getElementById('ho-mo-status');
+  if (!ids.length) { if (status) { status.textContent = 'Tick at least one character.'; status.className = 'ho-mo-status err'; } return; }
+
+  const btn = document.getElementById('ho-mo-go');
+  if (btn) btn.disabled = true;
+  try {
+    const res = await fetch('/api/handouts/' + encodeURIComponent(_hoModalPick) + '/hand-out', {
+      method: 'POST', headers: authHeaders(), body: JSON.stringify({ charIds: ids }),
+    });
+    if (!res.ok) throw new Error('failed');
+    if (status) {
+      status.textContent = 'Handed to ' + ids.length + ' character' + (ids.length === 1 ? '' : 's') + '.';
+      status.className = 'ho-mo-status ok';
+    }
+    await _hoModalLoad();
+    if (_sideCharId) loadSideHandouts(_sideCharId);
+  } catch {
+    if (status) { status.textContent = 'Could not hand it out.'; status.className = 'ho-mo-status err'; }
+  } finally {
+    if (btn) btn.disabled = false;
+  }
 }
