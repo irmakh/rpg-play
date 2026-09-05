@@ -97,7 +97,7 @@ char_sheet/
 │   │   │   │   ├── table-hppanel.js    #       HP panel + group ability/save rolls
 │   │   │   │   ├── table-initiative.js #       Initiative tracker UI
 │   │   │   │   ├── table-main.js       #       Bootstrap + DM tools modal
-│   │   │   │   ├── table-handouts.js   #       Handout pop-up card (players) + blind Examine
+│   │   │   │   ├── table-handouts.js   #       Handout pop-up (players) + right-panel Handouts tab (DM run controls)
 │   │   │   │   ├── table-map.js        #       Canvas, tokens, drawing, fog, ruler
 │   │   │   │   ├── table-monsters.js   #       Monster tokens + stat block
 │   │   │   │   ├── table-music.js      #       Synced music playback

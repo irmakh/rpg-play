@@ -519,3 +519,50 @@ input[type=number]{-moz-appearance:textfield;appearance:textfield}
   display: block; max-width: 100%; max-height: 340px; border-radius: 6px;
   border: 1px solid var(--a44); margin-bottom: 10px; cursor: zoom-in;
 }
+
+/* ── Handouts tab in the right panel ───────────────────────────────────────── */
+/* Two audiences share these rows: a player sees only the state the server
+   permitted, a DM additionally gets the buttons that resolve it. */
+.rp-tab.rp-tab-alert { color: var(--ac); }
+.rp-tab.rp-tab-alert::after {
+  content: ''; display: inline-block; width: 5px; height: 5px; margin-left: 4px;
+  border-radius: 50%; background: var(--ac); vertical-align: middle;
+}
+.ho-rp-item {
+  border-bottom: 1px solid var(--sep); padding: 8px;
+  border-left: 2px solid transparent;
+}
+.ho-rp-item.unread { border-left-color: var(--ac); background: var(--a22); }
+.ho-rp-top { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; }
+.ho-rp-title { flex: 1; font-size: 12px; font-weight: bold; color: var(--ac); }
+.ho-rp-new {
+  font-size: 8px; font-weight: bold; text-transform: uppercase; letter-spacing: .4px;
+  color: var(--bg); background: var(--ac); border-radius: 20px; padding: 1px 5px;
+}
+.ho-rp-pill {
+  font-size: 8px; font-weight: bold; text-transform: uppercase; letter-spacing: .4px;
+  border-radius: 20px; padding: 1px 6px;
+}
+.ho-rp-pill.pending { background: #ffffff11; color: var(--txd); }
+.ho-rp-pill.rolled  { background: #e0b86022; color: #e0b860; }
+.ho-rp-pill.success { background: #88ff8822; color: #88ff88; }
+.ho-rp-pill.fail    { background: #ff888822; color: #ff8888; }
+.ho-rp-sub { font-size: 10px; color: var(--txd); margin-bottom: 5px; }
+.ho-rp-sub b { color: var(--tx); font-size: 12px; }
+.ho-rp-detail { opacity: .7; }
+.ho-rp-suggest { margin-left: 5px; }
+.ho-rp-btns { display: flex; gap: 4px; flex-wrap: wrap; }
+.ho-rp-btns .ho-ok  { border-color: #88ff8855; color: #88ff88; background: transparent; }
+.ho-rp-btns .ho-bad { border-color: #ff888855; color: #ff8888; background: transparent; }
+.ho-rp-prompt { font-size: 11px; line-height: 1.5; white-space: pre-wrap; }
+.ho-rp-body   { font-size: 11px; line-height: 1.55; white-space: pre-wrap; }
+.ho-rp-wait   { font-size: 10px; color: var(--txd); font-style: italic; margin-top: 5px; }
+.ho-rp-img {
+  display: block; max-width: 100%; max-height: 160px; border-radius: 4px;
+  border: 1px solid var(--a44); margin-bottom: 5px; cursor: zoom-in;
+}
+.ho-rp-avail { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+.ho-rp-avail-name {
+  flex: 1; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.ho-rp-none { font-size: 10px; color: var(--txd); }

@@ -176,6 +176,8 @@ function startSSE() {
       // Covers hand-out, outcome confirmation and recall alike; the server
       // decides what this character may now see.
       if (typeof loadTableHandouts === 'function') loadTableHandouts();
+      // Keep the right-panel tab in step — this is how a DM sees a roll land.
+      if (typeof loadSideHandouts === 'function' && _sideCharId) loadSideHandouts(_sideCharId);
     },
     'calendar-updated': () => { if (typeof loadTableWeather === 'function') loadTableWeather(); },
   });

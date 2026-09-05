@@ -1,16 +1,18 @@
 // ── Side panel Quick Roll ─────────────────────────────────────────────────────
 let _sideCharId = null; // character ID currently displayed in the side panel
 let _sideAllSpells = []; // full parsed _spells of the displayed char (for action spell description posting)
-let _sideActiveTab = 'skills'; // active right-panel sheet tab (skills|combat|spells|items)
+let _sideActiveTab = 'skills'; // active right-panel sheet tab (skills|combat|spells|items|handouts)
 let _sideCombatTab = 'attacks'; // active Combat sub-tab (attacks|action|bonus|reaction|other)
 
-const _SIDE_TABS = ['skills', 'combat', 'spells', 'items'];
+const _SIDE_TABS = ['skills', 'combat', 'spells', 'items', 'handouts'];
 
 // Switch the active right-panel tab without a full re-render (re-renders read
 // _sideActiveTab to restore the same tab on the next paint).
 function setSideTab(name) {
   if (!_SIDE_TABS.includes(name)) return;
   _sideActiveTab = name;
+  // Opening Handouts counts as reading whatever is currently readable.
+  if (name === 'handouts' && typeof sideHandoutsMarkSeen === 'function') sideHandoutsMarkSeen();
   _SIDE_TABS.forEach(t => {
     const pane = document.getElementById('rp-tab-' + t);
     const btn  = document.getElementById('rp-tabbtn-' + t);
@@ -253,18 +255,28 @@ function renderSideCharacter() {
     : `<div class="rp-tab-empty">No spells or spell slots.</div>`;
   const itemsPane  = itemsHtml || `<div class="rp-tab-empty">No items.</div>`;
 
-  const TABS = [['skills', 'Skills'], ['combat', 'Combat'], ['spells', 'Spells'], ['items', 'Items']];
+  // Handouts sits beside Items: for a player it is their own handouts, for the
+  // DM it is the same character's plus the controls to hand out and resolve.
+  const handoutBadge = (typeof sideHandoutBadge === 'function' && _sideCharId)
+    ? sideHandoutBadge(_sideCharId) : 0;
+  const TABS = [['skills', 'Skills'], ['combat', 'Combat'], ['spells', 'Spells'], ['items', 'Items'],
+                ['handouts', handoutBadge ? `Handouts (${handoutBadge})` : 'Handouts']];
   const tabBarHtml = `<div class="rp-tabs">`
     + TABS.map(([id, lbl]) =>
-        `<button id="rp-tabbtn-${id}" class="rp-tab${_sideActiveTab === id ? ' active' : ''}" onclick="setSideTab('${id}')">${lbl}</button>`
+        `<button id="rp-tabbtn-${id}" class="rp-tab${_sideActiveTab === id ? ' active' : ''}${id === 'handouts' && handoutBadge ? ' rp-tab-alert' : ''}" onclick="setSideTab('${id}')">${lbl}</button>`
       ).join('')
     + `</div>`;
 
   const pane = (id, body) =>
     `<div id="rp-tab-${id}" class="rp-tab-pane"${_sideActiveTab === id ? '' : ' style="display:none"'}>${body}</div>`;
 
+  const handoutsPane = (typeof renderSideHandoutsPane === 'function')
+    ? renderSideHandoutsPane(_sideCharId)
+    : '<div class="rp-tab-empty">Handouts unavailable.</div>';
+
   const panesHtml = pane('skills', skillsPane) + pane('combat', combatPane)
-                  + pane('spells', spellsPane) + pane('items', itemsPane);
+                  + pane('spells', spellsPane) + pane('items', itemsPane)
+                  + pane('handouts', handoutsPane);
 
   return secStatsHtml
     + abilitiesSection
@@ -611,6 +623,8 @@ async function loadSideQroll() {
           subtitleEl.textContent = parts.join(' · ');
         }
         content.innerHTML = renderSideCharacter();
+        // Fills the Handouts tab and its badge without blocking the sheet.
+        if (typeof loadSideHandouts === 'function') loadSideHandouts(_sideCharId);
         return;
       }
     } catch {}

@@ -112,6 +112,7 @@ Uploaded images and audio under `public/uploads/` are shared across campaigns. T
 - Re-tag an outcome at any time, send a recipient back to *pending* to grant a re-roll, or recall the handout entirely.
 - A handout with no skill check is simply readable the moment you hand it out.
 - Players see it pop up on the **table screen** and keep it in a **📜 Handouts tab** on their character sheet, with an unread badge.
+- **Run it all from the map.** The right-hand character panel on the table gains a **Handouts** tab beside Items. Select a player's token as DM and you get their handouts with the roll, the DC's suggestion, and Success / Fail / re-roll / recall — plus a *Hand Out* list to give them a new one, without leaving the map. A player selecting their own token sees the same tab with their history and the Examine button. The tab shows a dot and a count when something needs attention.
 
 ### Treasury (`/treasury.html`) — DM only
 One catalogue for everything you hand out, replacing the separate Merchant and Loot managers. Every item carries the full D&D data set — type, price (PP/GP/EP/SP/CP), stock, AC / initiative / speed / spell bonuses, attunement, weapon damage and properties, description — plus a **distribution mode** you flip in place:
