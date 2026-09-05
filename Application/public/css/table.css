@@ -624,3 +624,27 @@ input[type=number]{-moz-appearance:textfield;appearance:textfield}
 .ho-mo-status { font-size: 11px; min-height: 15px; margin-top: 8px; }
 .ho-mo-status.ok { color: #88ff88; }
 .ho-mo-status.err { color: #ff8888; }
+
+/* ── Hand-out modal: live results ──────────────────────────────────────────── */
+/* A recipient's row replaces their tick box once they hold the handout, so the
+   roster is one list that reads as give → roll → verdict. */
+.ho-mo-name { flex: 1; }
+.ho-mo-note { font-size: 9px; color: var(--txd); font-style: italic; }
+.ho-mo-wait {
+  margin-left: 6px; font-size: 9px; font-weight: bold; letter-spacing: .3px;
+  color: var(--bg); background: #e0b860; border-radius: 20px; padding: 1px 5px;
+}
+.ho-mo-rec {
+  padding: 7px 9px; border-bottom: 1px solid var(--sep);
+  border-left: 3px solid transparent;
+}
+.ho-mo-rec:last-child { border-bottom: none; }
+.ho-mo-rec.rolled  { border-left-color: #e0b860; background: #e0b8600f; }
+.ho-mo-rec.success { border-left-color: #88ff88; }
+.ho-mo-rec.fail    { border-left-color: #ff8888; }
+.ho-mo-rec-top { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+.ho-mo-rec-sub { font-size: 10px; color: var(--txd); margin: 3px 0 5px; }
+.ho-mo-rec-sub b { color: var(--tx); font-size: 13px; }
+.ho-mo-rec-btns { display: flex; gap: 4px; flex-wrap: wrap; }
+.ho-mo-rec-btns .ho-ok  { border-color: #88ff8855; color: #88ff88; background: transparent; }
+.ho-mo-rec-btns .ho-bad { border-color: #ff888855; color: #ff8888; background: transparent; }

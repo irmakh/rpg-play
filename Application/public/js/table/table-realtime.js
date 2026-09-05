@@ -178,6 +178,8 @@ function startSSE() {
       if (typeof loadTableHandouts === 'function') loadTableHandouts();
       // Keep the right-panel tab in step — this is how a DM sees a roll land.
       if (typeof loadSideHandouts === 'function' && _sideCharId) loadSideHandouts(_sideCharId);
+      // And the hand-out dialog, which is where a DM watches checks land.
+      if (typeof handoutModalIsOpen === 'function' && handoutModalIsOpen()) _hoModalLoad();
     },
     'calendar-updated': () => { if (typeof loadTableWeather === 'function') loadTableWeather(); },
   });

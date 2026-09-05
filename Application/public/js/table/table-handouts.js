@@ -392,16 +392,21 @@ async function sideHandoutsMarkSeen() {
 }
 
 // ── Hand-out modal (DM) ───────────────────────────────────────────────────────
-// Pick one handout, tick any number of characters, hand it to all of them at
-// once. Reachable from the toolbar, so it does not need a token selected first
-// — the per-character Give buttons in the right panel remain for the quick
-// "give this one to whoever I have open" case.
+// One dialog for the whole life of a handout: pick it, give it to any mix of
+// characters, then watch the checks land and resolve them — without a token
+// selected and without leaving the map.
+//
+// Each character appears once. Whether they hold the handout decides what their
+// row is: a tick box to give it to them, or their roll, the DC's suggestion and
+// the buttons that resolve it. Rolls arrive over the `handouts` realtime event,
+// so the roster updates itself while it sits open.
 
-let _hoModalPick = null;   // handout id selected in the modal
+let _hoModalPick = null;              // handout id selected in the modal
+const _hoModalChecked = new Set();    // charIds ticked, kept across repaints
 
 function openHandoutModal(preselectId) {
   if (!isDM()) return;
-  _hoModalPick = preselectId || null;
+  if (preselectId !== undefined) { _hoModalPick = preselectId || null; _hoModalChecked.clear(); }
   let modal = document.getElementById('handout-give-modal');
   if (!modal) {
     modal = document.createElement('div');
@@ -413,19 +418,27 @@ function openHandoutModal(preselectId) {
   }
   modal.style.display = 'flex';
   renderHandoutModal();
-  // Refresh the catalogue in the background so a newly authored handout appears.
   _hoModalLoad();
 }
 
+function handoutModalIsOpen() {
+  const m = document.getElementById('handout-give-modal');
+  return !!m && m.style.display === 'flex';
+}
+
+/** Refetch the catalogue, then repaint if the dialog is still up. */
 async function _hoModalLoad() {
   try {
     const res = await fetch('/api/handouts', { headers: authHeaders() });
     if (res.ok) {
       const list = await res.json();
-      if (Array.isArray(list)) { _sideHandouts = list; _sideHandoutsFor = _sideCharId || _sideHandoutsFor; }
+      if (Array.isArray(list)) {
+        _sideHandouts = list;
+        if (_sideCharId) _sideHandoutsFor = _sideCharId;
+      }
     }
   } catch {}
-  if (document.getElementById('handout-give-modal')?.style.display === 'flex') renderHandoutModal();
+  if (handoutModalIsOpen()) renderHandoutModal();
 }
 
 function closeHandoutModal() {
@@ -433,55 +446,75 @@ function closeHandoutModal() {
   if (m) m.style.display = 'none';
 }
 
+/** Remember ticks before a repaint so a roll landing does not clear them. */
+function _hoModalCaptureChecks() {
+  const boxes = document.querySelectorAll('#handout-give-modal .ho-mo-cb');
+  if (!boxes.length) return;
+  _hoModalChecked.clear();
+  boxes.forEach(cb => { if (cb.checked) _hoModalChecked.add(cb.value); });
+}
+
 function renderHandoutModal() {
   const modal = document.getElementById('handout-give-modal');
   if (!modal) return;
+  _hoModalCaptureChecks();
 
   const chars = (_charList || []).filter(c => (c.char_type || c.charType || 'pc') === 'pc');
   const picked = _sideHandouts.find(h => h.id === _hoModalPick) || null;
 
   const handoutRows = _sideHandouts.length
     ? _sideHandouts.map(h => {
-        const n = (h.recipients || []).length;
+        const recs = h.recipients || [];
+        const waiting = recs.filter(r => r.outcome === 'rolled').length;
         const check = h.checkSkill >= 0
           ? esc(h.checkSkillName) + (h.checkDc ? ' DC ' + h.checkDc : '')
           : 'No check';
         return '<button class="ho-mo-pick' + (_hoModalPick === h.id ? ' active' : '') + '"'
           + ' onclick="hoModalPick(\'' + escJs(h.id) + '\')">'
-          + '<span class="ho-mo-pick-name">' + esc(h.title) + '</span>'
-          + '<span class="ho-mo-pick-sub">' + check + (n ? ' · with ' + n : '') + '</span>'
+          + '<span class="ho-mo-pick-name">' + esc(h.title)
+          + (waiting ? '<span class="ho-mo-wait">' + waiting + ' waiting</span>' : '')
+          + '</span>'
+          + '<span class="ho-mo-pick-sub">' + check + (recs.length ? ' · with ' + recs.length : '') + '</span>'
           + '</button>';
       }).join('')
     : '<div class="ho-rp-none">No handouts yet. <a href="/handouts.html" style="color:var(--ac)">Create one →</a></div>';
 
-  // Who already holds the picked handout — shown ticked and disabled, so it is
-  // obvious the DM is adding rather than replacing.
-  const already = new Set(picked ? (picked.recipients || []).map(r => r.charId) : []);
-  const charRows = chars.length
-    ? chars.map(c => {
-        const has = already.has(c.id);
-        return '<label class="ho-mo-char' + (has ? ' has' : '') + '">'
-          + '<input type="checkbox" class="ho-mo-cb" value="' + esc(c.id) + '"'
-          + (has ? ' checked disabled' : '') + '>'
-          + '<span>' + esc(c.name) + '</span>'
-          + (has ? '<span class="ho-mo-has">already has it</span>' : '')
-          + '</label>';
-      }).join('')
-    : '<div class="ho-rp-none">No player characters in this campaign.</div>';
+  const recById = new Map((picked ? picked.recipients || [] : []).map(r => [r.charId, r]));
+  const anySuggested = [...recById.values()].some(r => r.outcome === 'rolled' && r.suggested);
+  const anyToGive = chars.some(c => !recById.has(c.id));
+
+  const charRows = !chars.length
+    ? '<div class="ho-rp-none">No player characters in this campaign.</div>'
+    : !picked
+      ? '<div class="ho-rp-none">Pick a handout above.</div>'
+      : chars.map(c => {
+          const rec = recById.get(c.id);
+          if (!rec) {
+            // Not a recipient yet — offer to give it to them.
+            return '<label class="ho-mo-char">'
+              + '<input type="checkbox" class="ho-mo-cb" value="' + esc(c.id) + '"'
+              + (_hoModalChecked.has(c.id) ? ' checked' : '') + '>'
+              + '<span class="ho-mo-name">' + esc(c.name) + '</span>'
+              + '<span class="ho-mo-note">not handed out</span>'
+              + '</label>';
+          }
+          return _hoModalRecipientRow(c, rec, picked);
+        }).join('');
 
   modal.innerHTML =
       '<div class="ho-mo-box">'
     +   '<div class="ho-mo-hdr">'
-    +     '<span class="ho-mo-title">📜 Hand Out</span>'
+    +     '<span class="ho-mo-title">📜 Handouts</span>'
     +     '<button class="btn sm" onclick="closeHandoutModal()">✕</button>'
     +   '</div>'
     +   '<div class="ho-mo-body">'
     +     '<div class="ho-mo-lbl">Handout</div>'
     +     '<div class="ho-mo-list">' + handoutRows + '</div>'
-    +     '<div class="ho-mo-lbl" style="margin-top:12px">Characters'
+    +     '<div class="ho-mo-lbl" style="margin-top:12px">Characters &amp; Results'
     +       '<span class="ho-mo-bulk">'
-    +         '<button class="btn sm" onclick="hoModalAll(true)">All</button>'
-    +         '<button class="btn sm" onclick="hoModalAll(false)">None</button>'
+    +         (anySuggested ? '<button class="btn sm" onclick="hoModalApplySuggested()">Apply suggested</button>' : '')
+    +         (anyToGive ? '<button class="btn sm" onclick="hoModalAll(true)">All</button>'
+                         + '<button class="btn sm" onclick="hoModalAll(false)">None</button>' : '')
     +       '</span>'
     +     '</div>'
     +     '<div class="ho-mo-chars">' + charRows + '</div>'
@@ -489,28 +522,62 @@ function renderHandoutModal() {
     +   '</div>'
     +   '<div class="ho-mo-ft">'
     +     '<button class="btn primary" id="ho-mo-go" onclick="hoModalSubmit()"'
-    +       (picked ? '' : ' disabled') + '>Hand Out</button>'
+    +       (picked && anyToGive ? '' : ' disabled') + '>Hand Out</button>'
     +     '<button class="btn" onclick="closeHandoutModal()">Cancel</button>'
     +   '</div>'
     + '</div>';
 }
 
+/** A character who already holds it: their roll, the suggestion, the verdict. */
+function _hoModalRecipientRow(c, rec, h) {
+  const rolled = rec.rollTotal != null;
+  const tag = (o, cls, label, title) =>
+    '<button class="btn sm ' + cls + '"' + (title ? ' title="' + title + '"' : '')
+    + ' onclick="hoModalTag(\'' + escJs(h.id) + '\',\'' + escJs(c.id) + '\',\'' + o + '\')">' + label + '</button>';
+
+  return '<div class="ho-mo-rec ' + esc(rec.outcome) + '">'
+    + '<div class="ho-mo-rec-top">'
+    +   '<span class="ho-mo-name">' + esc(c.name) + '</span>'
+    +   '<span class="ho-rp-pill ' + esc(rec.outcome) + '">' + esc(rec.outcome) + '</span>'
+    + '</div>'
+    + '<div class="ho-mo-rec-sub">'
+    +   (rolled
+        ? 'rolled <b>' + rec.rollTotal + '</b> <span class="ho-rp-detail">' + esc(rec.rollDetail || '') + '</span>'
+          + (rec.suggested && rec.outcome === 'rolled'
+              ? '<span class="ho-rp-suggest">suggests ' + (rec.suggested === 'success' ? '✅' : '❌') + '</span>'
+              : '')
+        : (h.checkSkill >= 0 ? 'waiting for them to examine it' : 'no check needed'))
+    + '</div>'
+    + '<div class="ho-mo-rec-btns">'
+    +   tag('success', 'ho-ok', 'Success')
+    +   tag('fail', 'ho-bad', 'Fail')
+    +   (rolled ? tag('pending', '', '↺', 'Clear the roll so they can try again') : '')
+    +   '<button class="btn sm" title="Take it back" onclick="hoModalRecall(\'' + escJs(h.id) + '\',\'' + escJs(c.id) + '\')">✕</button>'
+    + '</div>'
+    + '</div>';
+}
+
 function hoModalPick(id) {
   _hoModalPick = id;
+  _hoModalChecked.clear();
   renderHandoutModal();
 }
 
 function hoModalAll(on) {
-  document.querySelectorAll('#handout-give-modal .ho-mo-cb:not(:disabled)')
-    .forEach(cb => { cb.checked = on; });
+  document.querySelectorAll('#handout-give-modal .ho-mo-cb').forEach(cb => { cb.checked = on; });
+  _hoModalCaptureChecks();
+}
+
+function _hoModalStatus(msg, cls) {
+  const el = document.getElementById('ho-mo-status');
+  if (el) { el.textContent = msg || ''; el.className = 'ho-mo-status ' + (cls || ''); }
 }
 
 async function hoModalSubmit() {
   if (!_hoModalPick) return;
-  const ids = [...document.querySelectorAll('#handout-give-modal .ho-mo-cb:not(:disabled)')]
-    .filter(cb => cb.checked).map(cb => cb.value);
-  const status = document.getElementById('ho-mo-status');
-  if (!ids.length) { if (status) { status.textContent = 'Tick at least one character.'; status.className = 'ho-mo-status err'; } return; }
+  _hoModalCaptureChecks();
+  const ids = [..._hoModalChecked];
+  if (!ids.length) { _hoModalStatus('Tick at least one character.', 'err'); return; }
 
   const btn = document.getElementById('ho-mo-go');
   if (btn) btn.disabled = true;
@@ -519,15 +586,53 @@ async function hoModalSubmit() {
       method: 'POST', headers: authHeaders(), body: JSON.stringify({ charIds: ids }),
     });
     if (!res.ok) throw new Error('failed');
-    if (status) {
-      status.textContent = 'Handed to ' + ids.length + ' character' + (ids.length === 1 ? '' : 's') + '.';
-      status.className = 'ho-mo-status ok';
-    }
+    _hoModalChecked.clear();
+    _hoModalStatus('Handed to ' + ids.length + ' character' + (ids.length === 1 ? '' : 's') + '.', 'ok');
     await _hoModalLoad();
     if (_sideCharId) loadSideHandouts(_sideCharId);
   } catch {
-    if (status) { status.textContent = 'Could not hand it out.'; status.className = 'ho-mo-status err'; }
+    _hoModalStatus('Could not hand it out.', 'err');
   } finally {
     if (btn) btn.disabled = false;
   }
+}
+
+/** The gate: nothing a player can read changes until this runs. */
+async function hoModalTag(handoutId, charId, outcome) {
+  try {
+    const res = await fetch('/api/handouts/' + encodeURIComponent(handoutId) + '/recipients/' + encodeURIComponent(charId), {
+      method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ outcome }),
+    });
+    if (!res.ok) throw new Error('failed');
+    _hoModalStatus('', '');
+  } catch { _hoModalStatus('Could not set the outcome.', 'err'); }
+  await _hoModalLoad();
+  if (_sideCharId) loadSideHandouts(_sideCharId);
+}
+
+async function hoModalApplySuggested() {
+  const h = _sideHandouts.find(x => x.id === _hoModalPick);
+  if (!h) return;
+  const todo = (h.recipients || []).filter(r => r.outcome === 'rolled' && r.suggested);
+  if (!todo.length) return;
+  for (const r of todo) {
+    try {
+      await fetch('/api/handouts/' + encodeURIComponent(h.id) + '/recipients/' + encodeURIComponent(r.charId), {
+        method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ outcome: r.suggested }),
+      });
+    } catch {}
+  }
+  _hoModalStatus('Applied ' + todo.length + ' suggested outcome' + (todo.length === 1 ? '' : 's') + '.', 'ok');
+  await _hoModalLoad();
+  if (_sideCharId) loadSideHandouts(_sideCharId);
+}
+
+async function hoModalRecall(handoutId, charId) {
+  try {
+    await fetch('/api/handouts/' + encodeURIComponent(handoutId) + '/recall', {
+      method: 'POST', headers: authHeaders(), body: JSON.stringify({ charId }),
+    });
+  } catch {}
+  await _hoModalLoad();
+  if (_sideCharId) loadSideHandouts(_sideCharId);
 }
