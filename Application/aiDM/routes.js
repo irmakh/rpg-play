@@ -1,7 +1,11 @@
 import { fileURLToPath } from 'url';
 import path from 'path';
 import crypto from 'crypto';
-import * as aidb from './db.js';
+// Request-scoped: resolves to the current campaign's aiDM.db. Module-level
+// helpers below (buildAIMessages, getApiKeyForProvider) read it outside
+// register(), so it has to be a module binding rather than something pulled off
+// ctx inside the handler.
+import { adb as aidb } from '../lib/request-context.js';
 
 const AUTO_SUMMARY_THRESHOLD = 20; // user+assistant messages before auto-summarizing
 

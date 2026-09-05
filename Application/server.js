@@ -5,12 +5,21 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import sharp from 'sharp';
-import * as sdb from './db/storiesdb.js';
 import { createServer as createHttpsServer } from 'https';
 import { createServer as createHttpServer } from 'http';
 import { WebSocketServer } from 'ws';
-import Database from 'better-sqlite3';
 
+import * as cdb from './db/campaignsdb.js';
+import { bootstrapCampaigns, getCampaignData } from './db/campaign-store.js';
+import { hashPassword, verifyPassword } from './lib/passwords.js';
+import {
+  requestContext, currentCampaignId, currentCampaign,
+  ldb as ldbProxy, sdb as sdbProxy, adb as adbProxy,
+  mediaDb as mediaDbProxy, mediaGet as mediaGetProxy,
+  mapUpsert as mapUpsertProxy, insertSharedMedia,
+} from './lib/request-context.js';
+
+import registerCampaigns  from './server/routes/campaigns.js';
 import registerAuth       from './server/routes/auth.js';
 import registerCharacters from './server/routes/characters.js';
 import registerShop       from './server/routes/shop.js';
@@ -33,11 +42,18 @@ const __dirname = path.dirname(__filename);
 const DB_PROVIDER = (process.env.DB_PROVIDER || 'instantdb').trim().toLowerCase();
 
 let idb = null;
-let ldb = null;
 let _idbGenId;
 
+// Campaign data is reached through request-scoped proxies, never a module-level
+// handle — see lib/request-context.js. `ldb` therefore resolves to whichever
+// campaign the in-flight request belongs to.
+const ldb = ldbProxy;
+
 if (DB_PROVIDER === 'localdb') {
-  ldb = await import('./db/localdb.js');
+  // Nothing to open here: db/campaign-store.js opens each campaign's files on
+  // first use. Bootstrap creates the first campaign and migrates the
+  // pre-multi-tenant databases into it (no-op once a campaign exists).
+  bootstrapCampaigns({ defaultDmPassword: process.env.MASTER_PASSWORD || '15243' });
 } else {
   const { init, id: _gid } = await import('@instantdb/admin');
   _idbGenId = _gid;
@@ -99,53 +115,99 @@ async function processImageSizes(mimeType, buffer, subdir, baseId) {
   };
 }
 
-// ── SQLite: shared media ──────────────────────────────────────────────────────
-const mediaDb = new Database(path.join(__dirname, 'media.db'));
-mediaDb.pragma('journal_mode = DELETE');
-mediaDb.exec(`
-  CREATE TABLE IF NOT EXISTS shared_media (
-    id        TEXT PRIMARY KEY,
-    mime_type TEXT NOT NULL,
-    data      BLOB NOT NULL,
-    created_at INTEGER NOT NULL
-  )
-`);
-try { mediaDb.exec(`ALTER TABLE shared_media ADD COLUMN thumb_data  TEXT DEFAULT ''`); } catch {}
-try { mediaDb.exec(`ALTER TABLE shared_media ADD COLUMN medium_data TEXT DEFAULT ''`); } catch {}
-const SHARED_MEDIA_MAX = 50;
-const _mediaInsert = mediaDb.prepare('INSERT INTO shared_media (id, mime_type, data, created_at) VALUES (?, ?, ?, ?)');
-const _mediaUpsert = mediaDb.prepare('INSERT OR REPLACE INTO shared_media (id, mime_type, data, created_at) VALUES (?, ?, ?, ?)');
-const _mapUpsert   = _mediaUpsert;
-const _mediaGet    = mediaDb.prepare('SELECT mime_type, data, created_at FROM shared_media WHERE id = ?');
-const _mediaCount  = mediaDb.prepare('SELECT COUNT(*) as c FROM shared_media');
-const _mediaOldest = mediaDb.prepare('DELETE FROM shared_media WHERE id = (SELECT id FROM shared_media ORDER BY created_at ASC LIMIT 1)');
-function insertSharedMedia(id, mimeType, buf) {
-  _mediaInsert.run(id, mimeType, buf, Date.now());
-  if (_mediaCount.get().c > SHARED_MEDIA_MAX) _mediaOldest.run();
-}
+// ── Shared media ──────────────────────────────────────────────────────────────
+// Each campaign has its own media.db (db/mediadb.js); these are request-scoped
+// proxies onto the current campaign's handle and prepared statements.
+const mediaDb   = mediaDbProxy;
+const _mediaGet = mediaGetProxy;
+const _mapUpsert = mapUpsertProxy;
 
 // ── Auth helpers ──────────────────────────────────────────────────────────────
+// Two levels of DM authority:
+//
+//   Super-admin  MASTER_PASSWORD env var. Unlocks every campaign and is the
+//                only key that may create or delete campaigns. Also the
+//                recovery path when a campaign's DM password is lost.
+//   Campaign DM  Per-campaign password hashed in campaigns.db. This is what a
+//                DM actually logs in with, and it grants nothing outside their
+//                own campaign.
+//
+// isMasterPassword() keeps its old name and signature so the ~100 masterAuth()
+// call sites across the route modules did not have to change; it now answers
+// "is this the DM of the campaign this request belongs to?".
 const MASTER_PASSWORD = process.env.MASTER_PASSWORD || '15243';
 
-function isMasterPassword(pw) {
+function isSuperAdminPassword(pw) {
   if (!MASTER_PASSWORD || !pw || pw.length !== MASTER_PASSWORD.length) return false;
-  return crypto.timingSafeEqual(Buffer.from(pw), Buffer.from(MASTER_PASSWORD));
+  try { return crypto.timingSafeEqual(Buffer.from(pw), Buffer.from(MASTER_PASSWORD)); }
+  catch { return false; }
 }
-function hashPassword(password) {
-  const salt = crypto.randomBytes(16).toString('hex');
-  const hash = crypto.scryptSync(password, salt, 64).toString('hex');
-  return `${salt}:${hash}`;
+
+function isMasterPassword(pw, campaignId = currentCampaignId()) {
+  if (!pw) return false;
+  if (isSuperAdminPassword(pw)) return true;
+  if (!campaignId) return false;
+  return cdb.verifyDmPassword(campaignId, pw);
 }
-function verifyPassword(password, stored) {
-  try {
-    const [salt, hash] = stored.split(':');
-    const attempt = crypto.scryptSync(password, salt, 64).toString('hex');
-    return crypto.timingSafeEqual(Buffer.from(hash, 'hex'), Buffer.from(attempt, 'hex'));
-  } catch { return false; }
-}
+
 function masterAuth(req) {
   const pw = req.headers['x-master-password'];
-  return pw && isMasterPassword(pw);
+  return !!(pw && isMasterPassword(pw, campaignIdFromReq(req) || currentCampaignId()));
+}
+
+// ── Campaign resolution ───────────────────────────────────────────────────────
+// Which campaign is this request for? Checked in order:
+//
+//   1. X-Campaign-Id header  — explicit, lets a tool or a future per-tab client
+//                              override the cookie
+//   2. ?campaign= query      — used by the SSE / WebSocket URLs, which cannot
+//                              set headers
+//   3. campaign cookie       — the normal path, set when you enter a campaign.
+//                              A cookie is what keeps all ~276 existing frontend
+//                              fetch() calls working untouched.
+//   4. the only campaign     — a single-campaign install behaves exactly as it
+//                              did before campaigns existed. Stops applying the
+//                              moment a second campaign is created.
+//
+// The value may be an id or a slug; both resolve.
+export const CAMPAIGN_COOKIE = 'campaign';
+
+function readCookie(req, name) {
+  const raw = req.headers?.cookie || '';
+  for (const part of raw.split(';')) {
+    const eq = part.indexOf('=');
+    if (eq < 0) continue;
+    if (part.slice(0, eq).trim() !== name) continue;
+    try { return decodeURIComponent(part.slice(eq + 1).trim()); } catch { return part.slice(eq + 1).trim(); }
+  }
+  return '';
+}
+
+function campaignHintFromReq(req) {
+  const header = req.headers?.['x-campaign-id'];
+  if (header) return String(header);
+  let q = req.query;
+  if (!q || !Object.keys(q).length) {
+    // WebSocket upgrades never reach express's query parser.
+    try { q = Object.fromEntries(new URL(req.url || '', 'http://x').searchParams); } catch { q = {}; }
+  }
+  if (q.campaign) return String(q.campaign);
+  return readCookie(req, CAMPAIGN_COOKIE);
+}
+
+function resolveCampaignForReq(req) {
+  const hint = campaignHintFromReq(req);
+  if (hint) {
+    const found = cdb.resolveCampaign(hint);
+    if (found) return found;
+  }
+  const all = cdb.listCampaigns();
+  return all.length === 1 ? all[0] : null;
+}
+
+function campaignIdFromReq(req) {
+  const c = resolveCampaignForReq(req);
+  return c ? c.id : null;
 }
 
 async function getCharacter(charId) {
@@ -169,7 +231,36 @@ const sseClients     = new Set();
 const wsClients      = new Set();
 const consoleSseClients = new Set();
 
-function broadcast(eventName, payload = {}) {
+/**
+ * Sends an event to the real-time clients of ONE campaign.
+ *
+ * The campaign defaults to the one the in-flight request belongs to, so the
+ * ~130 existing `broadcast('token-updated', ...)` calls became campaign-scoped
+ * without changing a single call site.
+ *
+ * Clients that never told us their campaign receive nothing. That is the safe
+ * default: a client with an unknown campaign is more likely a stale tab than a
+ * legitimate listener, and leaking another campaign's table state is worse than
+ * a missed refresh.
+ */
+function broadcast(eventName, payload = {}, campaignId = currentCampaignId()) {
+  const sseMsg = `event: ${eventName}\ndata: ${JSON.stringify(payload)}\n\n`;
+  for (const res of [...sseClients]) {
+    if (res._meta?.campaignId !== campaignId) continue;
+    try { res.write(sseMsg); } catch { sseClients.delete(res); }
+  }
+  if (DB_PROVIDER === 'localdb') {
+    const wsMsg = JSON.stringify({ event: eventName, data: payload });
+    for (const ws of [...wsClients]) {
+      if (ws.readyState !== 1) { wsClients.delete(ws); continue; }
+      if (ws._meta?.campaignId !== campaignId) continue;
+      ws.send(wsMsg);
+    }
+  }
+}
+
+/** Sends an event to every connected client regardless of campaign. */
+function broadcastAll(eventName, payload = {}) {
   const sseMsg = `event: ${eventName}\ndata: ${JSON.stringify(payload)}\n\n`;
   for (const res of [...sseClients]) {
     try { res.write(sseMsg); } catch { sseClients.delete(res); }
@@ -240,11 +331,44 @@ const MAX_MEDIA_BYTES = 25 * 1024 * 1024;
 // Bump this number whenever frontend JS or CSS files change.
 // Also bump CACHE in public/sw.js to the same value.
 // Both must always match. See deployment notes in CLAUDE.md.
-const FRONTEND_VERSION = 133;
+const FRONTEND_VERSION = 134;
 
 // ── Express app ───────────────────────────────────────────────────────────────
 const app = express();
 app.use(express.json({ limit: '200mb' }));
+
+// ── Campaign context ──────────────────────────────────────────────────────────
+// Every request runs inside an AsyncLocalStorage store carrying its campaign and
+// that campaign's database handles. This is what makes `ldb`, `sdb`, `mediaDb`
+// and `broadcast()` resolve per campaign inside handlers that were written when
+// there was only one.
+//
+// Routes that must work without a campaign selected — the registry itself and
+// the config probe — are exempt. Any other /api request with no resolvable
+// campaign gets 409 NO_CAMPAIGN, which the frontend turns into a redirect to
+// the campaign picker.
+const CAMPAIGN_EXEMPT = [
+  /^\/api\/config$/,
+  /^\/api\/campaigns(\/|$)/,
+  /^\/api\/maintenance\//,   // server-wide admin, gated by the super-admin password
+];
+
+app.use((req, res, next) => {
+  const campaign = resolveCampaignForReq(req);
+  if (!campaign) {
+    const isApi = req.path.startsWith('/api/');
+    if (isApi && !CAMPAIGN_EXEMPT.some(re => re.test(req.path))) {
+      return res.status(409).json({ error: 'No campaign selected', code: 'NO_CAMPAIGN' });
+    }
+    return next();   // static assets and the registry work without one
+  }
+  req.campaign = campaign;
+  requestContext.run(
+    { campaignId: campaign.id, campaign, data: getCampaignData(campaign.id) },
+    next
+  );
+});
+
 app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads'), {
   maxAge: '5m', etag: true, lastModified: true,
 }));
@@ -266,7 +390,11 @@ for (const legacy of ['/loot.html', '/merchant.html']) {
 // the character sheet at "/" kept loading stale JS while /table.html did not).
 app.use((req, res, next) => {
   let rel = req.path;
-  if (rel.endsWith('/')) rel += 'index.html';
+  // The site now opens on the campaign picker: you choose a campaign before
+  // anything else. The character sheet keeps its own URL (/index.html) so every
+  // existing link, bookmark and PWA shortcut still resolves.
+  if (rel === '/') rel = '/campaigns.html';
+  else if (rel.endsWith('/')) rel += 'index.html';
   if (!rel.endsWith('.html')) return next();
   const filePath = path.join(__dirname, 'public', rel);
   fs.readFile(filePath, 'utf8', (err, html) => {
@@ -326,9 +454,13 @@ function clientMetaFromReq(req, transport) {
   const xff = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
   const ip  = (TRUST_PROXY && xff) ? xff : (req.socket?.remoteAddress || '');
   const loginAt = q.loginAt ? (parseInt(q.loginAt) || null) : null;
+  // Which campaign this client is watching — broadcast() only reaches matching clients.
+  const campaign = resolveCampaignForReq(req);
   return {
     ip:        _cap(ip, 64),
     transport,
+    campaignId:   campaign ? campaign.id : null,
+    campaignName: campaign ? campaign.name : '',
     connectedAt: Date.now(),
     loginAt,
     page:      _cap(q.page, 256),
@@ -358,8 +490,12 @@ app.get('/api/events', (req, res) => {
 // ── Maintenance: list all connected real-time clients (DM-only) ───────────────
 // Backs the hidden maintenance.html page. Requires the DM master password on
 // every request — never trust the client gate alone.
+// SUPER-ADMIN, not campaign DM: this page lists every connected client across
+// every campaign, so a single campaign's DM password must not open it.
 app.get('/api/maintenance/clients', (req, res) => {
-  if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
+  if (!isSuperAdminPassword(req.headers['x-master-password'])) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
   const clients = [];
   for (const ws of wsClients)  if (ws._meta)  clients.push({ ...ws._meta });
   for (const r  of sseClients) if (r._meta)   clients.push({ ...r._meta });
@@ -370,10 +506,13 @@ app.get('/api/maintenance/clients', (req, res) => {
 // Force connected clients to reload (pick up the latest deployed version).
 // mode 'all' reloads everyone; mode 'outdated' only reloads clients whose loaded
 // version differs from the current FRONTEND_VERSION (the client decides). DM-only.
+// Super-admin: a forced reload hits every campaign's clients at once.
 app.post('/api/maintenance/reload', (req, res) => {
-  if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
+  if (!isSuperAdminPassword(req.headers['x-master-password'])) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
   const mode = req.body && req.body.mode === 'outdated' ? 'outdated' : 'all';
-  broadcast('force-reload', { mode, version: FRONTEND_VERSION });
+  broadcastAll('force-reload', { mode, version: FRONTEND_VERSION });
   res.json({ ok: true, mode, version: FRONTEND_VERSION });
 });
 
@@ -424,7 +563,10 @@ const ctx = {
   UPLOADS_DIR, STORIES_DIR, STORY_IMAGES_DIR,
   ALLOWED_MIME, SHARED_MEDIA_MIME, MAX_MEDIA_BYTES, IMAGE_MIME,
   // Stories DB
-  sdb,
+  sdb: sdbProxy,
+  // Campaigns
+  cdb, campaignIdFromReq, currentCampaignId, currentCampaign,
+  isSuperAdminPassword, broadcastAll, CAMPAIGN_COOKIE, FRONTEND_VERSION,
   // In-memory state
   chatLog, CHAT_MAX,
   // Node modules
@@ -432,6 +574,7 @@ const ctx = {
 };
 
 // ── Register all route modules ────────────────────────────────────────────────
+registerCampaigns(app, ctx);
 registerAuth(app, ctx);
 registerCharacters(app, ctx);
 registerTreasury(app, ctx);

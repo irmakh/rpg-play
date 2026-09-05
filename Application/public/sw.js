@@ -1,7 +1,10 @@
-const CACHE = 'rpg-v133';
+const CACHE = 'rpg-v134';
 
 const STATIC = [
   // Core pages
+  '/campaigns.html',
+  '/css/campaigns.css',
+  '/js/campaigns.js',
   '/login.html',
   '/index.html',
   '/table.html',

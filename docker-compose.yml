@@ -21,10 +21,13 @@ services:
       - ./Application:/app:delegated
       # Use named volume for node_modules to preserve Linux-compiled binaries
       - /app/node_modules
-      # Persist SQLite databases
-      - ./Application/characters.db:/app/characters.db
-      - ./Application/media.db:/app/media.db
-      - ./Application/localdb.db:/app/localdb.db
+      # SQLite databases are covered by the ./Application mount above:
+      #   Application/campaigns.db            the campaign registry
+      #   Application/data/campaigns/<id>/    one campaign's localdb / media /
+      #                                       stories / aiDM databases
+      # The pre-multi-tenant files (localdb.db, media.db, stories.db,
+      # aiDM/aiDM.db) are still present as a rollback copy and are no longer
+      # read by the server.
       # Mount Let's Encrypt certificates (read-only)
       - /etc/letsencrypt:/etc/letsencrypt:ro
     restart: unless-stopped

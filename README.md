@@ -1,6 +1,6 @@
 # RPG Play — D&D 5e Virtual Tabletop
 
-A self-hosted web app for running D&D 5e sessions. It bundles a full character sheet, a shared virtual battle map, a real-time initiative tracker, a monster library, a treasury for loot and shop items, a synced music player, an AI Dungeon Master, a comic-style story builder, and a mobile companion — all kept live across every connected browser with no external cloud required.
+A self-hosted web app for running D&D 5e sessions. It hosts any number of **campaigns**, each a fully separate world with its own DM password and its own data. Every campaign bundles a full character sheet, a shared virtual battle map, a real-time initiative tracker, a monster library, a treasury for loot and shop items, a synced music player, an AI Dungeon Master, a comic-style story builder, and a mobile companion — all kept live across every connected browser with no external cloud required.
 
 Vanilla JS, no build step, no framework. Runs on SQLite by default; nothing to provision.
 
@@ -8,7 +8,35 @@ Vanilla JS, no build step, no framework. Runs on SQLite by default; nothing to p
 
 ## Feature Overview
 
-### Character Sheet (`/`)
+### Campaigns (`/`) — the front door
+
+The server hosts any number of **campaigns**, and each one is a fully separate tenant: its own characters, table, initiative, monsters, treasury, calendar, weather, maps, sounds, chat, stories and AI DM sessions — and its own DM password.
+
+- `/` opens the **campaign picker**: a list of every campaign on the left, the selected campaign's cover, description and stats on the right
+- Selecting a campaign shows its detail and its login (Character tab / DM tab). Logging in scopes the whole app to that campaign
+- **Each campaign has its own DM password**, stored hashed in `campaigns.db`. A DM password grants nothing in any other campaign
+- The server-wide `MASTER_PASSWORD` env var is the **super-admin** key: it unlocks any campaign, is required to create or delete campaigns, and is the recovery path when a campaign's DM password is lost
+- **⚙ Campaign settings** (needs that campaign's DM password): rename, edit the description, upload a cover image, change the DM password
+- **Deleting** a campaign needs the admin password *and* the campaign name typed exactly; the last remaining campaign cannot be deleted
+- Every page header carries a campaign badge; clicking it — or logging out — returns to the picker
+
+**How isolation works.** Each campaign owns a directory of SQLite files:
+
+```
+Application/
+├── campaigns.db                      # registry: names, covers, hashed DM passwords
+└── data/campaigns/<campaignId>/
+    ├── localdb.db                    # characters, table, treasury, monsters, calendar…
+    ├── media.db                      # chat images + the table map blob
+    ├── stories.db                    # the comic/story builder
+    └── aiDM.db                       # AI DM sessions
+```
+
+Nothing filters by a `campaign_id` column, so there is no `WHERE` clause to forget: a request simply never holds a database handle that reaches another campaign. Real-time events are filtered the same way — a token move in one campaign is never delivered to another campaign's table.
+
+Uploaded images and audio under `public/uploads/` are shared across campaigns. Their filenames are UUIDs so they never collide, but deleting a campaign leaves its uploads on disk as orphans.
+
+### Character Sheet (`/index.html`)
 - Full D&D 5e sheet: ability scores, skills, saving throws, HP, AC, speed, initiative — all auto-calculated
 - Proficiency bonus auto-derived from level; spell slot tracking with per-level counters and prepared-spell count
 - **Actions tab** — aggregates weapon attacks, action-flagged spells, and freeform **custom actions** into one combat panel. Custom actions carry a category (action / bonus / reaction / other), description, dice, and limited-use tracking with short/long-rest recharge
@@ -67,7 +95,7 @@ Vanilla JS, no build step, no framework. Runs on SQLite by default; nothing to p
 - **Media attachments:** attach images, video, or audio to any event (one per upload, 25 MB cap; images get auto-generated thumbnails)
 - **Daily weather roller:** roll temperature, wind and precipitation for any date — each gets its own d20 against configurable thresholds, with temperature swinging from a "session normal" baseline and precipitation falling as snow below freezing. Set a day manually instead if you prefer. Results are logged per day and shown as icons on the calendar grid with a hover breakdown
 
-### Player Calendar (tab on `/`)
+### Player Calendar (tab on `/index.html`)
 - Calendar showing DM-published public events, the player's own journals, and the current campaign date (live via SSE)
 - **Player journals** — players author their own dated entries from the calendar (**+Journal** button). A journal defaults to **shared** (visible to everyone) or can be kept **private** (visible only to the DM and its author); each entry can carry media attachments. Players can edit and delete only their own journals
 - Visibility rule: a viewer sees an event if they are the DM, the event is public, or they authored it
@@ -145,8 +173,12 @@ One catalogue for everything you hand out, replacing the separate Merchant and L
 
 ## Authentication & Login
 
-- Unified **login screen** (`/login.html`) before any page. **Character tab:** name + password (first-login setup for passwordless characters). **DM tab:** master password for DM access everywhere
-- The DM can also log in **as any character** by using the master password in the character tab
+- Login is always **scoped to a campaign**. The campaign picker at `/` is the front door; choosing a campaign sets a `campaign` cookie, and every later request is answered from that campaign only
+- **Character tab:** name + password (first-login setup for passwordless characters). **DM tab:** that campaign’s own DM password
+- **Two levels of DM authority:** a campaign DM password (hashed in `campaigns.db`, valid only in its own campaign) and the server-wide `MASTER_PASSWORD` super-admin key (unlocks any campaign, required to create or delete campaigns, and the recovery path for a lost DM password)
+- The DM can also log in **as any character** by using a DM password in the character tab
+- `/login.html` still works and reads the campaign already selected; it redirects to the picker when there is none
+- An API call made with no campaign selected answers `409 NO_CAMPAIGN`, and the frontend bounces to the picker
 - Sessions live in `sessionStorage` — closing the tab logs out; HTML pages have auth guards that redirect unauthenticated access to login
 - **Stories** use a separate gate (`/api/auth/verify-any`) accepting the DM or any character password, auto-bypassed when already logged in
 - Token movement on the table is intentionally **open to all players** (DM retains full control); DM-only controls stay hidden until the master password is entered
@@ -157,8 +189,9 @@ One catalogue for everything you hand out, replacing the separate Merchant and L
 
 | Page | URL | Who |
 |---|---|---|
+| Campaign Picker | `/` | All users |
 | Login | `/login.html` | All users |
-| Character Sheet | `/` | Players |
+| Character Sheet | `/index.html` | Players |
 | Virtual Table | `/table.html` | Players + DM |
 | DM Dashboard | `/dm.html` | DM |
 | DM Calendar | `/events.html` | DM |
@@ -166,7 +199,7 @@ One catalogue for everything you hand out, replacing the separate Merchant and L
 | Map Prep | `/prepare-map.html` | DM |
 | Treasury (loot + shop) | `/treasury.html` | DM |
 | Music & Sounds | `/playlists.html` | DM |
-| Maintenance (unlisted) | `/maintenance.html` | DM |
+| Maintenance (unlisted) | `/maintenance.html` | Super-admin |
 | Stories | `/stories.html` | Any (password gated) |
 | Story Builder | `/story-builder.html` | Any (password gated) |
 | Story Viewer | `/story-viewer.html` | Any (password gated) |
@@ -271,7 +304,7 @@ PORT=443
 | Variable | Required | Default | Description |
 |---|---|---|---|
 | `DB_PROVIDER` | Yes | `instantdb` | `localdb` or `instantdb` |
-| `MASTER_PASSWORD` | Yes | — | DM master password for all protected screens |
+| `MASTER_PASSWORD` | Yes | — | Super-admin password: unlocks any campaign, required to create/delete campaigns, seeds the first campaign’s DM password on migration. Per-campaign DM passwords live in `campaigns.db` |
 | `PORT` | No | `3000` | Port the server listens on (use `443` for HTTPS) |
 | `SSL_KEY` | No | — | Path to TLS private key (enables HTTPS) |
 | `SSL_CERT` | No | — | Path to TLS certificate chain (enables HTTPS) |
@@ -279,13 +312,15 @@ PORT=443
 | `INSTANT_ADMIN_TOKEN` | InstantDB only | — | InstantDB admin token |
 | `HOST_PORT` | Docker only | `3000` | Port exposed on the host machine |
 | `WS_URL` | No | auto | Override WebSocket URL (e.g. `wss://your-domain.com/ws`) |
+| `CAMPAIGNS_DB` | No | `Application/campaigns.db` | Override the campaign registry file |
+| `CAMPAIGN_DATA_DIR` | No | `Application/data/campaigns` | Override where per-campaign databases live |
 
 ---
 
 ## Tech Stack
 
-- **Backend:** Node.js (ES modules), Express — split into 12 semantic route modules under `server/routes/`, with a lean `server.js` entry point
-- **Database:** SQLite (`better-sqlite3`) for `localdb` / [InstantDB](https://www.instantdb.com) for cloud; stories and the AI DM each use their own SQLite DB
+- **Backend:** Node.js (ES modules), Express — split into 14 semantic route modules under `server/routes/`, with a lean `server.js` entry point
+- **Database:** SQLite (`better-sqlite3`) for `localdb` / [InstantDB](https://www.instantdb.com) for cloud. One cross-tenant registry (`campaigns.db`) plus four SQLite files per campaign under `data/campaigns/<id>/`; multi-tenancy is `localdb` only
 - **Real-time:** WebSocket (`ws`) for `localdb` / Server-Sent Events for cloud
 - **Frontend:** Vanilla JS, HTML, CSS — no build step, no framework, no bundler. The character sheet is 15 modules under `js/index/`, the table is 14 under `js/table/`, with shared helpers in `js/lib/`
 - **Dice:** 3D CSS dice (icosahedron d20, pentagonal-trapezohedron d10) driven by a shared `dice-engine.js`
@@ -308,12 +343,13 @@ High-level layout — see **[structure.md](structure.md)** for the complete, ann
 char_sheet/
 ├── Application/            # The web app
 │   ├── server.js           #   Express entry point — loads route modules + shared context
-│   ├── server/routes/      #   13 Express route modules
-│   ├── db/                 #   SQLite layers (localdb.js, storiesdb.js)
+│   ├── server/routes/      #   14 Express route modules
+│   ├── lib/                #   Request context (campaign scoping) + password hashing
+│   ├── db/                 #   SQLite layers (campaignsdb, campaign-store, localdb, mediadb, storiesdb)
 │   ├── aiDM/               #   AI Dungeon Master module (own DB + routes)
-│   ├── tests/              #   21 Vitest unit + API suites
+│   ├── tests/              #   23 Vitest unit + API suites (716 tests)
 │   └── public/             #   Served frontend
-│       ├── *.html          #     Page entry points (index, table, dm, treasury, events, …)
+│       ├── *.html          #     Page entry points (campaigns, index, table, dm, treasury, events, …)
 │       ├── js/index/       #     14 character-sheet modules
 │       ├── js/table/       #     15 virtual-table modules
 │       ├── js/lib/         #     Shared utilities (dice engine, chat render, calendar, …)
@@ -322,7 +358,7 @@ char_sheet/
 │       ├── sw.js           #     Service worker (PWA cache)
 │       └── uploads/  story-images/   #   Runtime user uploads
 ├── goals/ tools/ context/ args/ hardprompts/   # GOTCHA framework layers (see CLAUDE.md)
-├── memory/  data/          # Persistent cross-session memory
+├── memory/  data/          # Persistent cross-session memory (Application/data/ holds campaign DBs)
 ├── docker-compose.yml  Dockerfile.dev  docker-*.sh   # Docker deployment
 ├── renew-cert.sh          # Let's Encrypt renewal (PM2-aware)
 └── CLAUDE.md  README.md  FEATURES.md  DOCKER.md  structure.md

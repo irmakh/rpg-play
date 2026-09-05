@@ -11,7 +11,7 @@ function scheduleAutoSave() {
 function indexLogout() {
   sessionStorage.removeItem('rpgSession');
   sessionStorage.removeItem('dmMasterPw');
-  location.replace('/login.html');
+  location.replace('/');
 }
 
 // ── Data collection / application ─────────────────────────────────────────────

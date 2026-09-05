@@ -20,9 +20,15 @@ char_sheet/
 │   │   │   └── index.json              #     Scenario catalog (Forgotten Realms starters)
 │   │   ├── db.js                       #   AI DM SQLite layer (sessions, messages)
 │   │   └── routes.js                   #   AI DM API + streaming endpoints
-│   ├── db/                             # Database layers
-│   │   ├── localdb.js                  #   SQLite layer (characters, media, tokens, …)
-│   │   └── storiesdb.js                #   SQLite layer for stories and sequences
+│   ├── db/                             # Database layers (one set of files PER CAMPAIGN)
+│   │   ├── campaign-store.js           #   Opens/caches each campaign’s DBs; provisions + migrates
+│   │   ├── campaignsdb.js              #   Campaign registry (names, covers, hashed DM passwords)
+│   │   ├── localdb.js                  #   openCampaignDb() — characters, media, tokens, …
+│   │   ├── mediadb.js                  #   openMediaDb() — chat images + table map blob
+│   │   └── storiesdb.js                #   openStoriesDb() — stories and sequences
+│   ├── lib/                            # Cross-cutting server helpers
+│   │   ├── passwords.js                #   scrypt hash/verify (salt:hash)
+│   │   └── request-context.js          #   AsyncLocalStorage campaign scope + db proxies
 │   ├── public/                         # Served frontend (HTML / CSS / JS + PWA)
 │   │   ├── console/                    #   Mobile companion PWA (d20 + companion screens)
 │   │   │   ├── index.html              #     Companion PWA launcher
@@ -35,6 +41,7 @@ char_sheet/
 │   │   │   ├── console/                #     Companion styles
 │   │   │   │   └── table-console.css   #       Console screen styles
 │   │   │   ├── calendar.css            #     Calendar of Harptos styles
+│   │   │   ├── campaigns.css           #     Campaign picker styles (master-detail)
 │   │   │   ├── dm.css                  #     DM dashboard styles
 │   │   │   ├── index.css               #     Character sheet styles
 │   │   │   ├── loot.css                #     Retired loot manager styles (page redirects to Treasury)
@@ -78,7 +85,7 @@ char_sheet/
 │   │   │   │   ├── esc.js              #       HTML escaping helper
 │   │   │   │   ├── fr_calendar.js      #       Calendar of Harptos logic
 │   │   │   │   ├── lightbox.js         #       Fullscreen image/video viewer
-│   │   │   │   ├── realtime.js         #       WS (localdb) / SSE (instantdb) transport + force-reload
+│   │   │   │   ├── realtime.js         #       WS/SSE transport, force-reload, campaign guard + badge
 │   │   │   │   └── weather-ui.js       #       Shared weather icons, tooltip, day markers
 │   │   │   ├── table/                  #     Virtual table — 15 modules
 │   │   │   │   ├── table-addtoken.js   #       Add-token modal
@@ -98,7 +105,8 @@ char_sheet/
 │   │   │   │   └── table-weather.js    #       Toolbar weather widget for the current date
 │   │   │   ├── dm.js                   #     DM dashboard
 │   │   │   ├── events.js               #     DM calendar + weather roller
-│   │   │   ├── login.js                #     Login screen logic
+│   │   │   ├── campaigns.js            #     Campaign picker — list, detail, login, create/settings/delete
+│   │   │   ├── login.js                #     Login screen logic (campaign-scoped)
 │   │   │   ├── loot.js                 #     Retired loot manager (page redirects to Treasury)
 │   │   │   ├── maintenance.js          #     Maintenance page — client list, versions, force reload
 │   │   │   ├── merchant.js             #     Retired merchant manager (page redirects to Treasury)
@@ -107,6 +115,7 @@ char_sheet/
 │   │   │   ├── prepare-map.js          #     Map prep tool (DM)
 │   │   │   └── treasury.js             #     Treasury manager (DM) — master-detail, images, ledger
 │   │   ├── dm.html                     #   DM dashboard page
+│   │   ├── campaigns.html              #   Campaign picker — served at / (the front door)
 │   │   ├── events.html                 #   DM calendar page
 │   │   ├── index.html                  #   Character sheet page
 │   │   ├── login.html                  #   Login page (all users)
@@ -125,8 +134,9 @@ char_sheet/
 │   │   ├── table.html                  #   Virtual table page
 │   │   └── treasury.html               #   Treasury manager page (loot + shop, DM)
 │   ├── server/                         # Backend
-│   │   └── routes/                     #   13 Express route modules (each exports register(app, ctx))
+│   │   └── routes/                     #   14 Express route modules (each exports register(app, ctx))
 │   │       ├── auth.js                 #     Login, passwords, stories gate
+│   │       ├── campaigns.js            #     Campaign registry API — list/detail/enter/create/settings/delete
 │   │       ├── backup.js               #     Per-section JSON export / restore
 │   │       ├── characters.js           #     Character CRUD + quick-roll + action use
 │   │       ├── chat.js                 #     Chat messages + image sharing
@@ -143,6 +153,7 @@ char_sheet/
 │   │   ├── api/                        #   API / integration tests
 │   │   │   ├── auth.api.test.js        #     Auth route tests
 │   │   │   ├── calendar.api.test.js    #     Calendar events & journal visibility tests
+│   │   │   ├── campaigns.api.test.js   #     Campaign registry, per-campaign DM passwords, isolation
 │   │   │   ├── characters.api.test.js  #     Characters route tests
 │   │   │   ├── initiative.api.test.js  #     Initiative route tests
 │   │   │   ├── table.api.test.js       #     Table route tests
@@ -235,14 +246,17 @@ char_sheet/
 | Path | Purpose |
 |---|---|
 | `server.js` | Express entry point; injects the cache-busting `?v=N`, redirects retired pages, wires route modules |
-| `server/routes/` | 13 route modules, each `register(app, ctx)` |
-| `db/localdb.js`, `db/storiesdb.js` | SQLite data layers |
+| `server/routes/` | 14 route modules, each `register(app, ctx)` |
+| `db/campaignsdb.js` | Campaign registry — the only cross-tenant database |
+| `db/campaign-store.js` | Per-campaign database handles, provisioning, bootstrap migration |
+| `db/localdb.js`, `db/mediadb.js`, `db/storiesdb.js` | Per-campaign SQLite data layers (factories) |
+| `lib/request-context.js` | AsyncLocalStorage campaign scope + the db proxies routes use |
 | `aiDM/` | Self-contained AI Dungeon Master (own DB, routes, frontend) |
 | `public/` | All served HTML/CSS/JS and the companion PWA |
 | `public/js/index/` | 14 character-sheet modules |
 | `public/js/table/` | 15 virtual-table modules |
 | `public/js/lib/` | 8 shared frontend helpers (dice engine, chat render, calendar, weather, …) |
-| `tests/` | 21 Vitest unit + API suites |
+| `tests/` | 23 Vitest unit + API suites (716 tests) |
 
 ## Retired pages
 
@@ -257,4 +271,4 @@ The loot and merchant managers merged into the **Treasury** (`/treasury.html`). 
 
 All of the above are removed once every client reports the current `FRONTEND_VERSION`.
 
-> **Not in the tree:** runtime content created at install/use time is git-ignored — `node_modules/`, the working SQLite databases (`localdb.db`, `characters.db`, `media.db`, `stories.db`, `aiDM/aiDM.db`), uploaded assets under `public/uploads/` and `public/story-images/`, environment files (`.env`), and the dated memory logs under `memory/logs/`. These are created on first run / during play.
+> **Not in the tree:** runtime content created at install/use time is git-ignored — `node_modules/`, the campaign registry (`campaigns.db`) and every per-campaign database under `data/campaigns/<id>/`, plus the retained pre-multi-tenant copies (`localdb.db`, `characters.db`, `media.db`, `stories.db`, `aiDM/aiDM.db`), uploaded assets under `public/uploads/` and `public/story-images/`, environment files (`.env`), and the dated memory logs under `memory/logs/`. These are created on first run / during play.

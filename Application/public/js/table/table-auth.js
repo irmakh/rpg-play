@@ -53,7 +53,7 @@ function logout() {
   sessionStorage.removeItem('rpgSession');
   sessionStorage.removeItem('tableMasterPw');
   sessionStorage.removeItem('dmMasterPw');
-  location.replace('/login.html');
+  location.replace('/');
 }
 
 // ── Deprecated inline DM-unlock helpers (kept as stubs so old call sites don't error) ──

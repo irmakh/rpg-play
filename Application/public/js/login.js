@@ -1,4 +1,40 @@
 // ── Login page logic ──────────────────────────────────────────────────────────
+//
+// Logging in is always scoped to a campaign — the DM password and the character
+// roster both belong to one. The campaign picker at "/" is the normal way in and
+// sets the campaign cookie; this page is what auth guards redirect to, so it
+// reads that cookie and bounces back to the picker when there is no campaign.
+
+let _campaign = null;   // { id, name, ... } once loaded
+
+function _campaignFromCookie() {
+  const m = /(?:^|;\s*)campaign=([^;]*)/.exec(document.cookie || '');
+  if (!m) return '';
+  try { return decodeURIComponent(m[1]); } catch { return m[1]; }
+}
+
+function _toPicker() {
+  const next = encodeURIComponent(location.pathname + location.search);
+  location.replace(`/?next=${next}`);
+}
+
+async function loadCampaign() {
+  try {
+    const res = await fetch('/api/campaign/current');
+    if (!res.ok) { _toPicker(); return false; }
+    _campaign = await res.json();
+  } catch { return false; }
+
+  // Name the campaign you are logging into, and offer a way back to the picker.
+  const logo = document.querySelector('.logo p');
+  if (logo && _campaign) logo.textContent = _campaign.name;
+  const hint = document.querySelector('.hint');
+  if (hint) {
+    hint.innerHTML = 'Session is stored in this browser tab only.<br>'
+      + '<a href="/" style="color:var(--ac)">Switch campaign</a>';
+  }
+  return true;
+}
 
 // Where to go after login (honour ?next= param so auth guards can redirect back)
 function _nextUrl() {
@@ -152,6 +188,9 @@ async function loginDM() {
 
 function _storeSession(sess) {
   if (!sess.loginAt) sess.loginAt = Date.now();   // when this user logged in (shown on maintenance page)
+  // Stamp the campaign so a page can tell a live session from one left over
+  // after switching campaigns.
+  if (_campaign) { sess.campaignId = _campaign.id; sess.campaignName = _campaign.name; }
   sessionStorage.setItem('rpgSession', JSON.stringify(sess));
   // Keep legacy keys alive for any page that still reads them directly
   if (sess.role === 'dm') {
@@ -165,16 +204,25 @@ function _storeSession(sess) {
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 // If already logged in, skip login page
-(function() {
+(async function() {
   try {
     const s = JSON.parse(sessionStorage.getItem('rpgSession') || 'null');
-    if (s && s.role) {
+    const cookieCampaign = _campaignFromCookie();
+    // A session from a different campaign is stale — the campaign was switched
+    // in another tab or the cookie was replaced. Drop it and log in again.
+    if (s && s.campaignId && cookieCampaign && s.campaignId !== cookieCampaign) {
+      sessionStorage.removeItem('rpgSession');
+      sessionStorage.removeItem('tableMasterPw');
+      sessionStorage.removeItem('dmMasterPw');
+    } else if (s && s.role) {
       // Characters can only access index/table — don't let them loop into DM-only pages
       const dest = s.role === 'character' ? '/index.html' : _nextUrl();
       location.replace(dest);
       return;
     }
   } catch {}
+  // No campaign selected yet: the picker is the only sensible destination.
+  if (!(await loadCampaign())) return;
   loadCharacters();
   // Focus password field if DM tab is active (it won't be on load, so focus char pw)
   setTimeout(() => document.getElementById('char-pw')?.focus(), 100);

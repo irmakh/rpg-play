@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Campaigns — RPG Play</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#1a1a2e">
+<link rel="stylesheet" href="/css/campaigns.css">
+<script>if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js');</script>
+</head>
+<body>
+
+<div class="top">
+  <h1>⚔ RPG Play</h1>
+  <span class="sub">Choose a campaign</span>
+  <span class="spacer"></span>
+  <button class="btn btn-sm btn-ghost" onclick="openNewCampaign()">+ New Campaign</button>
+</div>
+
+<div class="main">
+  <!-- Master: every campaign on the server -->
+  <div class="list-pane">
+    <div class="list-hdr">
+      <span class="lbl" id="list-count">Campaigns</span>
+    </div>
+    <div class="list-body" id="camp-list">
+      <div class="detail-empty"><span>Loading…</span></div>
+    </div>
+  </div>
+
+  <!-- Detail: the selected campaign, its stats and its login -->
+  <div class="detail-pane" id="detail">
+    <div class="detail-empty">
+      <div class="big">🗺️</div>
+      <div>Select a campaign to see its details and log in.</div>
+    </div>
+  </div>
+</div>
+
+<!-- New campaign (super-admin) -->
+<div class="modal-overlay" id="new-modal">
+  <div class="modal-box">
+    <div class="modal-hdr">
+      <h3>New Campaign</h3>
+      <button class="modal-x" onclick="closeModal('new-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label>Campaign Name</label>
+        <input id="new-name" placeholder="e.g. Descent into Avernus" maxlength="80">
+      </div>
+      <div class="field">
+        <label>Description</label>
+        <textarea id="new-desc" placeholder="A short blurb shown on the campaign card…" maxlength="600"></textarea>
+      </div>
+      <div class="field">
+        <label>DM Password (for this campaign)</label>
+        <input type="password" id="new-dmpw" placeholder="At least 3 characters" autocomplete="new-password">
+      </div>
+      <div class="field">
+        <label>Admin Password</label>
+        <input type="password" id="new-adminpw" placeholder="The server MASTER_PASSWORD" autocomplete="current-password">
+      </div>
+      <div class="err-msg" id="new-err"></div>
+      <div class="hint">
+        Creating a campaign needs the server's admin password. The new campaign starts
+        empty — its own characters, monsters, maps, treasury and stories.
+      </div>
+    </div>
+    <div class="modal-ft">
+      <button class="btn" onclick="createCampaign()" id="new-btn">Create</button>
+      <button class="btn btn-ghost" onclick="closeModal('new-modal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Campaign settings (campaign DM or admin) -->
+<div class="modal-overlay" id="manage-modal">
+  <div class="modal-box">
+    <div class="modal-hdr">
+      <h3>Campaign Settings</h3>
+      <button class="modal-x" onclick="closeModal('manage-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label>DM Password (to authorise these changes)</label>
+        <input type="password" id="mg-auth" placeholder="This campaign's DM password" autocomplete="current-password">
+      </div>
+      <hr style="border:none;border-top:1px solid var(--sep);margin:14px 0">
+      <div class="field">
+        <label>Campaign Name</label>
+        <input id="mg-name" maxlength="80">
+      </div>
+      <div class="field">
+        <label>Description</label>
+        <textarea id="mg-desc" maxlength="600"></textarea>
+      </div>
+      <div class="field">
+        <label>Cover Image</label>
+        <input type="file" id="mg-cover" accept="image/*">
+      </div>
+      <div class="field">
+        <label>New DM Password (leave blank to keep)</label>
+        <input type="password" id="mg-newpw" placeholder="At least 3 characters" autocomplete="new-password">
+      </div>
+      <div class="err-msg" id="mg-err"></div>
+      <div class="ok-msg" id="mg-ok"></div>
+      <hr style="border:none;border-top:1px solid var(--sep);margin:14px 0">
+      <label>Danger Zone</label>
+      <div class="hint" style="margin-top:2px">
+        Deleting a campaign permanently destroys its characters, table, treasury,
+        monsters, calendar, stories and AI DM sessions. Needs the admin password.
+      </div>
+      <button class="btn btn-danger btn-sm" style="margin-top:10px" onclick="openDelete()">Delete this campaign…</button>
+    </div>
+    <div class="modal-ft">
+      <button class="btn" onclick="saveCampaign()" id="mg-btn">Save Changes</button>
+      <button class="btn btn-ghost" onclick="closeModal('manage-modal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete confirmation -->
+<div class="modal-overlay" id="del-modal">
+  <div class="modal-box">
+    <div class="modal-hdr">
+      <h3>Delete Campaign</h3>
+      <button class="modal-x" onclick="closeModal('del-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="hint" style="margin-top:0">
+        This cannot be undone. Type the campaign name exactly to confirm.
+      </div>
+      <div class="field" style="margin-top:12px">
+        <label>Campaign Name</label>
+        <input id="del-name" placeholder="Type the name…">
+      </div>
+      <div class="field">
+        <label>Admin Password</label>
+        <input type="password" id="del-adminpw" autocomplete="current-password">
+      </div>
+      <div class="err-msg" id="del-err"></div>
+    </div>
+    <div class="modal-ft">
+      <button class="btn btn-danger" onclick="deleteCampaign()" id="del-btn">Delete Permanently</button>
+      <button class="btn btn-ghost" onclick="closeModal('del-modal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/campaigns.js"></script>
+</body>
+</html>

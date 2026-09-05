@@ -12,6 +12,55 @@
 - **hybrid_search.py** - Combined keyword + semantic search for best results
 - **embed_memory.py** - Generate and manage embeddings for memory entries
 
+## Application — Multi-Tenant Campaigns
+
+> Every campaign is a separate tenant with its own DM password and its own set of
+> SQLite files. Cross-campaign reads are impossible by construction: a request
+> never holds a database handle that spans two campaigns.
+
+**`Application/db/campaignsdb.js`** — the only cross-tenant database (`campaigns.db`). One row per campaign: name, slug, description, cover, and the scrypt-hashed DM password.
+- `listCampaigns()` / `getCampaign(id)` / `getCampaignBySlug(slug)` / `resolveCampaign(idOrSlug)` — reads; `resolveCampaign` accepts either key because the campaign cookie may carry either
+- `createCampaign({name, description, dmPassword})` / `updateCampaign(id, patch)` / `deleteCampaign(id)` — CRUD; create hashes the plaintext password and derives a unique slug
+- `setDmPassword(id, plaintext)` / `verifyDmPassword(id, plaintext)` — the DM credential. Successful verifications are memoised for 5 minutes, keyed by SHA-256 of campaign+password, because scrypt would otherwise run on ~100 authenticated call sites per page load; changing or deleting a campaign drops its cached entries
+- `touchCampaign(id)` stamps `lastPlayedAt`; `LEGACY_CAMPAIGN_ID` is the fixed id of the migrated campaign
+- Env `CAMPAIGNS_DB` overrides the registry file path (used by tests)
+
+**`Application/db/campaign-store.js`** — owns `Application/data/campaigns/<id>/` and hands out cached per-campaign handles.
+- `getCampaignData(campaignId)` — returns `{ ldb, mdb, sdb, adb }`, opening the four databases on first use. Opening IS provisioning: every table is created from the current schema, so a new campaign starts empty but complete
+- `releaseCampaign(id)` / `destroyCampaignData(id)` / `campaignDataSize(id)` / `campaignDir(id)` — `campaignDir` validates the id against `[A-Za-z0-9._-]+` so a path can never escape the data directory
+- `bootstrapCampaigns({defaultDmPassword})` — one-time: creates the first campaign and COPIES the pre-multi-tenant `localdb.db` / `media.db` / `stories.db` / `aiDM.db` into it. No-op once any campaign exists; the originals are left in place as a rollback
+- Env `CAMPAIGN_DATA_DIR` overrides the data directory (used by tests)
+
+**`Application/lib/request-context.js`** — the mechanism that made ~200 existing route handlers campaign-aware without editing them.
+- `requestContext` — an AsyncLocalStorage store holding `{campaignId, campaign, data}` for the in-flight request; propagates across `await`
+- `ldb` / `sdb` / `adb` / `mediaDb` / `mediaGet` / `mapUpsert` — Proxies that resolve to the current request's campaign at property-access time. Route modules destructure their dependencies once at `register()`, so a plain object would freeze one campaign into the closure forever; a Proxy defers resolution to the access inside the handler. They THROW outside a request rather than guessing a campaign
+- `currentCampaignId()` / `currentCampaign()` / `insertSharedMedia(id, mime, buf)`
+
+**`Application/lib/passwords.js`** — `hashPassword` / `verifyPassword` (scrypt, `salt:hash` format), shared by the server, the registry and the bootstrap.
+
+**`Application/db/mediadb.js`** — `openMediaDb(file)`: per-campaign `shared_media` (chat images + the table map blob), lifted out of `server.js`. The 50-item cap is now per campaign, so a busy campaign no longer evicts a quiet one's map.
+
+**`Application/db/localdb.js`** — now `openCampaignDb(file)`, a factory returning the same 120-name API. Function bodies are unchanged; they close over a per-campaign `db`. `lootRowToTreasury`, `shopRowToTreasury`, `normalizeShopTags` and `SHOP_MAX_ACTIVE_TAGS` stay module-level exports because they are pure. `db/storiesdb.js` (`openStoriesDb`) and `aiDM/db.js` (`openAiDmDb`) got the same treatment.
+
+**`Application/server/routes/campaigns.js`** — the registry API; the only routes that work with no campaign selected.
+- `GET /api/campaigns` · `GET /api/campaigns/:id` (detail + character roster + stats) · `GET /api/campaign/current`
+- `POST /api/campaigns/:id/enter` — sets the `campaign` cookie; grants nothing on its own, the login still has to succeed · `POST /api/campaigns/leave`
+- `POST /api/campaigns` and `DELETE /api/campaigns/:id` — SUPER-ADMIN only (`MASTER_PASSWORD` env). Delete requires `confirmName` to match the campaign name exactly and refuses to remove the last campaign
+- `PUT /api/campaigns/:id`, `PUT /api/campaigns/:id/dm-password`, `POST /api/campaigns/:id/cover` — campaign DM or super-admin
+
+**Server wiring (`Application/server.js`)**
+- `resolveCampaignForReq(req)` — resolution order: `X-Campaign-Id` header → `?campaign=` query (SSE/WS URLs cannot set headers) → `campaign` cookie → the only campaign when exactly one exists. The cookie is what keeps all ~276 existing frontend `fetch()` calls working untouched
+- Campaign middleware — wraps each request in `requestContext.run(...)`; any `/api` request with no resolvable campaign gets `409 {code:'NO_CAMPAIGN'}`. Exempt: `/api/config`, `/api/campaigns*`, `/api/maintenance/*`
+- `isSuperAdminPassword(pw)` vs `isMasterPassword(pw, campaignId)` — the latter keeps its old name and signature so the ~100 `masterAuth()` call sites did not change; it now answers "is this the DM of THIS campaign, or the super-admin?"
+- `broadcast(event, payload, campaignId = currentCampaignId())` — only reaches clients whose `_meta.campaignId` matches, so the ~130 existing call sites became campaign-scoped for free. `broadcastAll()` exists for server-wide events (force-reload)
+- `/` serves `campaigns.html`; `/index.html` is still the character sheet
+- `/api/maintenance/*` is SUPER-ADMIN only — it lists clients across every campaign, so one campaign's DM password must not open it
+
+**Frontend**
+- `public/campaigns.html` + `js/campaigns.js` + `css/campaigns.css` — master-detail campaign picker with per-campaign login, create (admin password), settings, cover upload and delete
+- `js/lib/realtime.js` is now also the shared campaign layer: a `fetch` interceptor that bounces to the picker on `409 NO_CAMPAIGN`, `enforceCampaignSession()` which drops a session belonging to another campaign, `initCampaignBadge()` which fills any `#campaign-badge` element, and `campaign=` on the WS/SSE URL
+
+
 ## Application — Server Helpers (`Application/server.js`)
 
 > These are runtime helpers embedded in the Express server, not standalone scripts.

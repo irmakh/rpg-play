@@ -29,8 +29,94 @@ function _realtimeParams() {
       if (s.loginAt) loginAt = String(s.loginAt);
     }
   } catch {}
-  return new URLSearchParams({ page: location.pathname, role, charId, charName, loginAt, ver: _clientVer() }).toString();
+  return new URLSearchParams({
+    page: location.pathname, role, charId, charName, loginAt,
+    ver: _clientVer(),
+    // Which campaign this connection is watching. The server only delivers a
+    // campaign's events to its own clients, so a connection with no campaign
+    // receives nothing. The cookie is also sent on the WS upgrade, but passing
+    // it explicitly keeps the two paths reading the same value.
+    campaign: campaignFromCookie(),
+  }).toString();
 }
+
+// ── Campaign context (shared by every page that loads this lib) ───────────────
+
+/** The campaign id currently selected in this browser, or '' if none. */
+function campaignFromCookie() {
+  const m = /(?:^|;\s*)campaign=([^;]*)/.exec(document.cookie || '');
+  if (!m) return '';
+  try { return decodeURIComponent(m[1]); } catch { return m[1]; }
+}
+
+/** Sends the visitor back to the campaign picker, remembering where they were. */
+function goToCampaignPicker() {
+  const next = encodeURIComponent(location.pathname + location.search);
+  location.replace(`/?next=${next}`);
+}
+
+/**
+ * Fills any #campaign-badge element with the active campaign's name and makes
+ * it a shortcut back to the picker. Pages opt in just by having the element —
+ * no per-page wiring.
+ */
+/**
+ * Drops a session that belongs to a different campaign than the one selected.
+ *
+ * Sessions carry the campaign they were created in. After switching campaigns
+ * the stored role and password are meaningless here — worse, a DM password
+ * would keep being sent to a campaign it has no authority over. Clear it and
+ * send the visitor back to pick a login.
+ */
+function enforceCampaignSession() {
+  try {
+    const s = JSON.parse(sessionStorage.getItem('rpgSession') || 'null');
+    const cookie = campaignFromCookie();
+    if (!s || !s.campaignId || !cookie || s.campaignId === cookie) return;
+    sessionStorage.removeItem('rpgSession');
+    sessionStorage.removeItem('tableMasterPw');
+    sessionStorage.removeItem('dmMasterPw');
+    goToCampaignPicker();
+  } catch {}
+}
+document.addEventListener('DOMContentLoaded', enforceCampaignSession);
+
+async function initCampaignBadge() {
+  const el = document.getElementById('campaign-badge');
+  if (!el) return;
+  try {
+    const res = await fetch('/api/campaign/current');
+    if (!res.ok) return;
+    const c = await res.json();
+    el.textContent = c.name;
+    el.title = 'Switch campaign';
+    el.style.display = '';
+    el.onclick = () => { location.href = '/'; };
+  } catch {}
+}
+document.addEventListener('DOMContentLoaded', initCampaignBadge);
+
+// Any API call made without a campaign selected answers 409 NO_CAMPAIGN. That
+// happens when the cookie was cleared, expired, or points at a campaign that has
+// since been deleted. Rather than making all ~276 existing fetch() call sites
+// handle it, intercept it once here and bounce to the picker.
+(function installCampaignGuard() {
+  if (typeof window === 'undefined' || !window.fetch || window.__campaignGuardInstalled) return;
+  window.__campaignGuardInstalled = true;
+  const nativeFetch = window.fetch.bind(window);
+  let redirecting = false;
+  window.fetch = async (...args) => {
+    const res = await nativeFetch(...args);
+    if (res.status === 409 && !redirecting) {
+      // Only a NO_CAMPAIGN 409 redirects — other 409s belong to their caller.
+      try {
+        const body = await res.clone().json();
+        if (body && body.code === 'NO_CAMPAIGN') { redirecting = true; goToCampaignPicker(); }
+      } catch {}
+    }
+    return res;
+  };
+})();
 
 // DM-triggered remote reload (from the maintenance page). Reloads to pick up the
 // latest deployed version. mode 'outdated' only reloads clients whose loaded

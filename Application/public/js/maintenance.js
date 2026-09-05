@@ -154,6 +154,7 @@ function render(data) {
           <span class="badge ${role}">${badgeLabel}</span>
           <span class="name">${esc(name)}</span>
         </div>
+        <div class="row"><span class="k">Campaign</span><span class="v">${esc(c.campaignName || '—')}</span></div>
         <div class="row"><span class="k">Current page</span><span class="v page-v">${esc(page)}</span></div>
         <div class="row"><span class="k">Version</span><span class="v ${stale ? 'ver-stale' : 'ver-ok'}">${esc(verStr)}</span></div>
         ${loginRow}
