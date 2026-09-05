@@ -13,11 +13,22 @@ COPY Application/package*.json ./
 # Install dependencies (will be compiled for Alpine Linux)
 RUN npm install
 
-# Copy only application files (not node_modules)
+# Copy only application files (not node_modules).
+# docker-compose bind-mounts ./Application over /app for hot reload, so at
+# runtime these layers are hidden — but the image must still be complete on its
+# own, or `docker run` without the mount starts a server with no routes.
 COPY Application/*.js ./
 COPY Application/*.xml ./
 COPY Application/db ./db
+COPY Application/lib ./lib
+COPY Application/server ./server
+COPY Application/aiDM ./aiDM
 COPY Application/public ./public
+
+# Per-campaign SQLite files live here (Application/data/campaigns/<id>/).
+# Created on demand by db/campaign-store.js; the directory is pre-made so a
+# fresh container can write to it before the first campaign is opened.
+RUN mkdir -p /app/data/campaigns
 
 # Expose port (configurable via environment)
 EXPOSE 3000
