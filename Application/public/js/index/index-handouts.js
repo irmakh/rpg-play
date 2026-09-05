@@ -93,8 +93,16 @@ function renderHandouts() {
       </div>`;
   }).join('');
 
-  // Opening the tab counts as reading whatever is readable.
-  markHandoutsSeen();
+  // Only a VISIBLE tab counts as reading. renderHandouts() also runs on a
+  // background refresh (character select, or a `handouts` realtime event), and
+  // marking seen there would silently consume the handout — suppressing the
+  // pop-up on the table screen for something the player never actually saw.
+  if (handoutsTabVisible()) markHandoutsSeen();
+}
+
+function handoutsTabVisible() {
+  const pane = document.getElementById('tab-handouts');
+  return !!pane && pane.classList.contains('active');
 }
 
 async function markHandoutsSeen() {

@@ -404,3 +404,69 @@ describe('seen / unread', () => {
     expect((await gaston(request(app).post(`/api/handouts/${h.id}/seen`)).send({})).status).toBe(404);
   });
 });
+
+// seenAt is what stops the table screen replaying a handout on every reload, so
+// it has to be the server that decides when there is something new to show. A
+// client-side "already shown" list cannot: it dies with the page.
+describe('seenAt drives re-showing', () => {
+  const seenAt = (id, charId = ALIYR) => ldb.getHandoutRecipient(id, charId).seenAt;
+
+  it('stays marked across repeated reads', async () => {
+    const h = await makeHandout({ checkSkill: -1 });
+    await handTo(h.id, [ALIYR]);
+    await aliyr(request(app).post(`/api/handouts/${h.id}/seen`)).send({});
+    const first = seenAt(h.id);
+    expect(first).not.toBe('');
+    // Re-fetching must not clear it — that is what would replay the handout.
+    await aliyr(request(app).get('/api/handouts'));
+    expect(seenAt(h.id)).toBe(first);
+  });
+
+  it('clears when the DM confirms an outcome, so the body surfaces', async () => {
+    const h = await makeHandout();
+    await handTo(h.id, [ALIYR]);
+    await aliyr(request(app).post(`/api/handouts/${h.id}/roll`)).send({});
+    await aliyr(request(app).post(`/api/handouts/${h.id}/seen`)).send({});
+    expect(seenAt(h.id)).not.toBe('');
+
+    await dm(request(app).patch(`/api/handouts/${h.id}/recipients/${ALIYR}`)).send({ outcome: 'success' });
+    expect(seenAt(h.id)).toBe('');
+    const { row } = await playerPayload(h.id);
+    expect(row.seenAt).toBe('');
+    expect(row.text).toBe(SUCCESS_BODY);
+  });
+
+  it('clears again when the DM re-tags', async () => {
+    const h = await makeHandout();
+    await handTo(h.id, [ALIYR]);
+    await dm(request(app).patch(`/api/handouts/${h.id}/recipients/${ALIYR}`)).send({ outcome: 'success' });
+    await aliyr(request(app).post(`/api/handouts/${h.id}/seen`)).send({});
+    await dm(request(app).patch(`/api/handouts/${h.id}/recipients/${ALIYR}`)).send({ outcome: 'fail' });
+    expect(seenAt(h.id)).toBe('');
+  });
+
+  it('clears when the DM re-sends it, without disturbing the roll', async () => {
+    const h = await makeHandout();
+    await handTo(h.id, [ALIYR]);
+    await aliyr(request(app).post(`/api/handouts/${h.id}/roll`)).send({});
+    await aliyr(request(app).post(`/api/handouts/${h.id}/seen`)).send({});
+    const rolled = ldb.getHandoutRecipient(h.id, ALIYR).rollTotal;
+
+    await handTo(h.id, [ALIYR]);          // the DM re-sends it
+    const rec = ldb.getHandoutRecipient(h.id, ALIYR);
+    expect(rec.seenAt).toBe('');          // shows again
+    expect(rec.outcome).toBe('rolled');   // but the roll survives
+    expect(rec.rollTotal).toBe(rolled);
+  });
+
+  it('leaves other recipients alone when re-sending to one', async () => {
+    const h = await makeHandout({ checkSkill: -1 });
+    await handTo(h.id);                                   // both characters
+    await aliyr(request(app).post(`/api/handouts/${h.id}/seen`)).send({});
+    await gaston(request(app).post(`/api/handouts/${h.id}/seen`)).send({});
+
+    await handTo(h.id, [ALIYR]);                          // re-send to Aliyr only
+    expect(seenAt(h.id, ALIYR)).toBe('');
+    expect(seenAt(h.id, GASTON)).not.toBe('');
+  });
+});

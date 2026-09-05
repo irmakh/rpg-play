@@ -84,6 +84,8 @@ forged. The roll is written to chat with `dmOnly:true`, so only the DM sees it.
 recipient when a DC is set, but nothing a player can read changes until the DM
 `PATCH`es an outcome — that single call is the gate.
 
+`seenAt` is what stops the table screen replaying a handout on every page load: the pop-up gate is `!seenAt`, stamped when the card is shown, and the SERVER clears it whenever the DM re-sends the handout or changes the outcome. It has to be server-side — a client-side "already shown" list dies with the page. Marking seen only ever happens on a VISIBLE tab, or a background refresh would silently consume the handout and suppress the pop-up.
+
 Per-recipient state: `pending -> rolled -> success|fail`. A handout with no
 check (`checkSkill = -1`) is created straight at `success`. Sending a
 recipient back to `pending` clears their roll, which is how a re-roll is

@@ -6,14 +6,24 @@
 // popping their own handouts at them mid-session would be noise.
 
 let _tblHandouts = [];
-let _tblHandoutShown = new Set();   // ids already popped this session
+let _tblHandoutShown = new Set();   // guards against double-popping in one paint
 let _tblHandoutQueue = [];
 
 // charHeaders() already carries X-Character-Id + X-Character-Password.
 const tblHandoutHeaders = () => charHeaders();
 
-/** A handout is worth showing once its body exists, or when it invites a roll. */
+/**
+ * Whether to pop this handout at the player.
+ *
+ * The gate is the server's seenAt, NOT anything this page remembers. An
+ * in-memory set dies on reload, so every handout the player already read used
+ * to pop again on every refresh. seenAt is stamped when the card is shown and
+ * cleared server-side whenever the DM re-sends the handout or changes the
+ * outcome — so it pops once, and again only when there is genuinely something
+ * new to read.
+ */
 function _tblHandoutIsShowable(h) {
+  if (h.seenAt) return false;
   return h.canRoll || h.outcome === 'success' || h.outcome === 'fail';
 }
 
@@ -44,6 +54,17 @@ async function loadTableHandouts({ popNew = true } = {}) {
   } catch {}
 }
 
+/** Stamp seenAt so this handout does not pop again after a reload. */
+async function _tblHandoutMarkSeen(id) {
+  try {
+    await fetch('/api/handouts/' + encodeURIComponent(id) + '/seen', {
+      method: 'POST', headers: tblHandoutHeaders(),
+    });
+  } catch {}
+  const local = _tblHandouts.find(h => h.id === id);
+  if (local) local.seenAt = new Date().toISOString();
+}
+
 function _tblHandoutNext() {
   const h = _tblHandoutQueue.shift();
   if (h) showHandoutCard(h);
@@ -67,6 +88,10 @@ function showHandoutCard(h) {
     <div class="ho-card-body" id="handout-card-body">${_tblHandoutBody(h)}</div>`;
   document.body.appendChild(card);
   _tblHandoutMakeDraggable(card, document.getElementById('handout-card-drag'));
+  // Showing it counts as delivering it. Reloading the page must not replay
+  // handouts the player has already had in front of them; it stays available in
+  // the right panel's Handouts tab either way.
+  _tblHandoutMarkSeen(h.id);
 }
 
 function _tblHandoutBody(h) {

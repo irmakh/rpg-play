@@ -257,7 +257,13 @@ export default function register(app, ctx) {
       // With no check there is nothing to resolve, so the content is readable
       // immediately; otherwise the recipient waits at 'pending' for their roll.
       const startState = (row.checkSkill ?? -1) >= 0 ? 'pending' : 'success';
-      for (const charId of charIds) ldb.addHandoutRecipient(genId(), row.id, charId, startState);
+      for (const charId of charIds) {
+        ldb.addHandoutRecipient(genId(), row.id, charId, startState);
+        // Handing it to someone who already holds it is the DM re-sending it:
+        // clear seenAt so it surfaces again on their screen. Their outcome and
+        // roll are deliberately left alone — this nudges, it does not reset.
+        ldb.updateHandoutRecipient(row.id, charId, { seenAt: '' });
+      }
 
       broadcast('handouts', { action: 'handed-out', id: row.id, charIds });
       res.json(dmObj(ldb.getHandout(row.id)));
@@ -343,7 +349,12 @@ export default function register(app, ctx) {
 
       // Sending a recipient back to 'pending' clears the roll so they may try
       // again — that is how a DM grants a re-roll.
-      const patch = { outcome };
+      //
+      // Any outcome change also clears seenAt: the player now has something they
+      // have not read, which is what makes it surface on their screen again.
+      // Without this the client would have to remember what it had shown, and
+      // that memory would die on every page reload.
+      const patch = { outcome, seenAt: '' };
       if (outcome === 'pending') { patch.rollTotal = null; patch.rollDetail = ''; patch.rolledAt = ''; }
       ldb.updateHandoutRecipient(row.id, req.params.charId, patch);
 
