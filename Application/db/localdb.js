@@ -218,6 +218,31 @@ db.exec(`
     precip_roll INTEGER, precip_level TEXT, precipitation TEXT,
     created_at TEXT DEFAULT (datetime('now'))
   );
+  -- DM handouts. A handout carries TWO bodies: the one a player sees when their
+  -- skill check succeeds and the one they see when it fails. Neither ever
+  -- reaches a player until the DM confirms their outcome — see playerObj() in
+  -- server/routes/handouts.js, which does the redaction server-side.
+  CREATE TABLE IF NOT EXISTS handouts (
+    id TEXT PRIMARY KEY, title TEXT DEFAULT '', tag TEXT DEFAULT '',
+    promptText TEXT DEFAULT '',
+    successText TEXT DEFAULT '',
+    successImageUrl TEXT DEFAULT '', successImageThumb TEXT DEFAULT '', successImageMedium TEXT DEFAULT '',
+    failText TEXT DEFAULT '',
+    failImageUrl TEXT DEFAULT '', failImageThumb TEXT DEFAULT '', failImageMedium TEXT DEFAULT '',
+    checkSkill INTEGER DEFAULT -1,   -- -1 = no check, else index into SKILL_NAMES
+    checkDc INTEGER DEFAULT 0,       -- guidance only; the DM still confirms
+    createdAt TEXT DEFAULT (datetime('now'))
+  );
+  -- One row per (handout, character). outcome walks
+  -- pending -> rolled -> success|fail; a handout with no check is created
+  -- straight at 'success'.
+  CREATE TABLE IF NOT EXISTS handout_recipients (
+    id TEXT PRIMARY KEY, handoutId TEXT NOT NULL, charId TEXT NOT NULL,
+    rollTotal INTEGER, rollDetail TEXT DEFAULT '', rolledAt TEXT DEFAULT '',
+    outcome TEXT DEFAULT 'pending', seenAt TEXT DEFAULT '',
+    createdAt TEXT DEFAULT (datetime('now')),
+    UNIQUE(handoutId, charId)
+  );
 `);
 
 // Indexes (idempotent — safe on every startup)
@@ -229,6 +254,8 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_treasury_items_mode        ON treasury_items(mode);
   CREATE INDEX IF NOT EXISTS idx_treasury_items_tag         ON treasury_items(tag);
   CREATE INDEX IF NOT EXISTS idx_loot_logs_charId           ON loot_logs(charId);
+  CREATE INDEX IF NOT EXISTS idx_handout_recip_handout      ON handout_recipients(handoutId);
+  CREATE INDEX IF NOT EXISTS idx_handout_recip_char         ON handout_recipients(charId);
 `);
 
 // One-time migrations
@@ -1064,6 +1091,83 @@ function getSoundsForPlaylist(playlistId) {
   return soundIds.map(id => allSounds.find(s => s.id === id)).filter(Boolean);
 }
 
+// ── Handouts ──────────────────────────────────────────────────────────────────
+// Row shape is returned raw; the routes decide what a given viewer may see.
+function listHandouts() {
+  return db.prepare('SELECT * FROM handouts ORDER BY createdAt DESC').all();
+}
+function getHandout(id) {
+  return db.prepare('SELECT * FROM handouts WHERE id = ?').get(id) || null;
+}
+const HANDOUT_COLS = [
+  'title', 'tag', 'promptText',
+  'successText', 'successImageUrl', 'successImageThumb', 'successImageMedium',
+  'failText', 'failImageUrl', 'failImageThumb', 'failImageMedium',
+  'checkSkill', 'checkDc',
+];
+function createHandout(id, fields = {}) {
+  const cols = ['id', ...HANDOUT_COLS, 'createdAt'];
+  const vals = [
+    id,
+    fields.title ?? '', fields.tag ?? '', fields.promptText ?? '',
+    fields.successText ?? '', fields.successImageUrl ?? '', fields.successImageThumb ?? '', fields.successImageMedium ?? '',
+    fields.failText ?? '', fields.failImageUrl ?? '', fields.failImageThumb ?? '', fields.failImageMedium ?? '',
+    fields.checkSkill ?? -1, fields.checkDc ?? 0,
+    fields.createdAt || new Date().toISOString(),
+  ];
+  db.prepare(`INSERT INTO handouts (${cols.map(c => `"${c}"`).join(', ')}) VALUES (${cols.map(() => '?').join(', ')})`).run(...vals);
+  return getHandout(id);
+}
+function updateHandout(id, fields = {}) {
+  const patch = {};
+  for (const k of HANDOUT_COLS) if (fields[k] !== undefined) patch[k] = fields[k];
+  if (!Object.keys(patch).length) return getHandout(id);
+  const sets = Object.keys(patch).map(k => `"${k}" = ?`).join(', ');
+  db.prepare(`UPDATE handouts SET ${sets} WHERE id = ?`).run(...Object.values(patch), id);
+  return getHandout(id);
+}
+function deleteHandout(id) {
+  db.prepare('DELETE FROM handout_recipients WHERE handoutId = ?').run(id);
+  db.prepare('DELETE FROM handouts WHERE id = ?').run(id);
+}
+
+function listHandoutRecipients(handoutId) {
+  return db.prepare('SELECT * FROM handout_recipients WHERE handoutId = ? ORDER BY createdAt').all(handoutId);
+}
+function listHandoutsForChar(charId) {
+  // The player's view: every handout they hold, newest first, with their own row.
+  return db.prepare(`
+    SELECT h.*, r.id AS recipientId, r.charId, r.rollTotal, r.rollDetail, r.rolledAt, r.outcome, r.seenAt
+    FROM handout_recipients r JOIN handouts h ON h.id = r.handoutId
+    WHERE r.charId = ? ORDER BY h.createdAt DESC
+  `).all(charId);
+}
+function getHandoutRecipient(handoutId, charId) {
+  return db.prepare('SELECT * FROM handout_recipients WHERE handoutId = ? AND charId = ?').get(handoutId, charId) || null;
+}
+/** Idempotent: handing the same handout to the same character twice is a no-op. */
+function addHandoutRecipient(id, handoutId, charId, outcome = 'pending') {
+  db.prepare(`INSERT OR IGNORE INTO handout_recipients (id, handoutId, charId, outcome, createdAt)
+              VALUES (?, ?, ?, ?, ?)`).run(id, handoutId, charId, outcome, new Date().toISOString());
+  return getHandoutRecipient(handoutId, charId);
+}
+const RECIPIENT_COLS = new Set(['rollTotal', 'rollDetail', 'rolledAt', 'outcome', 'seenAt']);
+function updateHandoutRecipient(handoutId, charId, fields = {}) {
+  const patch = {};
+  for (const [k, v] of Object.entries(fields)) if (RECIPIENT_COLS.has(k)) patch[k] = v;
+  if (!Object.keys(patch).length) return getHandoutRecipient(handoutId, charId);
+  const sets = Object.keys(patch).map(k => `"${k}" = ?`).join(', ');
+  db.prepare(`UPDATE handout_recipients SET ${sets} WHERE handoutId = ? AND charId = ?`)
+    .run(...Object.values(patch), handoutId, charId);
+  return getHandoutRecipient(handoutId, charId);
+}
+function removeHandoutRecipient(handoutId, charId) {
+  db.prepare('DELETE FROM handout_recipients WHERE handoutId = ? AND charId = ?').run(handoutId, charId);
+}
+function clearHandoutRecipients(handoutId) {
+  db.prepare('DELETE FROM handout_recipients WHERE handoutId = ?').run(handoutId);
+}
+
 // ── Full export (for backup) ──────────────────────────────────────────────────
 function exportAll() {
   return {
@@ -1110,5 +1214,8 @@ function exportAll() {
     updateCalendarEvent, deleteCalendarEvent, listSoundFiles, getSoundFile, createSoundFile, deleteSoundFile,
     updateSoundFile, listPlaylists, getPlaylist, createPlaylist, updatePlaylist, deletePlaylist,
     getSoundsForPlaylist, exportAll, SHOP_MAX_ACTIVE_TAGS, normalizeShopTags, lootRowToTreasury, shopRowToTreasury,
+    listHandouts, getHandout, createHandout, updateHandout, deleteHandout,
+    listHandoutRecipients, listHandoutsForChar, getHandoutRecipient, addHandoutRecipient,
+    updateHandoutRecipient, removeHandoutRecipient, clearHandoutRecipients,
   };
 }

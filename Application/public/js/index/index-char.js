@@ -323,6 +323,8 @@ async function _applyChar(char) {
   await loadMedia();
   renderShopWallet();
   syncLootDescVisibility();
+  // Populates the Handouts badge without needing the tab to be opened.
+  if (typeof loadHandouts === 'function') loadHandouts();
 }
 
 // ── Inline unlock screen ───────────────────────────────────────────────────────

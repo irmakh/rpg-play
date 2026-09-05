@@ -88,7 +88,7 @@
 </div>
 
 <!-- Add / Edit Event Modal -->
-<div class="cal-modal" id="cal-event-modal" style="display:none" onclick="if(event.target===this)calCloseEventModal()">
+<div class="cal-modal" id="cal-event-modal" style="display:none">
   <div class="cal-modal-box">
     <div class="cal-modal-title" id="cal-modal-title">Add Event</div>
 
@@ -194,7 +194,7 @@
 </div>
 
 <!-- Jump to Date Modal -->
-<div class="cal-modal" id="cal-jump-modal" style="display:none" onclick="if(event.target===this)calCloseJumpModal()">
+<div class="cal-modal" id="cal-jump-modal" style="display:none">
   <div class="cal-modal-box">
     <div class="cal-modal-title">Set Campaign Date</div>
 
@@ -264,7 +264,7 @@
 </div>
 
 <!-- Weather modal -->
-<div class="cal-modal" id="weather-modal" style="display:none" onclick="if(event.target===this)weatherCloseModal()">
+<div class="cal-modal" id="weather-modal" style="display:none">
   <div class="cal-modal-box" style="max-width:540px">
     <div class="cal-modal-title">🌦 Daily Weather</div>
 
@@ -378,6 +378,7 @@
 <script src="/js/lib/lightbox.js" defer></script>
 <script src="/js/lib/weather-ui.js" defer></script>
 <script src="/js/lib/realtime.js" defer></script>
+<script src="/js/lib/modal-guard.js" defer></script>
 <script src="/js/events.js" defer></script>
 <!-- Presence: register this client so it shows on the maintenance page -->
 <script>window.addEventListener('DOMContentLoaded',function(){if(window.connectRealtime)connectRealtime({});});</script>

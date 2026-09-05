@@ -102,6 +102,17 @@ Uploaded images and audio under `public/uploads/` are shared across campaigns. T
 - Click a day to filter its events; **Go to Today** jumps back to the campaign date; ← / → month navigation
 - Weather icons on each day the DM has rolled, with the same hover breakdown; the virtual table also carries a toolbar widget showing the current day's weather
 
+### Handouts (`/handouts.html`) — DM only
+
+- Author a handout with a title, an optional **prompt** shown before any check, and **two bodies**: one for a successful skill check, one for a failure. Each body takes its own image.
+- Hand it to selected characters (or the whole party); every recipient is tracked independently.
+- **Optionally require a skill check.** The check is **blind**: the player presses a neutral *Examine* button and never learns which skill was tested, what the DC was, or what they rolled. The roll happens on the server using the character's own modifier, so it cannot be forged.
+- **You decide the outcome.** The DM screen lists every recipient with their total and, if you set a DC, a suggested result — but nothing reaches a player until you press **Success** or **Fail**. There is an *Apply all suggested* shortcut, and you can overrule any roll.
+- Rolls are logged to chat as **DM-only**, so players never see each other's results.
+- Re-tag an outcome at any time, send a recipient back to *pending* to grant a re-roll, or recall the handout entirely.
+- A handout with no skill check is simply readable the moment you hand it out.
+- Players see it pop up on the **table screen** and keep it in a **📜 Handouts tab** on their character sheet, with an unread badge.
+
 ### Treasury (`/treasury.html`) — DM only
 One catalogue for everything you hand out, replacing the separate Merchant and Loot managers. Every item carries the full D&D data set — type, price (PP/GP/EP/SP/CP), stock, AC / initiative / speed / spell bonuses, attunement, weapon damage and properties, description — plus a **distribution mode** you flip in place:
 
@@ -198,6 +209,7 @@ One catalogue for everything you hand out, replacing the separate Merchant and L
 | Monster Library | `/monsters.html` | DM |
 | Map Prep | `/prepare-map.html` | DM |
 | Treasury (loot + shop) | `/treasury.html` | DM |
+| Handouts | `/handouts.html` | DM |
 | Music & Sounds | `/playlists.html` | DM |
 | Maintenance (unlisted) | `/maintenance.html` | Super-admin |
 | Stories | `/stories.html` | Any (password gated) |
@@ -319,7 +331,7 @@ PORT=443
 
 ## Tech Stack
 
-- **Backend:** Node.js (ES modules), Express — split into 14 semantic route modules under `server/routes/`, with a lean `server.js` entry point
+- **Backend:** Node.js (ES modules), Express — split into 15 semantic route modules under `server/routes/`, with a lean `server.js` entry point
 - **Database:** SQLite (`better-sqlite3`) for `localdb` / [InstantDB](https://www.instantdb.com) for cloud. One cross-tenant registry (`campaigns.db`) plus four SQLite files per campaign under `data/campaigns/<id>/`; multi-tenancy is `localdb` only
 - **Real-time:** WebSocket (`ws`) for `localdb` / Server-Sent Events for cloud
 - **Frontend:** Vanilla JS, HTML, CSS — no build step, no framework, no bundler. The character sheet is 15 modules under `js/index/`, the table is 14 under `js/table/`, with shared helpers in `js/lib/`
@@ -343,11 +355,11 @@ High-level layout — see **[structure.md](structure.md)** for the complete, ann
 char_sheet/
 ├── Application/            # The web app
 │   ├── server.js           #   Express entry point — loads route modules + shared context
-│   ├── server/routes/      #   14 Express route modules
+│   ├── server/routes/      #   15 Express route modules
 │   ├── lib/                #   Request context (campaign scoping) + password hashing
 │   ├── db/                 #   SQLite layers (campaignsdb, campaign-store, localdb, mediadb, storiesdb)
 │   ├── aiDM/               #   AI Dungeon Master module (own DB + routes)
-│   ├── tests/              #   23 Vitest unit + API suites (716 tests)
+│   ├── tests/              #   24 Vitest unit + API suites (750 tests)
 │   └── public/             #   Served frontend
 │       ├── *.html          #     Page entry points (campaigns, index, table, dm, treasury, events, …)
 │       ├── js/index/       #     14 character-sheet modules

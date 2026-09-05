@@ -2,7 +2,7 @@
   "name": "RPG Table",
   "short_name": "RPG Table",
   "description": "Virtual tabletop for D&D 5e — character sheets, combat tracker, maps",
-  "start_url": "/",
+  "start_url": "/index.html",
   "display": "standalone",
   "background_color": "#1a1a2e",
   "theme_color": "#1a1a2e",

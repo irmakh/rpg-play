@@ -61,6 +61,42 @@
 - `js/lib/realtime.js` is now also the shared campaign layer: a `fetch` interceptor that bounces to the picker on `409 NO_CAMPAIGN`, `enforceCampaignSession()` which drops a session belonging to another campaign, `initCampaignBadge()` which fills any `#campaign-badge` element, and `campaign=` on the WS/SSE URL
 
 
+## Application — Handouts
+
+> DM-authored handouts. Each carries TWO bodies — what a player reads on a
+> successful skill check and what they read on a failed one — plus an optional
+> prompt shown before the check resolves.
+
+**Redaction is server-side and non-negotiable.** `playerObj()` in
+`server/routes/handouts.js` assembles a per-recipient payload holding only the
+body that recipient has earned. A `pending` or `rolled` recipient's JSON
+contains neither body, no skill name, no DC and no roll total. Hiding the wrong
+variant in the browser would still ship it in the response — the same leak fixed
+in the treasury in session 80.
+
+**The check is blind and rolled on the server.** `POST /api/handouts/:id/roll`
+reads the character's stored `data['sk-<i>']` (kept current by
+`recalcDerived()`), rolls `d20 + mod`, stores the total and returns
+`{ok:true}` with no number. Rolling server-side also means a total cannot be
+forged. The roll is written to chat with `dmOnly:true`, so only the DM sees it.
+
+**The DC only suggests.** `dmObj()` adds `suggested: 'success'|'fail'` per
+recipient when a DC is set, but nothing a player can read changes until the DM
+`PATCH`es an outcome — that single call is the gate.
+
+Per-recipient state: `pending -> rolled -> success|fail`. A handout with no
+check (`checkSkill = -1`) is created straight at `success`. Sending a
+recipient back to `pending` clears their roll, which is how a re-roll is
+granted.
+
+- Tables `handouts` + `handout_recipients` (unique on `handoutId, charId`, so handing out twice is idempotent and never resets a roll)
+- `ldb.listHandouts / getHandout / createHandout / updateHandout / deleteHandout`
+- `ldb.listHandoutRecipients / listHandoutsForChar / getHandoutRecipient / addHandoutRecipient / updateHandoutRecipient / removeHandoutRecipient / clearHandoutRecipients`
+- Routes: `GET /api/handouts` (DM full, player redacted) · `GET/POST/PUT/DELETE /api/handouts[/:id]` · `POST /api/handouts/media` · `POST /:id/hand-out` · `POST /:id/recall` · `POST /:id/roll` (character) · `PATCH /:id/recipients/:charId` (DM confirm) · `POST /:id/seen`
+- DM page `handouts.html` + `js/handouts.js` + `css/handouts.css`, linked from the DM screen nav
+- Player: `js/index/index-handouts.js` (Handouts tab, unread badge) and `js/table/table-handouts.js` (draggable pop-up on arrival AND on outcome confirmation — the second is when the body actually arrives)
+- Tests: `tests/api/handouts.api.test.js` (34), built on the real `openCampaignDb(':memory:')` because the thing under test is what the server puts in a response
+
 ## Application — Server Helpers (`Application/server.js`)
 
 > These are runtime helpers embedded in the Express server, not standalone scripts.

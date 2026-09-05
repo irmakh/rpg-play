@@ -33,6 +33,7 @@ import registerBackup     from './server/routes/backup.js';
 import registerTable      from './server/routes/table.js';
 import registerSound      from './server/routes/sound.js';
 import registerStories    from './server/routes/stories.js';
+import registerHandouts   from './server/routes/handouts.js';
 import registerAiDM      from './aiDM/routes.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -331,7 +332,7 @@ const MAX_MEDIA_BYTES = 25 * 1024 * 1024;
 // Bump this number whenever frontend JS or CSS files change.
 // Also bump CACHE in public/sw.js to the same value.
 // Both must always match. See deployment notes in CLAUDE.md.
-const FRONTEND_VERSION = 134;
+const FRONTEND_VERSION = 136;
 
 // ── Express app ───────────────────────────────────────────────────────────────
 const app = express();
@@ -592,6 +593,7 @@ registerBackup(app, ctx);
 registerTable(app, ctx);
 registerSound(app, ctx);
 registerStories(app, ctx);
+registerHandouts(app, ctx);
 registerAiDM(app, ctx);
 
 // ── Server startup: HTTPS in production, plain HTTP for local dev ─────────────

@@ -56,6 +56,7 @@ function showTab(name, el) {
   document.getElementById('tab-' + name).classList.add('active');
   el.classList.add('active');
   if (name === 'treasury') loadTreasuryTab();
+  if (name === 'handouts' && typeof loadHandouts === 'function') loadHandouts();
   if (name === 'calendar') pcalLoad();
   if (name === 'actions' && typeof renderActionsTab === 'function') renderActionsTab();
 }

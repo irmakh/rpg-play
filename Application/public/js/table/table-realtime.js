@@ -172,6 +172,11 @@ function startSSE() {
     },
     sound: (d) => { handleSoundEvent(d); },
     // DM rolled/set weather or moved the campaign date — refresh the toolbar widget.
+    handouts: () => {
+      // Covers hand-out, outcome confirmation and recall alike; the server
+      // decides what this character may now see.
+      if (typeof loadTableHandouts === 'function') loadTableHandouts();
+    },
     'calendar-updated': () => { if (typeof loadTableWeather === 'function') loadTableWeather(); },
   });
 }

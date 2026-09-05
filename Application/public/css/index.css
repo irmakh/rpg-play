@@ -527,3 +527,32 @@ body.theme-mobile .media-gallery{grid-template-columns:repeat(auto-fill,minmax(1
 /* Stands in for a description the DM has not revealed yet. */
 .tr-unid{font-size:10px;color:var(--txd);font-style:italic;opacity:.85;margin-top:2px;
          white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* ── Handouts tab ──────────────────────────────────────────────────────────── */
+/* Each item shows exactly one state: an invitation to examine, a "waiting for
+   the DM" line, or the one body this character earned. The other body is never
+   sent to the browser, so there is nothing here to hide. */
+#tab-btn-handouts.has-unread { color: var(--ac); font-weight: bold; }
+.ho-item {
+  background: var(--bg2); border: 1px solid var(--sep); border-left: 3px solid transparent;
+  border-radius: 7px; padding: 12px 14px; margin-bottom: 10px;
+}
+.ho-item.unread { border-left-color: var(--ac); }
+.ho-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; flex-wrap: wrap; }
+.ho-title { font-size: 14px; font-weight: bold; color: var(--ac); }
+.ho-tag {
+  font-size: 10px; color: var(--txd); background: var(--bg3);
+  border: 1px solid var(--sep); border-radius: 20px; padding: 1px 8px;
+}
+.ho-new {
+  font-size: 9px; font-weight: bold; letter-spacing: .5px; text-transform: uppercase;
+  color: var(--bg); background: var(--ac); border-radius: 20px; padding: 2px 7px;
+}
+.ho-prompt { font-size: 13px; color: var(--tx); line-height: 1.55; white-space: pre-wrap; }
+.ho-wait { font-size: 12px; color: var(--txd); margin-top: 8px; font-style: italic; }
+.ho-wait .muted { opacity: .7; }
+.ho-body { font-size: 13px; color: var(--tx); line-height: 1.6; white-space: pre-wrap; margin-top: 8px; }
+.ho-img {
+  display: block; max-width: 100%; max-height: 320px; border-radius: 6px;
+  border: 1px solid var(--a44); margin-bottom: 4px; cursor: zoom-in;
+}

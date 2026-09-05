@@ -157,12 +157,22 @@ function initResizablePanels() {
 
 // ── Modal backdrop click-to-close ─────────────────────────────────────────────
 function initModalBackdrops() {
-  [
-    ['dm-tools-modal',     closeDMToolsModal],
+  // Modals holding text the user typed go through the guard, which refuses to
+  // discard a filled-in form on a stray backdrop click and ignores a drag that
+  // began inside the box. The rest keep the plain click-away behaviour.
+  const GUARDED = [
     ['add-token-modal',    closeAddTokenModal],
     ['dice-roller-modal',  closeDiceRollerModal],
+    ['init-roll-modal',    closeInitRollModal],
+  ];
+  const PLAIN = [
+    ['dm-tools-modal',     closeDMToolsModal],
     ['monster-info-modal', closeMonsterInfoTableModal],
-  ].forEach(([id, fn]) => {
+  ];
+  for (const [id, fn] of GUARDED) {
+    if (window.guardModal) guardModal(id, fn);
+  }
+  PLAIN.forEach(([id, fn]) => {
     const el = document.getElementById(id);
     if (el) el.addEventListener('click', e => { if (e.target === el) fn(); });
   });
@@ -240,6 +250,7 @@ window.addEventListener('load', async () => {
   fetchDrawings();
   startSSE();
   loadTableWeather();
+  loadTableHandouts();
   initMusicPlayer();
   initChatDragDrop();
   initResizablePanels();

@@ -42,6 +42,7 @@ char_sheet/
 │   │   │   │   └── table-console.css   #       Console screen styles
 │   │   │   ├── calendar.css            #     Calendar of Harptos styles
 │   │   │   ├── campaigns.css           #     Campaign picker styles (master-detail)
+│   │   │   ├── handouts.css            #     Handout manager styles (master-detail)
 │   │   │   ├── dm.css                  #     DM dashboard styles
 │   │   │   ├── index.css               #     Character sheet styles
 │   │   │   ├── loot.css                #     Retired loot manager styles (page redirects to Treasury)
@@ -76,6 +77,7 @@ char_sheet/
 │   │   │   │   ├── index-media.js      #       Portrait + media attachments
 │   │   │   │   ├── index-realtime.js   #       SSE/WS sync
 │   │   │   │   ├── index-state.js      #       Shared mutable state + session
+│   │   │   │   ├── index-handouts.js   #       Handouts tab — blind Examine, unread badge
 │   │   │   │   ├── index-treasury.js   #       Treasury tab — Free Loot / Shop segments, carts, claimed loots
 │   │   │   │   └── index-utils.js      #       Ability/modifier helpers
 │   │   │   ├── lib/                    #     Shared frontend utilities
@@ -85,6 +87,7 @@ char_sheet/
 │   │   │   │   ├── esc.js              #       HTML escaping helper
 │   │   │   │   ├── fr_calendar.js      #       Calendar of Harptos logic
 │   │   │   │   ├── lightbox.js         #       Fullscreen image/video viewer
+│   │   │   │   ├── modal-guard.js      #       Backdrop/Escape guard so a filled-in modal is never lost
 │   │   │   │   ├── realtime.js         #       WS/SSE transport, force-reload, campaign guard + badge
 │   │   │   │   └── weather-ui.js       #       Shared weather icons, tooltip, day markers
 │   │   │   ├── table/                  #     Virtual table — 15 modules
@@ -94,6 +97,7 @@ char_sheet/
 │   │   │   │   ├── table-hppanel.js    #       HP panel + group ability/save rolls
 │   │   │   │   ├── table-initiative.js #       Initiative tracker UI
 │   │   │   │   ├── table-main.js       #       Bootstrap + DM tools modal
+│   │   │   │   ├── table-handouts.js   #       Handout pop-up card (players) + blind Examine
 │   │   │   │   ├── table-map.js        #       Canvas, tokens, drawing, fog, ruler
 │   │   │   │   ├── table-monsters.js   #       Monster tokens + stat block
 │   │   │   │   ├── table-music.js      #       Synced music playback
@@ -106,6 +110,7 @@ char_sheet/
 │   │   │   ├── dm.js                   #     DM dashboard
 │   │   │   ├── events.js               #     DM calendar + weather roller
 │   │   │   ├── campaigns.js            #     Campaign picker — list, detail, login, create/settings/delete
+│   │   │   ├── handouts.js             #     Handout manager (DM) — authoring, hand-out, outcome tagging
 │   │   │   ├── login.js                #     Login screen logic (campaign-scoped)
 │   │   │   ├── loot.js                 #     Retired loot manager (page redirects to Treasury)
 │   │   │   ├── maintenance.js          #     Maintenance page — client list, versions, force reload
@@ -117,6 +122,7 @@ char_sheet/
 │   │   ├── dm.html                     #   DM dashboard page
 │   │   ├── campaigns.html              #   Campaign picker — served at / (the front door)
 │   │   ├── events.html                 #   DM calendar page
+│   │   ├── handouts.html               #   Handout manager page (DM)
 │   │   ├── index.html                  #   Character sheet page
 │   │   ├── login.html                  #   Login page (all users)
 │   │   ├── loot.html                   #   Retired — server 301-redirects /loot.html to /treasury.html
@@ -141,6 +147,7 @@ char_sheet/
 │   │       ├── characters.js           #     Character CRUD + quick-roll + action use
 │   │       ├── chat.js                 #     Chat messages + image sharing
 │   │       ├── events.js               #     Calendar dates, events, journals & media, weather
+│   │       ├── handouts.js             #     Handouts: two bodies, blind server-side check, DM confirm
 │   │       ├── initiative.js           #     Initiative CRUD + turn control
 │   │       ├── loot.js                 #     Legacy loot API — kept one release for cached clients
 │   │       ├── monsters.js             #     Monster library + XML/JSON import
@@ -154,6 +161,7 @@ char_sheet/
 │   │   │   ├── auth.api.test.js        #     Auth route tests
 │   │   │   ├── calendar.api.test.js    #     Calendar events & journal visibility tests
 │   │   │   ├── campaigns.api.test.js   #     Campaign registry, per-campaign DM passwords, isolation
+│   │   │   ├── handouts.api.test.js    #     Handout redaction boundary, blind roll, DC guidance
 │   │   │   ├── characters.api.test.js  #     Characters route tests
 │   │   │   ├── initiative.api.test.js  #     Initiative route tests
 │   │   │   ├── table.api.test.js       #     Table route tests
@@ -246,7 +254,7 @@ char_sheet/
 | Path | Purpose |
 |---|---|
 | `server.js` | Express entry point; injects the cache-busting `?v=N`, redirects retired pages, wires route modules |
-| `server/routes/` | 14 route modules, each `register(app, ctx)` |
+| `server/routes/` | 15 route modules, each `register(app, ctx)` |
 | `db/campaignsdb.js` | Campaign registry — the only cross-tenant database |
 | `db/campaign-store.js` | Per-campaign database handles, provisioning, bootstrap migration |
 | `db/localdb.js`, `db/mediadb.js`, `db/storiesdb.js` | Per-campaign SQLite data layers (factories) |
@@ -256,7 +264,7 @@ char_sheet/
 | `public/js/index/` | 14 character-sheet modules |
 | `public/js/table/` | 15 virtual-table modules |
 | `public/js/lib/` | 8 shared frontend helpers (dice engine, chat render, calendar, weather, …) |
-| `tests/` | 23 Vitest unit + API suites (716 tests) |
+| `tests/` | 24 Vitest unit + API suites (750 tests) |
 
 ## Retired pages
 

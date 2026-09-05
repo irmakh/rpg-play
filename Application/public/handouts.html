@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Handouts — DM</title>
+<script>(function(){try{var s=JSON.parse(sessionStorage.getItem('rpgSession')||'null');if(!s||s.role!=='dm'){location.replace('/login.html?next='+encodeURIComponent(location.pathname));}}catch(e){location.replace('/login.html');}})();</script>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#1a1a2e">
+<link rel="stylesheet" href="/css/handouts.css">
+<script>if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js');</script>
+</head>
+<body>
+
+<div class="top">
+  <a href="/dm.html" class="btn ghost sm" style="text-decoration:none">← Back</a>
+  <h1>📜 Handouts</h1>
+  <span id="campaign-badge" style="display:none;background:var(--bg3);border:1px solid var(--a44);color:var(--txd);padding:2px 8px;border-radius:3px;font-size:11px;cursor:pointer"></span>
+  <span class="spacer"></span>
+  <button class="btn sm" onclick="newHandout()">+ New Handout</button>
+</div>
+
+<div class="main">
+  <div class="list-pane">
+    <div class="list-hdr">
+      <input id="search" placeholder="Search handouts…" oninput="renderList()" style="flex:1">
+    </div>
+    <div class="list-body" id="ho-list">
+      <div class="detail-empty"><span>Loading…</span></div>
+    </div>
+  </div>
+
+  <div class="detail-pane" id="detail">
+    <div class="detail-empty">
+      <div class="big">📜</div>
+      <div>Select a handout, or create one.</div>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="img-picker" accept="image/*" style="display:none">
+
+<script src="/js/lib/realtime.js" defer></script>
+<script src="/js/lib/modal-guard.js" defer></script>
+<script src="/js/handouts.js" defer></script>
+</body>
+</html>

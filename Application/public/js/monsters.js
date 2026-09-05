@@ -609,6 +609,13 @@ function efPortraitChosen(input) {
 }
 
 // ── Keyboard shortcuts ────────────────────────────────────────────────────────
+// The monster stat editor holds dozens of fields — Escape must ask first.
+window.addEventListener('DOMContentLoaded', () => {
+  if (!window.guardModal) return;
+  guardModal('edit-modal', closeEditMonsterModal, { backdrop: false });
+  guardModal('init-modal', closeInitModal,        { backdrop: false });
+});
+
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
     if (document.getElementById('info-modal').style.display !== 'none') closeInfoModal();

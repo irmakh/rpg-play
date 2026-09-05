@@ -79,6 +79,7 @@
     <div class="tab" id="tab-btn-media" onclick="showTab('media',this)">📸 Media</div>
     <div class="tab" id="tab-btn-treasury" onclick="showTab('treasury',this)">💰 Treasury</div>
     <div class="tab" id="tab-btn-calendar" onclick="showTab('calendar',this)">📅 Cal</div>
+    <div class="tab" id="tab-btn-handouts" onclick="showTab('handouts',this)">📜 Handouts</div>
   </div>
 
   <!-- MAIN -->
@@ -371,6 +372,16 @@
       <div id="media-gallery"></div>
     </div></div>
 
+  </div>
+
+  <!-- HANDOUTS (DM-issued, one body per outcome) -->
+  <div id="tab-handouts" class="page">
+    <div class="sec">
+      <div class="ct">📜 Handouts</div>
+      <div class="cb">
+        <div id="handouts-list"></div>
+      </div>
+    </div>
   </div>
 
   <!-- TREASURY (free loot + shop) -->
@@ -821,6 +832,7 @@
 <script src="/js/index/index-actions.js" defer></script>
 <script src="/js/index/index-media.js" defer></script>
 <script src="/js/index/index-treasury.js" defer></script>
+<script src="/js/index/index-handouts.js" defer></script>
 <script src="/js/index/index-initiative.js" defer></script>
 <script src="/js/index/index-dice3d.js" defer></script>
 <script src="/js/index/index-realtime.js" defer></script>

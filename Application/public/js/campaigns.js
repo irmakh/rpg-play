@@ -478,10 +478,9 @@ async function deleteCampaign() {
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') for (const id of ['new-modal', 'manage-modal', 'del-modal']) closeModal(id);
-});
+// The guard owns backdrop clicks and Escape for these three: it will not
+// discard a part-filled form without asking.
 for (const id of ['new-modal', 'manage-modal', 'del-modal']) {
-  document.getElementById(id).addEventListener('click', e => { if (e.target.id === id) closeModal(id); });
+  if (window.guardModal) guardModal(id, () => closeModal(id));
 }
 loadCampaigns();

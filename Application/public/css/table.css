@@ -491,3 +491,31 @@ input[type=number]{-moz-appearance:textfield;appearance:textfield}
 #token-layer-bg{z-index:3}
 #fog-canvas{z-index:5}
 #zoom-control{user-select:none}
+
+/* ── Handout card (player) ─────────────────────────────────────────────────── */
+/* Draggable, and deliberately NOT dismissed by an outside click — a handout is
+   something you read, and losing it to a stray click would be maddening. Same
+   reasoning as the DM image-reveal card. */
+#handout-card {
+  position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  z-index: 3000; width: min(460px, calc(100vw - 24px));
+  max-height: calc(100vh - 40px); display: flex; flex-direction: column;
+  background: var(--bg2); border: 1px solid var(--a55); border-radius: 10px;
+  box-shadow: 0 10px 40px #000a;
+}
+.ho-card-hdr {
+  flex: 0 0 auto; display: flex; align-items: center; gap: 8px;
+  padding: 9px 12px; border-bottom: 1px solid var(--sep); cursor: move;
+  background: var(--a22); border-radius: 9px 9px 0 0;
+}
+.ho-card-title { flex: 1; font-size: 13px; font-weight: bold; color: var(--ac); }
+.ho-card-x { background: none; border: none; color: var(--txd); font-size: 16px; cursor: pointer; line-height: 1; }
+.ho-card-x:hover { color: var(--tx); }
+.ho-card-body { flex: 1 1 auto; overflow-y: auto; padding: 14px; min-height: 0; }
+.ho-card-prompt { font-size: 13px; line-height: 1.55; white-space: pre-wrap; }
+.ho-card-text { font-size: 13px; line-height: 1.6; white-space: pre-wrap; }
+.ho-card-wait { font-size: 12px; color: var(--txd); font-style: italic; margin-top: 10px; }
+.ho-card-img {
+  display: block; max-width: 100%; max-height: 340px; border-radius: 6px;
+  border: 1px solid var(--a44); margin-bottom: 10px; cursor: zoom-in;
+}

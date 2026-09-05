@@ -273,6 +273,7 @@ html,body{height:100%;overflow:hidden;margin:0;padding:0}
 </div>
 
 <script src="/js/lib/realtime.js"></script>
+<script src="/js/lib/modal-guard.js"></script>
 <script>
 // ── Utils ─────────────────────────────────────────────────────────────────────
 function el(id) { return document.getElementById(id); }
@@ -916,9 +917,10 @@ window.addEventListener('DOMContentLoaded', function() {
 });
 
 // ── Modal backdrop close ─────────────────────────────────────────────────────
-el('new-pl-modal').addEventListener('click', function(e) { if (e.target === this) closeNewPl(); });
+if (window.guardModal) { guardModal('new-pl-modal', closeNewPl); guardModal('addtracks-modal', closeAddTracks); }
+else el('new-pl-modal').addEventListener('click', function(e) { if (e.target === this) closeNewPl(); });
 el('upload-modal').addEventListener('click', function(e) { if (e.target === this) closeUploadModal(); });
-el('addtracks-modal').addEventListener('click', function(e) { if (e.target === this) closeAddTracks(); });
+// addtracks-modal is registered with the guard above.
 </script>
 </body>
 </html>

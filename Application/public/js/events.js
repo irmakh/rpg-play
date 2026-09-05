@@ -767,6 +767,15 @@ function calRemovePendingMedia(i) {
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
+// Backdrop clicks and Escape both run through the guard, so a half-written
+// event is never thrown away by a stray click outside the box.
+window.addEventListener('DOMContentLoaded', () => {
+  if (!window.guardModal) return;
+  guardModal('cal-event-modal', calCloseEventModal);
+  guardModal('cal-jump-modal',  calCloseJumpModal);
+  guardModal('weather-modal',   weatherCloseModal);
+});
+
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
     calCloseEventModal();

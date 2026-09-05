@@ -57,5 +57,10 @@ window.addEventListener('load', function startRealtime() {
     'calendar-updated': () => {
       pcalOnServerUpdate();
     },
+    // A handout arriving, or the DM confirming an outcome, changes what this
+    // character may read — refetch rather than trusting what is on screen.
+    handouts: () => {
+      if (typeof loadHandouts === 'function') loadHandouts();
+    },
   });
 });

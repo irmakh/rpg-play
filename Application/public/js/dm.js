@@ -399,6 +399,13 @@ async function deleteEntry(id) {
 }
 
 // ── Keyboard shortcuts ────────────────────────────────────────────────────────
+// Escape must not silently discard a part-filled NPC or character edit.
+window.addEventListener('DOMContentLoaded', () => {
+  if (!window.guardModal) return;
+  guardModal('npc-modal',  closeAddNpcModal,  { backdrop: false });
+  guardModal('edit-modal', closeEditModal,    { backdrop: false });
+});
+
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
     if (document.getElementById('npc-modal').style.display !== 'none') closeAddNpcModal();
