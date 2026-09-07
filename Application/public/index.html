@@ -30,6 +30,7 @@
     <button id="btn-ai-dm" class="char-btn" onclick="goToAIDM()" title="AI Dungeon Master — text adventure">⚔ AI DM</button>
     <span id="campaign-badge" class="char-btn" style="display:none;cursor:pointer" title="Switch campaign"></span>
     <button id="char-logout-btn" class="char-btn" style="display:none" onclick="indexLogout()" title="Logout">🚪 Logout</button>
+    <a id="desktop-app-link" data-desktop-link class="char-btn" href="/downloads/RPG-Table-portable.exe" download style="display:none" title="Download the Windows desktop app — separate windows per screen, global hotkeys and a tray icon">💻 Desktop App</a>
     <select id="theme-sel" onchange="applyTheme(this.value)" title="Theme">
       <option value="dark-gold">🌙 Dark Gold</option>
       <option value="parchment">📜 Parchment</option>
@@ -838,6 +839,7 @@
 <script src="/js/index/index-realtime.js" defer></script>
 <script src="/js/index/index-calendar.js" defer></script>
 <script src="/js/index/index-main.js" defer></script>
+<script src="/js/lib/desktop-link.js" defer></script>
 
 <!-- Floating Panel Stack: initiative on top, chat below, both bottom-right -->
 <div class="panel-stack">
