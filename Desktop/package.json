@@ -25,6 +25,8 @@
       "output": "dist",
       "buildResources": "assets"
     },
+    "compression": "maximum",
+    "electronLanguages": ["en-US"],
     "files": [
       "src/**/*",
       "assets/**/*",
