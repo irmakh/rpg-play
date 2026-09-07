@@ -1,0 +1,144 @@
+/* Shared styling for the desktop app's own pages (setup, settings, error).
+   Colours mirror the web app's default Dark Gold theme so the shell does not
+   look like a different product from the pages it hosts. */
+
+:root {
+  --bg: #1a1a2e;
+  --bg2: #16213e;
+  --bg3: #0f3460;
+  --ac: #c8a04a;
+  --ahi: #e0b860;
+  --a22: #c8a04a22;
+  --a44: #c8a04a44;
+  --tx: #e0d8c8;
+  --txd: #9a927f;
+  --ok: #88ff88;
+  --err: #ff8888;
+  --inf: #aaddff;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--tx);
+  font: 14px/1.5 "Segoe UI", system-ui, sans-serif;
+  padding: 28px 32px 24px;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+h1 {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--ac);
+  letter-spacing: 0.4px;
+  margin-bottom: 4px;
+}
+
+.sub {
+  color: var(--txd);
+  font-size: 13px;
+  margin-bottom: 22px;
+}
+
+section {
+  background: var(--bg2);
+  border: 1px solid var(--a22);
+  border-radius: 8px;
+  padding: 16px 18px;
+  margin-bottom: 16px;
+}
+
+section > h2 {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.1px;
+  color: var(--ac);
+  background: var(--a22);
+  border-top: 1px solid var(--a44);
+  margin: -16px -18px 14px;
+  padding: 8px 18px;
+  border-radius: 7px 7px 0 0;
+}
+
+label { display: block; font-size: 12px; color: var(--txd); margin-bottom: 6px; }
+
+input[type="text"] {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--a44);
+  border-radius: 6px;
+  color: var(--tx);
+  font: inherit;
+  padding: 9px 11px;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+input[type="text"]:focus { outline: none; border-color: var(--ac); }
+input[type="text"]:disabled { opacity: 0.55; }
+
+.row { display: flex; gap: 10px; align-items: center; }
+.row + .row { margin-top: 12px; }
+.grow { flex: 1; }
+
+.check {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.check:last-child { margin-bottom: 0; }
+.check input { margin-top: 3px; accent-color: var(--ac); }
+.check .text { font-size: 13px; }
+.check .text small { display: block; color: var(--txd); font-size: 12px; }
+
+button {
+  background: var(--a22);
+  border: 1px solid var(--a44);
+  border-radius: 6px;
+  color: var(--tx);
+  cursor: pointer;
+  font: inherit;
+  padding: 9px 16px;
+  white-space: nowrap;
+}
+button:hover:not(:disabled) { background: var(--a44); border-color: var(--ac); }
+button:disabled { opacity: 0.5; cursor: default; }
+button.primary { background: var(--ac); border-color: var(--ahi); color: #16213e; font-weight: 600; }
+button.primary:hover:not(:disabled) { background: var(--ahi); }
+
+.msg { font-size: 13px; margin-top: 12px; min-height: 20px; }
+.msg.ok { color: var(--ok); }
+.msg.err { color: var(--err); }
+.msg.info { color: var(--inf); }
+
+.hint { color: var(--txd); font-size: 12px; margin-top: 10px; }
+
+.shortcut-grid { display: grid; grid-template-columns: 1fr 200px; gap: 10px 14px; align-items: center; }
+.shortcut-grid .name { font-size: 13px; }
+.shortcut-grid input { margin: 0; }
+
+.footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: 4px; }
+
+code {
+  font-family: Consolas, "Cascadia Mono", monospace;
+  background: var(--bg);
+  border: 1px solid var(--a22);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 12px;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.warn {
+  border-left: 3px solid var(--err);
+  background: #ff888811;
+  padding: 10px 12px;
+  border-radius: 4px;
+  font-size: 13px;
+  margin-top: 12px;
+}

@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'none'; style-src 'self'; script-src 'self'">
+  <title>RPG Table — Settings</title>
+  <link rel="stylesheet" href="ui.css">
+</head>
+<body>
+  <h1>Settings</h1>
+  <p class="sub">These apply to this computer only. Nothing here changes the server.</p>
+
+  <section>
+    <h2>Server</h2>
+    <div class="row">
+      <div class="grow"><code id="server-url">not configured</code></div>
+      <button id="change-server">Change…</button>
+    </div>
+  </section>
+
+  <section>
+    <h2>Global shortcuts</h2>
+    <div class="check">
+      <input type="checkbox" id="shortcuts-enabled">
+      <span class="text">
+        Enable system-wide hotkeys
+        <small>They work while another application has focus. Press a shortcut a second time to hide that window again.</small>
+      </span>
+    </div>
+    <div class="shortcut-grid" id="shortcut-grid"></div>
+    <p class="hint">Click a box and press the keys you want. Backspace clears one.</p>
+    <div id="shortcut-warning"></div>
+  </section>
+
+  <section>
+    <h2>Tray</h2>
+    <div class="check">
+      <input type="checkbox" id="tray-enabled">
+      <span class="text">
+        Show a tray icon
+        <small>Gives quick access to the table, DM panel and sheet without a window open.</small>
+      </span>
+    </div>
+    <div class="check">
+      <input type="checkbox" id="close-to-tray">
+      <span class="text">
+        Keep running when the last window closes
+        <small>The app stays in the tray so global shortcuts keep working. Quit from the tray menu.</small>
+      </span>
+    </div>
+  </section>
+
+  <section>
+    <h2>Maintenance</h2>
+    <div class="row">
+      <button id="reset-windows">Reset window positions</button>
+      <button id="forget-certs">Forget trusted certificates</button>
+      <button id="clear-data">Clear browsing data…</button>
+    </div>
+    <p class="hint">Settings file: <code id="config-path">—</code></p>
+  </section>
+
+  <div class="msg" id="msg"></div>
+
+  <div class="footer">
+    <button id="close">Close</button>
+    <button class="primary" id="save">Save</button>
+  </div>
+
+  <script src="settings.js"></script>
+</body>
+</html>

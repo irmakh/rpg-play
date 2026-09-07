@@ -182,6 +182,15 @@ One catalogue for everything you hand out, replacing the separate Merchant and L
 - **DM controls in companion:** token visibility toggle and character assignment
 - Safe-area padding for notched / punch-hole phones (iOS and Android)
 
+### Desktop App (`Desktop/`) — Windows
+
+- Electron **thin client**: renders the pages this server already serves, so the web app is unchanged and nothing needs redeploying when the desktop app changes
+- **Multi-monitor windows** — open the table, DM panel, sheet, monsters, treasury, stories, console and more as separate native windows; each remembers its size, position, monitor, fullscreen state and zoom. Table and Second Screen open on a secondary display by default
+- **Global hotkeys** (`Ctrl+Alt+T/D/C/R`) reach a window while another application has focus; press again to minimise it
+- **Tray icon**, application menu, real fullscreen, per-window zoom, and native Save dialogs for backups, map exports and character XML
+- First run asks for the server address and validates it against `/api/config`; self-hosted certificates are trusted per host after an explicit prompt, pinned by fingerprint
+- Build instructions below — see **[Desktop/README.md](Desktop/README.md)** for the full picture
+
 ---
 
 ## Authentication & Login
@@ -313,6 +322,52 @@ PORT=443
 
 ---
 
+## Desktop Client (Windows)
+
+The desktop app is a client, not a second server — it connects to a running RPG Play
+server. Build it separately from `Desktop/`.
+
+```bash
+cd Desktop
+npm install
+npm run build
+```
+
+If `npm install` finishes without a `node_modules/electron/dist/` folder, run the
+binary download directly: `node node_modules/electron/install.js`.
+
+Artifacts land in `Desktop/dist/`:
+
+| File | What it is |
+|---|---|
+| `RPG Table Setup <version>.exe` | Installer — choose the folder, desktop + Start Menu shortcuts, uninstaller |
+| `RPG-Table-<version>-portable.exe` | Single self-contained file, no install |
+| `win-unpacked/RPG Table.exe` | Raw unpacked build, for a quick test without packaging |
+
+Both installers are x64 and self-contained: the target machine needs no Node and no
+Electron. Other commands:
+
+```bash
+npm start        # run from source
+npm run dev      # run from source with DevTools open
+npm run pack     # win-unpacked/ only — much faster than a full build
+```
+
+**Version and icon:** bump `version` in `Desktop/package.json` (it appears in the
+filenames, the installer and Help → About); replace `Desktop/assets/icon.png` to
+change the icon — electron-builder converts it to a Windows `.ico`, so keep it at
+least 256×256.
+
+**Code signing:** builds are unsigned, so Windows SmartScreen warns on first run of
+the installer (*More info → Run anyway*). Removing that needs a code-signing
+certificate configured via `win.certificateFile` in the build config.
+
+**Building from a VS Code terminal:** prefix with `env -u ELECTRON_RUN_AS_NODE`.
+VS Code exports `ELECTRON_RUN_AS_NODE=1`, which makes any Electron binary boot as
+plain Node and crash. A normal PowerShell window is unaffected.
+
+---
+
 ## Environment Variables
 
 | Variable | Required | Default | Description |
@@ -371,6 +426,11 @@ char_sheet/
 │       ├── css/  img/      #     Styles and static images
 │       ├── sw.js           #     Service worker (PWA cache)
 │       └── uploads/  story-images/   #   Runtime user uploads
+├── Desktop/               # Electron desktop client (thin client over the web app)
+│   ├── src/main/           #   Main process — windows, menu, tray, hotkeys, certs, downloads
+│   ├── src/preload/        #   Preloads — cross-window session mirror + settings bridge
+│   ├── src/renderer/       #   Its own pages — first-run setup, settings, offline screen
+│   └── assets/             #   App and tray icons
 ├── goals/ tools/ context/ args/ hardprompts/   # GOTCHA framework layers (see CLAUDE.md)
 ├── memory/  data/          # Persistent cross-session memory (Application/data/ holds campaign DBs)
 ├── docker-compose.yml  Dockerfile.dev  docker-*.sh   # Docker deployment

@@ -1,0 +1,53 @@
+{
+  "name": "rpg-table-desktop",
+  "productName": "RPG Table",
+  "version": "1.0.0",
+  "description": "Desktop client for the RPG Table virtual tabletop",
+  "author": "irmakh",
+  "license": "UNLICENSED",
+  "private": true,
+  "main": "src/main/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "pack": "electron-builder --win --dir",
+    "build": "electron-builder --win"
+  },
+  "devDependencies": {
+    "electron": "^44.2.0",
+    "electron-builder": "^26.15.3"
+  },
+  "build": {
+    "appId": "com.irmakh.rpgtable",
+    "productName": "RPG Table",
+    "copyright": "Copyright © irmakh",
+    "directories": {
+      "output": "dist",
+      "buildResources": "assets"
+    },
+    "files": [
+      "src/**/*",
+      "assets/**/*",
+      "package.json"
+    ],
+    "win": {
+      "icon": "assets/icon.png",
+      "target": [
+        { "target": "nsis", "arch": ["x64"] },
+        { "target": "portable", "arch": ["x64"] }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "RPG Table",
+      "uninstallDisplayName": "RPG Table"
+    },
+    "portable": {
+      "artifactName": "RPG-Table-${version}-portable.exe"
+    }
+  }
+}

@@ -226,6 +226,30 @@ granted.
 - **story-builder.html** — prompt editor; create character folders, numbered textarea rows, save to disk
 - **story-viewer.html** — storyboard viewer; grid or strip layout, lightbox on click
 
+## Desktop Client (`Desktop/`)
+
+> Electron thin client over the existing web app. It renders the pages the server
+> already serves — no server code and no web-app code lives here, and nothing
+> under `Application/` was changed to support it. See `Desktop/README.md`.
+
+**`Desktop/src/main/main.js`** — lifecycle: single-instance lock, permission policy (fullscreen and notifications only; camera/microphone refused), first-run routing to the setup window.
+
+**`Desktop/src/main/config.js`** — settings as one atomic-written JSON file in the Electron userData folder: server URL, trusted certificate fingerprints, per-role window geometry and zoom, hotkeys, tray preferences.
+
+**`Desktop/src/main/windows.js`** — window roles (table, dm, sheet, monsters, events, treasury, stories, playlists, campaigns, console, secondary). Each role remembers size, position, monitor and zoom; table and second-screen prefer a secondary display. Also the navigation policy: same-origin pop-outs stay native windows so `table-popout.js` keeps working, everything else opens in the system browser.
+
+**`Desktop/src/main/session-store.js`** + **`src/preload/app-preload.js`** — the cross-window login mirror. `sessionStorage` is per-window, so a second window would open on the login screen; the main process holds the authoritative copy and the preload seeds it synchronously before page scripts run, polls outward every 700ms (an isolated world cannot observe `sessionStorage` writes), and applies broadcasts inward. In memory only — quitting signs you out.
+
+**`Desktop/src/main/certs.js`** — per-host TLS trust pinned by SHA-256 fingerprint, prompted once with issuer/subject/fingerprint shown. Needed because a public CA cannot issue for a bare IP; connecting by domain validates normally and never prompts.
+
+**`Desktop/src/main/downloads.js`** — native Save dialogs for DB backups, map exports and character XML, remembering the last folder and notifying with "show in folder" on completion.
+
+**`Desktop/src/main/menu.js`** / **`tray.js`** / **`shortcuts.js`** — application menu (rebuilt when monitors change), tray icon, and global hotkeys (defaults `Ctrl+Alt+T/D/C/R`; a second press minimises; accelerators another app owns are reported, not swallowed).
+
+**`Desktop/src/main/ipc.js`** — every renderer-reachable channel. `ui:probe-server` validates an address against `GET /api/config` before it can be saved, and compares the server's published `wsUrl` host against the entered host to catch the IP-vs-domain mismatch that would put realtime traffic on a different origin.
+
+**Build** — `npm start` to run, `npm run build` for the Windows NSIS installer + portable exe. Inside a VS Code terminal or agent session, launch with `env -u ELECTRON_RUN_AS_NODE` or Electron boots as plain Node and crashes on `setAppUserModelId`.
+
 ---
 
 *Add new tools here as they are created*

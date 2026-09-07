@@ -194,6 +194,38 @@ char_sheet/
 │   ├── package.json                    # Dependencies & npm scripts
 │   ├── server.js                       # Express entry point — loads route modules + shared context
 │   └── vitest.config.js                # Vitest configuration
+├── Desktop/                            # Electron desktop client (thin client over the web app)
+│   ├── assets/                         #   Icons
+│   │   ├── icon.png                    #     App icon (512px, source for the Windows .ico)
+│   │   ├── tray.png                    #     Tray icon 16px
+│   │   └── tray@2x.png                 #     Tray icon 32px (high-DPI)
+│   ├── src/                            #   Application source
+│   │   ├── main/                       #     Main process
+│   │   │   ├── certs.js                #       Per-host TLS trust, pinned by fingerprint
+│   │   │   ├── config.js               #       JSON settings store in userData
+│   │   │   ├── downloads.js            #       Native save dialogs for backups/exports
+│   │   │   ├── ipc.js                  #       Every channel the renderer can reach
+│   │   │   ├── main.js                 #       Lifecycle, single instance, permission policy
+│   │   │   ├── menu.js                 #       Application menu (rebuilt on display change)
+│   │   │   ├── session-store.js        #       Shared login state across windows
+│   │   │   ├── shortcuts.js            #       Global hotkeys
+│   │   │   ├── tray.js                 #       Tray icon and menu
+│   │   │   └── windows.js              #       Window roles, geometry, navigation policy
+│   │   ├── preload/                    #     Preload scripts
+│   │   │   ├── app-preload.js          #       Web-app windows — the sessionStorage mirror
+│   │   │   └── ui-preload.js           #       Setup/settings — the configuration API
+│   │   └── renderer/                   #     The app's own local pages
+│   │       ├── error.html              #       Offline screen (auto-retries every 20s)
+│   │       ├── error.js                #       Offline screen logic
+│   │       ├── settings.html           #       Shortcuts, tray, maintenance
+│   │       ├── settings.js             #       Settings logic + hotkey capture
+│   │       ├── setup.html              #       First-run server picker
+│   │       ├── setup.js                #       Server probe + host-mismatch warning
+│   │       └── ui.css                  #       Shared styling (Dark Gold theme)
+│   ├── .gitignore                      #   Ignores node_modules/ and dist/
+│   ├── README.md                       #   Build, run, and how the session mirror works
+│   ├── package-lock.json               #   Dependency lockfile
+│   └── package.json                    #   Electron + electron-builder config
 ├── args/                               # GOTCHA: behaviour settings
 │   └── README.md                       #   Layer overview / placeholder
 ├── context/                            # GOTCHA: domain knowledge

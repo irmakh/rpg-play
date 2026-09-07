@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'none'; style-src 'self'; script-src 'self'">
+  <title>RPG Table — Offline</title>
+  <link rel="stylesheet" href="ui.css">
+</head>
+<body>
+  <h1>Can't reach the table</h1>
+  <p class="sub" id="sub">The server did not answer.</p>
+
+  <section>
+    <h2>What happened</h2>
+    <p id="detail">The connection failed.</p>
+    <p class="hint">Address: <code id="url">—</code></p>
+    <p class="hint" id="code">—</p>
+  </section>
+
+  <section>
+    <h2>Things to check</h2>
+    <p class="hint">
+      Is the server running? Is this machine on the same network? If the server
+      moved to a new address, point the app at it below. Retrying automatically —
+      <span id="countdown">20</span>s.
+    </p>
+  </section>
+
+  <div class="footer">
+    <button id="setup">Change server…</button>
+    <button class="primary" id="retry">Try again now</button>
+  </div>
+
+  <script src="error.js"></script>
+</body>
+</html>
