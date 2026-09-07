@@ -46,22 +46,35 @@ function differs(a, b) {
   return KEYS.some((key) => (a[key] ?? null) !== (b[key] ?? null));
 }
 
-// ── Seed before any page script runs ─────────────────────────────────────────
-// Synchronous on purpose: the login page checks sessionStorage in a top-level
-// script, so the value has to be there before that script is parsed.
+// ── Reconcile before any page script runs ────────────────────────────────────
+// Synchronous on purpose: table.html and login.html both read sessionStorage in
+// a top-level <head> script, so this has to settle before that script is parsed.
+//
+// Which side wins depends on whether this is the window's first document:
+//
+//   First document — a window that just opened. Its sessionStorage is empty
+//   (or copied from an opener), so the shared session seeds it.
+//
+//   Any later document — the window navigated. Signing in and signing out both
+//   write to sessionStorage and then immediately call location.replace(), which
+//   destroys the poll below before it can fire, so this document's values are
+//   the newest thing anywhere and the main process has to be told about them.
+//   Without this, a login never propagates and every other window opens on the
+//   login screen; a logout would be undone by the next seed.
 try {
   const snapshot = ipcRenderer.sendSync('rpg:session-get-sync');
-  if (snapshot && snapshot.values) {
-    const local = readLocal();
-    const hasLocal = KEYS.some((key) => local[key] !== null);
-    const hasShared = KEYS.some((key) => snapshot.values[key] !== null);
+  const shared = (snapshot && snapshot.values) || {};
+  const local = readLocal();
+  const hasLocal = KEYS.some((key) => local[key] !== null);
+  const hasShared = KEYS.some((key) => shared[key] !== null);
 
-    // A window that already has its own session wins — it is the one the user
-    // just signed in on, and its values reach the main process on the next poll.
-    if (hasShared && !hasLocal) writeLocal(snapshot.values);
-
-    lastRevision = snapshot.revision;
+  if (snapshot && snapshot.isFirstDocument && hasShared && !hasLocal) {
+    writeLocal(shared);
+  } else if (differs(local, shared)) {
+    ipcRenderer.send('rpg:session-set', local);
   }
+
+  if (snapshot) lastRevision = snapshot.revision;
   lastSeen = readLocal();
 } catch {
   lastSeen = readLocal();

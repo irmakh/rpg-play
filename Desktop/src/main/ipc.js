@@ -127,10 +127,22 @@ function uiState() {
   };
 }
 
+// Which windows have already loaded a document. The preload needs to tell a
+// brand-new window (seed it from the shared session) apart from a window that
+// simply navigated (its own sessionStorage is authoritative — the user just
+// signed in or out and the page moved before the poll could report it).
+const documentsSeen = new Set();
+
 function register() {
   // ── Session mirror (available to web-app windows) ───────────────────────────
   ipcMain.on('rpg:session-get-sync', (event) => {
-    event.returnValue = sessionStore.snapshot();
+    const id = event.sender.id;
+    const isFirstDocument = !documentsSeen.has(id);
+    if (isFirstDocument) {
+      documentsSeen.add(id);
+      event.sender.once('destroyed', () => documentsSeen.delete(id));
+    }
+    event.returnValue = { ...sessionStore.snapshot(), isFirstDocument };
   });
 
   ipcMain.handle('rpg:session-get', () => sessionStore.snapshot());
