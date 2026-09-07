@@ -20,7 +20,7 @@ function withFocused(fn) {
 function newWindowItems() {
   const order = [
     'table', 'dm', 'sheet', 'monsters', 'events',
-    'treasury', 'stories', 'playlists', 'campaigns', 'console', 'secondary',
+    'treasury', 'stories', 'playlists', 'nowplaying', 'campaigns', 'console', 'secondary',
   ];
   return order.map((role) => ({
     label: windows.ROLES[role].title,

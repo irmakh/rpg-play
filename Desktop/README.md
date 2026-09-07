@@ -73,7 +73,8 @@ Change the server later from **File → Change Server…**.
 
 **Multi-monitor windows** — `File → New Window` opens any screen of the app as
 its own native window: Table, DM Panel, Character Sheet, Monsters, Events,
-Treasury, Stories, Playlists, Campaigns, Console, Second Screen. Each remembers
+Treasury, Stories, Music & Sounds, Now Playing, Campaigns, Console, Second
+Screen. Each remembers
 its own size, position, monitor, maximised/fullscreen state and zoom level.
 `Window → Move to Display` throws the focused window at another monitor, and the
 Table and Second Screen open on a secondary monitor by default when one exists.
@@ -84,10 +85,23 @@ DevTools.
 
 **Global hotkeys** — reach a window while another application has focus.
 Defaults: `Ctrl+Alt+T` table, `Ctrl+Alt+D` DM panel, `Ctrl+Alt+C` character
-sheet, `Ctrl+Alt+R` bring everything forward. Pressing one again minimises that
-window. Rebind them in Settings by clicking a box and pressing the keys; a
-shortcut another application already owns is reported instead of failing
-silently.
+sheet, `Ctrl+Alt+M` music, `Ctrl+Alt+R` bring everything forward. Pressing one
+again minimises that window. Rebind them in Settings by clicking a box and
+pressing the keys; a shortcut another application already owns is reported
+instead of failing silently.
+
+The music key is resolved on each press from whoever is signed in, because the
+two roles want different screens:
+
+| Signed in as | Opens | Why |
+|---|---|---|
+| DM | **Music & Sounds** (`/playlists.html`) | The control panel where tracks are chosen and triggered. It is DM-gated server-side, so it would only bounce a player to the login page. |
+| Player, or signed out | **Now Playing** (`/music-player.html`) | A compact window with the track name, position and volume. No auth guard, and it follows the DM's sound events over realtime. |
+
+Two things to know about the Now Playing window: it opens showing nothing until
+the next command from the DM, because it normally receives its initial state
+from the page that spawned it; and it closes itself when a table window loads,
+which is the web app's own guard against the same track playing twice.
 
 **Tray icon** — quick access to the main screens. With *keep running when the
 last window closes* enabled, the app stays in the tray so the hotkeys keep

@@ -7,6 +7,7 @@
 const { BrowserWindow, screen, shell } = require('electron');
 const path = require('path');
 const config = require('./config');
+const sessionStore = require('./session-store');
 
 const APP_PRELOAD = path.join(__dirname, '..', 'preload', 'app-preload.js');
 const UI_PRELOAD = path.join(__dirname, '..', 'preload', 'ui-preload.js');
@@ -24,7 +25,8 @@ const ROLES = {
   events:    { path: '/events.html',                  title: 'Events',          width: 1100, height: 820 },
   treasury:  { path: '/treasury.html',                title: 'Treasury',        width: 1100, height: 820 },
   stories:   { path: '/stories.html',                 title: 'Stories',         width: 1200, height: 880 },
-  playlists: { path: '/playlists.html',               title: 'Playlists',       width: 1100, height: 820 },
+  playlists: { path: '/playlists.html',               title: 'Music & Sounds',  width: 1100, height: 820 },
+  nowplaying:{ path: '/music-player.html',            title: 'Now Playing',     width: 460,  height: 150, minWidth: 320, minHeight: 110 },
   campaigns: { path: '/campaigns.html',               title: 'Campaigns',       width: 1000, height: 780 },
   console:   { path: '/console/table-console.html',   title: 'Console',         width: 900,  height: 700 },
   secondary: { path: '/console/table-secondary.html', title: 'Second Screen',   width: 1600, height: 900, secondary: true },
@@ -187,8 +189,8 @@ function createAppWindow(role) {
 
   const win = new BrowserWindow({
     ...bounds,
-    minWidth: 640,
-    minHeight: 480,
+    minWidth: spec.minWidth || 640,
+    minHeight: spec.minHeight || 480,
     title: spec.title,
     icon: ICON,
     show: false,
@@ -250,6 +252,14 @@ function open(role) {
     return existing;
   }
   return createAppWindow(role);
+}
+
+// Which music screen belongs to the person signed in. The DM gets the control
+// panel — playlists.html is DM-gated anyway, so it would only bounce a player to
+// the login page. Everyone else gets the compact Now Playing window, which has
+// no auth guard and follows the DM's sound events over realtime.
+function musicRole() {
+  return sessionStore.role() === 'dm' ? 'playlists' : 'nowplaying';
 }
 
 // A second window showing the same screen — for two character sheets side by
@@ -392,6 +402,7 @@ module.exports = {
   sameOrigin,
   open,
   openExtra,
+  musicRole,
   openLocal,
   getLocal,
   all,

@@ -15,6 +15,8 @@ let tray = null;
 
 function contextMenu() {
   const quickRoles = ['table', 'dm', 'sheet', 'campaigns'];
+  // Resolved when the menu is built, so it follows whoever is signed in.
+  const musicRole = windows.musicRole();
   return Menu.buildFromTemplate([
     { label: 'Open RPG Table', click: () => windows.open('main') },
     { type: 'separator' },
@@ -22,6 +24,7 @@ function contextMenu() {
       label: windows.ROLES[role].title,
       click: () => windows.open(role),
     })),
+    { label: windows.ROLES[musicRole].title, click: () => windows.open(windows.musicRole()) },
     { type: 'separator' },
     {
       label: 'Bring All Windows Forward',

@@ -27,6 +27,7 @@ const DEFAULTS = {
     table: 'Control+Alt+T',
     dm: 'Control+Alt+D',
     sheet: 'Control+Alt+C',
+    music: 'Control+Alt+M',
     focus: 'Control+Alt+R',
   },
   shortcutsEnabled: true,

@@ -236,7 +236,7 @@ granted.
 
 **`Desktop/src/main/config.js`** — settings as one atomic-written JSON file in the Electron userData folder: server URL, trusted certificate fingerprints, per-role window geometry and zoom, hotkeys, tray preferences.
 
-**`Desktop/src/main/windows.js`** — window roles (table, dm, sheet, monsters, events, treasury, stories, playlists, campaigns, console, secondary). Each role remembers size, position, monitor and zoom; table and second-screen prefer a secondary display. Also the navigation policy: same-origin pop-outs stay native windows so `table-popout.js` keeps working, everything else opens in the system browser.
+**`Desktop/src/main/windows.js`** — window roles (table, dm, sheet, monsters, events, treasury, stories, playlists, nowplaying, campaigns, console, secondary). `musicRole()` picks the music screen from the signed-in role: DM gets the `playlists` control panel, everyone else the compact `nowplaying` window (music-player.html has no auth guard, playlists.html is DM-gated). Each role remembers size, position, monitor and zoom; table and second-screen prefer a secondary display. Also the navigation policy: same-origin pop-outs stay native windows so `table-popout.js` keeps working, everything else opens in the system browser.
 
 **`Desktop/src/main/session-store.js`** + **`src/preload/app-preload.js`** — the cross-window login mirror. `sessionStorage` is per-window, so a second window would open on the login screen; the main process holds the authoritative copy and the preload seeds it synchronously before page scripts run, polls outward every 700ms (an isolated world cannot observe `sessionStorage` writes), and applies broadcasts inward. In memory only — quitting signs you out.
 
@@ -244,7 +244,7 @@ granted.
 
 **`Desktop/src/main/downloads.js`** — native Save dialogs for DB backups, map exports and character XML, remembering the last folder and notifying with "show in folder" on completion.
 
-**`Desktop/src/main/menu.js`** / **`tray.js`** / **`shortcuts.js`** — application menu (rebuilt when monitors change), tray icon, and global hotkeys (defaults `Ctrl+Alt+T/D/C/R`; a second press minimises; accelerators another app owns are reported, not swallowed).
+**`Desktop/src/main/menu.js`** / **`tray.js`** / **`shortcuts.js`** — application menu (rebuilt when monitors change), tray icon, and global hotkeys (defaults `Ctrl+Alt+T/D/C/M/R`, where M resolves per press via `windows.musicRole()`; a second press minimises; accelerators another app owns are reported, not swallowed).
 
 **`Desktop/src/main/ipc.js`** — every renderer-reachable channel. `ui:probe-server` validates an address against `GET /api/config` before it can be saved, and compares the server's published `wsUrl` host against the entered host to catch the IP-vs-domain mismatch that would put realtime traffic on a different origin.
 

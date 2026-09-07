@@ -12,6 +12,9 @@ const ACTIONS = {
   table: { label: 'Show table', run: () => toggleRole('table') },
   dm: { label: 'Show DM panel', run: () => toggleRole('dm') },
   sheet: { label: 'Show character sheet', run: () => toggleRole('sheet') },
+  // Resolved per press, not once at startup: whether this opens the DM control
+  // panel or the Now Playing window depends on who is signed in right now.
+  music: { label: 'Show music player', run: () => toggleRole(windows.musicRole()) },
   focus: { label: 'Bring all windows forward', run: () => raiseAll() },
 };
 
