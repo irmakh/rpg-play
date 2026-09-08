@@ -90,6 +90,15 @@ export function makeLdb() {
       precip_roll INTEGER, precip_level TEXT, precipitation TEXT,
       created_at TEXT DEFAULT (datetime('now'))
     );
+    CREATE TABLE IF NOT EXISTS notifications (
+      id TEXT PRIMARY KEY, kind TEXT DEFAULT '', priority TEXT DEFAULT 'feed',
+      title TEXT DEFAULT '', body TEXT DEFAULT '', dataJson TEXT DEFAULT '{}',
+      actorName TEXT DEFAULT '', createdAt TEXT DEFAULT (datetime('now'))
+    );
+    CREATE TABLE IF NOT EXISTS notification_recipients (
+      id TEXT PRIMARY KEY, notificationId TEXT NOT NULL DEFAULT '',
+      recipient TEXT NOT NULL DEFAULT '', seenAt TEXT DEFAULT ''
+    );
     CREATE TABLE IF NOT EXISTS treasury_requests (
       id TEXT PRIMARY KEY, itemId TEXT NOT NULL DEFAULT '',
       charId TEXT NOT NULL DEFAULT '', charName TEXT DEFAULT '',
@@ -431,6 +440,48 @@ export function makeLdb() {
     db.prepare('DELETE FROM weather_log WHERE id = ?').run(id);
   }
 
+  // ── Notifications (mirror db/localdb.js) ────────────────────────────────────
+  function createNotification(id, f) {
+    db.prepare(`INSERT INTO notifications (id, kind, priority, title, body, dataJson, actorName, createdAt)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
+      .run(id, f.kind || '', f.priority === 'alert' ? 'alert' : 'feed', f.title || '', f.body || '',
+           f.dataJson || '{}', f.actorName || '', f.createdAt || new Date().toISOString());
+  }
+  function addNotificationRecipient(id, notificationId, recipient) {
+    db.prepare('INSERT INTO notification_recipients (id, notificationId, recipient, seenAt) VALUES (?, ?, ?, ?)')
+      .run(id, notificationId, recipient, '');
+  }
+  function listNotificationsFor(recipient, limit = 50) {
+    return db.prepare(`
+      SELECT r.id AS rowId, r.seenAt, n.id, n.kind, n.priority, n.title, n.body, n.dataJson, n.actorName, n.createdAt
+        FROM notification_recipients r JOIN notifications n ON n.id = r.notificationId
+       WHERE r.recipient = ? ORDER BY n.createdAt DESC, r.rowid DESC LIMIT ?`)
+      .all(recipient, Math.max(1, Math.min(200, limit)));
+  }
+  function unreadNotificationCount(recipient) {
+    return db.prepare("SELECT COUNT(*) n FROM notification_recipients WHERE recipient = ? AND seenAt = ''")
+      .get(recipient).n;
+  }
+  function markNotificationSeen(rowId, recipient, seenAt) {
+    return db.prepare("UPDATE notification_recipients SET seenAt = ? WHERE id = ? AND recipient = ? AND seenAt = ''")
+      .run(seenAt || new Date().toISOString(), rowId, recipient).changes;
+  }
+  function markAllNotificationsSeen(recipient, seenAt) {
+    return db.prepare("UPDATE notification_recipients SET seenAt = ? WHERE recipient = ? AND seenAt = ''")
+      .run(seenAt || new Date().toISOString(), recipient).changes;
+  }
+  function clearNotificationsFor(recipient) {
+    return db.prepare('DELETE FROM notification_recipients WHERE recipient = ?').run(recipient).changes;
+  }
+  function pruneNotifications(keep = 300) {
+    const info = db.prepare(`DELETE FROM notifications WHERE id NOT IN
+      (SELECT id FROM notifications ORDER BY createdAt DESC LIMIT ?)`).run(Math.max(1, keep));
+    if (info.changes) {
+      db.prepare('DELETE FROM notification_recipients WHERE notificationId NOT IN (SELECT id FROM notifications)').run();
+    }
+    return info.changes;
+  }
+
   // ── Treasury requests (mirror db/localdb.js) ────────────────────────────────
   function listTreasuryRequests(status) {
     return status
@@ -555,6 +606,9 @@ export function makeLdb() {
     listLootLogs, createLootLog, listClaimedItemIds, listPurchaseLogs, createPurchaseLog,
     // weather
     getWeatherConfig, saveWeatherConfig, listWeatherLog, getWeatherForDate, saveWeatherEntry, deleteWeatherEntry,
+    // notifications
+    createNotification, addNotificationRecipient, listNotificationsFor, unreadNotificationCount,
+    markNotificationSeen, markAllNotificationsSeen, clearNotificationsFor, pruneNotifications,
     // treasury requests
     listTreasuryRequests, listTreasuryRequestsForItem, listTreasuryRequestsForChar,
     getTreasuryRequest, getPendingTreasuryRequest, createTreasuryRequest, updateTreasuryRequest,

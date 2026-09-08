@@ -26,6 +26,7 @@ window.addEventListener('load', function startRealtime() {
         } catch {}
       }
     },
+    notification: (payload) => { typeof handleNotification === 'function' && handleNotification(payload); },
     treasury: () => {
       loadTreasuryTab();
       syncLootDescVisibility();

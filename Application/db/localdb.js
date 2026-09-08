@@ -118,6 +118,24 @@ db.exec(`
     id TEXT PRIMARY KEY, charId TEXT NOT NULL DEFAULT '', charName TEXT DEFAULT '',
     itemName TEXT DEFAULT '', claimedAt TEXT DEFAULT (datetime('now'))
   );
+  -- Notifications. One row per event, plus one recipient row per person it was
+  -- addressed to — the same fan-out handouts uses, which is what makes "have I
+  -- seen this?" a server-side fact that follows a player between devices
+  -- instead of something a browser can forget.
+  CREATE TABLE IF NOT EXISTS notifications (
+    id TEXT PRIMARY KEY, kind TEXT DEFAULT '',
+    priority TEXT DEFAULT 'feed',          -- 'alert' pops and chimes, 'feed' is silent
+    title TEXT DEFAULT '', body TEXT DEFAULT '',
+    dataJson TEXT DEFAULT '{}',            -- where clicking it should go
+    actorName TEXT DEFAULT '',             -- who caused it
+    createdAt TEXT DEFAULT (datetime('now'))
+  );
+  -- recipient is a character id, or the reserved 'dm'.
+  CREATE TABLE IF NOT EXISTS notification_recipients (
+    id TEXT PRIMARY KEY, notificationId TEXT NOT NULL DEFAULT '',
+    recipient TEXT NOT NULL DEFAULT '', seenAt TEXT DEFAULT ''
+  );
+
   -- A player putting their name on a piece of free loot. The DM decides who
   -- actually gets it; loot_logs still records what was handed over, so
   -- claim-once and the ledger are unaffected by anything in here.
@@ -263,6 +281,9 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_treasury_items_mode        ON treasury_items(mode);
   CREATE INDEX IF NOT EXISTS idx_treasury_items_tag         ON treasury_items(tag);
   CREATE INDEX IF NOT EXISTS idx_loot_logs_charId           ON loot_logs(charId);
+  CREATE INDEX IF NOT EXISTS idx_notif_recip_who            ON notification_recipients(recipient, seenAt);
+  CREATE INDEX IF NOT EXISTS idx_notif_recip_notif          ON notification_recipients(notificationId);
+  CREATE INDEX IF NOT EXISTS idx_notif_created              ON notifications(createdAt);
   CREATE INDEX IF NOT EXISTS idx_treasury_req_item          ON treasury_requests(itemId);
   CREATE INDEX IF NOT EXISTS idx_treasury_req_char          ON treasury_requests(charId);
   -- One live request per character per item. Partial, so the decided history
@@ -487,6 +508,56 @@ function createLootLog(id, fields) {
 function listClaimedItemIds(charId) {
   return db.prepare("SELECT DISTINCT itemId FROM loot_logs WHERE charId = ? AND itemId != ''").all(charId)
     .map(r => r.itemId);
+}
+
+// ── Notifications ─────────────────────────────────────────────────────────────
+// Written by server/notify.js; read by the bell in js/lib/notifications.js.
+function createNotification(id, fields) {
+  db.prepare(`INSERT INTO notifications (id, kind, priority, title, body, dataJson, actorName, createdAt)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
+    .run(id, fields.kind || '', fields.priority === 'alert' ? 'alert' : 'feed',
+         fields.title || '', fields.body || '', fields.dataJson || '{}',
+         fields.actorName || '', fields.createdAt || new Date().toISOString());
+}
+function addNotificationRecipient(id, notificationId, recipient) {
+  db.prepare('INSERT INTO notification_recipients (id, notificationId, recipient, seenAt) VALUES (?, ?, ?, ?)')
+    .run(id, notificationId, recipient, '');
+}
+/** Newest first, joined with the event itself. `rowId` addresses one delivery. */
+function listNotificationsFor(recipient, limit = 50) {
+  return db.prepare(`
+    SELECT r.id AS rowId, r.seenAt, n.id, n.kind, n.priority, n.title, n.body, n.dataJson, n.actorName, n.createdAt
+      FROM notification_recipients r JOIN notifications n ON n.id = r.notificationId
+     WHERE r.recipient = ?
+     ORDER BY n.createdAt DESC, r.rowid DESC
+     LIMIT ?`).all(recipient, Math.max(1, Math.min(200, limit)));
+}
+function unreadNotificationCount(recipient) {
+  return db.prepare("SELECT COUNT(*) n FROM notification_recipients WHERE recipient = ? AND seenAt = ''")
+    .get(recipient).n;
+}
+function markNotificationSeen(rowId, recipient, seenAt) {
+  return db.prepare("UPDATE notification_recipients SET seenAt = ? WHERE id = ? AND recipient = ? AND seenAt = ''")
+    .run(seenAt || new Date().toISOString(), rowId, recipient).changes;
+}
+function markAllNotificationsSeen(recipient, seenAt) {
+  return db.prepare("UPDATE notification_recipients SET seenAt = ? WHERE recipient = ? AND seenAt = ''")
+    .run(seenAt || new Date().toISOString(), recipient).changes;
+}
+function clearNotificationsFor(recipient) {
+  return db.prepare('DELETE FROM notification_recipients WHERE recipient = ?').run(recipient).changes;
+}
+/**
+ * Keeps the table from growing without bound. Drops the oldest events beyond
+ * `keep`, and the deliveries that pointed at them. Cheap enough to run on write.
+ */
+function pruneNotifications(keep = 300) {
+  const info = db.prepare(`DELETE FROM notifications WHERE id NOT IN
+    (SELECT id FROM notifications ORDER BY createdAt DESC LIMIT ?)`).run(Math.max(1, keep));
+  if (info.changes) {
+    db.prepare('DELETE FROM notification_recipients WHERE notificationId NOT IN (SELECT id FROM notifications)').run();
+  }
+  return info.changes;
 }
 
 // ── Treasury Requests ─────────────────────────────────────────────────────────
@@ -1262,6 +1333,8 @@ function exportAll() {
     deleteShopItem, listPurchaseLogs, createPurchaseLog, listLootItems, getLootItem, getLootItemsByIds,
     createLootItem, updateLootItem, bulkUpdateLootTag, deleteLootItem, bulkDeleteLootItems, listLootLogs,
     createLootLog, listClaimedItemIds,
+    createNotification, addNotificationRecipient, listNotificationsFor, unreadNotificationCount,
+    markNotificationSeen, markAllNotificationsSeen, clearNotificationsFor, pruneNotifications,
     listTreasuryRequests, listTreasuryRequestsForItem, listTreasuryRequestsForChar,
     getTreasuryRequest, getPendingTreasuryRequest, createTreasuryRequest, updateTreasuryRequest,
     deleteTreasuryRequest, declinePendingTreasuryRequests,

@@ -715,6 +715,15 @@ export default function register(app, ctx) {
       }
       if (made.length === 0) return res.status(400).json({ error: 'Nothing available to request' });
 
+      // The DM is the only one who can act on this, so only the DM is told.
+      ctx.notify?.({
+        to: 'dm', kind: 'loot-requested', priority: 'alert', actorName: charName,
+        title: charName + (made.length === 1 ? ' wants ' + (made[0].descVisible ? made[0].name : 'an unidentified item')
+                                             : ' wants ' + made.length + ' items'),
+        body: 'Waiting for your approval.',
+        data: { href: '/treasury.html' },
+      });
+
       broadcast('treasury', { action: 'requested' });
       res.json({ ok: true, count: made.length });
     } catch (err) { console.error('POST /api/treasury/request:', err); res.status(500).json({ error: 'Server error' }); }
@@ -824,6 +833,26 @@ export default function register(app, ctx) {
 
       broadcast('characters', { action: 'updated', id: reqRow.charId });
       broadcast('treasury', { action: 'approved', itemId: item.id, charId: reqRow.charId });
+
+      // The player is somewhere else in the app when this lands, so tell them.
+      const shownName = item.descVisible ? item.name : 'an unidentified item';
+      ctx.notify?.({
+        to: reqRow.charId, kind: 'loot-granted', priority: 'alert',
+        title: 'The DM gave you ' + shownName,
+        body: 'It is in your inventory now.',
+        data: { href: '/index.html' },
+      });
+      // Everyone who was passed over finds out too, rather than watching the
+      // item quietly vanish from their list.
+      for (const other of (exhausted ? await requestsForItem(item.id, 'declined') : [])) {
+        if (other.charId === reqRow.charId || other.decidedAt !== now) continue;
+        ctx.notify?.({
+          to: other.charId, kind: 'loot-declined', priority: 'alert',
+          title: shownName + ' went to someone else',
+          body: 'The DM handed it to ' + charName + '.',
+          data: { href: '/index.html' },
+        });
+      }
       res.json({ ok: true, exhausted, declined });
     } catch (err) { console.error('POST /api/treasury/requests/:id/approve:', err); res.status(500).json({ error: 'Server error' }); }
   });
@@ -836,6 +865,14 @@ export default function register(app, ctx) {
       if (reqRow.status !== 'pending') return res.status(409).json({ error: 'Already decided' });
       await updateRequest(reqRow.id, { status: 'declined', decidedAt: new Date().toISOString() });
       broadcast('treasury', { action: 'declined', itemId: reqRow.itemId, charId: reqRow.charId });
+
+      const declinedItem = await getOne(reqRow.itemId);
+      ctx.notify?.({
+        to: reqRow.charId, kind: 'loot-declined', priority: 'alert',
+        title: 'The DM turned down your request',
+        body: declinedItem && declinedItem.descVisible ? declinedItem.name : 'The item is not yours this time.',
+        data: { href: '/index.html' },
+      });
       res.json({ ok: true });
     } catch (err) { console.error('POST /api/treasury/requests/:id/decline:', err); res.status(500).json({ error: 'Server error' }); }
   });

@@ -266,6 +266,14 @@ export default function register(app, ctx) {
       }
 
       broadcast('handouts', { action: 'handed-out', id: row.id, charIds });
+      // The handout pops on its own on the table and sheet, but a player who is
+      // on another screen would never learn it arrived.
+      ctx.notify?.({
+        to: charIds, kind: 'handout', priority: 'alert',
+        title: 'The DM handed you "' + (row.title || 'a handout') + '"',
+        body: startState === 'pending' ? 'It needs a check before you can read it.' : 'It is ready to read.',
+        data: { href: '/index.html' },
+      });
       res.json(dmObj(ldb.getHandout(row.id)));
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
   });

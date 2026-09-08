@@ -765,6 +765,7 @@ async function showMonsterInfo(monsterId) {
 // this script). It attaches the session identity + current page to the
 // connection so the maintenance page can list this client.
 connectRealtime({
+  notification: (payload) => { typeof handleNotification === 'function' && handleNotification(payload); },
   initiative: () => {
     if (masterPw) loadInitiative();
   },

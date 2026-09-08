@@ -34,6 +34,8 @@ import registerTable      from './server/routes/table.js';
 import registerSound      from './server/routes/sound.js';
 import registerStories    from './server/routes/stories.js';
 import registerHandouts   from './server/routes/handouts.js';
+import registerNotifs     from './server/routes/notifications.js';
+import makeNotify         from './server/notify.js';
 import registerAiDM      from './aiDM/routes.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -332,7 +334,7 @@ const MAX_MEDIA_BYTES = 25 * 1024 * 1024;
 // Bump this number whenever frontend JS or CSS files change.
 // Also bump CACHE in public/sw.js to the same value.
 // Both must always match. See deployment notes in CLAUDE.md.
-const FRONTEND_VERSION = 143;
+const FRONTEND_VERSION = 144;
 
 // ── Express app ───────────────────────────────────────────────────────────────
 const app = express();
@@ -574,6 +576,8 @@ const ctx = {
   sharp, crypto, path, fs, express, __dirname,
 };
 
+ctx.notify = makeNotify(ctx);
+
 // ── Register all route modules ────────────────────────────────────────────────
 registerCampaigns(app, ctx);
 registerAuth(app, ctx);
@@ -594,6 +598,7 @@ registerTable(app, ctx);
 registerSound(app, ctx);
 registerStories(app, ctx);
 registerHandouts(app, ctx);
+registerNotifs(app, ctx);
 registerAiDM(app, ctx);
 
 // ── Server startup: HTTPS in production, plain HTTP for local dev ─────────────

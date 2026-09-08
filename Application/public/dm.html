@@ -9,6 +9,7 @@
 <meta name="theme-color" content="#1a1a2e">
 <script>if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js');</script>
 <link rel="stylesheet" href="/css/dm.css">
+<link rel="stylesheet" href="/css/notifications.css">
 </head>
 <body>
 
@@ -38,6 +39,7 @@
       </select>
     </div>
     <div class="hdr-right">
+      <button class="btn" data-notif-bell title="Notifications">🔔</button>
       <button class="btn success" onclick="openBackupModal()" title="Download database backup">💾 Backup</button>
       <button class="btn" onclick="triggerImport()" title="Restore from backup file">📥 Import</button>
       <input type="file" id="import-file-input" accept=".json" multiple style="display:none" onchange="doImport(this)">
@@ -287,6 +289,7 @@
 
 <script src="/js/monster-stat-block.js" defer></script>
 <script src="/js/lib/realtime.js" defer></script>
+<script src="/js/lib/notifications.js" defer></script>
 <script src="/js/lib/modal-guard.js" defer></script>
 <script src="/js/dm.js" defer></script>
 </body>

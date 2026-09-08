@@ -199,6 +199,12 @@ export default function register(app, ctx) {
         await idb.transact([idb.tx.initiativeState[stateId].update({ currentId: firstId })]);
       }
       broadcast('initiative', { action: 'start' });
+      ctx.notify?.({
+        to: 'players', kind: 'combat-started', priority: 'alert',
+        title: 'Combat has started', body: 'Initiative is rolling.',
+        data: { href: '/table.html' },
+      });
+      notifyTurn(entries.find(e => e.id === firstId));
       res.json({ ok: true });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
   });
@@ -227,6 +233,7 @@ export default function register(app, ctx) {
       }
       _resetMovedFt(nextId);
       broadcast('initiative', { action: 'next' });
+      notifyTurn(entries.find(e => e.id === nextId));
       res.json({ ok: true });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
   });
@@ -329,6 +336,20 @@ export default function register(app, ctx) {
         broadcast('table', { action: 'token-updated', token: { ...tok, initiativeId: entryId } });
       }
     } catch {}
+  }
+
+  /**
+   * Tell whoever is up that it is their turn. Only entries tied to a character
+   * reach anyone — a goblin's turn belongs to the DM, who is watching the
+   * tracker anyway.
+   */
+  function notifyTurn(entry) {
+    if (!entry || !entry.charId) return;
+    ctx.notify?.({
+      to: entry.charId, kind: 'your-turn', priority: 'alert',
+      title: "It's your turn", body: entry.name ? entry.name + ' is up.' : 'You are up in initiative.',
+      data: { href: '/table.html' },
+    });
   }
 
   // Reset movedFt to 0 for all tokens linked to the given initiative entry

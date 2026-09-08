@@ -9,6 +9,7 @@
 <meta name="theme-color" content="#1a1a2e">
 <script>if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js');</script>
 <link rel="stylesheet" href="/css/table.css">
+<link rel="stylesheet" href="/css/notifications.css">
 <link rel="stylesheet" href="/css/table-theme-modern.css">
 <link rel="stylesheet" href="/css/weather.css">
 </head>
@@ -23,6 +24,7 @@
 
   <div class="dm-controls" style="display:none;display:contents">
     <button class="btn primary" id="btn-add-token" onclick="openAddTokenModal()">+ Token</button>
+    <button class="btn" data-notif-bell title="Notifications">🔔</button>
     <button class="btn" id="btn-music" onclick="openMusicModal()" title="Music Player">🎵</button>
     <button class="btn" id="btn-handouts" onclick="openHandoutModal()" title="Hand out a handout to one or more characters">📜</button>
   </div>
@@ -704,6 +706,7 @@
 <script src="/js/lib/chat-render.js" defer></script>
 <script src="/js/lib/dnd-data.js" defer></script>
 <script src="/js/lib/realtime.js" defer></script>
+<script src="/js/lib/notifications.js" defer></script>
 <script src="/js/lib/music-sync.js" defer></script>
 <script src="/js/lib/fr_calendar.js" defer></script>
 <script src="/js/lib/weather-ui.js" defer></script>

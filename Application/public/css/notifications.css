@@ -1,0 +1,85 @@
+/* ── Notifications ───────────────────────────────────────────────────────────
+   Bell, panel and toasts. Loaded by every page that shows notifications, so it
+   inherits each page's own theme variables (--bg2/--ac/--tx …) rather than
+   carrying colours of its own; the fallbacks keep it legible on a page that
+   defines none. */
+
+[data-notif-bell]{position:relative;cursor:pointer;user-select:none}
+
+/* Unread count, sitting on the bell itself. */
+.notif-count{
+  position:absolute;top:-6px;right:-8px;min-width:16px;height:16px;padding:0 4px;
+  border-radius:8px;background:var(--err,#d9534f);color:#fff;
+  font-size:10px;font-weight:bold;line-height:16px;text-align:center;
+  box-shadow:0 0 0 2px var(--bg2,#221e19);pointer-events:none}
+
+/* ── Panel ───────────────────────────────────────────────────────────────── */
+#notif-panel{
+  display:none;position:fixed;top:48px;right:12px;z-index:4000;
+  width:330px;max-width:calc(100vw - 16px);max-height:70vh;
+  background:var(--bg2,#221e19);border:1px solid var(--ac,#c8a04a);border-radius:6px;
+  box-shadow:0 10px 30px #0009;overflow:hidden;
+  display:none;flex-direction:column;
+  font-family:inherit;font-size:12px;color:var(--tx,#e8dcc8)}
+#notif-panel.open{display:flex}
+
+.notif-hdr{
+  display:flex;align-items:center;gap:6px;padding:7px 10px;flex-shrink:0;
+  background:var(--a22,#c8a04a22);border-bottom:1px solid var(--a44,#c8a04a44)}
+.notif-hdr-title{
+  flex:1;font-size:11px;font-weight:bold;text-transform:uppercase;letter-spacing:.5px;
+  color:var(--ac,#c8a04a)}
+.notif-link{
+  background:none;border:none;color:var(--ac,#c8a04a);cursor:pointer;
+  font-size:11px;font-family:inherit;padding:2px 4px}
+.notif-link:hover{text-decoration:underline}
+
+#notif-list{flex:1;overflow-y:auto;min-height:0;scrollbar-width:thin}
+.notif-empty{padding:22px 10px;text-align:center;color:var(--txd,#8a7a60);font-size:11px}
+
+.notif-row{
+  display:flex;align-items:flex-start;gap:8px;padding:8px 10px;cursor:pointer;
+  border-bottom:1px solid var(--sep,#ffffff11)}
+.notif-row:last-child{border-bottom:none}
+.notif-row:hover{background:var(--a22,#c8a04a22)}
+/* Unread carries a gold rail and full-strength text; read fades back. */
+.notif-row.unread{box-shadow:inset 3px 0 0 var(--ac,#c8a04a)}
+.notif-row:not(.unread){opacity:.62}
+.notif-row-icon{font-size:14px;line-height:1.3;flex-shrink:0}
+.notif-row-text{flex:1;min-width:0}
+.notif-row-title{font-weight:bold;line-height:1.35;word-break:break-word}
+.notif-row-body{color:var(--txd,#8a7a60);font-size:11px;line-height:1.35;margin-top:1px;word-break:break-word}
+.notif-row-when{font-size:10px;color:var(--txd,#8a7a60);white-space:nowrap;flex-shrink:0;padding-top:2px}
+
+#notif-settings{
+  padding:8px 10px;border-bottom:1px solid var(--a44,#c8a04a44);
+  background:var(--bg,#1a1614);flex-shrink:0}
+.notif-set{display:flex;align-items:center;gap:7px;font-size:11px;padding:3px 0;cursor:pointer}
+.notif-set input{accent-color:var(--ac,#c8a04a);cursor:pointer;margin:0}
+.notif-set-note{font-size:10px;color:var(--txd,#8a7a60);margin-top:5px}
+
+/* ── Toasts ──────────────────────────────────────────────────────────────── */
+#notif-toasts{
+  position:fixed;top:14px;right:14px;z-index:5000;
+  display:flex;flex-direction:column;gap:8px;
+  max-width:min(360px, calc(100vw - 28px));pointer-events:none}
+.notif-toast{
+  display:flex;align-items:flex-start;gap:9px;padding:9px 12px;pointer-events:auto;
+  background:var(--bg2,#221e19);border:1px solid var(--ac,#c8a04a);border-radius:6px;
+  box-shadow:0 6px 20px #0008;color:var(--tx,#e8dcc8);font-size:12px;
+  animation:notif-in .22s ease-out}
+.notif-toast.out{animation:notif-out .35s ease-in forwards}
+.notif-toast-icon{font-size:15px;line-height:1.2;flex-shrink:0}
+.notif-toast-title{font-weight:bold;line-height:1.35}
+.notif-toast-body{color:var(--txd,#8a7a60);font-size:11px;line-height:1.35;margin-top:1px}
+@keyframes notif-in{from{opacity:0;transform:translateX(18px)}to{opacity:1;transform:none}}
+@keyframes notif-out{to{opacity:0;transform:translateX(18px)}}
+
+/* Phones: the panel becomes a sheet under the header, toasts span the width. */
+@media (max-width:520px){
+  #notif-panel{left:8px;right:8px;width:auto;max-height:62vh}
+  #notif-toasts{left:10px;right:10px;max-width:none}
+}
+@media (prefers-reduced-motion:reduce){
+  .notif-toast,.notif-toast.out{animation:none}
+}

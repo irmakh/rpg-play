@@ -21,6 +21,8 @@ import registerAuth        from '../../server/routes/auth.js';
 import registerEvents      from '../../server/routes/events.js';
 import registerTreasury    from '../../server/routes/treasury.js';
 import registerSound       from '../../server/routes/sound.js';
+import registerNotifs      from '../../server/routes/notifications.js';
+import makeNotify          from '../../server/notify.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
@@ -163,6 +165,10 @@ export function makeApp() {
     currentCampaignId: () => activeCampaignId,
   };
 
+  // notify() needs the finished ctx, and is attached before any route module —
+  // exactly as in server.js.
+  ctx.notify = makeNotify(ctx);
+
   registerInitiative(app, ctx);
   registerTable(app, ctx);
   registerCharacters(app, ctx);
@@ -170,6 +176,7 @@ export function makeApp() {
   registerEvents(app, ctx);
   registerTreasury(app, ctx);
   registerSound(app, ctx);
+  registerNotifs(app, ctx);
 
   return { app, ldb, masterPw: TEST_MASTER_PW, hashPassword, broadcasts, deletedFiles };
 }

@@ -170,6 +170,7 @@ function startSSE() {
         }
       }
     },
+    notification: (d) => { typeof handleNotification === 'function' && handleNotification(d); },
     sound: (d) => { handleSoundEvent(d); },
     // DM rolled/set weather or moved the campaign date — refresh the toolbar widget.
     handouts: () => {
