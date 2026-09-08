@@ -268,6 +268,22 @@ function register() {
         silent: false,
       });
       note.on('click', () => {
+        const href = String((payload && payload.href) || '');
+
+        // Some screens belong in a window of their own — the music player above
+        // all — rather than replacing whatever the reader was looking at. The
+        // role windows are already named and reused, so this focuses the one
+        // they have instead of stacking another.
+        if (href && payload && payload.newWindow) {
+          const role = Object.keys(windows.ROLES).find(r => windows.ROLES[r].path === href);
+          const opened = role ? windows.open(role) : windows.openExtra('main');
+          if (opened && !role) {
+            const base = windows.serverUrl();
+            if (base) opened.loadURL(base + href);
+          }
+          return;
+        }
+
         const target = (win && !win.isDestroyed()) ? win : windows.focusAny();
         if (!target || target.isDestroyed()) return;
         if (target.isMinimized()) target.restore();
@@ -275,7 +291,6 @@ function register() {
         target.focus();
         // Only follow the link when it names a different screen; otherwise
         // raising the window is the whole point.
-        const href = String((payload && payload.href) || '');
         try {
           if (href && new URL(target.webContents.getURL()).pathname !== href) {
             const base = windows.serverUrl();

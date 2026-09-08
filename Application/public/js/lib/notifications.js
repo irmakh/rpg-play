@@ -120,15 +120,18 @@ function notifPopup(n) {
   if (notifMuted('popup') || !document.hidden) return;
   try {
     if (window.rpgDesktop && typeof window.rpgDesktop.notify === 'function') {
-      window.rpgDesktop.notify({ title: n.title, body: n.body || '', href: (n.data && n.data.href) || '' });
+      window.rpgDesktop.notify({
+        title: n.title, body: n.body || '',
+        href: (n.data && n.data.href) || '',
+        newWindow: !!(n.data && n.data.window),
+      });
       return;
     }
     if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
     const pop = new Notification(n.title, { body: n.body || '', tag: n.id, silent: true });
     pop.onclick = () => {
       window.focus();
-      const href = n.data && n.data.href;
-      if (href && location.pathname !== href) location.href = href;
+      notifFollow(n.data);
       pop.close();
     };
   } catch {}
@@ -140,6 +143,30 @@ function notifRequestPermission() {
     if (typeof Notification === 'undefined') return;
     if (Notification.permission === 'default') Notification.requestPermission().then(() => _notifRenderPanel());
   } catch {}
+}
+
+// ── Where a notification takes you ───────────────────────────────────────────
+/**
+ * Follow a notification's link.
+ *
+ * `data.window` names a window to open instead of navigating: the music player
+ * belongs in its own window, and replacing the character sheet you were reading
+ * with it is not what "now playing" should do. The name is reused, so clicking
+ * the same kind twice focuses the window you already have rather than stacking
+ * a new one. A blocked popup falls back to navigating, which beats doing
+ * nothing at all.
+ */
+function notifFollow(data) {
+  const href = data && data.href;
+  if (!href) return;
+  if (data.window) {
+    try {
+      const win = window.open(href, String(data.window),
+                              'width=440,height=620,resizable=yes,scrollbars=no');
+      if (win) { try { win.focus(); } catch {} return; }
+    } catch {}
+  }
+  if (location.pathname !== href) location.href = href;
 }
 
 // ── Toast ────────────────────────────────────────────────────────────────────
@@ -156,10 +183,9 @@ function notifToast(n) {
     `<span class="notif-toast-icon">${notifIcon(n.kind)}</span>` +
     `<div class="notif-toast-text"><div class="notif-toast-title">${_notifEsc(n.title)}</div>` +
     (n.body ? `<div class="notif-toast-body">${_notifEsc(n.body)}</div>` : '') + '</div>';
-  const href = n.data && n.data.href;
-  if (href) {
+  if (n.data && n.data.href) {
     el.style.cursor = 'pointer';
-    el.onclick = () => { location.href = href; };
+    el.onclick = () => notifFollow(n.data);
   }
   host.appendChild(el);
   setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 400); }, 6000);
@@ -301,8 +327,7 @@ async function notifOpenItem(rowId) {
                   { method: 'POST', headers: notifHeaders() });
     } catch {}
   }
-  const href = n.data && n.data.href;
-  if (href && location.pathname !== href) location.href = href;
+  notifFollow(n.data);
 }
 
 async function notifMarkAll() {

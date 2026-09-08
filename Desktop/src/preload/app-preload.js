@@ -119,5 +119,6 @@ contextBridge.exposeInMainWorld('rpgDesktop', {
     title: String((n && n.title) || ''),
     body: String((n && n.body) || ''),
     href: String((n && n.href) || ''),
+    newWindow: !!(n && n.newWindow),
   }),
 });

@@ -162,7 +162,10 @@ export default function register(app, ctx) {
       if (track?.name && track.url !== state.url) {
         ctx.notify?.({
           to: 'players', kind: 'music', title: 'Now playing: ' + track.name,
-          data: { href: '/music.html' },
+          // `window` opens the player in its own window rather than replacing
+          // whatever the reader was looking at. Named, so a second click
+          // focuses the window they already have.
+          data: { href: '/music.html', window: 'rpg-music' },
         });
       }
     } else if (action === 'pause') {
