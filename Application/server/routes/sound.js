@@ -157,6 +157,14 @@ export default function register(app, ctx) {
         position: pos, positionSetAt: Date.now(), duration: keepDur, loopMode: state.loopMode,
       });
       broadcast('sound', { action: 'play', url: track?.url || null, name: track?.name || null, playlistId, trackIndex: idx, volume: state.volume, position: pos, duration: keepDur });
+      // Only a genuine track change is worth a line in the feed; resuming the
+      // same track after a pause is not news.
+      if (track?.name && track.url !== state.url) {
+        ctx.notify?.({
+          to: 'players', kind: 'music', title: 'Now playing: ' + track.name,
+          data: { href: '/music.html' },
+        });
+      }
     } else if (action === 'pause') {
       const pos = typeof position === 'number' ? Math.max(0, position) : state.position;
       state.isPlaying = false;

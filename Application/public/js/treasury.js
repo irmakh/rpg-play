@@ -908,6 +908,7 @@ window.addEventListener('beforeunload', e => {
 // ── Real-time ────────────────────────────────────────────────────────────────
 // connectRealtime() comes from the shared /js/lib/realtime.js (loaded first).
 connectRealtime({
+  notification: (p) => { typeof handleNotification === 'function' && handleNotification(p); },
   treasury: (data) => {
     if (!masterPw) return;
     if (data.action === 'statusChanged') {

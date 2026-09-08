@@ -370,6 +370,16 @@ function initNotifications() {
   for (const bell of bells) {
     bell.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); notifToggle(); });
   }
+
+  // Pages that already talk to the server add `notification` to their own
+  // handler map. Pages that have no realtime connection of their own opt in
+  // with data-notif-bell="connect" and get one just for this — an explicit
+  // marker rather than a guess, so no page ends up with two sockets.
+  if (bells.some(b => b.getAttribute('data-notif-bell') === 'connect')
+      && typeof connectRealtime === 'function') {
+    connectRealtime({ notification: (p) => handleNotification(p) });
+  }
+
   _notifRenderCount();
   notifLoad();
   // A backstop for a dropped realtime connection; the live path does the work.

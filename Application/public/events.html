@@ -9,6 +9,7 @@
 <meta name="theme-color" content="#1a1a2e">
 <script>if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js');</script>
 <link rel="stylesheet" href="/css/dm.css">
+<link rel="stylesheet" href="/css/notifications.css">
 <link rel="stylesheet" href="/css/calendar.css">
 <link rel="stylesheet" href="/css/weather.css">
 <style>
@@ -44,6 +45,7 @@
       </select>
     </div>
     <div class="hdr-right">
+      <button class="btn" data-notif-bell="connect" title="Notifications">🔔</button>
       <span id="save-status" style="font-size:11px;color:var(--txd)"></span>
     </div>
   </div>
@@ -378,6 +380,7 @@
 <script src="/js/lib/lightbox.js" defer></script>
 <script src="/js/lib/weather-ui.js" defer></script>
 <script src="/js/lib/realtime.js" defer></script>
+<script src="/js/lib/notifications.js" defer></script>
 <script src="/js/lib/modal-guard.js" defer></script>
 <script src="/js/events.js" defer></script>
 <!-- Presence: register this client so it shows on the maintenance page -->

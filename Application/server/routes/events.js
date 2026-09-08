@@ -67,6 +67,10 @@ export default function register(app, ctx) {
       if (!s || typeof s.frYear !== 'number') return res.status(400).json({ error: 'Invalid body' });
       if (DB_PROVIDER === 'localdb') ldb.saveCalendarState(s);
       broadcast('calendar-updated', { type: 'state' });
+      ctx.notify?.({
+        to: 'players', kind: 'calendar', title: 'The date has moved on',
+        body: s.dateLabel || '', data: { href: '/index.html' },
+      });
       res.json({ ok: true });
     } catch (err) { console.error('PUT /api/calendar/state:', err); res.status(500).json({ error: 'Server error' }); }
   });

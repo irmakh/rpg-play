@@ -513,6 +513,12 @@ export default function register(app, ctx) {
       if (DB_PROVIDER === 'localdb') ldb.setShopConfig(isOpen, activeTags);
       else await idb.transact([idb.tx.shopConfig[SHOP_CONFIG_ID].update({ isOpen, activeTag, activeTags })]);
       broadcast('treasury', { action: 'statusChanged', isOpen, activeTag, activeTags });
+      ctx.notify?.({
+        to: 'players', kind: isOpen ? 'shop-open' : 'shop-closed',
+        title: isOpen ? 'The shop is open' : 'The shop has closed',
+        body: isOpen && activeTags.length ? 'Selling: ' + activeTags.join(', ') : '',
+        data: { href: '/index.html' },
+      });
       res.json({ ok: true, isOpen, activeTag, activeTags });
     } catch (err) { console.error('PUT /api/treasury/status:', err); res.status(500).json({ error: 'Server error' }); }
   });

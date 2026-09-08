@@ -9,6 +9,7 @@
 <meta name="theme-color" content="#1a1a2e">
 <script>if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js');</script>
 <link rel="stylesheet" href="/css/dm.css">
+<link rel="stylesheet" href="/css/notifications.css">
 <style>
   html,body{height:100%;width:100%;overflow:hidden;margin:0;padding:0}
   .sheet{display:flex;flex-direction:column;height:100%;width:100%;max-width:none;margin:0;padding:0}
@@ -96,6 +97,7 @@
       </select>
     </div>
     <div class="hdr-right">
+      <button class="btn" data-notif-bell="connect" title="Notifications">🔔</button>
       <span id="status-msg" style="font-size:11px"></span>
       <button class="btn" id="btn-controls-toggle" onclick="togglePmControls()" title="Toggle grid controls">Grid ▲</button>
       <button class="btn" id="btn-sidebar-toggle" onclick="togglePmSidebar()" title="Toggle panel">◀ Panel</button>
@@ -366,6 +368,7 @@
 </div>
 
 <script src="/js/lib/realtime.js" defer></script>
+<script src="/js/lib/notifications.js" defer></script>
 <script src="/js/prepare-map.js" defer></script>
 <!-- Presence: register this client so it shows on the maintenance page -->
 <script>window.addEventListener('DOMContentLoaded',function(){if(window.connectRealtime)connectRealtime({});});</script>

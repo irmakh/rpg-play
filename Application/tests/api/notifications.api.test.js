@@ -209,6 +209,85 @@ describe('notifications — emitted by the events themselves', () => {
   });
 });
 
+describe('notifications — ambient and character changes', () => {
+  it('tells the players when the shop opens, and again when it closes', async () => {
+    const { app } = setup();
+    await asDM(request(app).put('/api/treasury/status')).send({ isOpen: true, activeTags: ['Potions'] });
+    let mine = (await inbox(app, asAliyr)).body.items;
+    expect(mine[0]).toMatchObject({ kind: 'shop-open', priority: 'feed' });
+    expect(mine[0].body).toContain('Potions');
+
+    await asDM(request(app).put('/api/treasury/status')).send({ isOpen: false });
+    mine = (await inbox(app, asAliyr)).body.items;
+    expect(mine[0].kind).toBe('shop-closed');
+
+    // Ambient news is for the table, not the DM's own bell.
+    expect((await inbox(app, asDM)).body.items).toEqual([]);
+  });
+
+  it('reports damage to the character who took it', async () => {
+    const { app, ldb } = setup();
+    ldb.createTableToken('tok-1', {
+      name: 'Aliyr', type: 'character', linkedId: 'char-a', hpCurrent: 20, hpMax: 20,
+    });
+    await asDM(request(app).put('/api/table/tokens/tok-1')).send({ hpCurrent: 12 });
+
+    const mine = (await inbox(app, asAliyr)).body.items;
+    expect(mine[0]).toMatchObject({ kind: 'damage', priority: 'feed' });
+    expect(mine[0].title).toContain('8 damage');
+    expect((await inbox(app, asGerion)).body.items).toEqual([]);
+  });
+
+  it('interrupts when the hit drops them to zero', async () => {
+    const { app, ldb } = setup();
+    ldb.createTableToken('tok-1', {
+      name: 'Aliyr', type: 'character', linkedId: 'char-a', hpCurrent: 5, hpMax: 20,
+    });
+    await asDM(request(app).put('/api/table/tokens/tok-1')).send({ hpCurrent: 0 });
+    expect((await inbox(app, asAliyr)).body.items[0].priority).toBe('alert');
+  });
+
+  it('reports healing as healing', async () => {
+    const { app, ldb } = setup();
+    ldb.createTableToken('tok-1', {
+      name: 'Aliyr', type: 'character', linkedId: 'char-a', hpCurrent: 4, hpMax: 20,
+    });
+    await asDM(request(app).put('/api/table/tokens/tok-1')).send({ hpCurrent: 15 });
+    const first = (await inbox(app, asAliyr)).body.items[0];
+    expect(first.kind).toBe('healing');
+    expect(first.title).toContain('11');
+  });
+
+  it('says nothing when the HP did not actually move', async () => {
+    const { app, ldb } = setup();
+    ldb.createTableToken('tok-1', {
+      name: 'Aliyr', type: 'character', linkedId: 'char-a', hpCurrent: 9, hpMax: 20,
+    });
+    await asDM(request(app).put('/api/table/tokens/tok-1')).send({ hpCurrent: 9 });
+    expect((await inbox(app, asAliyr)).body.items).toEqual([]);
+  });
+
+  it('names a condition when it is put on or taken off', async () => {
+    const { app, ldb } = setup();
+    ldb.createTableToken('tok-1', {
+      name: 'Aliyr', type: 'character', linkedId: 'char-a', hpCurrent: 20, hpMax: 20, conditions: '[]',
+    });
+    await asDM(request(app).put('/api/table/tokens/tok-1')).send({ conditions: ['poisoned'] });
+    expect((await inbox(app, asAliyr)).body.items[0].title).toContain('poisoned');
+
+    await asDM(request(app).put('/api/table/tokens/tok-1')).send({ conditions: [] });
+    expect((await inbox(app, asAliyr)).body.items[0].title).toContain('No longer poisoned');
+  });
+
+  it('says nothing when a monster token is edited', async () => {
+    const { app, ldb } = setup();
+    ldb.createTableToken('tok-m', { name: 'Goblin', type: 'monster', hpCurrent: 7, hpMax: 7 });
+    await asDM(request(app).put('/api/table/tokens/tok-m')).send({ hpCurrent: 1 });
+    expect((await inbox(app, asAliyr)).body.items).toEqual([]);
+    expect((await inbox(app, asDM)).body.items).toEqual([]);
+  });
+});
+
 describe('notifications — housekeeping', () => {
   it('keeps the table bounded and drops orphaned deliveries', async () => {
     const { app, ldb } = setup();

@@ -306,6 +306,25 @@ export default function register(app, ctx) {
         const updated = { ...tok, ...update };
         broadcast('table', { action: 'token-updated', token: updated });
 
+        // Conditions the DM put on a player's own token, named so they can see
+        // what changed without hunting through the token panel.
+        if (conditions !== undefined && tok.linkedId && (tok.type === 'character' || tok.type === 'npc')) {
+          const listOf = (v) => {
+            try { return Array.isArray(v) ? v : JSON.parse(v || '[]'); } catch { return []; }
+          };
+          const before = listOf(tok.conditions);
+          const after = listOf(update.conditions);
+          const added = after.filter(c => !before.includes(c));
+          const removed = before.filter(c => !after.includes(c));
+          if (added.length || removed.length) {
+            ctx.notify?.({
+              to: tok.linkedId, kind: 'condition',
+              title: added.length ? 'You are now ' + added.join(', ') : 'No longer ' + removed.join(', '),
+              data: { href: '/table.html' },
+            });
+          }
+        }
+
         const hpChanged = hpCurrent !== undefined || hpMax !== undefined || hpTemp !== undefined;
         if (hpChanged && tok.linkedId && (tok.type === 'character' || tok.type === 'npc')) {
           try {
@@ -319,6 +338,26 @@ export default function register(app, ctx) {
               if (DB_PROVIDER === 'localdb') { ldb.updateCharacter(tok.linkedId, { dataJson: JSON.stringify(cdata) }); }
               else { await idb.transact([idb.tx.characters[tok.linkedId].update({ dataJson: JSON.stringify(cdata) })]); }
               broadcast('characters', { action: 'updated', id: tok.linkedId });
+
+              // This branch is the DM's, so an HP change here was done TO the
+              // player rather than by them — their sheet would otherwise just
+              // change underneath them with no explanation.
+              if (hpCurrent !== undefined) {
+                const before = tok.hpCurrent ?? 0;
+                const after = update.hpCurrent;
+                const delta = after - before;
+                if (delta !== 0) {
+                  ctx.notify?.({
+                    to: tok.linkedId,
+                    kind: delta < 0 ? 'damage' : 'healing',
+                    title: delta < 0 ? `You took ${-delta} damage` : `You were healed ${delta}`,
+                    body: `HP ${after}${update.hpMax ?? tok.hpMax ? ' / ' + (update.hpMax ?? tok.hpMax) : ''}`,
+                    // Dropping to 0 is the one HP change worth interrupting for.
+                    priority: after === 0 ? 'alert' : 'feed',
+                    data: { href: '/table.html' },
+                  });
+                }
+              }
             }
           } catch (syncErr) { console.error('char HP sync:', syncErr); }
         }

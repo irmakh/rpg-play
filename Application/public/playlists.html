@@ -9,6 +9,7 @@
 <meta name="theme-color" content="#1a1a2e">
 <script>if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js');</script>
 <link rel="stylesheet" href="/css/dm.css">
+<link rel="stylesheet" href="/css/notifications.css">
 <style>
 html,body{height:100%;overflow:hidden;margin:0;padding:0}
 .sheet{display:flex;flex-direction:column;height:100%;width:100%;max-width:none;margin:0;padding:0}
@@ -151,6 +152,7 @@ html,body{height:100%;overflow:hidden;margin:0;padding:0}
       </select>
     </div>
     <div class="hdr-right">
+      <button class="btn" data-notif-bell="connect" title="Notifications">🔔</button>
       <span id="status-msg" style="font-size:11px;color:var(--txd)"></span>
       <span id="table-badge">
         📡 <span id="tb-name"></span>
@@ -274,6 +276,7 @@ html,body{height:100%;overflow:hidden;margin:0;padding:0}
 </div>
 
 <script src="/js/lib/realtime.js"></script>
+<script src="/js/lib/notifications.js"></script>
 <script src="/js/lib/modal-guard.js"></script>
 <script>
 // ── Utils ─────────────────────────────────────────────────────────────────────

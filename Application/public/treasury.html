@@ -9,6 +9,7 @@
 <meta name="theme-color" content="#1a1a2e">
 <script>if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js');</script>
 <link rel="stylesheet" href="/css/treasury.css">
+<link rel="stylesheet" href="/css/notifications.css">
 </head>
 <body>
 
@@ -39,6 +40,7 @@
       <span id="status-msg"></span>
     </div>
     <div class="hdr-right">
+      <button class="btn" data-notif-bell title="Notifications">🔔</button>
       <button class="btn" id="shop-status-btn" onclick="toggleShopStatus()">Loading…</button>
       <div class="pop-wrap">
         <button class="btn" id="open-tags-btn" onclick="toggleTagsPopup()" title="Choose which tags are on sale">🏷 Tags ▾</button>
@@ -309,6 +311,7 @@
 </div>
 
 <script src="/js/lib/realtime.js" defer></script>
+<script src="/js/lib/notifications.js" defer></script>
 <script src="/js/treasury.js" defer></script>
 </body>
 </html>

@@ -8,6 +8,7 @@
 <link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#1a1a2e">
 <link rel="stylesheet" href="/css/handouts.css">
+<link rel="stylesheet" href="/css/notifications.css">
 <script>if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js');</script>
 </head>
 <body>
@@ -16,6 +17,7 @@
   <a href="/dm.html" class="btn ghost sm" style="text-decoration:none">← Back</a>
   <h1>📜 Handouts</h1>
   <span id="campaign-badge" style="display:none;background:var(--bg3);border:1px solid var(--a44);color:var(--txd);padding:2px 8px;border-radius:3px;font-size:11px;cursor:pointer"></span>
+  <button class="btn sm" data-notif-bell title="Notifications">🔔</button>
   <span class="spacer"></span>
   <button class="btn sm" onclick="newHandout()">+ New Handout</button>
 </div>
@@ -41,6 +43,7 @@
 <input type="file" id="img-picker" accept="image/*" style="display:none">
 
 <script src="/js/lib/realtime.js" defer></script>
+<script src="/js/lib/notifications.js" defer></script>
 <script src="/js/lib/modal-guard.js" defer></script>
 <script src="/js/handouts.js" defer></script>
 </body>

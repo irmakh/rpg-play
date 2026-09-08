@@ -9,8 +9,11 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <script>if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js');</script>
 <script src="/js/lib/modal-guard.js"></script>
+<script src="/js/lib/realtime.js"></script>
+<script src="/js/lib/notifications.js"></script>
 <script>window.addEventListener('DOMContentLoaded',function(){if(window.guardModal)guardModal('new-modal',closeNewModal);});</script>
 <link rel="stylesheet" href="/css/dm.css">
+<link rel="stylesheet" href="/css/notifications.css">
 <link rel="stylesheet" href="/css/stories.css">
 </head>
 <body>
@@ -64,6 +67,7 @@ async function storiesGateSubmit() {
     <a href="/dm.html" class="btn" style="padding:4px 10px;font-size:11px">← Back</a>
     <h1>Stories</h1>
     <div class="hdr-right">
+      <button class="btn" data-notif-bell="connect" title="Notifications">🔔</button>
       <span id="status-msg" class="status-msg"></span>
       <select id="char-filter" class="stories-filter" onchange="renderGrid()">
         <option value="">All characters</option>

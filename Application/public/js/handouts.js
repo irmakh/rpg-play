@@ -434,6 +434,9 @@ window.addEventListener('DOMContentLoaded', () => {
   loadAll();
   if (window.connectRealtime) {
     // A player rolling is the event the DM is waiting on, so refresh on it.
-    connectRealtime({ handouts: () => { if (!_dirty) loadAll(); } });
+    connectRealtime({
+      handouts: () => { if (!_dirty) loadAll(); },
+      notification: (n) => { typeof handleNotification === 'function' && handleNotification(n); },
+    });
   }
 });

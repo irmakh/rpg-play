@@ -9,6 +9,7 @@
 <meta name="theme-color" content="#1a1a2e">
 <script>if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js');</script>
 <link rel="stylesheet" href="/css/monsters.css">
+<link rel="stylesheet" href="/css/notifications.css">
 </head>
 <body>
 
@@ -39,6 +40,7 @@
       </select>
     </div>
     <div class="hdr-right">
+      <button class="btn" data-notif-bell="connect" title="Notifications">🔔</button>
       <button class="btn" onclick="loadMonsters()">↻ Refresh</button>
       <button class="btn primary" onclick="openAddMonsterModal()">+ Add Monster</button>
     </div>
@@ -206,6 +208,7 @@
 
 <script src="/js/monster-stat-block.js" defer></script>
 <script src="/js/lib/realtime.js" defer></script>
+<script src="/js/lib/notifications.js" defer></script>
 <script src="/js/lib/modal-guard.js" defer></script>
 <script src="/js/monsters.js" defer></script>
 <!-- Presence: register this client so it shows on the maintenance page -->
