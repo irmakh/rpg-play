@@ -93,7 +93,8 @@ export function makeLdb() {
     CREATE TABLE IF NOT EXISTS notifications (
       id TEXT PRIMARY KEY, kind TEXT DEFAULT '', priority TEXT DEFAULT 'feed',
       title TEXT DEFAULT '', body TEXT DEFAULT '', dataJson TEXT DEFAULT '{}',
-      actorName TEXT DEFAULT '', createdAt TEXT DEFAULT (datetime('now'))
+      actorName TEXT DEFAULT '', count INTEGER DEFAULT 1,
+      createdAt TEXT DEFAULT (datetime('now'))
     );
     CREATE TABLE IF NOT EXISTS notification_recipients (
       id TEXT PRIMARY KEY, notificationId TEXT NOT NULL DEFAULT '',
@@ -440,6 +441,28 @@ export function makeLdb() {
     db.prepare('DELETE FROM weather_log WHERE id = ?').run(id);
   }
 
+  // ── Chat log and drawings ───────────────────────────────────────────────────
+  // In-memory rather than SQL: the chat routes are only registered so that
+  // posting a message exercises the notification it raises, and nothing here
+  // asserts on chat storage itself.
+  const _chat = [];
+  const _drawings = [];
+  function listChatLog() { return _chat.slice(); }
+  function appendChatLog(entry) { _chat.push(entry); if (_chat.length > 200) _chat.shift(); }
+  function deleteChatMessage(id) { const i = _chat.findIndex(e => e.id === id); if (i !== -1) _chat.splice(i, 1); }
+  function clearChatLog() { _chat.length = 0; }
+  function listDrawings() { return _drawings.slice(); }
+  function addDrawing(shape) { _drawings.push(shape); }
+  function updateDrawing(id, shape) {
+    const i = _drawings.findIndex(s => s.id === id);
+    if (i !== -1) _drawings[i] = { ..._drawings[i], ...shape };
+  }
+  function deleteDrawing(id) {
+    const i = _drawings.findIndex(s => s.id === id);
+    if (i !== -1) _drawings.splice(i, 1);
+  }
+  function clearDrawings() { _drawings.length = 0; }
+
   // ── Notifications (mirror db/localdb.js) ────────────────────────────────────
   function createNotification(id, f) {
     db.prepare(`INSERT INTO notifications (id, kind, priority, title, body, dataJson, actorName, createdAt)
@@ -453,7 +476,7 @@ export function makeLdb() {
   }
   function listNotificationsFor(recipient, limit = 50) {
     return db.prepare(`
-      SELECT r.id AS rowId, r.seenAt, n.id, n.kind, n.priority, n.title, n.body, n.dataJson, n.actorName, n.createdAt
+      SELECT r.id AS rowId, r.seenAt, n.id, n.kind, n.priority, n.title, n.body, n.dataJson, n.actorName, n.count, n.createdAt
         FROM notification_recipients r JOIN notifications n ON n.id = r.notificationId
        WHERE r.recipient = ? ORDER BY n.createdAt DESC, r.rowid DESC LIMIT ?`)
       .all(recipient, Math.max(1, Math.min(200, limit)));
@@ -472,6 +495,18 @@ export function makeLdb() {
   }
   function clearNotificationsFor(recipient) {
     return db.prepare('DELETE FROM notification_recipients WHERE recipient = ?').run(recipient).changes;
+  }
+  function findRecentNotification(kind, actorName, sinceIso) {
+    return db.prepare(`SELECT * FROM notifications WHERE kind = ? AND actorName = ? AND createdAt >= ?
+                        ORDER BY createdAt DESC LIMIT 1`).get(kind, actorName || '', sinceIso) || null;
+  }
+  function bumpNotification(id, f) {
+    db.prepare(`UPDATE notifications SET title = ?, body = ?, createdAt = ?, count = COALESCE(count, 1) + 1
+                 WHERE id = ?`).run(f.title || '', f.body || '', f.createdAt || new Date().toISOString(), id);
+  }
+  function resetNotificationSeen(notificationId) {
+    return db.prepare("UPDATE notification_recipients SET seenAt = '' WHERE notificationId = ?")
+      .run(notificationId).changes;
   }
   function pruneNotifications(keep = 300) {
     const info = db.prepare(`DELETE FROM notifications WHERE id NOT IN
@@ -606,9 +641,13 @@ export function makeLdb() {
     listLootLogs, createLootLog, listClaimedItemIds, listPurchaseLogs, createPurchaseLog,
     // weather
     getWeatherConfig, saveWeatherConfig, listWeatherLog, getWeatherForDate, saveWeatherEntry, deleteWeatherEntry,
+    // chat + drawings
+    listChatLog, appendChatLog, deleteChatMessage, clearChatLog,
+    listDrawings, addDrawing, updateDrawing, deleteDrawing, clearDrawings,
     // notifications
     createNotification, addNotificationRecipient, listNotificationsFor, unreadNotificationCount,
     markNotificationSeen, markAllNotificationsSeen, clearNotificationsFor, pruneNotifications,
+    findRecentNotification, bumpNotification, resetNotificationSeen,
     // treasury requests
     listTreasuryRequests, listTreasuryRequestsForItem, listTreasuryRequestsForChar,
     getTreasuryRequest, getPendingTreasuryRequest, createTreasuryRequest, updateTreasuryRequest,

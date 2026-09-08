@@ -33,7 +33,7 @@ export default function register(app, ctx) {
       const items = ldb.listNotificationsFor(me, limit).map(r => ({
         rowId: r.rowId, id: r.id, kind: r.kind, priority: r.priority,
         title: r.title, body: r.body, actorName: r.actorName,
-        createdAt: r.createdAt, seen: !!r.seenAt,
+        createdAt: r.createdAt, seen: !!r.seenAt, count: r.count || 1,
         data: (() => { try { return JSON.parse(r.dataJson || '{}'); } catch { return {}; } })(),
       }));
       res.json({ items, unread: ldb.unreadNotificationCount(me) });

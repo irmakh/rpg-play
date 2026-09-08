@@ -28,6 +28,11 @@ export const DM_RECIPIENT = 'dm';
 // dropped on write, so the table cannot grow forever.
 const KEEP_EVENTS = 300;
 
+// Repeats of the same kind from the same person inside this window fold into
+// one row that counts up. A combat round produces a dozen rolls; without this
+// the bell would be useless the moment dice were included.
+const COALESCE_MS = 45000;
+
 export default function makeNotify(ctx) {
   const { ldb, DB_PROVIDER, broadcast, genId } = ctx;
 
@@ -59,6 +64,11 @@ export default function makeNotify(ctx) {
    * @param {'alert'|'feed'} [n.priority] default 'feed'
    * @param {object} [n.data]             { href } to open when clicked
    * @param {string} [n.actorName]        who caused it
+   * @param {boolean} [n.coalesce]        fold into this actor's previous one of
+   *                                      the same kind, if it is recent
+   * @param {string} [n.coalesceTitle]    wording for a folded row; {count} is
+   *                                      replaced with how many it stands for
+   * @param {string} [n.coalesceBody]     body for a folded row
    * @param {string|string[]} [n.exclude] recipients to skip
    * @returns {string|null} the notification id, or null if it reached nobody
    */
@@ -68,8 +78,32 @@ export default function makeNotify(ctx) {
       const recipients = resolveRecipients(n.to, n.exclude);
       if (recipients.length === 0) return null;
 
-      const id = genId();
       const createdAt = new Date().toISOString();
+
+      // Fold into the previous one where the caller asked for it, rather than
+      // stacking a dozen near-identical rows. The existing deliveries are
+      // reused and marked unread again, so the row resurfaces with a new count.
+      if (n.coalesce && n.actorName) {
+        const since = new Date(Date.now() - COALESCE_MS).toISOString();
+        const prev = ldb.findRecentNotification(n.kind || '', n.actorName, since);
+        if (prev) {
+          const count = (prev.count || 1) + 1;
+          const title = n.coalesceTitle
+            ? String(n.coalesceTitle).replace('{count}', String(count))
+            : String(n.title || '');
+          const body = n.coalesceBody !== undefined ? String(n.coalesceBody) : String(n.body || '');
+          ldb.bumpNotification(prev.id, { title, body, createdAt });
+          ldb.resetNotificationSeen(prev.id);
+          broadcast('notification', {
+            id: prev.id, recipients,
+            kind: prev.kind, priority: prev.priority, title, body,
+            data: n.data || {}, actorName: prev.actorName, createdAt, count,
+          });
+          return prev.id;
+        }
+      }
+
+      const id = genId();
       const row = {
         kind: n.kind || '',
         priority: n.priority === 'alert' ? 'alert' : 'feed',

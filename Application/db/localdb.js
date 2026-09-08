@@ -318,6 +318,9 @@ try { db.exec(`ALTER TABLE calendar_events ADD COLUMN media_json     TEXT DEFAUL
 // the merged ledger can resolve back to it (legacy rows keep an empty itemId).
 try { db.exec(`ALTER TABLE loot_logs     ADD COLUMN itemId TEXT DEFAULT ''`); } catch {}
 try { db.exec(`ALTER TABLE purchase_logs ADD COLUMN itemId TEXT DEFAULT ''`); } catch {}
+// How many events a notification stands for. Rolls and chat arrive in bursts,
+// so they fold into one row that counts up rather than a dozen separate ones.
+try { db.exec(`ALTER TABLE notifications ADD COLUMN count INTEGER DEFAULT 1`); } catch {}
 
 // Ensure singleton rows exist
 db.prepare("INSERT OR IGNORE INTO shop_config (id, isOpen) VALUES (?, 1)").run(SHOP_CONFIG_ID);
@@ -526,7 +529,7 @@ function addNotificationRecipient(id, notificationId, recipient) {
 /** Newest first, joined with the event itself. `rowId` addresses one delivery. */
 function listNotificationsFor(recipient, limit = 50) {
   return db.prepare(`
-    SELECT r.id AS rowId, r.seenAt, n.id, n.kind, n.priority, n.title, n.body, n.dataJson, n.actorName, n.createdAt
+    SELECT r.id AS rowId, r.seenAt, n.id, n.kind, n.priority, n.title, n.body, n.dataJson, n.actorName, n.count, n.createdAt
       FROM notification_recipients r JOIN notifications n ON n.id = r.notificationId
      WHERE r.recipient = ?
      ORDER BY n.createdAt DESC, r.rowid DESC
@@ -547,6 +550,28 @@ function markAllNotificationsSeen(recipient, seenAt) {
 function clearNotificationsFor(recipient) {
   return db.prepare('DELETE FROM notification_recipients WHERE recipient = ?').run(recipient).changes;
 }
+/**
+ * The most recent notification of this kind from this actor, if it is newer
+ * than `sinceIso` — the row a burst of rolls or chat folds into.
+ */
+function findRecentNotification(kind, actorName, sinceIso) {
+  return db.prepare(`SELECT * FROM notifications
+                      WHERE kind = ? AND actorName = ? AND createdAt >= ?
+                      ORDER BY createdAt DESC LIMIT 1`).get(kind, actorName || '', sinceIso) || null;
+}
+/** Folds another event into an existing row: new wording, new time, count + 1. */
+function bumpNotification(id, fields) {
+  db.prepare(`UPDATE notifications
+                 SET title = ?, body = ?, createdAt = ?, count = COALESCE(count, 1) + 1
+               WHERE id = ?`)
+    .run(fields.title || '', fields.body || '', fields.createdAt || new Date().toISOString(), id);
+}
+/** A folded-in event makes the row new again, so it comes back as unread. */
+function resetNotificationSeen(notificationId) {
+  return db.prepare("UPDATE notification_recipients SET seenAt = '' WHERE notificationId = ?")
+    .run(notificationId).changes;
+}
+
 /**
  * Keeps the table from growing without bound. Drops the oldest events beyond
  * `keep`, and the deliveries that pointed at them. Cheap enough to run on write.
@@ -1335,6 +1360,7 @@ function exportAll() {
     createLootLog, listClaimedItemIds,
     createNotification, addNotificationRecipient, listNotificationsFor, unreadNotificationCount,
     markNotificationSeen, markAllNotificationsSeen, clearNotificationsFor, pruneNotifications,
+    findRecentNotification, bumpNotification, resetNotificationSeen,
     listTreasuryRequests, listTreasuryRequestsForItem, listTreasuryRequestsForChar,
     getTreasuryRequest, getPendingTreasuryRequest, createTreasuryRequest, updateTreasuryRequest,
     deleteTreasuryRequest, declinePendingTreasuryRequests,

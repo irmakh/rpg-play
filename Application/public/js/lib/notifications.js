@@ -62,6 +62,8 @@ function notifMuted(key) { return !!notifMutes()[key]; }
 const NOTIF_ICONS = {
   'loot-granted': '💰', 'loot-declined': '📭', 'loot-requested': '🙋',
   'handout': '📜', 'your-turn': '⚔️', 'combat-started': '⚔️',
+  'dice': '🎲', 'chat': '💬', 'music': '🎵', 'damage': '🩸', 'healing': '💚',
+  'condition': '🌀', 'shop-open': '🛒', 'shop-closed': '🛒', 'calendar': '📅',
 };
 function notifIcon(kind) { return NOTIF_ICONS[kind] || '🔔'; }
 
@@ -218,7 +220,8 @@ function _notifRenderPanel() {
            onclick="notifOpenItem('${_notifEsc(n.rowId)}')">
         <span class="notif-row-icon">${notifIcon(n.kind)}</span>
         <div class="notif-row-text">
-          <div class="notif-row-title">${_notifEsc(n.title)}</div>
+          <div class="notif-row-title">${_notifEsc(n.title)}${
+            n.count > 1 ? `<span class="notif-row-count">×${n.count}</span>` : ''}</div>
           ${n.body ? `<div class="notif-row-body">${_notifEsc(n.body)}</div>` : ''}
         </div>
         <span class="notif-row-when">${_notifEsc(notifAgo(n.createdAt))}</span>
@@ -342,10 +345,23 @@ function handleNotification(payload) {
   const item = {
     rowId: 'live-' + payload.id, id: payload.id, kind: payload.kind, priority: payload.priority,
     title: payload.title, body: payload.body, data: payload.data || {},
-    actorName: payload.actorName, createdAt: payload.createdAt, seen: false,
+    actorName: payload.actorName, createdAt: payload.createdAt, count: payload.count || 1, seen: false,
   };
-  _notifItems.unshift(item);
-  _notifUnread += 1;
+
+  // A coalesced event arrives under the id it folded into. Replace that row and
+  // move it to the top rather than stacking a near-duplicate; it counts as
+  // unread again, but only once no matter how many events it now stands for.
+  const existing = _notifItems.findIndex(i => i.id === payload.id);
+  if (existing !== -1) {
+    const was = _notifItems[existing];
+    item.rowId = was.rowId;                    // keep the delivery id we can mark read
+    _notifItems.splice(existing, 1);
+    _notifItems.unshift(item);
+    if (was.seen) _notifUnread += 1;           // it had been read; now it is new again
+  } else {
+    _notifItems.unshift(item);
+    _notifUnread += 1;
+  }
   _notifRenderCount();
   if (_notifOpen) _notifRenderPanel();
 

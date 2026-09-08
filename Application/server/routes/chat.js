@@ -110,6 +110,59 @@ export default function register(app, ctx) {
     res.json(isMaster ? chatLog : chatLog.filter(e => !e.dmOnly));
   });
 
+  /**
+   * A chat line or a roll, folded into the bell.
+   *
+   * Only this endpoint notifies — a roll usually also hits /api/dice/broadcast
+   * for the animation, and announcing both would tell everybody twice. This is
+   * the durable record, so it is the one that speaks.
+   *
+   * Both are 'feed': silent, bell only, and coalesced per sender, so a combat
+   * round becomes "Gerion rolled 6 times" rather than six separate rows.
+   */
+  function notifyChat(entry) {
+    if (!ctx.notify || !entry || entry.type === 'media') return;
+    const sender = entry.sender || '';
+    // The sender is a display name; find whose it is so they are not told about
+    // their own message. 'DM' is the DM's.
+    let exclude = [];
+    if (sender === 'DM') {
+      exclude = ['dm'];
+    } else if (DB_PROVIDER === 'localdb') {
+      try {
+        const me = ldb.listCharacters().find(c => (c.name || '') === sender);
+        if (me) exclude = [me.id];
+      } catch {}
+    }
+
+    const isRoll = entry.type !== 'text';
+    if (isRoll) {
+      const label = entry.label ? ' (' + entry.label + ')' : '';
+      ctx.notify({
+        // A DM-only roll stays with the DM, exactly as it does in the chat log.
+        to: entry.dmOnly ? 'dm' : 'all', exclude,
+        kind: 'dice', actorName: sender, priority: 'feed',
+        title: `${sender} rolled ${entry.total}${label}`,
+        coalesce: true,
+        coalesceTitle: `${sender} rolled {count} times`,
+        coalesceBody: `Latest: ${entry.total}${label}`,
+        data: { href: '/table.html' },
+      });
+    } else {
+      const text = String(entry.message || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+      if (!text) return;
+      ctx.notify({
+        to: 'all', exclude,
+        kind: 'chat', actorName: sender, priority: 'feed',
+        title: sender, body: text.slice(0, 140),
+        coalesce: true,
+        coalesceTitle: `${sender} — {count} messages`,
+        coalesceBody: text.slice(0, 140),
+        data: { href: '/table.html' },
+      });
+    }
+  }
+
   app.post('/api/chat', (req, res) => {
     const { sender, dice, results, modifier, total, label, type, message, description, dmOnly, html } = req.body;
     let entry;
@@ -152,6 +205,7 @@ export default function register(app, ctx) {
       if (chatLog.length > CHAT_MAX) chatLog.shift();
     }
     broadcast('chat', entry);
+    notifyChat(entry);
     res.json(entry);
   });
 

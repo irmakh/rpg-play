@@ -21,6 +21,7 @@ import registerAuth        from '../../server/routes/auth.js';
 import registerEvents      from '../../server/routes/events.js';
 import registerTreasury    from '../../server/routes/treasury.js';
 import registerSound       from '../../server/routes/sound.js';
+import registerChat        from '../../server/routes/chat.js';
 import registerNotifs      from '../../server/routes/notifications.js';
 import makeNotify          from '../../server/notify.js';
 
@@ -176,6 +177,7 @@ export function makeApp() {
   registerEvents(app, ctx);
   registerTreasury(app, ctx);
   registerSound(app, ctx);
+  registerChat(app, ctx);
   registerNotifs(app, ctx);
 
   return { app, ldb, masterPw: TEST_MASTER_PW, hashPassword, broadcasts, deletedFiles };

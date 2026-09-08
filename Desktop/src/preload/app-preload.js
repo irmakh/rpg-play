@@ -109,4 +109,15 @@ contextBridge.exposeInMainWorld('rpgDesktop', {
   version: process.versions.electron,
   retry: () => ipcRenderer.send('error:retry'),
   openServerSetup: () => ipcRenderer.send('ui:open-setup'),
+  /**
+   * Raise a real Windows notification. The web app calls this instead of the
+   * Notification API when it is running here, because a packaged app can notify
+   * without asking permission and clicking one can raise the right window.
+   * Only the three strings are passed on; nothing else crosses.
+   */
+  notify: (n) => ipcRenderer.send('notify:show', {
+    title: String((n && n.title) || ''),
+    body: String((n && n.body) || ''),
+    href: String((n && n.href) || ''),
+  }),
 });

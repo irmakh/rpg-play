@@ -48,6 +48,11 @@
 .notif-row-icon{font-size:14px;line-height:1.3;flex-shrink:0}
 .notif-row-text{flex:1;min-width:0}
 .notif-row-title{font-weight:bold;line-height:1.35;word-break:break-word}
+/* How many events a folded row stands for — a burst of rolls or chat. */
+.notif-row-count{
+  display:inline-block;margin-left:6px;padding:0 5px;border-radius:8px;
+  background:var(--a44,#c8a04a44);color:var(--ac,#c8a04a);
+  font-size:10px;font-weight:bold;vertical-align:middle}
 .notif-row-body{color:var(--txd,#8a7a60);font-size:11px;line-height:1.35;margin-top:1px;word-break:break-word}
 .notif-row-when{font-size:10px;color:var(--txd,#8a7a60);white-space:nowrap;flex-shrink:0;padding-top:2px}
 

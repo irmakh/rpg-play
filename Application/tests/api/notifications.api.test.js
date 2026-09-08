@@ -288,6 +288,95 @@ describe('notifications — ambient and character changes', () => {
   });
 });
 
+describe('notifications — chat and dice, folded', () => {
+  const say = (app, sender, message) =>
+    request(app).post('/api/chat').send({ type: 'text', sender, message });
+  const roll = (app, sender, total, extra = {}) =>
+    request(app).post('/api/chat').send({ sender, dice: '1d20', results: [total], total, ...extra });
+
+  it('reports a roll to everyone but the roller', async () => {
+    const { app } = setup();
+    await roll(app, 'Aliyr', 18);
+
+    const other = (await inbox(app, asGerion)).body.items;
+    expect(other[0]).toMatchObject({ kind: 'dice', priority: 'feed' });
+    expect(other[0].title).toContain('18');
+    // The person who rolled watched it happen.
+    expect((await inbox(app, asAliyr)).body.items).toEqual([]);
+    // The DM hears it too.
+    expect((await inbox(app, asDM)).body.items).toHaveLength(1);
+  });
+
+  it('folds a burst of rolls into one counted row', async () => {
+    const { app } = setup();
+    for (const t of [18, 3, 11, 20]) await roll(app, 'Aliyr', t);
+
+    const seen = (await inbox(app, asGerion)).body;
+    expect(seen.items).toHaveLength(1);
+    expect(seen.items[0].count).toBe(4);
+    expect(seen.items[0].title).toBe('Aliyr rolled 4 times');
+    expect(seen.items[0].body).toContain('20');       // the latest one
+    // Four rolls cost one unread, not four.
+    expect(seen.unread).toBe(1);
+  });
+
+  it('keeps different people apart', async () => {
+    const { app } = setup();
+    await roll(app, 'Aliyr', 5);
+    await roll(app, 'Gerion', 9);
+    const dm = (await inbox(app, asDM)).body.items;
+    expect(dm).toHaveLength(2);
+    expect(dm.map(i => i.actorName).sort()).toEqual(['Aliyr', 'Gerion']);
+  });
+
+  it('makes a folded row unread again', async () => {
+    const { app } = setup();
+    await roll(app, 'Aliyr', 5);
+    await asGerion(request(app).post('/api/notifications/seen-all'));
+    expect((await inbox(app, asGerion)).body.unread).toBe(0);
+
+    await roll(app, 'Aliyr', 12);
+    expect((await inbox(app, asGerion)).body.unread).toBe(1);
+  });
+
+  it('keeps a DM-only roll with the DM', async () => {
+    const { app } = setup();
+    await roll(app, 'Aliyr', 15, { dmOnly: true });
+    expect((await inbox(app, asDM)).body.items).toHaveLength(1);
+    expect((await inbox(app, asGerion)).body.items).toEqual([]);
+  });
+
+  it('carries a chat line, minus the sender', async () => {
+    const { app } = setup();
+    await say(app, 'Aliyr', 'I search the chest');
+    const other = (await inbox(app, asGerion)).body.items;
+    expect(other[0]).toMatchObject({ kind: 'chat', title: 'Aliyr', priority: 'feed' });
+    expect(other[0].body).toBe('I search the chest');
+    expect((await inbox(app, asAliyr)).body.items).toEqual([]);
+  });
+
+  it('strips markup out of a formatted message', async () => {
+    const { app } = setup();
+    await say(app, 'DM', '<b>Fireball</b><br>A bright streak');
+    const body = (await inbox(app, asAliyr)).body.items[0].body;
+    expect(body).not.toContain('<');
+    expect(body).toContain('Fireball');
+  });
+
+  it('says nothing for an empty or markup-only message', async () => {
+    const { app } = setup();
+    await say(app, 'DM', '<br>');
+    expect((await inbox(app, asAliyr)).body.items).toEqual([]);
+  });
+
+  it('does not announce shared media', async () => {
+    const { app, ldb } = setup();
+    // Media posts through its own endpoint; the chat feed should stay quiet.
+    ldb.appendChatLog({ id: 'm1', sender: 'DM', type: 'media', timestamp: new Date().toISOString() });
+    expect((await inbox(app, asAliyr)).body.items).toEqual([]);
+  });
+});
+
 describe('notifications — housekeeping', () => {
   it('keeps the table bounded and drops orphaned deliveries', async () => {
     const { app, ldb } = setup();

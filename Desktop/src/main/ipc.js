@@ -4,7 +4,7 @@
 // these: the only privileged surface exposed to remote content is the session
 // mirror, which carries login state the page already had.
 
-const { ipcMain, app, screen, BrowserWindow, shell, net, dialog, session } = require('electron');
+const { ipcMain, app, screen, BrowserWindow, shell, net, dialog, session, Notification } = require('electron');
 const config = require('./config');
 const sessionStore = require('./session-store');
 const windows = require('./windows');
@@ -251,6 +251,40 @@ function register() {
     if (!win || win.isDestroyed()) return;
     const url = windows.urlFor(win.rpgRole || 'main');
     if (url) win.loadURL(url);
+  });
+
+  // A real Windows notification for something the app wants to interrupt for.
+  // The page only asks when it is in the background, and clicking one brings
+  // back the window that raised it — which a web notification cannot do.
+  ipcMain.on('notify:show', (event, payload) => {
+    try {
+      if (!Notification.isSupported()) return;
+      const title = String((payload && payload.title) || '').slice(0, 120);
+      if (!title) return;
+      const win = BrowserWindow.fromWebContents(event.sender);
+      const note = new Notification({
+        title,
+        body: String((payload && payload.body) || '').slice(0, 300),
+        silent: false,
+      });
+      note.on('click', () => {
+        const target = (win && !win.isDestroyed()) ? win : windows.focusAny();
+        if (!target || target.isDestroyed()) return;
+        if (target.isMinimized()) target.restore();
+        target.show();
+        target.focus();
+        // Only follow the link when it names a different screen; otherwise
+        // raising the window is the whole point.
+        const href = String((payload && payload.href) || '');
+        try {
+          if (href && new URL(target.webContents.getURL()).pathname !== href) {
+            const base = windows.serverUrl();
+            if (base) target.loadURL(base + href);
+          }
+        } catch {}
+      });
+      note.show();
+    } catch (err) { console.error('notify:show:', err); }
   });
 }
 
