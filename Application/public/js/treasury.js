@@ -13,12 +13,14 @@ let expandedTags = new Set();
 let shopIsOpen = true;
 let shopActiveTags = [];   // empty = the whole shop is open
 let ledgerOpen = false;
+let requestsOpen = false;
+let requests   = [];       // pending free-loot requests, newest DM decision first
 let tagKeys    = [];
 
 const MODE_LABEL = { hidden: 'Hidden', loot: 'Free Loot', shop: 'Shop' };
 const MODE_HELP  = {
   hidden: 'DM only. Players cannot see this item anywhere.',
-  loot:   'Free to claim, one per character. Stock sets how many can be taken — 1 vanishes after the first claim, −1 is an open offer to the whole party.',
+  loot:   'Players put their name on it and you decide who gets it. Stock sets how many you can hand out — 1 leaves the pool after the first approval, −1 is an open offer to the whole party.',
   shop:   'For sale. Visible while the shop is open and its tag matches the open filter.',
 };
 const WEAPON_PROPS = ['Ammunition','Finesse','Heavy','Light','Loading','Range','Reach','Thrown','Two-Handed','Versatile'];
@@ -163,6 +165,7 @@ async function authenticate() {
     initPropsGrid();
     renderList();
     await loadShopStatus();
+    await loadRequests();
   } catch { errEl.textContent = 'Connection error.'; }
 }
 
@@ -184,6 +187,7 @@ async function loadItems() {
 async function refreshAll() {
   await loadItems();
   await loadShopStatus();
+  await loadRequests();
   if (ledgerOpen) await loadLedger();
   showStatus('Refreshed.', false);
 }
@@ -356,6 +360,12 @@ function renderList() {
         <span class="mode-dot ${i.mode}" title="${MODE_LABEL[i.mode]}"></span>
         ${thumb}
         <span class="it-name">${esc(i.name) || '<em>Untitled</em>'}</span>
+        ${(() => {
+          // How many players are waiting on this one, so contention is visible
+          // without opening the item.
+          const n = requestsFor(i.id).length;
+          return n ? `<span class="req-pill${n > 1 ? ' contested' : ''}" title="${n} waiting">${n}</span>` : '';
+        })()}
         <span class="it-meta">${esc(itemMeta(i))}</span>
       </div>`;
     }).join('');
@@ -515,6 +525,7 @@ function fillForm(it) {
   setMode(it.mode || 'hidden');
   onTypeChange();
   updatePricePreview();
+  renderItemRequests(it.id);
   clearDirty();          // setMode()/onPropChange() flag dirty; this is a fresh load
   renderList();
 }
@@ -710,11 +721,140 @@ async function runImport() {
   } catch { statusEl.textContent = 'Network error.'; statusEl.style.color = 'var(--err)'; }
 }
 
+// ── Free-loot requests ───────────────────────────────────────────────────────
+// Players ask; the DM hands out. The queue and the per-item list below are two
+// views of the same rows, so both act through approveRequest/declineRequest.
+function toggleRequests() {
+  requestsOpen = !requestsOpen;
+  if (requestsOpen && ledgerOpen) toggleLedger();
+  $('requests').classList.toggle('on', requestsOpen);
+  $('detail').style.display = (requestsOpen || ledgerOpen) ? 'none' : '';
+  $('btn-requests').classList.toggle('primary', requestsOpen);
+  if (requestsOpen) renderRequests();
+}
+
+async function loadRequests() {
+  if (!masterPw) return;
+  try {
+    const res = await api('/api/treasury/requests');
+    if (res.status === 401) { handleUnauth(); return; }
+    if (!res.ok) return;
+    requests = await res.json();
+  } catch { return; }
+  renderRequestCount();
+  if (requestsOpen) renderRequests();
+  if (currentId) renderItemRequests(currentId);
+  renderList();
+}
+
+function requestsFor(itemId) {
+  return requests.filter(r => r.itemId === itemId);
+}
+
+function renderRequestCount() {
+  const pill = $('req-count');
+  if (!pill) return;
+  pill.textContent = requests.length;
+  pill.style.display = requests.length ? '' : 'none';
+}
+
+function whenText(raw) {
+  const s = String(raw || '');
+  const dt = new Date(s + (s && !s.endsWith('Z') && s.includes('T') ? 'Z' : ''));
+  return isNaN(dt) ? esc(s) : dt.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+function decideBtns(r) {
+  return `<button class="btn sm primary" onclick="approveRequest('${escJs(r.id)}')" title="Give it to this character">✓ Approve</button>
+          <button class="btn sm danger" onclick="declineRequest('${escJs(r.id)}')" title="Turn this one down">✕</button>`;
+}
+
+function renderRequests() {
+  const body = $('requests-body');
+  if (!body) return;
+  if (requests.length === 0) {
+    body.innerHTML = '<div class="req-empty">Nobody is waiting on free loot right now.</div>';
+    return;
+  }
+  // Grouped by item, because the decision is "which of these players gets it".
+  const byItem = new Map();
+  for (const r of requests) {
+    if (!byItem.has(r.itemId)) byItem.set(r.itemId, []);
+    byItem.get(r.itemId).push(r);
+  }
+  body.innerHTML = [...byItem.entries()].map(([itemId, rows]) => {
+    const first = rows[0];
+    const thumb = first.itemThumb
+      ? `<img class="req-item-thumb" src="${esc(first.itemThumb)}" alt="">`
+      : '<span class="req-item-thumb ph">◻</span>';
+    const stock = first.quantity === -1 ? 'unlimited' : `${first.quantity} left`;
+    return `<div class="req-item">
+      <div class="req-item-hdr">
+        ${thumb}
+        <span class="req-item-name" onclick="jumpToItem('${escJs(itemId)}')" title="Open this item">${esc(first.itemName) || '<em>Untitled</em>'}</span>
+        ${rows.length > 1 ? `<span class="req-pill contested">${rows.length} want it</span>` : ''}
+        <span class="req-item-stock">${esc(stock)}</span>
+      </div>
+      ${rows.map(r => `<div class="req-row">
+        <span class="req-who"><strong>${esc(r.charName) || 'Unknown'}</strong></span>
+        <span class="req-when">${whenText(r.requestedAt)}</span>
+        ${decideBtns(r)}
+      </div>`).join('')}
+    </div>`;
+  }).join('');
+}
+
+// The same rows, shown on the item the DM is already looking at.
+function renderItemRequests(itemId) {
+  const sect = $('sect-requests');
+  const body = $('item-requests');
+  if (!sect || !body) return;
+  const item = items.find(i => i.id === itemId);
+  const rows = requestsFor(itemId);
+  if (!item || item.mode !== 'loot' || rows.length === 0) {
+    sect.style.display = 'none';
+    body.innerHTML = '';
+    return;
+  }
+  sect.style.display = '';
+  body.innerHTML = rows.map(r => `<div class="req-row">
+    <span class="req-who"><strong>${esc(r.charName) || 'Unknown'}</strong></span>
+    <span class="req-when">${whenText(r.requestedAt)}</span>
+    ${decideBtns(r)}
+  </div>`).join('');
+}
+
+function jumpToItem(id) {
+  if (requestsOpen) toggleRequests();
+  selectItem(id);
+}
+
+async function decideRequest(id, action) {
+  try {
+    const res = await api(`/api/treasury/requests/${id}/${action}`, { method: 'POST' });
+    if (res.status === 401) { handleUnauth(); return; }
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) { showStatus(data.error || 'Failed.', true); return; }
+    if (action === 'approve') {
+      showStatus(data.exhausted
+        ? `Handed over. That was the last one${data.declined ? ` — ${data.declined} other request${data.declined === 1 ? '' : 's'} declined` : ''}.`
+        : 'Handed over.');
+    } else {
+      showStatus('Declined.');
+    }
+    await loadItems();
+    await loadRequests();
+  } catch { showStatus('Network error.', true); }
+}
+const approveRequest = (id) => decideRequest(id, 'approve');
+const declineRequest = (id) => decideRequest(id, 'decline');
+
 // ── Ledger ───────────────────────────────────────────────────────────────────
 function toggleLedger() {
   ledgerOpen = !ledgerOpen;
+  if (ledgerOpen && requestsOpen) toggleRequests();
   $('ledger').classList.toggle('on', ledgerOpen);
-  $('detail').style.display = ledgerOpen ? 'none' : '';
+  $('detail').style.display = (ledgerOpen || requestsOpen) ? 'none' : '';
   $('btn-ledger').classList.toggle('primary', ledgerOpen);
   if (ledgerOpen) loadLedger();
 }
@@ -777,7 +917,8 @@ connectRealtime({
       return;
     }
     loadItems();
-    if (ledgerOpen && (data.action === 'claimed' || data.action === 'purchase')) loadLedger();
+    if (['requested','approved','declined','deleted','updated','bulk-updated'].includes(data.action)) loadRequests();
+    if (ledgerOpen && (data.action === 'approved' || data.action === 'claimed' || data.action === 'purchase')) loadLedger();
   },
   characters: () => { if (masterPw) loadItems(); },
 });

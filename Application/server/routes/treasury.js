@@ -334,6 +334,63 @@ export default function register(app, ctx) {
     if (DB_PROVIDER === 'localdb') return ldb.deleteTreasuryItem(id);
     return idb.transact([idb.tx.treasuryItems[id].delete()]);
   }
+  // ── Free-loot requests ──────────────────────────────────────────────────────
+  // A player asks for a piece of free loot; the DM decides who gets it. Nothing
+  // reaches an inventory until an approval, so these rows are just intent.
+  async function listRequests(status) {
+    if (DB_PROVIDER === 'localdb') return ldb.listTreasuryRequests(status);
+    const where = status ? { status } : {};
+    return (await idb.query({ treasuryRequests: { $: { where } } })).treasuryRequests || [];
+  }
+  async function requestsForItem(itemId, status) {
+    if (DB_PROVIDER === 'localdb') return ldb.listTreasuryRequestsForItem(itemId, status);
+    const where = status ? { itemId, status } : { itemId };
+    return (await idb.query({ treasuryRequests: { $: { where } } })).treasuryRequests || [];
+  }
+  async function getRequest(id) {
+    if (DB_PROVIDER === 'localdb') return ldb.getTreasuryRequest(id);
+    const rows = (await idb.query({ treasuryRequests: { $: { where: { id } } } })).treasuryRequests || [];
+    return rows[0] || null;
+  }
+  async function createRequest(id, fields) {
+    if (DB_PROVIDER === 'localdb') return ldb.createTreasuryRequest(id, fields);
+    return idb.transact([idb.tx.treasuryRequests[id].update(fields)]);
+  }
+  async function updateRequest(id, fields) {
+    if (DB_PROVIDER === 'localdb') return ldb.updateTreasuryRequest(id, fields);
+    return idb.transact([idb.tx.treasuryRequests[id].update(fields)]);
+  }
+  async function declinePendingFor(itemId, at) {
+    if (DB_PROVIDER === 'localdb') return ldb.declinePendingTreasuryRequests(itemId, at);
+    const open = await requestsForItem(itemId, 'pending');
+    if (open.length) {
+      await idb.transact(open.map(r => idb.tx.treasuryRequests[r.id].update({ status: 'declined', decidedAt: at })));
+    }
+    return open.length;
+  }
+
+  /**
+   * Who has their name on each of these items, as {itemId: [{id, charId, charName}]}.
+   * Requests from characters that no longer exist are dropped rather than shown
+   * as a ghost name nobody can approve.
+   */
+  async function pendingByItem(itemIds) {
+    const wanted = new Set(itemIds);
+    if (wanted.size === 0) return {};
+    const rows = (await listRequests('pending')).filter(r => wanted.has(r.itemId));
+    if (rows.length === 0) return {};
+    const characters = DB_PROVIDER === 'localdb'
+      ? ldb.listCharacters()
+      : (await idb.query({ characters: {} })).characters || [];
+    const liveIds = new Set(characters.map(c => c.id));
+    const out = {};
+    for (const r of rows) {
+      if (!liveIds.has(r.charId)) continue;
+      (out[r.itemId] ||= []).push({ id: r.id, charId: r.charId, charName: r.charName || '' });
+    }
+    return out;
+  }
+
   async function claimedIdsFor(charId) {
     if (DB_PROVIDER === 'localdb') return ldb.listClaimedItemIds(charId);
     const result = await idb.query({ lootLogs: { $: { where: { charId } } } });
@@ -392,11 +449,20 @@ export default function register(app, ctx) {
       const charId = req.headers['x-character-id'];
       if (charId && (await charAuth(charId, req)) === 200) claimedIds = await claimedIdsFor(charId);
 
+      // Who has asked for each piece of loot. Deliberately shown to the whole
+      // party: seeing that three people want the same sword is what lets them
+      // sort it out before the DM has to.
+      const requests = await pendingByItem(loot.map(i => i.id));
+      for (const item of loot) item.requesters = requests[item.id] || [];
+      const myRequestIds = charId
+        ? loot.filter(i => i.requesters.some(r => r.charId === charId)).map(i => i.id)
+        : [];
+
       res.json({
         shopOpen: !!cfg.isOpen,
         activeTag: cfg.activeTag || '',            // legacy single value
         activeTags: cfg.activeTags || [],
-        loot, shop, claimedIds,
+        loot, shop, claimedIds, myRequestIds,
       });
     } catch (err) { console.error('GET /api/treasury:', err); res.status(500).json({ error: 'Server error' }); }
   });
@@ -479,6 +545,12 @@ export default function register(app, ctx) {
       const revealed = update.descVisible === true && !existing.descVisible;
       if (revealed) await identifyForEveryone({ ...existing, ...update, id: req.params.id });
 
+      // Anyone queued for an item that has stopped being free loot is told no
+      // now, rather than sitting in the DM's queue as an unapprovable row.
+      if (existing.mode === 'loot' && update.mode !== undefined && update.mode !== 'loot') {
+        await declinePendingFor(req.params.id, new Date().toISOString());
+      }
+
       broadcast('treasury', { action: 'updated', id: req.params.id });
       res.json({ ok: true });
     } catch (err) { console.error('PUT /api/treasury/:id:', err); res.status(500).json({ error: 'Server error' }); }
@@ -491,6 +563,7 @@ export default function register(app, ctx) {
       if (!existing) return res.status(404).json({ error: 'Not found' });
       dropImageFiles(existing);
       await deleteOne(req.params.id);
+      await declinePendingFor(req.params.id, new Date().toISOString());
       broadcast('treasury', { action: 'deleted', id: req.params.id });
       res.json({ ok: true });
     } catch (err) { console.error('DELETE /api/treasury/:id:', err); res.status(500).json({ error: 'Server error' }); }
@@ -518,6 +591,11 @@ export default function register(app, ctx) {
       if (!MODES.has(mode)) return res.status(400).json({ error: 'Invalid mode' });
       if (DB_PROVIDER === 'localdb') ldb.bulkUpdateTreasuryMode(ids, mode);
       else await idb.transact(ids.map(id => idb.tx.treasuryItems[id].update({ mode })));
+      // Same rule as the single-item edit: leaving the loot pool closes the queue.
+      if (mode !== 'loot') {
+        const at = new Date().toISOString();
+        for (const id of ids) await declinePendingFor(id, at);
+      }
       broadcast('treasury', { action: 'bulk-updated' });
       res.json({ ok: true, count: ids.length });
     } catch (err) { console.error('POST /api/treasury/bulk-mode:', err); res.status(500).json({ error: 'Server error' }); }
@@ -532,6 +610,10 @@ export default function register(app, ctx) {
       for (const r of rows) dropImageFiles(r);
       if (DB_PROVIDER === 'localdb') ldb.bulkDeleteTreasuryItems(ids);
       else await idb.transact(ids.map(id => idb.tx.treasuryItems[id].delete()));
+      {
+        const at = new Date().toISOString();
+        for (const id of ids) await declinePendingFor(id, at);
+      }
       broadcast('treasury', { action: 'bulk-updated' });
       res.json({ ok: true, count: ids.length });
     } catch (err) { console.error('POST /api/treasury/bulk-delete:', err); res.status(500).json({ error: 'Server error' }); }
@@ -592,8 +674,10 @@ export default function register(app, ctx) {
     } catch (err) { console.error('POST /api/treasury/media:', err); res.status(500).json({ error: 'Server error' }); }
   });
 
-  // ── Claim (free loot) ───────────────────────────────────────────────────────
-  app.post('/api/treasury/claim', async (req, res) => {
+  // ── Request free loot ───────────────────────────────────────────────────────
+  // Players no longer take free loot: they put their name on it and the DM
+  // decides. Nothing here touches an inventory.
+  async function requestLoot(req, res) {
     try {
       const { charId, items: wanted } = req.body || {};
       if (!charId || !Array.isArray(wanted) || wanted.length === 0)
@@ -606,59 +690,154 @@ export default function register(app, ctx) {
       if (!charRecord) return res.status(404).json({ error: 'Character not found' });
       let charData = {};
       try { charData = JSON.parse(charRecord.dataJson || '{}'); } catch {}
+      const charName = charData.name || charRecord.name || 'Unknown';
 
       const ids = wanted.map(i => i.id).filter(Boolean);
       const rows = await getMany(ids);
       const byId = {};
       for (const r of rows) byId[r.id] = r;
 
-      // Claim-once is enforced from the claim log, not from the character sheet,
-      // so it survives the player editing their own inventory.
+      // Same claim-once rule as before, read from the grant log so it survives
+      // the player editing their own sheet.
       const already = new Set(await claimedIdsFor(charId));
+      const mine = new Set((await listRequests('pending')).filter(r => r.charId === charId).map(r => r.itemId));
 
-      const granted = [];
+      const now = new Date().toISOString();
+      const made = [];
       for (const id of ids) {
         const item = byId[id];
-        if (!item || item.mode !== 'loot' || already.has(id)) continue;
-        already.add(id);
-        grantItems(charData, objFromRecord(item), 1);
-        granted.push(item);
+        // quantity 0 means the pool is spent, so there is nothing left to ask for.
+        if (!item || item.mode !== 'loot' || item.quantity === 0) continue;
+        if (already.has(id) || mine.has(id)) continue;
+        mine.add(id);
+        await createRequest(genId(), { itemId: id, charId, charName, status: 'pending', requestedAt: now, decidedAt: '' });
+        made.push(item);
       }
-      if (granted.length === 0) return res.status(400).json({ error: 'Nothing available to claim' });
+      if (made.length === 0) return res.status(400).json({ error: 'Nothing available to request' });
 
-      const charName = charData.name || charRecord.name || 'Unknown';
+      broadcast('treasury', { action: 'requested' });
+      res.json({ ok: true, count: made.length });
+    } catch (err) { console.error('POST /api/treasury/request:', err); res.status(500).json({ error: 'Server error' }); }
+  }
+
+  app.post('/api/treasury/request', requestLoot);
+  // The old claim URL now registers a request instead of granting. A client
+  // still running cached pre-approval code therefore cannot self-grant; the
+  // worst it does is queue a request and show its own success message.
+  app.post('/api/treasury/claim', requestLoot);
+
+  app.post('/api/treasury/request/withdraw', async (req, res) => {
+    try {
+      const { charId, itemId } = req.body || {};
+      if (!charId || !itemId) return res.status(400).json({ error: 'charId and itemId required' });
+
+      const status = await charAuth(charId, req);
+      if (status !== 200) return res.status(status).json({ error: status === 404 ? 'Not found' : 'Unauthorized' });
+
+      const open = (await requestsForItem(itemId, 'pending')).filter(r => r.charId === charId);
+      if (open.length === 0) return res.status(404).json({ error: 'No pending request' });
+      for (const r of open) {
+        if (DB_PROVIDER === 'localdb') ldb.deleteTreasuryRequest(r.id);
+        else await idb.transact([idb.tx.treasuryRequests[r.id].delete()]);
+      }
+
+      broadcast('treasury', { action: 'requested' });
+      res.json({ ok: true });
+    } catch (err) { console.error('POST /api/treasury/request/withdraw:', err); res.status(500).json({ error: 'Server error' }); }
+  });
+
+  // ── The DM's queue ──────────────────────────────────────────────────────────
+  app.get('/api/treasury/requests', async (req, res) => {
+    try {
+      if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
+      const rows = await listRequests('pending');
+      const items = await listAll();
+      const byId = {};
+      for (const i of items) byId[i.id] = i;
+      // An item can be deleted out from under a request; those rows would be
+      // un-approvable, so they are not offered.
+      const out = rows
+        .filter(r => byId[r.itemId])
+        .map(r => ({
+          id: r.id, itemId: r.itemId, charId: r.charId, charName: r.charName || '',
+          requestedAt: r.requestedAt,
+          itemName: byId[r.itemId].name || '',
+          itemThumb: byId[r.itemId].imageThumb || '',
+          mode: byId[r.itemId].mode,
+          quantity: byId[r.itemId].quantity,
+          descVisible: !!byId[r.itemId].descVisible,
+        }));
+      res.json(out);
+    } catch (err) { console.error('GET /api/treasury/requests:', err); res.status(500).json({ error: 'Server error' }); }
+  });
+
+  app.post('/api/treasury/requests/:id/approve', async (req, res) => {
+    try {
+      if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
+      const reqRow = await getRequest(req.params.id);
+      if (!reqRow) return res.status(404).json({ error: 'Request not found' });
+      if (reqRow.status !== 'pending') return res.status(409).json({ error: 'Already decided' });
+
+      const item = await getOne(reqRow.itemId);
+      if (!item) return res.status(404).json({ error: 'Item no longer exists' });
+      if (item.mode !== 'loot' || item.quantity === 0)
+        return res.status(409).json({ error: 'Item is no longer free loot' });
+
+      const charRecord = await getCharacter(reqRow.charId);
+      if (!charRecord) return res.status(404).json({ error: 'Character not found' });
+      let charData = {};
+      try { charData = JSON.parse(charRecord.dataJson || '{}'); } catch {}
+
+      // The item is built by the same helper the shop uses, so an approved
+      // piece of loot carries identical stats — and an unidentified one stays
+      // unidentified in the player's bag.
+      grantItems(charData, objFromRecord(item), 1);
       const now = new Date().toISOString();
+      const charName = charData.name || charRecord.name || reqRow.charName || 'Unknown';
 
-      // Stock governs how many characters can claim: -1 is an open offer, a
-      // finite count decrements and the item leaves the pool at zero (so the
-      // default quantity of 1 behaves like the old claim-and-hide loot).
-      const claimStock = (item) => {
-        if (item.quantity === -1) return null;
-        const left = item.quantity - 1;
-        return left <= 0 ? { quantity: 0, mode: 'hidden' } : { quantity: left };
-      };
+      // Stock governs how many characters can be given one: -1 is an open offer,
+      // a finite count decrements and the item leaves the pool at zero.
+      const left = item.quantity === -1 ? -1 : item.quantity - 1;
+      const stockUpdate = item.quantity === -1 ? null
+        : (left <= 0 ? { quantity: 0, mode: 'hidden' } : { quantity: left });
+      const exhausted = item.quantity !== -1 && left <= 0;
 
       if (DB_PROVIDER === 'localdb') {
-        ldb.updateCharacter(charId, { dataJson: JSON.stringify(charData), name: charRecord.name });
-        for (const item of granted) {
-          const upd = claimStock(item);
-          if (upd) ldb.updateTreasuryItem(item.id, upd);
-          ldb.createLootLog(genId(), { charId, charName, itemName: item.name, itemId: item.id, claimedAt: now });
-        }
+        ldb.updateCharacter(reqRow.charId, { dataJson: JSON.stringify(charData), name: charRecord.name });
+        if (stockUpdate) ldb.updateTreasuryItem(item.id, stockUpdate);
+        ldb.createLootLog(genId(), { charId: reqRow.charId, charName, itemName: item.name, itemId: item.id, claimedAt: now });
+        ldb.updateTreasuryRequest(reqRow.id, { status: 'approved', decidedAt: now });
       } else {
-        const txns = [idb.tx.characters[charId].update({ dataJson: JSON.stringify(charData), name: charRecord.name })];
-        for (const item of granted) {
-          const upd = claimStock(item);
-          if (upd) txns.push(idb.tx.treasuryItems[item.id].update(upd));
-          txns.push(idb.tx.lootLogs[genId()].update({ charId, charName, itemName: item.name, itemId: item.id, claimedAt: now }));
-        }
+        const txns = [
+          idb.tx.characters[reqRow.charId].update({ dataJson: JSON.stringify(charData), name: charRecord.name }),
+          idb.tx.lootLogs[genId()].update({ charId: reqRow.charId, charName, itemName: item.name, itemId: item.id, claimedAt: now }),
+          idb.tx.treasuryRequests[reqRow.id].update({ status: 'approved', decidedAt: now }),
+        ];
+        if (stockUpdate) txns.push(idb.tx.treasuryItems[item.id].update(stockUpdate));
         await idb.transact(txns);
       }
 
-      broadcast('characters', { action: 'updated', id: charId });
-      broadcast('treasury', { action: 'claimed' });
-      res.json({ ok: true, count: granted.length });
-    } catch (err) { console.error('POST /api/treasury/claim:', err); res.status(500).json({ error: 'Server error' }); }
+      // Once the last one is handed out there is nothing left to compete for,
+      // so everybody still waiting is told no rather than left hanging.
+      let declined = 0;
+      if (exhausted) declined = await declinePendingFor(item.id, now);
+
+      broadcast('characters', { action: 'updated', id: reqRow.charId });
+      broadcast('treasury', { action: 'approved', itemId: item.id, charId: reqRow.charId });
+      res.json({ ok: true, exhausted, declined });
+    } catch (err) { console.error('POST /api/treasury/requests/:id/approve:', err); res.status(500).json({ error: 'Server error' }); }
+  });
+
+  app.post('/api/treasury/requests/:id/decline', async (req, res) => {
+    try {
+      if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
+      const reqRow = await getRequest(req.params.id);
+      if (!reqRow) return res.status(404).json({ error: 'Request not found' });
+      if (reqRow.status !== 'pending') return res.status(409).json({ error: 'Already decided' });
+      await updateRequest(reqRow.id, { status: 'declined', decidedAt: new Date().toISOString() });
+      broadcast('treasury', { action: 'declined', itemId: reqRow.itemId, charId: reqRow.charId });
+      res.json({ ok: true });
+    } catch (err) { console.error('POST /api/treasury/requests/:id/decline:', err); res.status(500).json({ error: 'Server error' }); }
   });
 
   // ── Purchase (paid) ─────────────────────────────────────────────────────────

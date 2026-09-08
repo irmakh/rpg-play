@@ -38,6 +38,7 @@ const FN_SRC = extractFunctions(
   TR_SRC,
   'cpToGp', 'bonusSummary', 'treasuryTypeLabel', 'isUnidentified',
   'treasuryDisplayName', 'unidentifiedHTML', 'treasuryThumb', 'findTreasuryItem',
+  'hasRequested', 'requesterNames', 'requesterLine',
   'addToLootCart', 'removeFromLootCart',
   'addToCart', 'removeFromCart',
   'renderTreasuryItems', 'renderTreasuryCart',
@@ -59,6 +60,7 @@ function makeEl() {
 function load({
   seg = 'loot', loot = [], shop = [], shopOpen = true,
   claimedIds = [], claimedLoots = [], lootCart = [], shopCart = [], charId = null,
+  myRequestIds = [],
 } = {}) {
   const loadingEl  = makeEl();
   const itemsBodyEl = makeEl();
@@ -69,7 +71,10 @@ function load({
   const claimedBodyEl = makeEl();
 
   const ctx = createContext({
-    treasuryData: { shopOpen, activeTag: '', loot: [...loot], shop: [...shop], claimedIds: [...claimedIds] },
+    treasuryData: {
+      shopOpen, activeTag: '', loot: [...loot], shop: [...shop],
+      claimedIds: [...claimedIds], myRequestIds: [...myRequestIds],
+    },
     treasurySeg:  seg,
     lootCart:     [...lootCart],
     shopCart:     shopCart.map(e => ({ ...e })),
@@ -108,6 +113,9 @@ function load({
     renderTreasuryCart:  ctx.renderTreasuryCart,
     renderClaimedLoots:  ctx.renderClaimedLoots,
     removeLoot:          ctx.removeLoot,
+    hasRequested:        ctx.hasRequested,
+    requesterNames:      ctx.requesterNames,
+    requesterLine:       ctx.requesterLine,
     // Getters — these globals are reassigned by the tested code.
     get lootCart()     { return ctx.lootCart; },
     get shopCart()     { return ctx.shopCart; },
@@ -445,6 +453,54 @@ describe('renderTreasuryItems — loot segment', () => {
     expect(itemsBodyEl.innerHTML).toContain('Claimed');
   });
 
+  // ── who else wants it ──────────────────────────────────────────────────────
+  // The names are on the shared player view on purpose: seeing that three
+  // people want the same sword is what lets the party sort it out.
+  it('names every player queued for an item', () => {
+    const item = lootItem({ requesters: [
+      { charId: 'c1', charName: 'Aliyr' }, { charId: 'c2', charName: 'Gerion' },
+    ] });
+    const { renderTreasuryItems, itemsBodyEl } = load({ loot: [item] });
+    renderTreasuryItems();
+    expect(itemsBodyEl.innerHTML).toContain('Aliyr');
+    expect(itemsBodyEl.innerHTML).toContain('Gerion');
+  });
+
+  it('calls the viewer "You" rather than by name', () => {
+    const item = lootItem({ requesters: [
+      { charId: 'c1', charName: 'Aliyr' }, { charId: 'c2', charName: 'Gerion' },
+    ] });
+    const { renderTreasuryItems, itemsBodyEl } = load({ loot: [item], charId: 'c1' });
+    renderTreasuryItems();
+    expect(itemsBodyEl.innerHTML).toContain('You');
+    expect(itemsBodyEl.innerHTML).not.toContain('Aliyr');
+  });
+
+  it('says nothing when nobody has asked', () => {
+    const { renderTreasuryItems, itemsBodyEl } = load({ loot: [lootItem()] });
+    renderTreasuryItems();
+    expect(itemsBodyEl.innerHTML).not.toContain('👥');
+  });
+
+  it('offers Withdraw instead of Select once you have asked', () => {
+    const { renderTreasuryItems, itemsBodyEl } = load({
+      loot: [lootItem({ requesters: [{ charId: 'c1', charName: 'Aliyr' }] })],
+      myRequestIds: ['loot-1'], charId: 'c1',
+    });
+    renderTreasuryItems();
+    expect(itemsBodyEl.innerHTML).toContain('Requested');
+    expect(itemsBodyEl.innerHTML).toContain('withdrawLootRequest');
+    expect(itemsBodyEl.innerHTML).not.toContain('+ Select');
+  });
+
+  it('escapes a requester name', () => {
+    const item = lootItem({ requesters: [{ charId: 'c9', charName: '<script>x</script>' }] });
+    const { renderTreasuryItems, itemsBodyEl } = load({ loot: [item] });
+    renderTreasuryItems();
+    expect(itemsBodyEl.innerHTML).not.toContain('<script>');
+    expect(itemsBodyEl.innerHTML).toContain('&lt;script&gt;');
+  });
+
   it('does not show "Claimed" for an unclaimed item', () => {
     const { renderTreasuryItems, itemsBodyEl } = load({ loot: [lootItem()], claimedIds: [] });
     renderTreasuryItems();
@@ -455,7 +511,7 @@ describe('renderTreasuryItems — loot segment', () => {
     const { addToLootCart, itemsBodyEl } = load({ loot: [lootItem()] });
     addToLootCart('loot-1');
     expect(itemsBodyEl.innerHTML).toContain('disabled');
-    expect(itemsBodyEl.innerHTML).toContain('In Cart');
+    expect(itemsBodyEl.innerHTML).toContain('Selected');
   });
 
   it('shows bonuses for a loot item that carries stats', () => {
@@ -607,7 +663,7 @@ describe('renderTreasuryCart — loot, empty cart', () => {
   it('shows empty message', () => {
     const { renderTreasuryCart, cartBodyEl } = load();
     renderTreasuryCart();
-    expect(cartBodyEl.innerHTML).toContain('Cart is empty');
+    expect(cartBodyEl.innerHTML).toContain('Nothing selected');
   });
 
   it('disables the action button', () => {
@@ -616,10 +672,10 @@ describe('renderTreasuryCart — loot, empty cart', () => {
     expect(actionBtnEl.disabled).toBe(true);
   });
 
-  it('labels the button "Claim All"', () => {
+  it('labels the button so it is clear the DM decides', () => {
     const { renderTreasuryCart, actionBtnEl } = load();
     renderTreasuryCart();
-    expect(actionBtnEl.textContent).toBe('Claim All');
+    expect(actionBtnEl.textContent).toBe('Ask the DM');
   });
 });
 

@@ -6,7 +6,7 @@
 // backs the "Loots" card on the Main tab — manual entries plus anything claimed
 // before the treasury merge.
 
-let treasuryData = { shopOpen: false, activeTag: '', loot: [], shop: [], claimedIds: [] };
+let treasuryData = { shopOpen: false, activeTag: '', loot: [], shop: [], claimedIds: [], myRequestIds: [] };
 let treasurySeg  = localStorage.getItem('treasury-seg') === 'shop' ? 'shop' : 'loot';
 let lootCart     = [];
 let shopCart     = [];
@@ -29,6 +29,30 @@ function treasuryHeaders() {
 
 function findTreasuryItem(id) {
   return treasuryData.loot.find(i => i.id === id) || treasuryData.shop.find(i => i.id === id) || null;
+}
+
+// ── Free-loot requests ───────────────────────────────────────────────────────
+// Free loot is asked for, not taken: the DM hands it out. These helpers answer
+// "have I asked for this?" and "who else has?".
+function hasRequested(id) {
+  return (treasuryData.myRequestIds || []).includes(id);
+}
+
+/** The other players queued for an item, as a display string. */
+function requesterNames(item) {
+  return (item.requesters || [])
+    .map(r => (r.charId === currentCharId ? 'You' : (r.charName || 'Someone')))
+    .join(', ');
+}
+
+function requesterLine(item) {
+  const names = requesterNames(item);
+  if (!names) return '';
+  const count = (item.requesters || []).length;
+  // Contested loot is worth pointing at — that is the whole reason the names
+  // are on screen rather than hidden in the DM's queue.
+  const color = count > 1 ? 'var(--ac)' : 'var(--txd)';
+  return `<div style="font-size:10px;color:${color};margin-top:2px">👥 ${esc(names)}</div>`;
 }
 
 // ── Wallet ───────────────────────────────────────────────────────────────────
@@ -164,11 +188,13 @@ function renderTreasuryItems() {
       </div>`;
     }
 
+    const requested = hasRequested(item.id);
     return `<div class="shop-item-row" style="align-items:flex-start;flex-wrap:nowrap;gap:8px">
       ${treasuryThumb(item)}
       <div style="flex:1;min-width:0">
         <div class="shop-item-name" style="cursor:pointer;text-decoration:underline dotted"
              onclick="openTreasuryDetail('${escJs(item.id)}')" title="View details">${esc(treasuryDisplayName(item))}</div>
+        ${requesterLine(item)}
         ${isUnidentified(item)
           ? unidentifiedHTML()
           : item.description
@@ -177,8 +203,12 @@ function renderTreasuryItems() {
         ${bonuses ? `<div class="shop-item-bonuses" style="margin-top:2px">${esc(bonuses)}</div>` : ''}
       </div>
       ${claimed ? '<span style="font-size:10px;color:var(--ok);flex-shrink:0;padding-top:2px">✓ Claimed</span>' : ''}
-      <button class="add-btn" style="width:auto;padding:3px 10px;margin:0;flex-shrink:0"
-              onclick="addToLootCart('${escJs(item.id)}')" ${inCart ? 'disabled' : ''}>${inCart ? 'In Cart' : '+ Cart'}</button>
+      ${requested
+        ? `<span style="font-size:10px;color:var(--ac);flex-shrink:0;padding-top:2px">⏳ Requested</span>
+           <button class="add-btn" style="width:auto;padding:3px 10px;margin:0;flex-shrink:0"
+                   onclick="withdrawLootRequest('${escJs(item.id)}')" title="Take your name off this item">Withdraw</button>`
+        : `<button class="add-btn" style="width:auto;padding:3px 10px;margin:0;flex-shrink:0"
+                   onclick="addToLootCart('${escJs(item.id)}')" ${inCart ? 'disabled' : ''}>${inCart ? 'Selected' : '+ Select'}</button>`}
     </div>`;
   }).join('');
 }
@@ -237,13 +267,25 @@ function openTreasuryDetail(id) {
   }
   document.getElementById('shop-detail-body').innerHTML = html;
 
+  // Free loot lists who else is after it, right where the player is deciding.
+  if (!forSale) {
+    const names = requesterNames(item);
+    html += `<div style="margin-top:10px"><div class="lbl" style="margin-bottom:4px">Requested by</div>
+      <div style="font-size:12px;color:${names ? 'var(--tx)' : 'var(--txd)'}">${names ? '👥 ' + esc(names) : 'Nobody yet.'}</div>
+      <div style="font-size:10px;color:var(--txd);margin-top:4px">The DM decides who receives it.</div></div>`;
+    document.getElementById('shop-detail-body').innerHTML = html;
+  }
+
   const cartBtn = document.getElementById('shop-detail-cart-btn');
   const claimed = treasuryData.claimedIds.includes(item.id);
+  const requested = !forSale && hasRequested(item.id);
   const outOfStock = forSale && item.quantity === 0;
-  cartBtn.disabled = outOfStock || (!forSale && claimed);
+  cartBtn.disabled = outOfStock || (!forSale && (claimed || requested));
   cartBtn.textContent = outOfStock ? 'Out of Stock'
                       : (!forSale && claimed) ? 'Already Claimed'
-                      : '+ Add to Cart';
+                      : requested ? 'Requested'
+                      : forSale ? '+ Add to Cart'
+                      : '+ Select';
   document.getElementById('shop-detail-modal').style.display = 'flex';
 }
 
@@ -324,10 +366,10 @@ function renderTreasuryCart() {
     return;
   }
 
-  btn.textContent = 'Claim All';
+  btn.textContent = 'Ask the DM';
   totalEl.textContent = '';
   if (lootCart.length === 0) {
-    body.innerHTML = '<div style="color:var(--txd);font-size:11px">Cart is empty — click "+ Cart" on items above.</div>';
+    body.innerHTML = '<div style="color:var(--txd);font-size:11px">Nothing selected — click "+ Select" on items above. The DM decides who gets what.</div>';
     btn.disabled = true;
     return;
   }
@@ -339,26 +381,44 @@ function renderTreasuryCart() {
 }
 
 function treasuryAction() {
-  return treasurySeg === 'shop' ? purchaseCart() : claimLoot();
+  return treasurySeg === 'shop' ? purchaseCart() : requestLoot();
 }
 
-async function claimLoot() {
+// Register interest. Nothing arrives until the DM approves it, so the sheet is
+// not reloaded here — the approval broadcast does that.
+async function requestLoot() {
   if (!currentCharId || lootCart.length === 0) return;
   const errEl = document.getElementById('treasury-err');
   errEl.textContent = '';
   try {
-    const res = await fetch('/api/treasury/claim', {
+    const res = await fetch('/api/treasury/request', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...treasuryHeaders() },
       body: JSON.stringify({ charId: currentCharId, items: lootCart.map(i => ({ id: i.id })) }),
     });
     const data = await res.json();
-    if (!res.ok) { errEl.textContent = data.error || 'Claim failed.'; return; }
+    if (!res.ok) { errEl.textContent = data.error || 'Request failed.'; return; }
     lootCart = [];
-    await loadCharacter(currentCharId);
     await loadTreasuryTab();
-    setStatus('Loot claimed!', false);
+    setStatus(data.count === 1 ? 'Sent to the DM.' : `${data.count} items sent to the DM.`, false);
   } catch { errEl.textContent = 'Network error.'; }
+}
+
+async function withdrawLootRequest(id) {
+  if (!currentCharId) return;
+  const errEl = document.getElementById('treasury-err');
+  if (errEl) errEl.textContent = '';
+  try {
+    const res = await fetch('/api/treasury/request/withdraw', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...treasuryHeaders() },
+      body: JSON.stringify({ charId: currentCharId, itemId: id }),
+    });
+    const data = await res.json();
+    if (!res.ok) { if (errEl) errEl.textContent = data.error || 'Withdraw failed.'; return; }
+    await loadTreasuryTab();
+    setStatus('Withdrawn.', false);
+  } catch { if (errEl) errEl.textContent = 'Network error.'; }
 }
 
 async function purchaseCart() {

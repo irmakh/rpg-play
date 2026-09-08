@@ -2,8 +2,9 @@
  * API integration tests for the unified /api/treasury routes.
  *
  * Covers the merged loot+shop model: mode filtering and description reveal,
- * shop open/closed + activeTag gating, free claim (claim-once via the log,
- * grants a real inventory item), purchase (funds, stock, weapon ATK/DMG),
+ * shop open/closed + activeTag gating, free loot (requested by a player and
+ * handed over by the DM — claim-once via the log, grants a real inventory
+ * item), purchase (funds, stock, weapon ATK/DMG),
  * bulk operations, text import, the merged ledger, and image upload.
  */
 import { describe, it, expect } from 'vitest';
@@ -42,6 +43,22 @@ function seed(ldb, over = {}) {
 
 function charData(ldb) {
   return JSON.parse(ldb.getCharacter('char-a').dataJson);
+}
+
+/**
+ * Take a piece of free loot the way the app now works: the player asks, the DM
+ * approves. Everything a claim used to do — the inventory entry, the weapon
+ * row, the stock decrement, the ledger line — happens on the approval, so the
+ * assertions below are unchanged; only the route to them is.
+ * A request the server turns away is returned as-is, so a caller can assert on
+ * the refusal instead of the handover.
+ */
+async function claimAndApprove(app, ldb, id, who = asA, charId = 'char-a') {
+  const asked = await who(request(app).post('/api/treasury/request'))
+    .send({ charId, items: [{ id }] });
+  if (asked.status !== 200) return asked;
+  const pending = ldb.listTreasuryRequests('pending').find(r => r.itemId === id && r.charId === charId);
+  return asDM(request(app).post(`/api/treasury/requests/${pending.id}/approve`));
 }
 function charItems(ldb) {
   return JSON.parse(charData(ldb)._items || '[]');
@@ -333,11 +350,11 @@ describe('POST /api/treasury/import', () => {
   });
 });
 
-describe('POST /api/treasury/claim', () => {
+describe('free loot — request then DM approval', () => {
   it('grants a real inventory item, not just a note', async () => {
     const { app, ldb } = setup();
     const id = seed(ldb, { name: 'Cloak', mode: 'loot', acBonus: 1, description: 'Warm', descVisible: true });
-    const res = await asA(request(app).post('/api/treasury/claim')).send({ charId: 'char-a', items: [{ id }] });
+    const res = await claimAndApprove(app, ldb, id);
     expect(res.status).toBe(200);
 
     const items = charItems(ldb);
@@ -352,7 +369,7 @@ describe('POST /api/treasury/claim', () => {
       name: 'Longsword', mode: 'loot', itemType: 'weapon',
       weaponAtk: '1', weaponDmg: '1d8 slashing', weaponPropertiesJson: '[]',
     });
-    await asA(request(app).post('/api/treasury/claim')).send({ charId: 'char-a', items: [{ id }] });
+    await claimAndApprove(app, ldb, id);
 
     const weapons = JSON.parse(charData(ldb)._weapons);
     expect(weapons[0][0]).toBe('Longsword');
@@ -366,7 +383,7 @@ describe('POST /api/treasury/claim', () => {
       name: 'Orb of Doom', mode: 'loot', description: 'Cursed!', descVisible: false,
       itemType: 'wondrous', acBonus: 3, initBonus: 2, requiresAttunement: true,
     });
-    await asA(request(app).post('/api/treasury/claim')).send({ charId: 'char-a', items: [{ id }] });
+    await claimAndApprove(app, ldb, id);
 
     const it = charItems(ldb)[0];
     expect(it).toMatchObject({
@@ -383,7 +400,7 @@ describe('POST /api/treasury/claim', () => {
       name: 'Flame Tongue', mode: 'loot', descVisible: false,
       itemType: 'weapon', weaponAtk: '2', weaponDmg: '2d6 fire',
     });
-    await asA(request(app).post('/api/treasury/claim')).send({ charId: 'char-a', items: [{ id }] });
+    await claimAndApprove(app, ldb, id);
     expect(JSON.parse(charData(ldb)._weapons || '[]')).toHaveLength(0);
     expect(charItems(ldb)[0].weaponDmg).toBe('');
   });
@@ -394,7 +411,7 @@ describe('POST /api/treasury/claim', () => {
       name: 'Flame Tongue', mode: 'loot', descVisible: false, description: 'It burns.',
       itemType: 'weapon', weaponAtk: '2', weaponDmg: '2d6 fire', quantity: 5,
     });
-    await asA(request(app).post('/api/treasury/claim')).send({ charId: 'char-a', items: [{ id }] });
+    await claimAndApprove(app, ldb, id);
     expect(charItems(ldb)[0].unidentified).toBe(true);
 
     await asDM(request(app).put(`/api/treasury/${id}`)).send({ descVisible: true });
@@ -411,7 +428,7 @@ describe('POST /api/treasury/claim', () => {
   it('leaves an already-identified held item alone on an unrelated edit', async () => {
     const { app, ldb } = setup();
     const id = seed(ldb, { name: 'Cloak', mode: 'loot', descVisible: true, description: 'Warm' });
-    await asA(request(app).post('/api/treasury/claim')).send({ charId: 'char-a', items: [{ id }] });
+    await claimAndApprove(app, ldb, id);
     const before = JSON.stringify(charItems(ldb));
     await asDM(request(app).put(`/api/treasury/${id}`)).send({ tag: 'Vault' });
     expect(JSON.stringify(charItems(ldb))).toBe(before);
@@ -420,9 +437,9 @@ describe('POST /api/treasury/claim', () => {
   it('refuses a second claim of the same item', async () => {
     const { app, ldb } = setup();
     const id = seed(ldb, { name: 'Ring', mode: 'loot' });
-    await asA(request(app).post('/api/treasury/claim')).send({ charId: 'char-a', items: [{ id }] });
+    await claimAndApprove(app, ldb, id);
     // The item leaves the pool, so a replay finds nothing to grant.
-    const again = await asA(request(app).post('/api/treasury/claim')).send({ charId: 'char-a', items: [{ id }] });
+    const again = await claimAndApprove(app, ldb, id);
     expect(again.status).toBe(400);
     expect(charItems(ldb)).toHaveLength(1);
   });
@@ -430,7 +447,7 @@ describe('POST /api/treasury/claim', () => {
   it('a single-stock item leaves the pool once claimed', async () => {
     const { app, ldb } = setup();
     const id = seed(ldb, { name: 'Ring', mode: 'loot', quantity: 1 });
-    await asA(request(app).post('/api/treasury/claim')).send({ charId: 'char-a', items: [{ id }] });
+    await claimAndApprove(app, ldb, id);
     const row = ldb.getTreasuryItem(id);
     expect(row.mode).toBe('hidden');
     expect(row.quantity).toBe(0);
@@ -439,7 +456,7 @@ describe('POST /api/treasury/claim', () => {
   it('a multi-stock item decrements and stays claimable', async () => {
     const { app, ldb } = setup();
     const id = seed(ldb, { name: 'Torch', mode: 'loot', quantity: 3 });
-    await asA(request(app).post('/api/treasury/claim')).send({ charId: 'char-a', items: [{ id }] });
+    await claimAndApprove(app, ldb, id);
     const row = ldb.getTreasuryItem(id);
     expect(row.quantity).toBe(2);
     expect(row.mode).toBe('loot');
@@ -448,7 +465,7 @@ describe('POST /api/treasury/claim', () => {
   it('unlimited loot never runs out', async () => {
     const { app, ldb } = setup();
     const id = seed(ldb, { name: 'Rations', mode: 'loot', quantity: -1 });
-    await asA(request(app).post('/api/treasury/claim')).send({ charId: 'char-a', items: [{ id }] });
+    await claimAndApprove(app, ldb, id);
     const row = ldb.getTreasuryItem(id);
     expect(row.quantity).toBe(-1);
     expect(row.mode).toBe('loot');
@@ -474,7 +491,7 @@ describe('POST /api/treasury/claim', () => {
   it('records the claim in the log with the item id', async () => {
     const { app, ldb } = setup();
     const id = seed(ldb, { name: 'Ring', mode: 'loot' });
-    await asA(request(app).post('/api/treasury/claim')).send({ charId: 'char-a', items: [{ id }] });
+    await claimAndApprove(app, ldb, id);
     const logs = ldb.listLootLogs();
     expect(logs).toHaveLength(1);
     expect(logs[0]).toMatchObject({ charId: 'char-a', charName: 'Alice', itemName: 'Ring', itemId: id });
@@ -674,11 +691,14 @@ describe('broadcasts', () => {
     expect(broadcasts.some(b => b.channel === 'treasury' && b.payload.action === 'created')).toBe(true);
   });
 
-  it('announces both character and treasury updates on a claim', async () => {
+  it('announces both character and treasury updates when loot is handed over', async () => {
     const { app, ldb, broadcasts } = setup();
     const id = seed(ldb, { name: 'Ring', mode: 'loot' });
-    await asA(request(app).post('/api/treasury/claim')).send({ charId: 'char-a', items: [{ id }] });
+    await claimAndApprove(app, ldb, id);
     expect(broadcasts.some(b => b.channel === 'characters')).toBe(true);
-    expect(broadcasts.some(b => b.channel === 'treasury' && b.payload.action === 'claimed')).toBe(true);
+    // 'claimed' became 'requested' (the ask) and 'approved' (the handover).
+    const actions = broadcasts.filter(b => b.channel === 'treasury').map(b => b.payload.action);
+    expect(actions).toContain('requested');
+    expect(actions).toContain('approved');
   });
 });

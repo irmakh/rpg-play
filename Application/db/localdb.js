@@ -118,6 +118,15 @@ db.exec(`
     id TEXT PRIMARY KEY, charId TEXT NOT NULL DEFAULT '', charName TEXT DEFAULT '',
     itemName TEXT DEFAULT '', claimedAt TEXT DEFAULT (datetime('now'))
   );
+  -- A player putting their name on a piece of free loot. The DM decides who
+  -- actually gets it; loot_logs still records what was handed over, so
+  -- claim-once and the ledger are unaffected by anything in here.
+  CREATE TABLE IF NOT EXISTS treasury_requests (
+    id TEXT PRIMARY KEY, itemId TEXT NOT NULL DEFAULT '',
+    charId TEXT NOT NULL DEFAULT '', charName TEXT DEFAULT '',
+    status TEXT DEFAULT 'pending',            -- pending | approved | declined
+    requestedAt TEXT DEFAULT (datetime('now')), decidedAt TEXT DEFAULT ''
+  );
   CREATE TABLE IF NOT EXISTS treasury_items (
     id TEXT PRIMARY KEY, name TEXT DEFAULT '', tag TEXT DEFAULT '',
     mode TEXT DEFAULT 'hidden', description TEXT DEFAULT '', descVisible INTEGER DEFAULT 0,
@@ -254,6 +263,13 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_treasury_items_mode        ON treasury_items(mode);
   CREATE INDEX IF NOT EXISTS idx_treasury_items_tag         ON treasury_items(tag);
   CREATE INDEX IF NOT EXISTS idx_loot_logs_charId           ON loot_logs(charId);
+  CREATE INDEX IF NOT EXISTS idx_treasury_req_item          ON treasury_requests(itemId);
+  CREATE INDEX IF NOT EXISTS idx_treasury_req_char          ON treasury_requests(charId);
+  -- One live request per character per item. Partial, so the decided history
+  -- can hold as many rows as it likes; this only guards the pending set, and
+  -- makes a double-tap on "Select" a constraint error instead of two rows.
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_treasury_req_pending
+    ON treasury_requests(itemId, charId) WHERE status = 'pending';
   CREATE INDEX IF NOT EXISTS idx_handout_recip_handout      ON handout_recipients(handoutId);
   CREATE INDEX IF NOT EXISTS idx_handout_recip_char         ON handout_recipients(charId);
 `);
@@ -471,6 +487,52 @@ function createLootLog(id, fields) {
 function listClaimedItemIds(charId) {
   return db.prepare("SELECT DISTINCT itemId FROM loot_logs WHERE charId = ? AND itemId != ''").all(charId)
     .map(r => r.itemId);
+}
+
+// ── Treasury Requests ─────────────────────────────────────────────────────────
+// Free loot is chosen by the DM, not taken: a player registers interest here and
+// the item only moves when the DM approves that row.
+function listTreasuryRequests(status) {
+  return status
+    ? db.prepare('SELECT * FROM treasury_requests WHERE status = ? ORDER BY requestedAt').all(status)
+    : db.prepare('SELECT * FROM treasury_requests ORDER BY requestedAt').all();
+}
+function listTreasuryRequestsForItem(itemId, status) {
+  return status
+    ? db.prepare('SELECT * FROM treasury_requests WHERE itemId = ? AND status = ? ORDER BY requestedAt').all(itemId, status)
+    : db.prepare('SELECT * FROM treasury_requests WHERE itemId = ? ORDER BY requestedAt').all(itemId);
+}
+function listTreasuryRequestsForChar(charId, status) {
+  return status
+    ? db.prepare('SELECT * FROM treasury_requests WHERE charId = ? AND status = ? ORDER BY requestedAt').all(charId, status)
+    : db.prepare('SELECT * FROM treasury_requests WHERE charId = ? ORDER BY requestedAt').all(charId);
+}
+function getTreasuryRequest(id) {
+  return db.prepare('SELECT * FROM treasury_requests WHERE id = ?').get(id) || null;
+}
+function getPendingTreasuryRequest(itemId, charId) {
+  return db.prepare("SELECT * FROM treasury_requests WHERE itemId = ? AND charId = ? AND status = 'pending'")
+    .get(itemId, charId) || null;
+}
+function createTreasuryRequest(id, fields) {
+  db.prepare(`INSERT INTO treasury_requests (id, itemId, charId, charName, status, requestedAt, decidedAt)
+              VALUES (?, ?, ?, ?, ?, ?, ?)`)
+    .run(id, fields.itemId || '', fields.charId || '', fields.charName || '',
+         fields.status || 'pending', fields.requestedAt || new Date().toISOString(), fields.decidedAt || '');
+}
+function updateTreasuryRequest(id, fields) {
+  if (!fields || Object.keys(fields).length === 0) return;
+  const sets = Object.keys(fields).map(k => `"${k}" = ?`).join(', ');
+  db.prepare(`UPDATE treasury_requests SET ${sets} WHERE id = ?`).run(...Object.values(fields), id);
+}
+function deleteTreasuryRequest(id) {
+  db.prepare('DELETE FROM treasury_requests WHERE id = ?').run(id);
+}
+/** Closes every still-open request for an item. Returns how many were closed. */
+function declinePendingTreasuryRequests(itemId, decidedAt) {
+  const info = db.prepare("UPDATE treasury_requests SET status = 'declined', decidedAt = ? WHERE itemId = ? AND status = 'pending'")
+    .run(decidedAt || new Date().toISOString(), itemId);
+  return info.changes;
 }
 
 // ── Treasury Items ────────────────────────────────────────────────────────────
@@ -1199,7 +1261,11 @@ function exportAll() {
     setShopConfig, listShopItems, getShopItem, createShopItem, bulkUpdateShopTag, updateShopItem,
     deleteShopItem, listPurchaseLogs, createPurchaseLog, listLootItems, getLootItem, getLootItemsByIds,
     createLootItem, updateLootItem, bulkUpdateLootTag, deleteLootItem, bulkDeleteLootItems, listLootLogs,
-    createLootLog, listClaimedItemIds, listTreasuryItems, listTreasuryItemsByMode, getTreasuryItem, getTreasuryItemsByIds,
+    createLootLog, listClaimedItemIds,
+    listTreasuryRequests, listTreasuryRequestsForItem, listTreasuryRequestsForChar,
+    getTreasuryRequest, getPendingTreasuryRequest, createTreasuryRequest, updateTreasuryRequest,
+    deleteTreasuryRequest, declinePendingTreasuryRequests,
+    listTreasuryItems, listTreasuryItemsByMode, getTreasuryItem, getTreasuryItemsByIds,
     createTreasuryItem, updateTreasuryItem, deleteTreasuryItem, bulkUpdateTreasuryTag, bulkUpdateTreasuryMode, bulkDeleteTreasuryItems,
     bulkCreateTreasuryItems, listMonsters, getMonster, createMonster, updateMonster, deleteMonster,
     listInitEntries, getInitEntry, getInitEntryByCharId, createInitEntry, updateInitEntry, deleteInitEntry,

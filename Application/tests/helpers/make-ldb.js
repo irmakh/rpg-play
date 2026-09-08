@@ -90,6 +90,14 @@ export function makeLdb() {
       precip_roll INTEGER, precip_level TEXT, precipitation TEXT,
       created_at TEXT DEFAULT (datetime('now'))
     );
+    CREATE TABLE IF NOT EXISTS treasury_requests (
+      id TEXT PRIMARY KEY, itemId TEXT NOT NULL DEFAULT '',
+      charId TEXT NOT NULL DEFAULT '', charName TEXT DEFAULT '',
+      status TEXT DEFAULT 'pending',
+      requestedAt TEXT DEFAULT (datetime('now')), decidedAt TEXT DEFAULT ''
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_treasury_req_pending
+      ON treasury_requests(itemId, charId) WHERE status = 'pending';
     CREATE TABLE IF NOT EXISTS sound_files (
       id TEXT PRIMARY KEY, name TEXT DEFAULT '', url TEXT DEFAULT '',
       mime_type TEXT DEFAULT '', tags TEXT DEFAULT '[]',
@@ -423,6 +431,47 @@ export function makeLdb() {
     db.prepare('DELETE FROM weather_log WHERE id = ?').run(id);
   }
 
+  // ── Treasury requests (mirror db/localdb.js) ────────────────────────────────
+  function listTreasuryRequests(status) {
+    return status
+      ? db.prepare('SELECT * FROM treasury_requests WHERE status = ? ORDER BY requestedAt').all(status)
+      : db.prepare('SELECT * FROM treasury_requests ORDER BY requestedAt').all();
+  }
+  function listTreasuryRequestsForItem(itemId, status) {
+    return status
+      ? db.prepare('SELECT * FROM treasury_requests WHERE itemId = ? AND status = ? ORDER BY requestedAt').all(itemId, status)
+      : db.prepare('SELECT * FROM treasury_requests WHERE itemId = ? ORDER BY requestedAt').all(itemId);
+  }
+  function listTreasuryRequestsForChar(charId, status) {
+    return status
+      ? db.prepare('SELECT * FROM treasury_requests WHERE charId = ? AND status = ? ORDER BY requestedAt').all(charId, status)
+      : db.prepare('SELECT * FROM treasury_requests WHERE charId = ? ORDER BY requestedAt').all(charId);
+  }
+  function getTreasuryRequest(id) {
+    return db.prepare('SELECT * FROM treasury_requests WHERE id = ?').get(id) || null;
+  }
+  function getPendingTreasuryRequest(itemId, charId) {
+    return db.prepare("SELECT * FROM treasury_requests WHERE itemId = ? AND charId = ? AND status = 'pending'")
+      .get(itemId, charId) || null;
+  }
+  function createTreasuryRequest(id, f) {
+    db.prepare(`INSERT INTO treasury_requests (id, itemId, charId, charName, status, requestedAt, decidedAt)
+                VALUES (?, ?, ?, ?, ?, ?, ?)`)
+      .run(id, f.itemId || '', f.charId || '', f.charName || '',
+           f.status || 'pending', f.requestedAt || new Date().toISOString(), f.decidedAt || '');
+  }
+  function updateTreasuryRequest(id, fields) {
+    if (!fields || Object.keys(fields).length === 0) return;
+    dynUpdate('treasury_requests', id, fields);
+  }
+  function deleteTreasuryRequest(id) {
+    db.prepare('DELETE FROM treasury_requests WHERE id = ?').run(id);
+  }
+  function declinePendingTreasuryRequests(itemId, decidedAt) {
+    return db.prepare("UPDATE treasury_requests SET status = 'declined', decidedAt = ? WHERE itemId = ? AND status = 'pending'")
+      .run(decidedAt || new Date().toISOString(), itemId).changes;
+  }
+
   // ── Sounds & playlists ──────────────────────────────────────────────────────
   // Mirrors db/localdb.js: a playlist stores an ordered array of sound ids as
   // JSON, and getSoundsForPlaylist resolves them to full rows in that order.
@@ -506,6 +555,10 @@ export function makeLdb() {
     listLootLogs, createLootLog, listClaimedItemIds, listPurchaseLogs, createPurchaseLog,
     // weather
     getWeatherConfig, saveWeatherConfig, listWeatherLog, getWeatherForDate, saveWeatherEntry, deleteWeatherEntry,
+    // treasury requests
+    listTreasuryRequests, listTreasuryRequestsForItem, listTreasuryRequestsForChar,
+    getTreasuryRequest, getPendingTreasuryRequest, createTreasuryRequest, updateTreasuryRequest,
+    deleteTreasuryRequest, declinePendingTreasuryRequests,
     // sounds & playlists
     listSoundFiles, getSoundFile, createSoundFile, updateSoundFile, deleteSoundFile,
     listPlaylists, getPlaylist, createPlaylist, updatePlaylist, deletePlaylist, getSoundsForPlaylist,
