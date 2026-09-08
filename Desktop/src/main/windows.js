@@ -25,8 +25,12 @@ const ROLES = {
   events:    { path: '/events.html',                  title: 'Events',          width: 1100, height: 820 },
   treasury:  { path: '/treasury.html',                title: 'Treasury',        width: 1100, height: 820 },
   stories:   { path: '/stories.html',                 title: 'Stories',         width: 1200, height: 880 },
-  playlists: { path: '/playlists.html',               title: 'Music & Sounds',  width: 1100, height: 820 },
-  nowplaying:{ path: '/music-player.html',            title: 'Now Playing',     width: 460,  height: 150, minWidth: 320, minHeight: 110 },
+  // Both music roles load the SAME page — /music.html decides what to show from
+  // the signed-in role. They differ only in window size: the DM gets a tall
+  // window with the playlist and track list, a player gets a compact readout.
+  music:     { path: '/music.html',                   title: 'Music',           width: 420,  height: 620, minWidth: 320, minHeight: 260 },
+  nowplaying:{ path: '/music.html',                   title: 'Now Playing',     width: 460,  height: 150, minWidth: 320, minHeight: 120 },
+  playlists: { path: '/playlists.html',               title: 'Music Library',   width: 1100, height: 820 },
   campaigns: { path: '/campaigns.html',               title: 'Campaigns',       width: 1000, height: 780 },
   console:   { path: '/console/table-console.html',   title: 'Console',         width: 900,  height: 700 },
   secondary: { path: '/console/table-secondary.html', title: 'Second Screen',   width: 1600, height: 900, secondary: true },
@@ -126,8 +130,23 @@ function trackState(role, win) {
 
 // Links that leave the server open in the real browser; the 5e.tools references
 // scattered through the app would otherwise hijack a game window with no way back.
+// Chromium hands the window.open() features string through untouched; the web
+// app sizes its pop-outs there (the music player wants a narrow window, the
+// panels a wide one), so honour it instead of forcing one size on all of them.
+function sizeFromFeatures(features) {
+  const size = {};
+  for (const part of String(features || '').split(',')) {
+    const [k, v] = part.split('=').map((s) => s.trim().toLowerCase());
+    const n = parseInt(v, 10);
+    if (!Number.isFinite(n)) continue;
+    if (k === 'width') size.width = Math.max(240, Math.min(n, 3000));
+    if (k === 'height') size.height = Math.max(140, Math.min(n, 2000));
+  }
+  return size;
+}
+
 function applyNavigationPolicy(win) {
-  win.webContents.setWindowOpenHandler(({ url, frameName }) => {
+  win.webContents.setWindowOpenHandler(({ url, frameName, features }) => {
     if (url !== 'about:blank' && !sameOrigin(url)) {
       shell.openExternal(url);
       return { action: 'deny' };
@@ -140,6 +159,7 @@ function applyNavigationPolicy(win) {
       overrideBrowserWindowOptions: {
         width: 900,
         height: 720,
+        ...sizeFromFeatures(features),
         icon: ICON,
         backgroundColor: '#1a1a2e',
         title: frameName || 'RPG Table',
@@ -254,12 +274,16 @@ function open(role) {
   return createAppWindow(role);
 }
 
-// Which music screen belongs to the person signed in. The DM gets the control
-// panel — playlists.html is DM-gated anyway, so it would only bounce a player to
-// the login page. Everyone else gets the compact Now Playing window, which has
-// no auth guard and follows the DM's sound events over realtime.
+// Which music window belongs to the person signed in. Both show /music.html —
+// the page itself is role-aware — so this only picks the window size: a tall
+// control window for the DM (playlist, transport, track list), a compact
+// readout for a player or someone not signed in.
+//
+// It deliberately does NOT open playlists.html: that is the library and
+// playlist editor, not a player, and it is DM-gated so it would bounce a player
+// to the login page.
 function musicRole() {
-  return sessionStore.role() === 'dm' ? 'playlists' : 'nowplaying';
+  return sessionStore.role() === 'dm' ? 'music' : 'nowplaying';
 }
 
 // A second window showing the same screen — for two character sheets side by

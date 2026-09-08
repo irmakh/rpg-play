@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Playlists — DM</title>
+<title>Music Library — DM</title>
 <script>(function(){try{var s=JSON.parse(sessionStorage.getItem('rpgSession')||'null');if(!s||s.role!=='dm'){location.replace('/login.html?next='+encodeURIComponent(location.pathname));}}catch(e){location.replace('/login.html');}})();</script>
 <link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#1a1a2e">
@@ -142,7 +142,8 @@ html,body{height:100%;overflow:hidden;margin:0;padding:0}
   <div class="hdr">
     <div class="hdr-left">
       <button class="btn" onclick="location.href='/dm.html'">← DM</button>
-      <h1>🎵 Playlists</h1>
+      <h1>📚 Music Library</h1>
+      <button class="btn" onclick="location.href='/music.html'" title="Open the music player controls">🎵 Player</button>
       <select id="theme-sel" onchange="applyTheme(this.value)" title="Theme">
         <option value="dark-gold">🌙</option>
         <option value="parchment">📜</option>

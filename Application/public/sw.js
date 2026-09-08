@@ -1,4 +1,4 @@
-const CACHE = 'rpg-v141';
+const CACHE = 'rpg-v142';
 
 const STATIC = [
   // Core pages
@@ -12,6 +12,7 @@ const STATIC = [
   '/login.html',
   '/index.html',
   '/table.html',
+  '/music.html',
   // Console theme
   '/console/',
   '/console/table-console.html',
@@ -36,6 +37,7 @@ const STATIC = [
   '/js/lib/chat-render.js',
   '/js/lib/dnd-data.js',
   '/js/lib/realtime.js',
+  '/js/lib/music-sync.js',
   '/js/lib/dice-engine.js',
   '/js/lib/lightbox.js',
   '/js/lib/fr_calendar.js',

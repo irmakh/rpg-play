@@ -73,7 +73,7 @@ Change the server later from **File → Change Server…**.
 
 **Multi-monitor windows** — `File → New Window` opens any screen of the app as
 its own native window: Table, DM Panel, Character Sheet, Monsters, Events,
-Treasury, Stories, Music & Sounds, Now Playing, Campaigns, Console, Second
+Treasury, Stories, Music, Now Playing, Music Library, Campaigns, Console, Second
 Screen. Each remembers
 its own size, position, monitor, maximised/fullscreen state and zoom level.
 `Window → Move to Display` throws the focused window at another monitor, and the
@@ -90,18 +90,30 @@ again minimises that window. Rebind them in Settings by clicking a box and
 pressing the keys; a shortcut another application already owns is reported
 instead of failing silently.
 
-The music key is resolved on each press from whoever is signed in, because the
-two roles want different screens:
+The music key is resolved on each press from whoever is signed in. Both roles
+open the same page — `/music.html` decides what to show from the session — so
+this only picks the window shape:
 
-| Signed in as | Opens | Why |
+| Signed in as | Opens | What it shows |
 |---|---|---|
-| DM | **Music & Sounds** (`/playlists.html`) | The control panel where tracks are chosen and triggered. It is DM-gated server-side, so it would only bounce a player to the login page. |
-| Player, or signed out | **Now Playing** (`/music-player.html`) | A compact window with the track name, position and volume. No auth guard, and it follows the DM's sound events over realtime. |
+| DM | **Music** (420×620) | Playlist picker, transport, seek, loop mode and the track list — the same controls as the table screen's music modal, which loads this very page in an iframe. |
+| Player, or signed out | **Now Playing** (460×170) | Track name, position and local volume, read-only. No auth guard, so it works signed out. |
 
-Two things to know about the Now Playing window: it opens showing nothing until
-the next command from the DM, because it normally receives its initial state
-from the page that spawned it; and it closes itself when a table window loads,
-which is the web app's own guard against the same track playing twice.
+The page seeds itself from `GET /api/sound/state` and then follows the DM over
+realtime, so it is correct the moment it opens whether or not anything spawned
+it. (The old `/music-player.html` needed an opener window to hand it state and
+closed itself whenever a table window loaded, which made it useless here; that
+URL now redirects to `/music.html`.)
+
+**Music Library** (`/playlists.html`) is a separate window for uploading sounds
+and editing playlists. It is not what the music hotkey opens, and it is DM-gated
+server-side.
+
+When several windows of the app are open on one machine — say the table on the
+projector and the Music window on the laptop — they elect exactly one to play
+the audio, so a track never plays twice a fraction of a second apart. A
+dedicated music window outranks a table window; close it and the table picks the
+sound back up where it was.
 
 **Tray icon** — quick access to the main screens. With *keep running when the
 last window closes* enabled, the app stays in the tray so the hotkeys keep

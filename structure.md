@@ -130,8 +130,10 @@ char_sheet/
 │   │   ├── manifest.json               #   Main app PWA manifest
 │   │   ├── merchant.html               #   Retired — server 301-redirects /merchant.html to /treasury.html
 │   │   ├── monsters.html               #   Monster library page
-│   │   ├── music-player.html           #   Standalone now-playing popup
-│   │   ├── playlists.html              #   Music & playlist manager page (DM)
+│   │   ├── music.html                  #   Music player — DM controls or player readout;
+│   │   │                               #   standalone window, table modal iframe, desktop app
+│   │   ├── music-player.html           #   Redirect stub -> music.html (old pop-out URL)
+│   │   ├── playlists.html              #   Music library: sound uploads & playlist editing (DM)
 │   │   ├── prepare-map.html            #   Map prep page
 │   │   ├── stories.html                #   Story dashboard page
 │   │   ├── story-builder.html          #   Story editor page (panels, cast, images)
@@ -295,7 +297,7 @@ char_sheet/
 | `public/` | All served HTML/CSS/JS and the companion PWA |
 | `public/js/index/` | 14 character-sheet modules |
 | `public/js/table/` | 15 virtual-table modules |
-| `public/js/lib/` | 8 shared frontend helpers (dice engine, chat render, calendar, weather, …) |
+| `public/js/lib/` | 11 shared frontend helpers (dice engine, chat render, calendar, weather, music audio-ownership, …) |
 | `tests/` | 24 Vitest unit + API suites (750 tests) |
 
 ## Retired pages

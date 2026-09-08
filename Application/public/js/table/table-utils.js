@@ -96,6 +96,13 @@ function makeDraggable(box, handle) {
     const oy = e.clientY - parseFloat(box.style.top);
     handle.style.cursor = 'grabbing';
     document.body.style.userSelect = 'none';
+    // The music modal embeds an iframe, and a frame can swallow the mousemove /
+    // mouseup this drag listens for once the pointer crosses it — which happens
+    // whenever the modal stops following the cursor at a window edge. Chromium
+    // was measured to route the events to the parent anyway, so this is a guard
+    // for the engines that do not, not a fix for an observed freeze here.
+    const frames = [...document.querySelectorAll('iframe')];
+    for (const f of frames) f.style.pointerEvents = 'none';
     function onMove(e) {
       box.style.left = Math.max(0, Math.min(window.innerWidth  - box.offsetWidth,  e.clientX - ox)) + 'px';
       box.style.top  = Math.max(0, Math.min(window.innerHeight - box.offsetHeight, e.clientY - oy)) + 'px';
@@ -103,6 +110,7 @@ function makeDraggable(box, handle) {
     function onUp() {
       handle.style.cursor = 'grab';
       document.body.style.userSelect = '';
+      for (const f of frames) f.style.pointerEvents = '';
       document.removeEventListener('mousemove', onMove);
       document.removeEventListener('mouseup',   onUp);
     }

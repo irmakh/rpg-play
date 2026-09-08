@@ -684,42 +684,17 @@
 <!-- Background audio element — all clients, controlled by SSE -->
 <audio id="bg-music" style="display:none" preload="none"></audio>
 
-<!-- Music Player Modal (DM only) -->
+<!-- Music Player Modal (DM only) — the controls live in /music.html, loaded in
+     an iframe so the modal, the pop-out window and the desktop client all show
+     the exact same player. -->
 <div id="music-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:2000;align-items:center;justify-content:center">
-  <div style="background:var(--bg2);border:1px solid var(--ac);border-radius:8px;width:400px;max-width:96vw;max-height:90vh;display:flex;flex-direction:column">
-    <div class="modal-drag-handle" style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--a44)">
-      <span style="font-weight:bold;font-size:14px">🎵 Music Player</span>
+  <div style="background:var(--bg2);border:1px solid var(--ac);border-radius:8px;width:400px;max-width:96vw;height:600px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden">
+    <div class="modal-drag-handle" style="display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid var(--a44)">
+      <span style="font-weight:bold;font-size:14px;flex:1">🎵 Music Player</span>
+      <button class="btn sm" onclick="openMusicPopup()" title="Open the player in its own window">↗</button>
       <button class="btn sm" onclick="closeMusicModal()">✕</button>
     </div>
-    <div style="padding:14px 16px;overflow-y:auto;flex:1">
-      <div style="margin-bottom:10px">
-        <label style="display:block;font-size:10px;color:var(--ac);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Playlist</label>
-        <select id="music-pl-sel" onchange="loadMusicPlaylist()" style="width:100%;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px;padding:5px 8px;font-size:12px">
-          <option value="">— Select Playlist —</option>
-        </select>
-      </div>
-      <div id="music-now-playing" style="font-size:11px;color:var(--txd);margin-bottom:10px;min-height:16px"></div>
-      <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
-        <span id="music-pos" style="font-size:11px;color:var(--ac);min-width:30px;text-align:right">0:00</span>
-        <input type="range" id="music-seek" min="0" max="100" value="0" step="0.5" style="flex:1;cursor:pointer" oninput="musicSeekInput(this.value)" onchange="musicSeekSend(this.value)">
-        <span id="music-dur" style="font-size:11px;color:var(--txd);min-width:30px">0:00</span>
-      </div>
-      <div style="display:flex;justify-content:center;gap:8px;margin-bottom:8px">
-        <button class="btn" onclick="musicControl('prev')" title="Previous">⏮</button>
-        <button class="btn primary" id="music-play-btn" onclick="musicPlayPause()" style="min-width:72px">▶ Play</button>
-        <button class="btn" onclick="musicControl('next')" title="Next">⏭</button>
-        <button class="btn danger" onclick="musicControl('stop')" title="Stop">⏹</button>
-      </div>
-      <div style="display:flex;justify-content:center;gap:6px;margin-bottom:14px">
-        <button class="btn sm" id="music-loop-none" onclick="musicSetLoopMode('none')">No Loop</button>
-        <button class="btn sm" id="music-loop-track" onclick="musicSetLoopMode('track')">🔂 Track</button>
-        <button class="btn sm" id="music-loop-playlist" onclick="musicSetLoopMode('playlist')">🔁 Playlist</button>
-      </div>
-      <div style="border-top:1px solid var(--a44);padding-top:10px">
-        <div style="font-size:10px;color:var(--ac);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Tracks</div>
-        <div id="music-track-list" style="max-height:200px;overflow-y:auto"></div>
-      </div>
-    </div>
+    <iframe id="music-frame" title="Music player" style="flex:1;width:100%;border:0;background:var(--bg2)"></iframe>
   </div>
 </div>
 
@@ -729,6 +704,7 @@
 <script src="/js/lib/chat-render.js" defer></script>
 <script src="/js/lib/dnd-data.js" defer></script>
 <script src="/js/lib/realtime.js" defer></script>
+<script src="/js/lib/music-sync.js" defer></script>
 <script src="/js/lib/fr_calendar.js" defer></script>
 <script src="/js/lib/weather-ui.js" defer></script>
 <script src="/js/table/table-state.js" defer></script>

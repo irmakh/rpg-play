@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Music</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#1a1a2e">
+<style>
+:root{
+  --bg:#1a1614; --bg2:#221e19; --bg3:#2b251e;
+  --ac:#c8a04a; --tx:#e8dcc8; --txd:#8a7a60; --err:#ff8888;
+  --a22:rgba(200,160,74,.13); --a44:rgba(200,160,74,.27); --a55:rgba(200,160,74,.4);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{
+  background:var(--bg2); color:var(--tx);
+  font-family:system-ui,-apple-system,sans-serif; font-size:12px;
+  display:flex; flex-direction:column; overflow:hidden;
+}
+/* Embedded in the table modal the page is framed by the modal chrome, so it
+   drops its own background and border and lets the modal supply them. */
+body.embed{background:transparent}
+
+#hdr{
+  flex-shrink:0; display:flex; align-items:center; gap:8px;
+  padding:8px 12px; background:var(--a22); border-bottom:1px solid var(--a44);
+}
+#hdr h1{font-size:13px; font-weight:bold; flex:1; white-space:nowrap}
+body.embed #hdr{display:none}
+/* A short window (the desktop Now Playing window) drops the title bar — the
+   native window frame already says what this is — and centres the few rows it
+   has left, so the readout sits in the window instead of clinging to the top. */
+@media (max-height:230px){
+  #hdr{display:none}
+  #body{justify-content:center}
+  #owner-note:empty{display:none}
+}
+
+#body{flex:1; min-height:0; display:flex; flex-direction:column; padding:10px 12px; gap:9px; overflow:hidden}
+
+.row{display:flex; align-items:center; gap:7px}
+.lbl{font-size:10px; color:var(--ac); text-transform:uppercase; letter-spacing:.5px}
+
+/* Now playing */
+#np{display:flex; align-items:center; gap:7px; min-height:18px}
+#np-state{font-size:10px; color:var(--txd); white-space:nowrap; flex-shrink:0}
+#np-icon{color:var(--ac); flex-shrink:0}
+#np-name{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+
+/* Seek + volume */
+#pos,#dur{font-size:10px; white-space:nowrap; min-width:30px; font-variant-numeric:tabular-nums}
+#pos{color:var(--ac); text-align:right}
+#dur{color:var(--txd)}
+input[type=range]{cursor:pointer; accent-color:var(--ac); min-width:0}
+#seek{flex:1}
+#vol{width:80px; flex:1; max-width:120px}
+#vol-pct{font-size:10px; color:var(--ac); min-width:30px; text-align:right}
+body.readonly #seek{pointer-events:none; cursor:default; opacity:.75}
+
+select,.btn{
+  background:var(--bg3); border:1px solid var(--a55); color:var(--tx);
+  border-radius:3px; padding:5px 8px; font-size:12px; font-family:inherit;
+}
+select{width:100%}
+.btn{cursor:pointer; white-space:nowrap}
+.btn:hover{background:var(--a22)}
+.btn:disabled{opacity:.45; cursor:default}
+.btn.primary{background:var(--a44); border-color:var(--ac); color:var(--ac); font-weight:bold}
+.btn.danger{color:var(--err); border-color:rgba(255,136,136,.4)}
+.btn.sm{padding:3px 7px; font-size:11px}
+.btn.lnk{background:none; border:none; color:var(--ac); text-decoration:none; padding:3px 4px; font-size:11px}
+.btn.lnk:hover{text-decoration:underline; background:none}
+
+#transport{display:flex; justify-content:center; gap:8px}
+#loops{display:flex; justify-content:center; gap:6px}
+
+/* Track list */
+#tracks-wrap{flex:1; min-height:0; display:flex; flex-direction:column; border-top:1px solid var(--a44); padding-top:8px}
+#tracks{flex:1; min-height:0; overflow-y:auto; scrollbar-width:thin; scrollbar-color:var(--a44) transparent; margin-top:5px}
+.trk{display:flex; align-items:center; gap:6px; padding:5px 8px; border-radius:3px; cursor:pointer; font-size:12px}
+.trk:hover{background:var(--a22)}
+.trk.active{background:var(--a44)}
+.trk-idx{font-size:11px; color:var(--txd); flex-shrink:0; min-width:14px}
+.trk.active .trk-idx{color:var(--ac)}
+.trk-name{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.empty{font-size:11px; color:var(--txd); text-align:center; padding:10px}
+
+/* Anything DM-only is hidden up front and removed from the DOM entirely for
+   players, so a compact player window is exactly as tall as the three rows it
+   needs — and no DM control ever flashes on screen before the script runs. */
+.dm-only{display:none}
+body.dm #pl-row{display:block}
+body.dm #transport{display:flex}
+body.dm #loops{display:flex}
+body.dm #tracks-wrap{display:flex}
+body.dm #lnk-playlists{display:inline-block}
+
+#owner-note{font-size:10px; color:var(--txd); text-align:center; min-height:12px}
+</style>
+</head>
+<body>
+
+<audio id="audio" style="display:none" preload="none"></audio>
+
+<div id="hdr">
+  <a class="btn lnk" id="lnk-back" href="/dm.html" style="display:none" title="Back to the DM panel">←</a>
+  <span style="color:var(--ac)">🎵</span>
+  <h1 id="hdr-title">Music</h1>
+  <a class="btn lnk dm-only" id="lnk-playlists" href="/playlists.html" target="_blank" rel="noopener" title="Upload sounds and edit playlists">⚙ Library</a>
+</div>
+
+<div id="body">
+
+  <!-- DM: which playlist the table is playing from -->
+  <div class="dm-only" id="pl-row">
+    <select id="pl-sel" onchange="onPlaylistChange()" title="Playlist">
+      <option value="">— Select Playlist —</option>
+    </select>
+  </div>
+
+  <!-- Everyone: what is playing right now -->
+  <div id="np">
+    <span id="np-state">Loading…</span>
+    <span id="np-icon">🎵</span>
+    <span id="np-name">—</span>
+  </div>
+
+  <!-- Everyone: position (DM can drag to seek for all clients) -->
+  <div class="row">
+    <span id="pos">0:00</span>
+    <input type="range" id="seek" min="0" max="100" value="0" step="0.5"
+           oninput="onSeekInput(this.value)" onchange="onSeekCommit(this.value)">
+    <span id="dur">0:00</span>
+  </div>
+
+  <!-- DM: transport -->
+  <div class="dm-only" id="transport">
+    <button class="btn" onclick="sendControl({action:'prev'})" title="Previous track">⏮</button>
+    <button class="btn primary" id="play-btn" onclick="togglePlay()" style="min-width:76px">▶ Play</button>
+    <button class="btn" onclick="sendControl({action:'next'})" title="Next track">⏭</button>
+    <button class="btn danger" onclick="sendControl({action:'stop'})" title="Stop for everyone">⏹</button>
+  </div>
+
+  <!-- DM: loop mode -->
+  <div class="dm-only" id="loops">
+    <button class="btn sm" id="loop-none" onclick="setLoopMode('none')">No Loop</button>
+    <button class="btn sm" id="loop-track" onclick="setLoopMode('track')">🔂 Track</button>
+    <button class="btn sm" id="loop-playlist" onclick="setLoopMode('playlist')">🔁 Playlist</button>
+  </div>
+
+  <!-- Everyone: this machine's own volume (never broadcast to other players) -->
+  <div class="row">
+    <span style="font-size:10px;color:var(--txd);flex-shrink:0">Vol</span>
+    <input type="range" id="vol" min="0" max="100" value="100"
+           oninput="onVolInput(this.value)" onchange="onVolInput(this.value)">
+    <span id="vol-pct">100%</span>
+  </div>
+
+  <div id="owner-note"></div>
+
+  <!-- DM: the tracks in the selected playlist -->
+  <div class="dm-only" id="tracks-wrap">
+    <span class="lbl">Tracks</span>
+    <div id="tracks"><div class="empty">No playlist selected</div></div>
+  </div>
+
+</div>
+
+<script src="/js/lib/esc.js"></script>
+<script src="/js/lib/realtime.js"></script>
+<script src="/js/lib/music-sync.js"></script>
+<script>
+// ── Music surface ─────────────────────────────────────────────────────────────
+// ONE page serving three contexts:
+//   /music.html            standalone window (desktop client, browser pop-out)
+//   /music.html?embed=1    inside the table screen's music modal (iframe)
+//   either one, as DM or as a player — the role decides which controls exist.
+//
+// It seeds itself from GET /api/sound/state (unauthenticated, and the server is
+// the authority on what is playing), so unlike the old pop-out player it needs
+// no opener window and works the moment it loads.
+
+const params   = new URLSearchParams(location.search);
+const EMBED    = params.get('embed') === '1';   // table modal: parent owns the audio
+const audio    = document.getElementById('audio');
+
+let role       = 'none';
+let masterPw   = '';
+let isDM       = false;
+
+let playlists  = [];
+let currentPl  = null;
+let stName     = null;      // track name
+let stPlaying  = false;
+let stPlaylist = null;
+let stTrackIdx = 0;
+let stDuration = 0;
+let stLoop     = 'none';
+
+let seeking    = false;
+let userPicked = false;     // DM chose a playlist by hand — stop auto-following
+let owning     = false;     // does THIS window play the audio?
+let basePos    = 0;         // position at baseAt, for windows that don't own audio
+let baseAt     = 0;
+let tick       = null;
+let arbiter    = null;
+
+// ── Session ───────────────────────────────────────────────────────────────────
+try {
+  const s = JSON.parse(sessionStorage.getItem('rpgSession') || 'null');
+  if (s && s.role) {
+    role = s.role;
+    masterPw = s.role === 'dm' ? (s.masterPw || '') : '';
+  }
+} catch {}
+isDM = role === 'dm' && !!masterPw;
+
+if (isDM) document.body.classList.add('dm');
+else      document.body.classList.add('readonly');
+if (EMBED) document.body.classList.add('embed');
+document.getElementById('hdr-title').textContent = isDM ? 'Music Control' : 'Now Playing';
+if (!isDM) {
+  // Players never see playlists, transport or the track list — drop them so the
+  // window collapses to the three rows it actually uses.
+  for (const el of document.querySelectorAll('.dm-only')) el.remove();
+}
+
+// The back link only makes sense when this page is a normal tab the DM browsed
+// to. A pop-out has an opener and the desktop client pins one screen per window,
+// so navigating away would strand a window titled "Music" on the DM panel.
+if (isDM && !EMBED && !window.opener && !(window.rpgDesktop && window.rpgDesktop.isDesktop)) {
+  document.getElementById('lnk-back').style.display = '';
+}
+
+// ── Display helpers ───────────────────────────────────────────────────────────
+const $ = (id) => document.getElementById(id);
+
+function renderNowPlaying() {
+  const stateEl = $('np-state'), nameEl = $('np-name'), iconEl = $('np-icon');
+  if (!stName) {
+    stateEl.textContent = 'Nothing playing';
+    nameEl.textContent  = '—';
+    iconEl.textContent  = '🎵';
+  } else {
+    stateEl.textContent = stPlaying ? 'Now playing:' : 'Paused:';
+    nameEl.textContent  = stName;
+    iconEl.textContent  = stPlaying ? '🎵' : '⏸';
+  }
+  const btn = $('play-btn');
+  if (btn) btn.textContent = stPlaying ? '⏸ Pause' : '▶ Play';
+}
+
+function renderDuration() {
+  $('dur').textContent = musicFmtTime(stDuration);
+  if (stDuration) $('seek').max = stDuration;
+}
+
+function renderPosition(pos) {
+  if (seeking) return;
+  $('pos').textContent = musicFmtTime(pos);
+  const sk = $('seek');
+  if (stDuration) sk.max = stDuration;
+  sk.value = pos;
+}
+
+function renderLoop() {
+  for (const m of ['none', 'track', 'playlist']) {
+    const b = $('loop-' + m);
+    if (b) b.classList.toggle('primary', m === stLoop);
+  }
+}
+
+function renderTracks() {
+  const el = $('tracks');
+  if (!el) return;
+  const tracks = currentPl && currentPl.sounds || [];
+  if (!tracks.length) {
+    el.innerHTML = '<div class="empty">' +
+      (currentPl ? 'This playlist is empty' : 'No playlist selected') + '</div>';
+    return;
+  }
+  // Only highlight the active track when the selected playlist is the one the
+  // table is actually playing — otherwise browsing a playlist would falsely
+  // mark its 3rd track as live.
+  const activeIdx = (currentPl && currentPl.id === stPlaylist) ? stTrackIdx : -1;
+  el.innerHTML = tracks.map((t, i) => `
+    <div class="trk${i === activeIdx ? ' active' : ''}" onclick="playTrack(${i})" title="${esc(t.name)}">
+      <span class="trk-idx">${i === activeIdx ? (stPlaying ? '▶' : '⏸') : (i + 1) + '.'}</span>
+      <span class="trk-name">${esc(t.name)}</span>
+    </div>`).join('');
+}
+
+// ── Position clock ────────────────────────────────────────────────────────────
+// The owner reads the real audio element. Everyone else extrapolates from the
+// last known position, and gets corrected by the owner's 'pos' broadcasts.
+function markPosition(pos) {
+  basePos = pos;
+  baseAt  = Date.now();
+}
+
+function currentPos() {
+  if (owning && audio.src) return audio.currentTime;
+  if (!stPlaying) return basePos;
+  const p = basePos + (Date.now() - baseAt) / 1000;
+  return stDuration ? Math.min(p, stDuration) : p;
+}
+
+function startTick() {
+  if (tick) return;
+  tick = setInterval(() => {
+    const pos = currentPos();
+    renderPosition(pos);
+    if (owning) {
+      const d = isFinite(audio.duration) ? audio.duration : stDuration;
+      if (arbiter) arbiter.post({ t: 'pos', position: pos, duration: d });
+    }
+  }, 500);
+}
+function stopTick() { clearInterval(tick); tick = null; }
+
+// ── Audio (only while this window owns it) ────────────────────────────────────
+function applyLoopToAudio() {
+  audio.loop = (stLoop === 'track');
+  // Only the DM's client advances the playlist — every client hitting 'next' at
+  // the end of a track would fire one request per player.
+  audio.onended = !isDM ? null
+    : stLoop === 'playlist' ? () => sendControl({ action: 'next' })
+    : stLoop === 'none'     ? () => sendControl({ action: 'stop' })
+    : null;
+}
+
+function playAudio(url, position) {
+  if (!owning || !url) return;
+  const full = new URL(url, location.origin).href;
+  if (audio.src !== full) {
+    if (position > 0) {
+      audio.addEventListener('loadedmetadata', () => { audio.currentTime = position; }, { once: true });
+    }
+    audio.src = url;
+  } else if (position > 0 && Math.abs(audio.currentTime - position) > 1) {
+    audio.currentTime = position;
+  }
+  audio.play().catch(() => {});
+}
+
+function stopAudio() {
+  audio.pause();
+  audio.removeAttribute('src');
+  audio.load();
+}
+
+// ── Volume — per machine, shared by every window through localStorage ─────────
+function applyVolume(v, broadcast) {
+  const pct = Math.max(0, Math.min(100, parseInt(v, 10) || 0));
+  $('vol').value = pct;
+  $('vol-pct').textContent = pct + '%';
+  audio.volume = pct / 100;
+  try { localStorage.setItem('localVolume', String(pct)); } catch {}
+  if (broadcast && arbiter) arbiter.post({ t: 'volume', v: pct });
+}
+function onVolInput(v) { applyVolume(v, true); }
+
+// ── Seek (DM only — players get pointer-events:none on the slider) ────────────
+function onSeekInput(v) {
+  if (!isDM) return;
+  seeking = true;
+  $('pos').textContent = musicFmtTime(parseFloat(v));
+}
+function onSeekCommit(v) {
+  if (!isDM) return;
+  seeking = false;
+  const pos = parseFloat(v);
+  if (owning) audio.currentTime = pos;
+  markPosition(pos);
+  sendControl({ action: 'seek', position: pos });
+}
+
+// ── DM controls ───────────────────────────────────────────────────────────────
+function sendControl(body) {
+  if (!isDM) return;
+  fetch('/api/sound/control', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Master-Password': masterPw },
+    body: JSON.stringify(body),
+  }).catch(() => {});
+}
+
+function setLoopMode(mode) {
+  if (!isDM) return;
+  stLoop = mode;
+  renderLoop();
+  applyLoopToAudio();
+  sendControl({ action: 'loopMode', loopMode: mode });
+}
+
+function togglePlay() {
+  if (stPlaying) {
+    sendControl({ action: 'pause', position: currentPos() });
+  } else {
+    // Resume the live playlist if there is one, otherwise start whatever the DM
+    // has selected in the dropdown.
+    const plId = stPlaylist || ($('pl-sel') && $('pl-sel').value) || '';
+    if (!plId) return;
+    const idx = plId === stPlaylist ? stTrackIdx : 0;
+    const pos = plId === stPlaylist ? currentPos() : 0;
+    sendControl({ action: 'play', playlistId: plId, trackIndex: idx, position: pos });
+  }
+}
+
+function playTrack(idx) {
+  const plId = $('pl-sel') && $('pl-sel').value;
+  if (!plId) return;
+  sendControl({ action: 'play', playlistId: plId, trackIndex: idx, position: 0 });
+}
+
+function onPlaylistChange() {
+  userPicked = true;          // stop auto-following the table's playlist
+  selectPlaylist($('pl-sel').value);
+}
+
+function selectPlaylist(id) {
+  currentPl = playlists.find(p => p.id === id) || null;
+  renderTracks();
+}
+
+async function loadPlaylists() {
+  if (!isDM) return;
+  try {
+    const res = await fetch('/api/playlists', { headers: { 'X-Master-Password': masterPw } });
+    if (!res.ok) return;
+    playlists = await res.json();
+    const sel = $('pl-sel');
+    if (!sel) return;
+    const keep = sel.value || stPlaylist || '';
+    sel.innerHTML = '<option value="">— Select Playlist —</option>' +
+      playlists.map(pl => `<option value="${esc(pl.id)}">${esc(pl.name)} (${(pl.sounds || []).length})</option>`).join('');
+    if (keep && playlists.some(p => p.id === keep)) sel.value = keep;
+    selectPlaylist(sel.value);
+  } catch {}
+}
+
+// Follow the table onto whatever playlist it switched to — but stop following
+// the moment the DM picks one by hand, or browsing a playlist would be yanked
+// away by the next track change.
+function syncPlaylistSelection() {
+  const sel = $('pl-sel');
+  if (!sel) return;
+  if (stPlaylist && !userPicked && sel.value !== stPlaylist && playlists.some(p => p.id === stPlaylist)) {
+    sel.value = stPlaylist;
+    selectPlaylist(stPlaylist);
+    return;
+  }
+  renderTracks();
+}
+
+// ── Server state ──────────────────────────────────────────────────────────────
+function applyServerState(st) {
+  stLoop     = st.loopMode || 'none';
+  stTrackIdx = st.trackIndex != null ? st.trackIndex : 0;
+  stPlaylist = st.playlistId || null;
+  stDuration = st.duration || 0;
+  stName     = st.url ? st.name : null;
+  stPlaying  = !!st.isPlaying;
+  markPosition(st.currentPosition != null ? st.currentPosition : (st.position || 0));
+
+  renderNowPlaying();
+  renderDuration();
+  renderPosition(currentPos());
+  renderLoop();
+  applyLoopToAudio();
+  syncPlaylistSelection();
+
+  if (owning && st.url && stPlaying) playAudio(st.url, currentPos());
+  if (stPlaying) startTick(); else { stopTick(); renderPosition(currentPos()); }
+}
+
+function refreshFromServer() {
+  return fetch('/api/sound/state').then(r => r.json()).then(applyServerState).catch(() => {});
+}
+
+// ── Realtime sound events ─────────────────────────────────────────────────────
+function onSound(d) {
+  if (d.action === 'play') {
+    stName     = d.name;
+    stPlaying  = true;
+    stTrackIdx = d.trackIndex != null ? d.trackIndex : 0;
+    if (d.playlistId) stPlaylist = d.playlistId;
+    if (d.duration) { stDuration = d.duration; renderDuration(); }
+    markPosition(d.position || 0);
+    if (owning) playAudio(d.url, d.position || 0);
+    renderNowPlaying();
+    syncPlaylistSelection();
+    startTick();
+  } else if (d.action === 'pause') {
+    stPlaying = false;
+    markPosition(d.position != null ? d.position : currentPos());
+    if (owning) audio.pause();
+    stopTick();
+    renderNowPlaying();
+    renderPosition(currentPos());
+    renderTracks();
+  } else if (d.action === 'stop') {
+    stPlaying  = false;
+    stName     = null;
+    stPlaylist = null;
+    stTrackIdx = 0;
+    stDuration = 0;
+    markPosition(0);
+    if (owning) stopAudio();
+    stopTick();
+    renderNowPlaying();
+    renderDuration();
+    renderPosition(0);
+    renderTracks();
+  } else if (d.action === 'seek') {
+    markPosition(d.position || 0);
+    if (owning) audio.currentTime = d.position || 0;
+    renderPosition(currentPos());
+  } else if (d.action === 'duration') {
+    stDuration = d.duration || 0;
+    renderDuration();
+  } else if (d.action === 'loopMode') {
+    stLoop = d.loopMode || 'none';
+    renderLoop();
+    applyLoopToAudio();
+  }
+}
+
+// ── Audio ownership ───────────────────────────────────────────────────────────
+function setOwnerNote() {
+  const el = $('owner-note');
+  if (!el) return;
+  el.textContent = (!EMBED && !owning) ? 'Audio is playing in another window' : '';
+}
+
+if (!EMBED) {
+  arbiter = createAudioArbiter({
+    priority: MUSIC_PRIO_PLAYER,
+    onAcquire() {
+      owning = true;
+      setOwnerNote();
+      // Take over mid-track: re-read the server so we start at the right second.
+      refreshFromServer();
+    },
+    onRelease() {
+      owning = false;
+      setOwnerNote();
+      stopAudio();
+    },
+    onMessage(m) {
+      if (!m) return;
+      if (m.t === 'pos' && !owning) {
+        markPosition(m.position);
+        if (m.duration && m.duration !== stDuration) { stDuration = m.duration; renderDuration(); }
+        renderPosition(m.position);
+      } else if (m.t === 'volume') {
+        applyVolume(m.v, false);
+      }
+    },
+  }).start();
+} else {
+  // Embedded in the table modal: the table page owns the audio element. This
+  // frame is controls and readout only, but it still joins the channel so the
+  // volume slider and the position clock stay in step with its parent.
+  arbiter = createAudioArbiter({
+    passive: true,              // never claims — the parent page is the owner
+    onMessage(m) {
+      if (!m) return;
+      if (m.t === 'pos') {
+        markPosition(m.position);
+        if (m.duration && m.duration !== stDuration) { stDuration = m.duration; renderDuration(); }
+        renderPosition(m.position);
+      } else if (m.t === 'volume') {
+        applyVolume(m.v, false);
+      }
+    },
+  }).start();
+}
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+let savedVol = 100;
+try {
+  const v = localStorage.getItem('localVolume');
+  if (v !== null) savedVol = parseInt(v, 10);
+} catch {}
+applyVolume(savedVol, false);
+
+// Report the real track length back to the server once, so every client's seek
+// bar has a scale even before it has loaded the file.
+audio.addEventListener('loadedmetadata', () => {
+  if (isDM && owning && isFinite(audio.duration) && audio.duration > 0 && audio.duration !== stDuration) {
+    sendControl({ action: 'duration', duration: audio.duration });
+  }
+});
+
+loadPlaylists().then(refreshFromServer);
+connectRealtime({ sound: onSound });
+</script>
+</body>
+</html>
