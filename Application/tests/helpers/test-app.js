@@ -20,6 +20,7 @@ import registerCharacters  from '../../server/routes/characters.js';
 import registerAuth        from '../../server/routes/auth.js';
 import registerEvents      from '../../server/routes/events.js';
 import registerTreasury    from '../../server/routes/treasury.js';
+import registerSound       from '../../server/routes/sound.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
@@ -86,8 +87,21 @@ export function makeApp() {
   const app = express();
   app.use(express.json({ limit: '10mb' }));
 
+  // Which campaign the in-flight request belongs to. Production resolves this
+  // from a header, query param or cookie and stashes it in an AsyncLocalStorage
+  // context; a test just names it with the same X-Campaign-Id header. Requests
+  // that send no header behave like a single-campaign install.
+  let activeCampaignId = '';
+  app.use((req, _res, next) => {
+    activeCampaignId = String(req.headers['x-campaign-id'] || '');
+    next();
+  });
+
   const broadcasts = [];
-  const broadcast = (channel, payload) => { broadcasts.push({ channel, payload }); };
+  // Records the campaign each event was sent to, so tests can prove an event
+  // never leaked into another campaign's stream.
+  const broadcast = (channel, payload) =>
+    { broadcasts.push({ channel, payload, campaignId: activeCampaignId }); };
   // Records every deleteUploadFile() call so image-cleanup can be asserted.
   const deletedFiles = [];
 
@@ -146,6 +160,7 @@ export function makeApp() {
     __dirname: path.resolve(__dirname, '../..'),
     chatLog: [],
     CHAT_MAX: 100,
+    currentCampaignId: () => activeCampaignId,
   };
 
   registerInitiative(app, ctx);
@@ -154,6 +169,7 @@ export function makeApp() {
   registerAuth(app, ctx);
   registerEvents(app, ctx);
   registerTreasury(app, ctx);
+  registerSound(app, ctx);
 
   return { app, ldb, masterPw: TEST_MASTER_PW, hashPassword, broadcasts, deletedFiles };
 }

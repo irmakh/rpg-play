@@ -90,6 +90,16 @@ export function makeLdb() {
       precip_roll INTEGER, precip_level TEXT, precipitation TEXT,
       created_at TEXT DEFAULT (datetime('now'))
     );
+    CREATE TABLE IF NOT EXISTS sound_files (
+      id TEXT PRIMARY KEY, name TEXT DEFAULT '', url TEXT DEFAULT '',
+      mime_type TEXT DEFAULT '', tags TEXT DEFAULT '[]',
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+    CREATE TABLE IF NOT EXISTS playlists (
+      id TEXT PRIMARY KEY, name TEXT DEFAULT '', type TEXT DEFAULT 'generic',
+      tags TEXT DEFAULT '[]', map_name TEXT DEFAULT '', sounds TEXT DEFAULT '[]',
+      created_at TEXT DEFAULT (datetime('now'))
+    );
   `);
 
   // Singleton rows
@@ -413,6 +423,66 @@ export function makeLdb() {
     db.prepare('DELETE FROM weather_log WHERE id = ?').run(id);
   }
 
+  // ── Sounds & playlists ──────────────────────────────────────────────────────
+  // Mirrors db/localdb.js: a playlist stores an ordered array of sound ids as
+  // JSON, and getSoundsForPlaylist resolves them to full rows in that order.
+  function listSoundFiles() {
+    return db.prepare('SELECT * FROM sound_files ORDER BY created_at DESC').all()
+      .map(r => ({ ...r, tags: JSON.parse(r.tags || '[]') }));
+  }
+  function getSoundFile(id) {
+    const r = db.prepare('SELECT * FROM sound_files WHERE id = ?').get(id);
+    return r ? { ...r, tags: JSON.parse(r.tags || '[]') } : null;
+  }
+  function createSoundFile(id, fields) {
+    db.prepare('INSERT INTO sound_files (id, name, url, mime_type, tags, created_at) VALUES (?, ?, ?, ?, ?, ?)')
+      .run(id, fields.name || '', fields.url || '', fields.mime_type || '',
+           JSON.stringify(fields.tags || []), fields.created_at || new Date().toISOString());
+  }
+  function updateSoundFile(id, fields) {
+    const mapped = { ...fields };
+    if ('tags' in mapped) mapped.tags = JSON.stringify(mapped.tags || []);
+    const sets = Object.keys(mapped).map(k => `"${k}" = ?`).join(', ');
+    if (!sets) return;
+    db.prepare(`UPDATE sound_files SET ${sets} WHERE id = ?`).run(...Object.values(mapped), id);
+  }
+  function deleteSoundFile(id) {
+    db.prepare('DELETE FROM sound_files WHERE id = ?').run(id);
+  }
+
+  function rowToPlaylist(r) {
+    return r ? { ...r, tags: JSON.parse(r.tags || '[]'), sounds: JSON.parse(r.sounds || '[]') } : null;
+  }
+  function listPlaylists() {
+    return db.prepare('SELECT * FROM playlists ORDER BY created_at DESC').all().map(rowToPlaylist);
+  }
+  function getPlaylist(id) {
+    return rowToPlaylist(db.prepare('SELECT * FROM playlists WHERE id = ?').get(id));
+  }
+  function createPlaylist(id, fields) {
+    db.prepare('INSERT INTO playlists (id, name, type, tags, map_name, sounds, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
+      .run(id, fields.name || '', fields.type || 'generic', JSON.stringify(fields.tags || []),
+           fields.map_name || '', JSON.stringify(fields.sounds || []),
+           fields.created_at || new Date().toISOString());
+  }
+  function updatePlaylist(id, fields) {
+    const mapped = { ...fields };
+    if ('tags'   in mapped) mapped.tags   = JSON.stringify(mapped.tags   || []);
+    if ('sounds' in mapped) mapped.sounds = JSON.stringify(mapped.sounds || []);
+    const sets = Object.keys(mapped).map(k => `"${k}" = ?`).join(', ');
+    if (!sets) return;
+    db.prepare(`UPDATE playlists SET ${sets} WHERE id = ?`).run(...Object.values(mapped), id);
+  }
+  function deletePlaylist(id) {
+    db.prepare('DELETE FROM playlists WHERE id = ?').run(id);
+  }
+  function getSoundsForPlaylist(playlistId) {
+    const pl = getPlaylist(playlistId);
+    if (!pl || !pl.sounds.length) return [];
+    const all = listSoundFiles();
+    return pl.sounds.map(id => all.find(s => s.id === id)).filter(Boolean);
+  }
+
   return {
     // characters
     listCharacters, getCharacter, createCharacter, updateCharacter, deleteCharacter, getLinkedTokens,
@@ -436,5 +506,8 @@ export function makeLdb() {
     listLootLogs, createLootLog, listClaimedItemIds, listPurchaseLogs, createPurchaseLog,
     // weather
     getWeatherConfig, saveWeatherConfig, listWeatherLog, getWeatherForDate, saveWeatherEntry, deleteWeatherEntry,
+    // sounds & playlists
+    listSoundFiles, getSoundFile, createSoundFile, updateSoundFile, deleteSoundFile,
+    listPlaylists, getPlaylist, createPlaylist, updatePlaylist, deletePlaylist, getSoundsForPlaylist,
   };
 }
