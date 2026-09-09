@@ -84,7 +84,7 @@ table.recips tr:last-child td{border-bottom:none}
 .roll-total{font-weight:bold;font-size:14px}
 .pill{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:bold;letter-spacing:.4px}
 .pill.pending{background:#ffffff11;color:var(--ash)}
-.pill.rolled{background:#e0b86022;color:var(--blood)}
+.pill.rolled{background:var(--arc-fill);color:var(--arc)}
 .pill.success{background:#88ff8822;color:var(--verdigris)}
 .pill.fail{background:#ff888822;color:var(--blood)}
 .suggest{font-size:10px;color:var(--ash);margin-left:6px}

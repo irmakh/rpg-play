@@ -57,16 +57,20 @@ function tokDisplayName(tok) {
   }
   return tok.name;
 }
+// Token and HP colours are drawn to a canvas, so they must be literals - a CSS
+// var() cannot reach ctx.fillStyle. These mirror the design tokens by hand.
+// A character is deliberately NEUTRAL: the ring carries state (whose turn it
+// is, how hurt they are), so the token itself does not need to shout.
 function tokenRingColor(type) {
-  if (type === 'character') return '#c8a04a';
-  if (type === 'monster') return '#ff4444';
-  if (type === 'npc') return '#7ec8e3';
-  return '#888888';
+  if (type === 'character') return '#E8E1D4';   // --bone
+  if (type === 'monster')   return '#EB7E73';   // --blood
+  if (type === 'npc')       return '#8C9EFF';   // --arc
+  return '#857D71';                             // --ash-dim
 }
 function hpBarColor(pct) {
-  if (pct >= 0.5) return '#44cc44';
-  if (pct >= 0.25) return '#ffcc00';
-  return '#ff4444';
+  if (pct >= 0.5)  return '#6BAA92';            // --verdigris
+  if (pct >= 0.25) return '#C9524B';            // --blood-deep
+  return '#EB7E73';                             // --blood
 }
 function getActiveTurnTokenId() {
   if (!initData.currentId) return null;

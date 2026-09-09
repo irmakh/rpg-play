@@ -20,12 +20,12 @@ body{font-family:'Segoe UI',sans-serif;background:var(--ink);color:var(--bone);d
 
 .card{border:1px solid var(--rule-hi);border-radius:9px;background:var(--slate);overflow:hidden;display:flex;flex-direction:column}
 .card.active{border-color:var(--arc);box-shadow:0 0 0 1px var(--arc) inset}
-.thumb{position:relative;height:132px;background:#0d0d18;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.thumb{position:relative;height:132px;background:var(--ink);display:flex;align-items:center;justify-content:center;cursor:pointer}
 .thumb img{width:100%;height:100%;object-fit:cover;display:block}
 .thumb .noimg{font-size:11px;color:var(--ash);text-align:center;padding:10px;line-height:1.6}
 .thumb:hover .overlay{opacity:1}
 .overlay{position:absolute;inset:0;background:rgba(5,6,12,.62);color:var(--bone);display:flex;align-items:center;justify-content:center;font-size:12px;opacity:0;transition:opacity .12s}
-.badge{position:absolute;top:7px;right:7px;padding:2px 8px;border-radius:4px;font-size:10px;background:var(--bone);color:#12121c}
+.badge{position:absolute;top:7px;right:7px;padding:2px 8px;border-radius:4px;font-size:10px;background:var(--bone);color:var(--slate)}
 
 .card-body{padding:9px 11px;display:flex;flex-direction:column;gap:7px}
 .card-body input{width:100%;background:var(--ink);border:1px solid var(--rule-hi);color:var(--bone);border-radius:5px;padding:5px 7px;font-size:12px;font-family:inherit}
@@ -38,7 +38,7 @@ body{font-family:'Segoe UI',sans-serif;background:var(--ink);color:var(--bone);d
 .btn:hover{background:var(--slate-hi);border-color:var(--bone)}
 .btn.sm{padding:4px 9px;font-size:11px}
 .btn.ghost{background:transparent}
-.btn.primary{background:var(--bone);border-color:var(--bone);color:#12121c;font-weight:600}
+.btn.primary{background:var(--bone);border-color:var(--bone);color:var(--slate);font-weight:600}
 .btn.primary:hover{background:var(--arc-hi)}
 .btn.danger{color:var(--blood);border-color:#ff888844}
 .btn.danger:hover{background:#ff888818;border-color:var(--blood)}

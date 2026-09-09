@@ -297,7 +297,7 @@ function renderPrepGrid() {
   const ox = (prepState.offsetX || 0) * viewScale;
   const oy = (prepState.offsetY || 0) * viewScale;
   gCtx.clearRect(0, 0, W, H);
-  gCtx.strokeStyle = 'rgba(200,160,74,0.75)';
+  gCtx.strokeStyle = 'rgba(140,158,255,0.75)';
   gCtx.lineWidth = 1;
   // vertical lines
   for (let x = ((ox % cs) + cs) % cs; x < W; x += cs) {
@@ -337,10 +337,10 @@ function renderPrepFog() {
     const px = ox + r.x * cs, py = oy + r.y * cs, pw = r.w * cs, ph = r.h * cs;
     fCtx.fillStyle = r.visible ? 'rgba(0,200,100,0.2)' : 'rgba(0,0,0,0.65)';
     fCtx.fillRect(px, py, pw, ph);
-    fCtx.strokeStyle = r.visible ? 'rgba(0,200,100,0.7)' : 'rgba(200,160,74,0.5)';
+    fCtx.strokeStyle = r.visible ? 'rgba(0,200,100,0.7)' : 'rgba(140,158,255,0.5)';
     fCtx.lineWidth = 1;
     fCtx.strokeRect(px, py, pw, ph);
-    fCtx.fillStyle = 'rgba(200,160,74,0.9)';
+    fCtx.fillStyle = 'rgba(140,158,255,0.9)';
     fCtx.font = '10px sans-serif';
     fCtx.fillText(r.label || '', px + 3, py + 12);
   }
@@ -426,7 +426,7 @@ function renderPrepFog() {
       fCtx.textAlign = 'start';
       fCtx.textBaseline = 'alphabetic';
     }
-    fCtx.fillStyle = hidden ? 'rgba(200,160,74,0.55)' : 'rgba(255,200,100,0.95)';
+    fCtx.fillStyle = hidden ? 'rgba(140,158,255,0.55)' : 'rgba(255,200,100,0.95)';
     fCtx.font = `${Math.max(7, Math.round(cs * 0.15))}px sans-serif`;
     fCtx.fillText(tok.name.slice(0, 14), ox + tok.x * cs + 2, oy + (tok.y + ts) * cs - 3);
   }
@@ -786,10 +786,10 @@ drawCvs.addEventListener('pointermove', e => {
   const oy = (prepState.offsetY || 0) * viewScale;
   dCtx.clearRect(0, 0, drawCvs.width, drawCvs.height);
   dCtx.setLineDash([4, 3]);
-  dCtx.strokeStyle = placeItemMode ? 'rgba(220,60,60,0.9)' : 'rgba(200,160,74,0.9)';
+  dCtx.strokeStyle = placeItemMode ? 'rgba(220,60,60,0.9)' : 'rgba(140,158,255,0.9)';
   dCtx.lineWidth = 2;
   dCtx.strokeRect(ox + minX * cs, oy + minY * cs, w * cs, h * cs);
-  dCtx.fillStyle = placeItemMode ? 'rgba(220,60,60,0.15)' : 'rgba(200,160,74,0.15)';
+  dCtx.fillStyle = placeItemMode ? 'rgba(220,60,60,0.15)' : 'rgba(140,158,255,0.15)';
   dCtx.fillRect(ox + minX * cs, oy + minY * cs, w * cs, h * cs);
   dCtx.setLineDash([]);
 });

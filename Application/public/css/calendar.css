@@ -12,7 +12,7 @@
 
 /* Selected day (player calendar day click) */
 .cal-day-cell.cal-selected {
-  background: rgba(200,160,74,.22) !important;
+  background: var(--rule-hi) !important;
   border-color: var(--bone);
   box-shadow: inset 0 0 0 1px var(--bone);
 }
@@ -30,7 +30,7 @@
   margin-bottom: 14px;
   flex-wrap: wrap;
 }
-.cal-today-label { font-size: 10px; color: var(--ash); text-transform: uppercase; letter-spacing: .5px; flex-shrink: 0; }
+.cal-today-label { font-size: 10px; color: var(--ash);   flex-shrink: 0; }
 .cal-today-date  { font-size: 13px; color: var(--bone); font-weight: bold; flex: 1; min-width: 0; }
 .cal-today-year  { font-size: 10px; color: var(--ash); flex: 1; min-width: 0; font-style: italic; }
 
@@ -62,8 +62,8 @@
 .cal-tenday-lbl {
   font-size: 9px;
   color: var(--ash);
-  text-transform: uppercase;
-  letter-spacing: .4px;
+  
+  
   padding: 6px 7px;
   width: 76px;
   vertical-align: middle;
@@ -88,7 +88,7 @@
 .cal-grid tbody tr:nth-child(even) .cal-day-cell { background: var(--wash); }
 .cal-grid tbody tr:nth-child(even) .cal-day-cell:hover { background: var(--a33); }
 .cal-day-cell.cal-is-today {
-  background: rgba(200,160,74,.1);
+  background: var(--wash);
   border-color: var(--bone);
   box-shadow: inset 0 0 0 1px var(--bone);
 }
@@ -106,7 +106,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  background: rgba(200,160,74,.05);
+  background: var(--wash);
   border: 1px solid var(--rule-hi);
   border-radius: 4px;
   padding: 11px 14px;
@@ -114,8 +114,8 @@
   cursor: pointer;
   transition: background .1s;
 }
-.cal-festival-row:hover       { background: rgba(200,160,74,.11); }
-.cal-festival-row.cal-is-today { border-color: var(--bone); background: rgba(200,160,74,.15); }
+.cal-festival-row:hover       { background: var(--arc-fill); }
+.cal-festival-row.cal-is-today { border-color: var(--bone); background: var(--wash); }
 .cal-fest-icon  { font-size: 18px; flex-shrink: 0; }
 .cal-fest-name  { font-size: 15px; font-weight: bold; color: var(--bone); flex: 1; }
 .cal-fest-mark  { font-size: 10px; color: var(--bone); font-style: italic; }
@@ -129,7 +129,7 @@
   border-bottom: 1px solid var(--a33);
   margin-bottom: 8px;
 }
-.cal-events-title { font-size: 11px; color: var(--bone); text-transform: uppercase; letter-spacing: .6px; font-weight: bold; }
+.cal-events-title { font-size: 11px; color: var(--bone);   font-weight: bold; }
 .cal-event-item {
   display: flex;
   align-items: flex-start;
@@ -149,7 +149,7 @@
   padding: 2px 6px;
   border-radius: 3px;
   font-weight: bold;
-  text-transform: uppercase;
+  
   flex-shrink: 0;
   margin-top: 2px;
 }
@@ -206,7 +206,7 @@
 }
 .cal-modal-title { font-size: 14px; font-weight: bold; color: var(--bone); margin-bottom: 16px; }
 .cal-form-row { margin-bottom: 11px; }
-.cal-form-row label { display: block; font-size: 10px; color: var(--bone); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px; }
+.cal-form-row label { display: block; font-size: 10px; color: var(--bone);   margin-bottom: 4px; }
 .cal-form-row input,
 .cal-form-row textarea,
 .cal-form-row select {

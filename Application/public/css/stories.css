@@ -356,8 +356,8 @@
   font-size: 10px;
   color: var(--bone);
   font-weight: bold;
-  letter-spacing: .5px;
-  text-transform: uppercase;
+  
+  
   margin-bottom: 5px;
 }
 .viewer-caption {
@@ -412,8 +412,8 @@
   font-size: 10px;
   font-weight: bold;
   color: var(--ash);
-  text-transform: uppercase;
-  letter-spacing: .5px;
+  
+  
   flex-shrink: 0;
 }
 .cast-chips {

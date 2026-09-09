@@ -197,24 +197,24 @@ describe('tokDisplayName', () => {
 describe('tokenRingColor', () => {
   const { tokenRingColor } = load();
 
-  it('returns gold for character', () => {
-    expect(tokenRingColor('character')).toBe('#c8a04a');
+  it('returns neutral bone for character - the ring carries state, not the token', () => {
+    expect(tokenRingColor('character')).toBe('#E8E1D4');   // --bone
   });
 
   it('returns red for monster', () => {
-    expect(tokenRingColor('monster')).toBe('#ff4444');
+    expect(tokenRingColor('monster')).toBe('#EB7E73');     // --blood
   });
 
-  it('returns blue for npc', () => {
-    expect(tokenRingColor('npc')).toBe('#7ec8e3');
+  it('returns the accent for npc', () => {
+    expect(tokenRingColor('npc')).toBe('#8C9EFF');         // --arc
   });
 
   it('returns grey for unknown type', () => {
-    expect(tokenRingColor('custom')).toBe('#888888');
+    expect(tokenRingColor('custom')).toBe('#857D71');      // --ash-dim
   });
 
   it('returns grey for undefined', () => {
-    expect(tokenRingColor(undefined)).toBe('#888888');
+    expect(tokenRingColor(undefined)).toBe('#857D71');     // --ash-dim
   });
 });
 
@@ -223,31 +223,31 @@ describe('hpBarColor', () => {
   const { hpBarColor } = load();
 
   it('returns green at full HP (1.0)', () => {
-    expect(hpBarColor(1.0)).toBe('#44cc44');
+    expect(hpBarColor(1.0)).toBe('#6BAA92');   // --verdigris
   });
 
   it('returns green at exactly 0.5', () => {
-    expect(hpBarColor(0.5)).toBe('#44cc44');
+    expect(hpBarColor(0.5)).toBe('#6BAA92');   // --verdigris
   });
 
-  it('returns yellow just below 0.5 (0.49)', () => {
-    expect(hpBarColor(0.49)).toBe('#ffcc00');
+  it('returns the mid damage tone just below 0.5 (0.49)', () => {
+    expect(hpBarColor(0.49)).toBe('#C9524B');  // --blood-deep
   });
 
-  it('returns yellow at exactly 0.25', () => {
-    expect(hpBarColor(0.25)).toBe('#ffcc00');
+  it('returns the mid damage tone at exactly 0.25', () => {
+    expect(hpBarColor(0.25)).toBe('#C9524B');  // --blood-deep
   });
 
   it('returns red just below 0.25 (0.24)', () => {
-    expect(hpBarColor(0.24)).toBe('#ff4444');
+    expect(hpBarColor(0.24)).toBe('#EB7E73');  // --blood
   });
 
   it('returns red at 0 HP', () => {
-    expect(hpBarColor(0)).toBe('#ff4444');
+    expect(hpBarColor(0)).toBe('#EB7E73');     // --blood
   });
 
   it('returns red at negative value', () => {
-    expect(hpBarColor(-0.1)).toBe('#ff4444');
+    expect(hpBarColor(-0.1)).toBe('#EB7E73');  // --blood
   });
 });
 

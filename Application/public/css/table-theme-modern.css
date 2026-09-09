@@ -20,7 +20,7 @@ body[data-theme="modern"] #vtool-strip {
   width: 48px;
   flex-shrink: 0;
   background: var(--ink);
-  border-right: 1px solid rgba(200,160,74,.1);
+  border-right: 1px solid var(--wash);
   padding: 10px 6px;
   gap: 4px;
   align-items: center;
@@ -43,15 +43,15 @@ body[data-theme="modern"] .vtool-btn {
   padding: 0;
 }
 body[data-theme="modern"] .vtool-btn:hover {
-  background: rgba(200,160,74,.1);
+  background: var(--arc-fill);
   color:var(--bone);
-  border-color: rgba(200,160,74,.2);
+  border-color: var(--arc-fill);
 }
 body[data-theme="modern"] .vtool-btn.active {
   background: var(--arc);
   color: var(--ink);
   border-color: var(--arc-hi);
-  box-shadow: 0 0 12px rgba(200,160,74,.3);
+  box-shadow: 0 0 12px var(--arc-fill);
 }
 body[data-theme="modern"] .vtool-sep {
   width: 22px;
@@ -75,7 +75,7 @@ body[data-theme="modern"] #toolbar {
   min-height: 48px;
   padding: 6px 14px;
   background: linear-gradient(180deg, var(--slate) 0%, var(--slate) 100%);
-  border-bottom: 1px solid rgba(200,160,74,.16);
+  border-bottom: 1px solid var(--wash);
   gap: 6px;
 }
 body[data-theme="modern"] #toolbar .btn { border-radius: 6px }
@@ -90,10 +90,10 @@ body[data-theme="modern"] .btn {
 body[data-theme="modern"] .btn.primary {
   background: linear-gradient(135deg, var(--rule-hi) 0%, var(--arc-hi) 100%);
   border-color: var(--arc-hi);
-  box-shadow: 0 2px 10px rgba(200,160,74,.25);
+  box-shadow: 0 2px 10px var(--arc-fill);
 }
 body[data-theme="modern"] .btn.primary:hover {
-  box-shadow: 0 2px 18px rgba(200,160,74,.45);
+  box-shadow: 0 2px 18px var(--arc);
   filter: brightness(1.06);
 }
 body[data-theme="modern"] .dice-btn { border-radius: 5px }
@@ -112,22 +112,22 @@ body[data-theme="modern"] #left-panel.lp-open {
   width: var(--lp-width, 264px);
   min-width: var(--lp-width, 264px);
   overflow-y: auto;
-  border-right: 1px solid rgba(200,160,74,.08);
+  border-right: 1px solid var(--wash);
 }
 
 /* Section headers — gold left-border accent + subtle dark gradient */
 body[data-theme="modern"] .lp-section-hdr {
   padding: 10px 14px;
   font-size: 10px;
-  letter-spacing: 2px;
-  text-transform: uppercase;
+  
+  
   background: var(--slate);
   border-left: 3px solid var(--rule-hi);
   border-bottom: 1px solid rgba(255,255,255,.04);
 }
 body[data-theme="modern"] .lp-section-hdr:hover { background: var(--slate) }
 body[data-theme="modern"] .lp-token-hdr {
-  border-left-color: rgba(200,160,74,.35);
+  border-left-color: var(--rule-hi);
   background: var(--ink);
 }
 body[data-theme="modern"] .lp-token-hdr:hover { background: var(--ink) }
@@ -150,16 +150,16 @@ body[data-theme="modern"] .init-row {
   transition: background .12s, border-color .12s;
 }
 body[data-theme="modern"] .init-row:hover {
-  background: rgba(200,160,74,.055);
-  border-left-color: rgba(200,160,74,.25);
+  background: var(--arc-fill);
+  border-left-color: var(--arc-fill);
 }
 body[data-theme="modern"] .init-row.init-cur {
-  background: rgba(200,160,74,.12);
+  background: var(--wash);
   border-left-color:var(--bone);
 }
 body[data-theme="modern"] .init-row.init-viewing {
-  background: rgba(200,160,74,.08);
-  border-left-color: rgba(200,160,74,.55);
+  background: var(--wash);
+  border-left-color: var(--bone);
 }
 /* Hide classic current-turn arrow — replaced by gold border */
 body[data-theme="modern"] .init-cur-marker { display: none }
@@ -171,14 +171,14 @@ body[data-theme="modern"] .init-avatar {
   border-radius: 50%;
   object-fit: cover;
   flex-shrink: 0;
-  border: 2px solid rgba(200,160,74,.2);
+  border: 2px solid var(--rule-hi);
 }
 body[data-theme="modern"] .init-avatar-ph {
   width: 34px;
   height: 34px;
   border-radius: 50%;
   flex-shrink: 0;
-  border: 2px solid rgba(200,160,74,.16);
+  border: 2px solid var(--wash);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -189,7 +189,7 @@ body[data-theme="modern"] .init-avatar-ph {
 /* Active-turn glow on portrait */
 body[data-theme="modern"] .init-cur-portrait {
   border-color:var(--bone);
-  box-shadow: 0 0 8px rgba(200,160,74,.4);
+  box-shadow: 0 0 8px var(--rule-hi);
 }
 /* Name + stats block */
 body[data-theme="modern"] .init-meta { flex: 1; min-width: 0 }
@@ -222,8 +222,8 @@ body[data-theme="modern"] .init-roll-input {
   font-weight: 700 !important;
   width: 36px !important;
   color:var(--bone) !important;
-  background: rgba(200,160,74,.08) !important;
-  border-color: rgba(200,160,74,.2) !important;
+  background: var(--wash) !important;
+  border-color: var(--rule-hi) !important;
   text-align: right;
 }
 
@@ -236,25 +236,25 @@ body[data-theme="modern"] #hp-ac-display  { font-size: 22px !important; font-wei
 body[data-theme="modern"] #side-panel {
   width: 240px;
   background: var(--ink);
-  border-left: 1px solid rgba(200,160,74,.08);
+  border-left: 1px solid var(--wash);
 }
 
 /* ── Quick roll sections ── */
 body[data-theme="modern"] .qroll-section-hdr {
-  letter-spacing: 1.5px;
+  
   font-size: 9px;
 }
 body[data-theme="modern"] .qroll-row { padding: 5px 12px }
 body[data-theme="modern"] .qroll-val { font-size: 13px }
 
 /* ── Chat bar ── */
-body[data-theme="modern"] #chat-bar { border-top: 1px solid rgba(200,160,74,.18); background: var(--ink) }
-body[data-theme="modern"] .chat-roller { background: var(--ink); border-top-color: rgba(200,160,74,.1) }
+body[data-theme="modern"] #chat-bar { border-top: 1px solid var(--wash); background: var(--ink) }
+body[data-theme="modern"] .chat-roller { background: var(--ink); border-top-color: var(--wash) }
 body[data-theme="modern"] #chat-bar-hdr {
   padding: 8px 14px;
   background: var(--slate);
   border-left: 3px solid var(--rule-hi);
-  letter-spacing: 1.5px;
+  
   font-size: 11px;
 }
 body[data-theme="modern"] #chat-bar-hdr:hover { background: var(--slate) }
@@ -274,11 +274,11 @@ body[data-theme="modern"] #chat-img-label { border-radius: 16px }
 /* ── Now-playing & draw toolbars ── */
 body[data-theme="modern"] #now-playing-bar {
   background: var(--ink);
-  border-bottom: 1px solid rgba(200,160,74,.12);
+  border-bottom: 1px solid var(--wash);
 }
 body[data-theme="modern"] #draw-toolbar {
   background: var(--ink);
-  border-bottom: 1px solid rgba(200,160,74,.12);
+  border-bottom: 1px solid var(--wash);
 }
 
 /* ── Canvas area inner shadow + modern scrollbars ── */
@@ -286,15 +286,15 @@ body[data-theme="modern"] #canvas-area {
   box-shadow: inset 4px 0 24px rgba(0,0,0,.45),
               inset -4px 0 24px rgba(0,0,0,.45);
   scrollbar-width: thin;
-  scrollbar-color: rgba(200,160,74,.25) rgba(0,0,0,.3);
+  scrollbar-color: var(--rule-hi) rgba(0,0,0,.3);
 }
 body[data-theme="modern"] #canvas-area::-webkit-scrollbar { width: 6px; height: 6px }
 body[data-theme="modern"] #canvas-area::-webkit-scrollbar-thumb {
-  background: rgba(200,160,74,.25);
+  background: var(--rule-hi);
   border-radius: 3px;
 }
 body[data-theme="modern"] #canvas-area::-webkit-scrollbar-thumb:hover {
-  background: rgba(200,160,74,.45);
+  background: var(--arc);
 }
 body[data-theme="modern"] #canvas-area::-webkit-scrollbar-track { background: rgba(0,0,0,.3) }
 body[data-theme="modern"] #canvas-area::-webkit-scrollbar-corner { background: rgba(0,0,0,.3) }
@@ -302,21 +302,21 @@ body[data-theme="modern"] #canvas-area::-webkit-scrollbar-corner { background: r
 /* ── Chat log modern scrollbars ── */
 body[data-theme="modern"] .chat-log {
   scrollbar-width: thin;
-  scrollbar-color: rgba(200,160,74,.2) transparent;
+  scrollbar-color: var(--rule-hi) transparent;
 }
 body[data-theme="modern"] .chat-log::-webkit-scrollbar { width: 4px }
 body[data-theme="modern"] .chat-log::-webkit-scrollbar-thumb {
-  background: rgba(200,160,74,.2);
+  background: var(--rule-hi);
   border-radius: 2px;
 }
-body[data-theme="modern"] .chat-log::-webkit-scrollbar-thumb:hover { background: rgba(200,160,74,.4) }
+body[data-theme="modern"] .chat-log::-webkit-scrollbar-thumb:hover { background: var(--arc) }
 body[data-theme="modern"] .chat-log::-webkit-scrollbar-track { background: transparent }
 
 /* ── Right panel — token details (Modern HUD) ── */
 body[data-theme="modern"] #side-panel {
   width: 264px;
   background: var(--ink);
-  border-left: 1px solid rgba(200,160,74,.08);
+  border-left: 1px solid var(--wash);
 }
 body[data-theme="modern"] #rp-placeholder { color: var(--ash-dim) }
 body[data-theme="modern"] .rp-action-row {
@@ -331,13 +331,13 @@ body[data-theme="modern"] #rp-portrait-img {
   width: 64px;
   height: 64px;
   border: 2px solid var(--rule-hi);
-  box-shadow: 0 0 14px rgba(200,160,74,.25);
+  box-shadow: 0 0 14px var(--rule-hi);
 }
 body[data-theme="modern"] #rp-portrait-ph {
   width: 64px;
   height: 64px;
   background: var(--slate);
-  border: 2px solid rgba(200,160,74,.25);
+  border: 2px solid var(--rule-hi);
   font-size: 26px;
 }
 body[data-theme="modern"] #hp-panel-name { font-size: 14px; color: var(--bone) }
@@ -349,14 +349,14 @@ body[data-theme="modern"] .rp-stats-row {
 body[data-theme="modern"] .rp-stat-block { padding: 10px 4px }
 body[data-theme="modern"] .rp-stat-cur { font-size: 26px !important }
 body[data-theme="modern"] #hp-ac-display  { font-size: 26px !important; font-weight: 700 }
-body[data-theme="modern"] .rp-stat-lbl { color: var(--ash-dim); letter-spacing: 1px }
-body[data-theme="modern"] .rp-stat-divider { background: rgba(200,160,74,.12) }
+body[data-theme="modern"] .rp-stat-lbl { color: var(--ash-dim); }
+body[data-theme="modern"] .rp-stat-divider { background: var(--wash) }
 
 /* Right panel — ability scores */
 body[data-theme="modern"] .rp-ability-grid { padding: 6px 10px 10px; gap: 5px }
 body[data-theme="modern"] .rp-ability-block {
   background: var(--slate);
-  border-color: rgba(200,160,74,.12);
+  border-color: var(--wash);
   border-radius: 5px;
   padding: 6px 3px;
 }
@@ -384,7 +384,7 @@ body[data-theme="modern"] #hp-max-display { font-size: 16px !important }
 /* ── DM Tools modal ── */
 body[data-theme="modern"] #dm-tools-modal > div {
   background: var(--slate);
-  border-color: rgba(200,160,74,.35);
+  border-color: var(--rule-hi);
 }
 body[data-theme="modern"] #dm-tools-modal .btn { border-radius: 6px }
 
@@ -402,23 +402,23 @@ body[data-theme="modern"] #side-panel.rp-open {
   width: var(--rp-width, 264px);
   min-width: var(--rp-width, 264px);
   overflow-y: auto;
-  border-left: 1px solid rgba(200,160,74,.08);
+  border-left: 1px solid var(--wash);
 }
 
 /* ── Secondary stats row (modern) ── */
 body[data-theme="modern"] .rp-sec-stats { background: var(--ink); border-color: rgba(255,255,255,.04) }
 body[data-theme="modern"] .rp-sec-stat { padding: 8px 2px }
-body[data-theme="modern"] .rp-sec-stat[onclick]:hover { background: rgba(200,160,74,.08); cursor: pointer }
+body[data-theme="modern"] .rp-sec-stat[onclick]:hover { background: var(--arc-fill); cursor: pointer }
 body[data-theme="modern"] .rp-sec-val { font-size: 17px; color:var(--bone) }
-body[data-theme="modern"] .rp-sec-lbl { color: var(--ash-dim); font-size: 8px; letter-spacing: .7px }
-body[data-theme="modern"] .rp-sec-divider { background: rgba(200,160,74,.12) }
+body[data-theme="modern"] .rp-sec-lbl { color: var(--ash-dim); font-size: 8px; }
+body[data-theme="modern"] .rp-sec-divider { background: var(--wash) }
 
 /* ── Flat section headers (modern, no collapse) ── */
 body[data-theme="modern"] .rp-flat-hdr {
   background: var(--slate);
   border-color: rgba(255,255,255,.04);
-  color: rgba(200,160,74,.65);
-  letter-spacing: 1.5px;
+  color: var(--bone);
+  
   padding: 6px 10px 4px;
 }
 
@@ -428,14 +428,14 @@ body[data-theme="modern"] .rp-tabs {
   gap: 2px;
   padding: 6px 8px 0;
   background: var(--ink);
-  border-bottom: 1px solid rgba(200,160,74,.16);
+  border-bottom: 1px solid var(--wash);
 }
 body[data-theme="modern"] .rp-tab {
   flex: 1;
   padding: 7px 4px;
   font-size: 11px;
   font-weight: 600;
-  letter-spacing: .4px;
+  
   color: var(--ash);
   background: transparent;
   border: none;
@@ -448,7 +448,7 @@ body[data-theme="modern"] .rp-tab:hover { color: var(--bone); background: rgba(2
 body[data-theme="modern"] .rp-tab.active {
   color: var(--arc);
   border-bottom-color: var(--arc);
-  background: rgba(200,160,74,.08);
+  background: var(--arc-fill);
 }
 body[data-theme="modern"] .rp-tab-pane { padding-bottom: 4px }
 
@@ -465,10 +465,10 @@ body[data-theme="modern"] .rp-subtab {
   padding: 4px 8px;
   font-size: 10px;
   font-weight: 600;
-  letter-spacing: .3px;
+  
   color: var(--ash);
   background: rgba(255,255,255,.03);
-  border: 1px solid rgba(200,160,74,.14);
+  border: 1px solid var(--wash);
   border-radius: 5px;
   cursor: pointer;
   white-space: nowrap;
@@ -477,8 +477,8 @@ body[data-theme="modern"] .rp-subtab {
 body[data-theme="modern"] .rp-subtab:hover { color: var(--bone) }
 body[data-theme="modern"] .rp-subtab.active {
   color: var(--arc);
-  border-color: rgba(200,160,74,.5);
-  background: rgba(200,160,74,.1);
+  border-color: var(--arc);
+  background: var(--arc-fill);
 }
 body[data-theme="modern"] .rp-tab-empty {
   padding: 18px 10px;
@@ -493,8 +493,8 @@ body[data-theme="modern"] .rp-skill-grid .qroll-row { padding: 3px 10px; font-si
 /* ── Spell slots (modern) ── */
 body[data-theme="modern"] .rp-spell-slots { padding: 8px 10px; gap: 10px }
 body[data-theme="modern"] .rp-spell-pip { background: var(--rule-hi) }
-body[data-theme="modern"] .rp-spell-pip.used { background: transparent; border-color: rgba(200,160,74,.2) }
-body[data-theme="modern"] .rp-spell-lvl-num { color: rgba(200,160,74,.7) }
+body[data-theme="modern"] .rp-spell-pip.used { background: transparent; border-color: var(--rule-hi) }
+body[data-theme="modern"] .rp-spell-lvl-num { color: var(--bone) }
 
 /* ── Monster info — modern HUD ── */
 
@@ -554,19 +554,19 @@ body[data-theme="modern"] .rp-save-prof .rp-save-val { color: var(--bone) }
 /* ── Floating zoom — modern polish ── */
 body[data-theme="modern"] #zoom-float {
   background: rgba(9,12,20,.88);
-  border-color: rgba(200,160,74,.2);
+  border-color: var(--rule-hi);
   border-radius: 10px;
   padding: 5px 10px;
-  box-shadow: 0 4px 20px rgba(0,0,0,.5), 0 0 0 1px rgba(200,160,74,.06);
+  box-shadow: 0 4px 20px rgba(0,0,0,.5), 0 0 0 1px var(--wash);
   transition: right .18s ease;
 }
 body[data-theme="modern"] #zoom-float button {
-  border-color: rgba(200,160,74,.25);
+  border-color: var(--rule-hi);
   border-radius: 5px;
 }
 body[data-theme="modern"] #zoom-float button:hover {
-  background: rgba(200,160,74,.14);
-  border-color: rgba(200,160,74,.55);
+  background: var(--arc-fill);
+  border-color: var(--arc);
 }
 
 /* ── Modal box backgrounds ── */
@@ -578,5 +578,5 @@ body[data-theme="modern"] #group-init-modal > div,
 body[data-theme="modern"] #confirm-modal > div,
 body[data-theme="modern"] .modal-box {
   background: var(--ink);
-  border-color: rgba(200,160,74,.28);
+  border-color: var(--rule-hi);
 }

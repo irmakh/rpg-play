@@ -191,7 +191,7 @@ async function submitAddToken() {
     payload = {
       name, type: _pendingTokenType || 'character', linkedId: _pendingTokenLinkedId,
       hpCurrent: hpCur, hpMax, hpTemp, speed, ac: charAc,
-      color: _pendingTokenType === 'npc' ? '#7ec8e3' : '#c8a04a',
+      color: _pendingTokenType === 'npc' ? '#8C9EFF' : '#E8E1D4',   // --arc / --bone
       initiativeId: initEntry?.id || '',
       portrait, portraitThumb,
       tokenSize, x: centerX, y: centerY

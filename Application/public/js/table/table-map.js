@@ -166,7 +166,7 @@ function renderFog() {
         fCtx.textAlign = 'center';
         fCtx.textBaseline = 'middle';
         fCtx.shadowColor = '#000'; fCtx.shadowBlur = 3;
-        fCtx.fillStyle = 'rgba(200,160,74,0.9)';
+        fCtx.fillStyle = 'rgba(140,158,255,0.9)';
         fCtx.fillText(r.label, px + pw / 2, py + ph / 2);
         fCtx.shadowBlur = 0; fCtx.textBaseline = 'alphabetic';
       }
@@ -327,7 +327,7 @@ function highlightMapRegion(id) {
   if (!r) return;
   const cs = tableState.cellSize || 50;
   const ox = tableState.offsetX || 0, oy = tableState.offsetY || 0;
-  _drawHighlight(ox + r.x * cs, oy + r.y * cs, r.w * cs, r.h * cs, 'rgba(200,160,74,1)');
+  _drawHighlight(ox + r.x * cs, oy + r.y * cs, r.w * cs, r.h * cs, 'rgba(140,158,255,1)');
 }
 
 function highlightMapItem(id) {
@@ -355,7 +355,7 @@ function _dismissMapCtxMenu() {
 function _showMapCtxMenu(cx, cy, html) {
   _dismissMapCtxMenu();
   const div = document.createElement('div');
-  div.style.cssText = 'position:fixed;z-index:9999;background:#0f1424;border:1px solid rgba(200,160,74,.4);border-radius:6px;padding:8px 10px;font-size:12px;color:var(--bone);box-shadow:0 4px 18px rgba(0,0,0,.75);min-width:155px;max-width:220px';
+  div.style.cssText = 'position:fixed;z-index:9999;background:var(--slate);border:1px solid rgba(140,158,255,.4);border-radius:6px;padding:8px 10px;font-size:12px;color:var(--bone);box-shadow:0 4px 18px rgba(0,0,0,.75);min-width:155px;max-width:220px';
   div.innerHTML = html;
   document.body.appendChild(div);
   _mapCtxMenu = div;
@@ -376,7 +376,7 @@ canvasArea.addEventListener('click', e => {
   for (const r of fogRegions) {
     if (gx >= r.x && gx < r.x + r.w && gy >= r.y && gy < r.y + r.h) {
       _showMapCtxMenu(e.clientX, e.clientY,
-        `<div style="font-size:9px;color:rgba(200,160,74,.6);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Fog Region</div>`
+        `<div style="font-size:9px;color:rgba(140,158,255,.6);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Fog Region</div>`
         + `<div style="font-weight:bold;margin-bottom:3px">${esc(r.label || 'Region')}</div>`
         + `<div style="font-size:10px;margin-bottom:7px;color:${r.visible ? '#88ff88' : 'var(--ash)'}">${r.visible ? '👁 Revealed to players' : '🌫 Hidden from players'}</div>`
         + (r.visible
@@ -392,7 +392,7 @@ canvasArea.addEventListener('click', e => {
     if (gx >= item.x && gx < item.x + iw && gy >= item.y && gy < item.y + ih) {
       const icon = ITEM_ICONS[item.type] || '?';
       _showMapCtxMenu(e.clientX, e.clientY,
-        `<div style="font-size:9px;color:rgba(200,160,74,.6);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">${icon} Hidden Item</div>`
+        `<div style="font-size:9px;color:rgba(140,158,255,.6);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">${icon} Hidden Item</div>`
         + `<div style="font-weight:bold;margin-bottom:3px">${esc(item.label || 'Item')}</div>`
         + (item.description ? `<div style="font-size:10px;color:var(--ash);margin-bottom:5px;max-height:54px;overflow-y:auto;white-space:pre-wrap;word-break:break-word">${esc(item.description)}</div>` : '')
         + `<div style="font-size:10px;margin-bottom:7px;color:${item.visible ? '#88ff88' : '#ff8888'}">${item.visible ? '👁 Revealed to players' : '🔴 Hidden from players'}</div>`
@@ -1251,9 +1251,9 @@ document.addEventListener('mousemove', e => {
   oCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
   oCtx.beginPath();
   oCtx.arc(cx, cy, size / 2, 0, Math.PI * 2);
-  oCtx.fillStyle = 'rgba(200,160,74,0.3)';
+  oCtx.fillStyle = 'rgba(140,158,255,0.3)';
   oCtx.fill();
-  oCtx.strokeStyle = 'rgba(200,160,74,0.8)';
+  oCtx.strokeStyle = 'rgba(140,158,255,0.8)';
   oCtx.lineWidth = 2;
   oCtx.stroke();
   if (!dragState.freeMove) {

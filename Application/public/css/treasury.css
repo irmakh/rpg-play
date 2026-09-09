@@ -1,7 +1,7 @@
 /* Treasury — unified loot + shop manager. Full-screen master-detail. */
 
 *{box-sizing:border-box;margin:0;padding:0}
-:root{--loot:#7ec8e3;--shop:#c8a04a;--hid:#8b8b8b}
+:root{--loot:var(--arc);--shop:var(--verdigris);--hid:var(--ash-dim)}
 
 
 

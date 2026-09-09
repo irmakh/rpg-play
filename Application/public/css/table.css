@@ -10,12 +10,12 @@ body{display:flex;flex-direction:column}
 .draw-shape-btn.active,.draw-thick-btn.active,.draw-mode-btn.active{background:var(--arc);color:var(--ink);border-color:var(--arc)}
 .draw-tb-sep{width:1px;height:18px;background:var(--rule-hi);margin:0 2px;flex-shrink:0}
 #table-wrap{display:flex;flex:1;overflow:hidden;position:relative}
-#canvas-area{flex:1;overflow:auto;position:relative;background:#0a0a14;cursor:crosshair}
+#canvas-area{flex:1;overflow:auto;position:relative;background:var(--sunken);cursor:crosshair}
 
 /* ── Floating zoom widget ── */
 #zoom-float{position:absolute;bottom:14px;right:calc(240px + 12px);z-index:50;display:flex;align-items:center;gap:5px;background:rgba(10,10,20,.82);border:1px solid rgba(180,140,60,.35);border-radius:8px;padding:5px 10px;backdrop-filter:blur(6px);pointer-events:all}
 #zoom-float button{background:none;border:1px solid rgba(180,140,60,.4);color:var(--bone);border-radius:4px;width:22px;height:22px;cursor:pointer;font-size:14px;line-height:1;padding:0;flex-shrink:0;transition:background .1s,border-color .1s}
-#zoom-float button:hover{background:rgba(200,160,74,.15);border-color:var(--bone)}
+#zoom-float button:hover{background:var(--arc-fill);border-color:var(--bone)}
 #zoom-float #slider-zoom{width:70px;cursor:pointer;accent-color:var(--bone)}
 #zoom-float #zoom-val{font-size:11px;color:var(--bone);min-width:33px;text-align:right}
 /* Classic theme: side panel always 240px */
@@ -138,7 +138,7 @@ input:focus,select:focus{outline:none;border-color:var(--arc)}
 .init-row:hover{background:var(--a11)}
 .init-row:last-child{border-bottom:none}
 .init-row.init-cur{background:var(--wash)}
-.init-row.init-viewing{background:rgba(200,160,74,.18);border-left:2px solid var(--rule-hi)}
+.init-row.init-viewing{background:var(--wash);border-left:2px solid var(--rule-hi)}
 .init-cur-marker{color:var(--bone);font-size:10px;width:10px;flex-shrink:0;text-align:center}
 .init-row-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .init-row-roll{font-weight:bold;font-size:13px;color:var(--bone);min-width:28px;text-align:right;flex-shrink:0}
@@ -171,10 +171,10 @@ input:focus,select:focus{outline:none;border-color:var(--arc)}
 /* ── Resize handles ── */
 .resize-handle-v{width:4px;flex-shrink:0;cursor:col-resize;background:transparent;z-index:10;position:relative;transition:background .15s}
 .resize-handle-v::after{content:'';position:absolute;inset:0 -4px}
-.resize-handle-v:hover,.resize-handle-v.rh-active{background:rgba(200,160,74,.55)}
+.resize-handle-v:hover,.resize-handle-v.rh-active{background:var(--arc)}
 .resize-handle-h{height:5px;flex-shrink:0;cursor:row-resize;background:transparent;z-index:10;position:relative;transition:background .15s}
 .resize-handle-h::after{content:'';position:absolute;inset:-4px 0}
-.resize-handle-h:hover,.resize-handle-h.rh-active{background:rgba(200,160,74,.55)}
+.resize-handle-h:hover,.resize-handle-h.rh-active{background:var(--arc)}
 /* Modal drag handle cursor */
 .modal-drag-handle{cursor:grab;user-select:none}
 .modal-drag-handle:active{cursor:grabbing}
@@ -227,8 +227,8 @@ input:focus,select:focus{outline:none;border-color:var(--arc)}
 .cond-btn.active{background:rgba(255,140,0,.25);border-color:rgba(255,140,0,.8);color:#ffa500}
 .cond-btn.partial{background:rgba(255,140,0,.1);border-color:rgba(255,140,0,.4);color:#cc8800}
 @keyframes pulse-ring{
-  0%,100%{box-shadow:0 0 0 3px rgba(200,160,74,.4),0 0 12px 4px rgba(200,160,74,.2)}
-  50%{box-shadow:0 0 0 5px rgba(200,160,74,.8),0 0 20px 8px rgba(200,160,74,.4)}
+  0%,100%{box-shadow:0 0 0 3px var(--rule-hi),0 0 12px 4px var(--rule-hi)}
+  50%{box-shadow:0 0 0 5px var(--bone),0 0 20px 8px var(--rule-hi)}
 }
 .ping-ring{position:absolute;border-radius:50%;pointer-events:none;transform:translate(-50%,-50%);animation:ping-expand 2s ease-out forwards}
 @keyframes ping-expand{
@@ -242,7 +242,7 @@ input:focus,select:focus{outline:none;border-color:var(--arc)}
 .dice-anim-switch{position:relative;width:34px;min-width:34px;height:18px;padding:0;margin-left:4px;border:1px solid var(--rule-hi);border-radius:9px;background:var(--slate-hi);cursor:pointer;flex-shrink:0;transition:background .2s,border-color .2s}
 .dice-anim-switch .das-knob{position:absolute;top:1px;left:1px;width:14px;height:14px;border-radius:50%;background:var(--ash);transition:left .2s,background .2s}
 .dice-anim-switch.on{background:var(--verdigris);border-color:var(--verdigris)}
-.dice-anim-switch.on .das-knob{left:17px;background:#0a2040}
+.dice-anim-switch.on .das-knob{left:17px;background:var(--slate)}
 
 /* ── 3D Dice Overlay ── */
 #dice-overlay{
@@ -264,7 +264,7 @@ input:focus,select:focus{outline:none;border-color:var(--arc)}
   border:2px solid var(--rule-hi);
   display:flex;align-items:center;justify-content:center;
   font-weight:bold;color:var(--bone);backface-visibility:hidden;
-  box-shadow:inset 0 0 24px rgba(200,160,74,.12),0 2px 10px #0006;
+  box-shadow:inset 0 0 24px var(--wash),0 2px 10px #0006;
 }
 @keyframes dice-tumble{
   0%  {transform:rotateX(0deg) rotateY(0deg) rotateZ(0deg)}
@@ -410,7 +410,7 @@ input:focus,select:focus{outline:none;border-color:var(--arc)}
 .d10-face:nth-child(10){top:100px;transform:rotateY(360deg) translateZ(-24px) translateY(2.88px) rotateZ(180deg) rotateY(180deg) rotateX(30deg)}
 .dice-result-big{
   font-size:72px;font-weight:bold;line-height:1;color:var(--bone);
-  text-shadow:0 0 40px rgba(200,160,74,.5);
+  text-shadow:0 0 40px var(--bone);
   opacity:0;transform:scale(.6);transition:opacity .35s ease,transform .35s ease;
 }
 .dice-result-big.show{opacity:1;transform:scale(1)}
@@ -529,15 +529,15 @@ input[type=number]{-moz-appearance:textfield;appearance:textfield}
 .ho-rp-top { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; }
 .ho-rp-title { flex: 1; font-size: 12px; font-weight: bold; color:var(--bone); }
 .ho-rp-new {
-  font-size: 8px; font-weight: bold; text-transform: uppercase; letter-spacing: .4px;
+  font-size: 8px; font-weight: bold;  
   color: var(--ink); background:var(--slate-hi); border-radius: 20px; padding: 1px 5px;
 }
 .ho-rp-pill {
-  font-size: 8px; font-weight: bold; text-transform: uppercase; letter-spacing: .4px;
+  font-size: 8px; font-weight: bold;  
   border-radius: 20px; padding: 1px 6px;
 }
 .ho-rp-pill.pending { background: #ffffff11; color: var(--ash); }
-.ho-rp-pill.rolled  { background: #e0b86022; color: #e0b860; }
+.ho-rp-pill.rolled  { background: var(--arc-fill); color: var(--arc); }
 .ho-rp-pill.success { background: #88ff8822; color: #88ff88; }
 .ho-rp-pill.fail    { background: #ff888822; color: #ff8888; }
 .ho-rp-sub { font-size: 10px; color: var(--ash); margin-bottom: 5px; }
@@ -589,7 +589,7 @@ input[type=number]{-moz-appearance:textfield;appearance:textfield}
 }
 .ho-mo-lbl {
   display: flex; align-items: center; gap: 6px;
-  font-size: 10px; color:var(--bone); text-transform: uppercase;
+  font-size: 10px; color:var(--bone); 
    margin-bottom: 5px;
 }
 .ho-mo-bulk { margin-left: auto; display: flex; gap: 4px; }
@@ -624,15 +624,15 @@ input[type=number]{-moz-appearance:textfield;appearance:textfield}
 .ho-mo-name { flex: 1; }
 .ho-mo-note { font-size: 9px; color: var(--ash); font-style: italic; }
 .ho-mo-wait {
-  margin-left: 6px; font-size: 9px; font-weight: bold; letter-spacing: .3px;
-  color: var(--ink); background: #e0b860; border-radius: 20px; padding: 1px 5px;
+  margin-left: 6px; font-size: 9px; font-weight: bold; 
+  color: var(--ink); background: var(--arc); border-radius: 20px; padding: 1px 5px;
 }
 .ho-mo-rec {
   padding: 7px 9px; border-bottom: 1px solid var(--rule);
   border-left: 3px solid transparent;
 }
 .ho-mo-rec:last-child { border-bottom: none; }
-.ho-mo-rec.rolled  { border-left-color: #e0b860; background: #e0b8600f; }
+.ho-mo-rec.rolled  { border-left-color: var(--arc); background: var(--arc-fill); }
 .ho-mo-rec.success { border-left-color: #88ff88; }
 .ho-mo-rec.fail    { border-left-color: #ff8888; }
 .ho-mo-rec-top { display: flex; align-items: center; gap: 6px; font-size: 12px; }
@@ -650,9 +650,9 @@ input[type=number]{-moz-appearance:textfield;appearance:textfield}
    Scoped to #table-wrap on purpose, never fixed to the viewport: #now-playing-bar
    and #bg-music are siblings outside it, so the music keeps playing and its
    track name, seek bar and volume stay reachable while the screen is up. */
-#waiting-overlay{position:absolute;inset:0;z-index:60;background:#05060c;display:flex;align-items:center;justify-content:center;overflow:hidden}
+#waiting-overlay{position:absolute;inset:0;z-index:60;background:var(--sunken);display:flex;align-items:center;justify-content:center;overflow:hidden}
 #waiting-overlay-img{max-width:100%;max-height:100%;width:100%;height:100%;object-fit:contain;display:block}
-#waiting-overlay-caption{position:absolute;left:0;right:0;bottom:0;padding:14px 18px;text-align:center;font-size:15px;letter-spacing:.3px;color:var(--bone);background:linear-gradient(transparent,rgba(5,6,12,.86) 55%);pointer-events:none}
+#waiting-overlay-caption{position:absolute;left:0;right:0;bottom:0;padding:14px 18px;text-align:center;font-size:15px;color:var(--bone);background:linear-gradient(transparent,rgba(5,6,12,.86) 55%);pointer-events:none}
 #side-panel{position:relative;z-index:70}
 
 /* DM banner — the DM still sees the map, so this is the only thing telling them
@@ -670,7 +670,7 @@ input[type=number]{-moz-appearance:textfield;appearance:textfield}
 .wp-card img{display:block;width:100%;height:88px;object-fit:cover}
 .wp-noimg{display:flex;align-items:center;justify-content:center;height:88px;font-size:11px;color:var(--ash);background:var(--slate-hi)}
 .wp-name{padding:7px 9px;font-size:12px;color:var(--bone);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.wp-badge{position:absolute;top:6px;right:6px;padding:2px 7px;border-radius:4px;font-size:10px;background:var(--slate-hi);color:#12121c}
+.wp-badge{position:absolute;top:6px;right:6px;padding:2px 7px;border-radius:4px;font-size:10px;background:var(--slate-hi);color:var(--slate)}
 .wp-empty{grid-column:1/-1;padding:22px;text-align:center;font-size:12px;color:var(--ash)}
 .wp-empty a{color:var(--bone)}
 

@@ -6,7 +6,7 @@
 <title>Map Prep — DM</title>
 <script>(function(){try{var s=JSON.parse(sessionStorage.getItem('rpgSession')||'null');if(!s||s.role!=='dm'){location.replace('/login.html?next='+encodeURIComponent(location.pathname));}}catch(e){location.replace('/login.html');}})();</script>
 <link rel="manifest" href="/manifest.json">
-<meta name="theme-color" content="#1a1a2e">
+<meta name="theme-color" content="#16130F">
 <script>if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js');</script>
 <link rel="stylesheet" href="/css/tokens.css">
 <link rel="stylesheet" href="/css/fonts.css">
@@ -27,7 +27,7 @@
 
   /* Sidebar sections */
   .sb-section{border-bottom:1px solid var(--rule-hi);flex-shrink:0}
-  .sb-section-hdr{font-size:10px;color:var(--bone);text-transform:uppercase;letter-spacing:.5px;font-weight:bold;cursor:pointer;display:flex;justify-content:space-between;align-items:center;padding:7px 10px;background:var(--wash);user-select:none}
+  .sb-section-hdr{font-size:10px;color:var(--bone);font-weight:bold;cursor:pointer;display:flex;justify-content:space-between;align-items:center;padding:7px 10px;background:var(--wash);user-select:none}
   .sb-section-hdr:hover{background:var(--rule-hi)}
   .sb-section-body{padding:6px 10px}
 
@@ -46,7 +46,7 @@
   /* Editor main area */
   #pm-editor{flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden}
   #pm-toolbar{flex-shrink:0;display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:6px 10px;background:var(--slate);border-bottom:1px solid var(--rule-hi)}
-  #pm-canvas-area{flex:1;overflow:hidden;position:relative;background:#0a0a14;cursor:default;display:flex;align-items:flex-start;justify-content:flex-start}
+  #pm-canvas-area{flex:1;overflow:hidden;position:relative;background:var(--sunken);cursor:default;display:flex;align-items:flex-start;justify-content:flex-start}
   #pm-controls{flex-shrink:0;display:flex;gap:12px;align-items:flex-start;padding:8px 10px;background:var(--slate);border-top:1px solid var(--rule-hi);flex-wrap:wrap}
 
   /* Canvas layers */
@@ -62,7 +62,7 @@
 
   /* Controls section groups */
   .ctrl-group{display:flex;flex-direction:column;gap:4px;min-width:120px}
-  .ctrl-group label.lbl{font-size:9px;color:var(--bone);text-transform:uppercase;letter-spacing:.5px}
+  .ctrl-group label.lbl{font-size:9px;color:var(--bone);}
 
   /* Hidden items section fills remaining sidebar height */
   #sb-items-section{flex:1;display:flex;flex-direction:column;min-height:0}
@@ -267,7 +267,7 @@
           <span id="pm-portrait-empty"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-image"></use></svg> </span>
         </div>
         <div>
-          <div style="font-size:9px;color:var(--ash);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px">Portrait</div>
+          <div style="font-size:9px;color:var(--ash);margin-bottom:4px">Portrait</div>
           <div style="display:flex;gap:4px">
             <button class="btn sm" style="font-size:10px;padding:2px 7px" onclick="document.getElementById('pm-portrait-input').click()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-camera"></use></svg> Upload</button>
             <button id="pm-portrait-clear-btn" class="btn sm danger" style="font-size:10px;padding:2px 7px;display:none" onclick="clearPmPortrait()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg> Clear</button>
@@ -295,36 +295,36 @@
           <span style="font-size:10px;color:var(--ash)">(shown to players)</span>
         </div>
         <div style="display:flex;gap:5px;margin-top:8px">
-          <div style="flex:1"><label style="font-size:9px;color:var(--bone);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:2px">HP Max</label>
+          <div style="flex:1"><label style="font-size:9px;color:var(--bone);display:block;margin-bottom:2px">HP Max</label>
             <input type="number" id="pm-tok-hp" value="10" min="1" style="width:100%;padding:3px 5px;font-size:11px;background:var(--slate-hi);border:1px solid var(--rule-hi);color:var(--bone);border-radius:3px"></div>
-          <div style="flex:1"><label style="font-size:9px;color:var(--bone);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:2px">AC</label>
+          <div style="flex:1"><label style="font-size:9px;color:var(--bone);display:block;margin-bottom:2px">AC</label>
             <input type="number" id="pm-tok-ac" value="" placeholder="—" style="width:100%;padding:3px 5px;font-size:11px;background:var(--slate-hi);border:1px solid var(--rule-hi);color:var(--bone);border-radius:3px"></div>
-          <div style="flex:1"><label style="font-size:9px;color:var(--bone);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:2px">Speed</label>
+          <div style="flex:1"><label style="font-size:9px;color:var(--bone);display:block;margin-bottom:2px">Speed</label>
             <input type="number" id="pm-tok-speed" value="30" min="0" style="width:100%;padding:3px 5px;font-size:11px;background:var(--slate-hi);border:1px solid var(--rule-hi);color:var(--bone);border-radius:3px"></div>
         </div>
       </div>
       <!-- Custom tab -->
       <div id="pm-tab-custom" style="display:none">
         <div style="margin-bottom:6px">
-          <label style="font-size:9px;color:var(--bone);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:2px">Name</label>
+          <label style="font-size:9px;color:var(--bone);display:block;margin-bottom:2px">Name</label>
           <input type="text" id="pm-tok-custom-name" placeholder="Token name…"
             style="width:100%;box-sizing:border-box;padding:4px 8px;font-size:11px;background:var(--slate-hi);border:1px solid var(--rule-hi);color:var(--bone);border-radius:3px">
         </div>
         <div style="display:flex;gap:5px">
-          <div style="flex:1"><label style="font-size:9px;color:var(--bone);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:2px">HP Max</label>
+          <div style="flex:1"><label style="font-size:9px;color:var(--bone);display:block;margin-bottom:2px">HP Max</label>
             <input type="number" id="pm-tok-custom-hp" value="10" min="1" style="width:100%;padding:3px 5px;font-size:11px;background:var(--slate-hi);border:1px solid var(--rule-hi);color:var(--bone);border-radius:3px"></div>
-          <div style="flex:1"><label style="font-size:9px;color:var(--bone);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:2px">Speed</label>
+          <div style="flex:1"><label style="font-size:9px;color:var(--bone);display:block;margin-bottom:2px">Speed</label>
             <input type="number" id="pm-tok-custom-speed" value="30" min="0" style="width:100%;padding:3px 5px;font-size:11px;background:var(--slate-hi);border:1px solid var(--rule-hi);color:var(--bone);border-radius:3px"></div>
         </div>
       </div>
       <!-- Common -->
       <div style="margin-top:10px">
-        <label style="font-size:9px;color:var(--bone);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:5px">Color</label>
+        <label style="font-size:9px;color:var(--bone);display:block;margin-bottom:5px">Color</label>
         <input type="hidden" id="pm-tok-color" value="#c0392b">
         <div id="pm-tok-color-swatches" style="display:flex;flex-wrap:wrap;gap:6px"></div>
       </div>
       <div style="display:flex;gap:8px;align-items:center;margin-top:10px">
-        <label style="font-size:9px;color:var(--bone);text-transform:uppercase;letter-spacing:.5px">Size</label>
+        <label style="font-size:9px;color:var(--bone);">Size</label>
         <select id="pm-tok-size" style="flex:1;padding:3px 5px;font-size:11px;background:var(--slate-hi);border:1px solid var(--rule-hi);color:var(--bone);border-radius:3px">
           <option value="1">1×1</option><option value="2">2×2</option><option value="3">3×3</option><option value="4">4×4</option>
         </select>
