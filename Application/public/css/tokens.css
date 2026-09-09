@@ -60,6 +60,7 @@
      with --blood text, not a solid red block.                              */
 
   /* ── Structure. Hairlines, not boxes. ─────────────────────────────────── */
+  --wash:#E8E1D40D;       /* 5% bone - a neutral fill for a raised row      */
   --rule:#E8E1D41A;       /* 10% bone - the default separator               */
   --rule-hi:#E8E1D42E;    /* 18% bone - the edge of something raised        */
   --scrim:#080604C7;      /* modal backdrop                                 */
