@@ -46,7 +46,7 @@
     </div>
     <div class="hdr-right">
       <button class="btn" data-notif-bell="connect" title="Notifications"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-bell"></use></svg> </button>
-      <span id="save-status" style="font-size:11px;color:var(--txd)"></span>
+      <span id="save-status" style="font-size:11px;color:var(--ash)"></span>
     </div>
   </div>
 
@@ -284,7 +284,7 @@
         <input type="number" id="weather-l2-min" min="1" max="20" value="18" onchange="weatherOnThresholds()">
       </div>
     </div>
-    <div style="font-size:11px;color:var(--txd);margin:-2px 0 8px" id="weather-range-help">Normal 1–14 · Level 1 15–17 · Level 2 18–20</div>
+    <div style="font-size:11px;color:var(--ash);margin:-2px 0 8px" id="weather-range-help">Normal 1–14 · Level 1 15–17 · Level 2 18–20</div>
 
     <!-- Roll date selector -->
     <div class="cal-form-inline" style="align-items:flex-end">
@@ -320,7 +320,7 @@
       </div>
     </div>
     <div class="cal-form-row" style="margin:4px 0 8px">
-      <label>Weather for: <b id="weather-target-date" style="color:var(--ac)">—</b>
+      <label>Weather for: <b id="weather-target-date" style="color:var(--bone)">—</b>
         <a href="#" onclick="weatherUseCurrentDate();return false" style="font-size:11px;margin-left:8px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-refresh"></use></svg> campaign date</a>
         <button class="btn sm" id="weather-roll-btn" onclick="weatherRoll()" style="margin-left:10px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg> Roll dice</button></label>
     </div>

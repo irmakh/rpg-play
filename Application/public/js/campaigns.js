@@ -170,8 +170,8 @@ function renderDetail() {
         </div>
 
         <div id="char-setup-step" style="display:none">
-          <div style="font-size:13px;color:var(--ac);font-weight:bold;margin-bottom:4px" id="setup-char-name"></div>
-          <div style="font-size:11px;color:var(--txd);margin-bottom:14px">This character has no password yet.<br>Set one to continue.</div>
+          <div style="font-size:13px;color:var(--bone);font-weight:bold;margin-bottom:4px" id="setup-char-name"></div>
+          <div style="font-size:11px;color:var(--ash);margin-bottom:14px">This character has no password yet.<br>Set one to continue.</div>
           <div class="field">
             <label>New Password</label>
             <input type="password" id="setup-pw1" autocomplete="new-password"

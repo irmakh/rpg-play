@@ -31,7 +31,7 @@ async function loadCampaign() {
   const hint = document.querySelector('.hint');
   if (hint) {
     hint.innerHTML = 'Session is stored in this browser tab only.<br>'
-      + '<a href="/" style="color:var(--ac)">Switch campaign</a>';
+      + '<a href="/" style="color:var(--bone)">Switch campaign</a>';
   }
   return true;
 }

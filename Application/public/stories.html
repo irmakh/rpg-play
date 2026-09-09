@@ -30,7 +30,7 @@
     <p>Enter your password to continue.</p>
     <input type="password" id="gate-pw" placeholder="Password…" autocomplete="off"
            onkeydown="if(event.key==='Enter')storiesGateSubmit()">
-    <div id="gate-err" style="color:var(--err);font-size:12px;min-height:16px;margin-top:6px"></div>
+    <div id="gate-err" style="color:var(--blood);font-size:12px;min-height:16px;margin-top:6px"></div>
     <button class="btn primary" style="width:100%;margin-top:8px" onclick="storiesGateSubmit()">Enter</button>
   </div>
 </div>
@@ -99,10 +99,10 @@ async function storiesGateSubmit() {
                onkeydown="if(event.key==='Enter')createStory()">
       </div>
       <div class="field">
-        <label class="lbl">Description <span style="font-weight:normal;color:var(--txd)">(optional)</span></label>
+        <label class="lbl">Description <span style="font-weight:normal;color:var(--ash)">(optional)</span></label>
         <textarea id="new-desc" rows="2" placeholder="A short summary of this story…"></textarea>
       </div>
-      <div id="new-err" style="color:var(--err);font-size:11px;min-height:14px"></div>
+      <div id="new-err" style="color:var(--blood);font-size:11px;min-height:14px"></div>
     </div>
     <div class="modal-btns">
       <button class="btn" onclick="closeNewModal()">Cancel</button>
@@ -116,7 +116,7 @@ async function storiesGateSubmit() {
   <div class="modal-box" style="max-width:360px;width:96%">
     <div class="ct">Delete Story</div>
     <div class="modal-body">
-      <p id="del-msg" style="font-size:13px;line-height:1.5;color:var(--tx)"></p>
+      <p id="del-msg" style="font-size:13px;line-height:1.5;color:var(--bone)"></p>
     </div>
     <div class="modal-btns">
       <button class="btn" onclick="closeDelModal()">Cancel</button>

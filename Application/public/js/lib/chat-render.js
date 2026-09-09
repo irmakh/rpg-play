@@ -27,7 +27,7 @@ function appendChatEntry(e) {
       : `<div style="word-break:break-word;white-space:pre-wrap">${esc(e.message || '')}</div>`;
     div.innerHTML = `<div style="display:flex;justify-content:space-between;margin-bottom:2px">
       <span class="ce-sender">${esc(e.sender || '?')}</span>
-      <span style="color:var(--txd);font-size:10px">${time}</span>
+      <span style="color:var(--ash);font-size:10px">${time}</span>
     </div>${body}`;
     log.appendChild(div);
     return;
@@ -44,13 +44,13 @@ function appendChatEntry(e) {
     } else if (e.mimeType && e.mimeType.startsWith('audio/')) {
       mediaEl = `<audio src="${url}" controls style="max-width:100%;margin-top:6px;display:block"></audio>`;
     } else {
-      mediaEl = `<a href="${url}" target="_blank" style="display:inline-block;margin-top:6px;padding:4px 8px;background:var(--bg3);border-radius:4px;color:var(--ac);font-size:11px">📎 Open file</a>`;
+      mediaEl = `<a href="${url}" target="_blank" style="display:inline-block;margin-top:6px;padding:4px 8px;background:var(--slate-hi);border-radius:4px;color:var(--bone);font-size:11px">📎 Open file</a>`;
     }
-    const cap = e.caption ? `<div style="font-size:10px;color:var(--txd);margin-top:4px">${esc(e.caption)}</div>` : '';
+    const cap = e.caption ? `<div style="font-size:10px;color:var(--ash);margin-top:4px">${esc(e.caption)}</div>` : '';
     div.className = 'chat-entry';
     div.innerHTML = `<div style="display:flex;justify-content:space-between;margin-bottom:4px">
-      <span class="ce-sender">${esc(e.sender || 'DM')} <span style="font-size:10px;color:var(--txd);font-weight:normal">media</span></span>
-      <span style="color:var(--txd);font-size:10px">${time}</span>
+      <span class="ce-sender">${esc(e.sender || 'DM')} <span style="font-size:10px;color:var(--ash);font-weight:normal">media</span></span>
+      <span style="color:var(--ash);font-size:10px">${time}</span>
     </div>${mediaEl}${cap}`;
     log.appendChild(div);
     return;
@@ -61,19 +61,19 @@ function appendChatEntry(e) {
   const cls = isNat20 ? ' nat20' : isNat1 ? ' nat1' : '';
   const modStr = e.modifier ? (e.modifier > 0 ? `+${e.modifier}` : `${e.modifier}`) : '';
   const multiStr = e.results && e.results.length > 1
-    ? ` <span style="font-size:10px;color:var(--txd)">[${e.results.join(', ')}]</span>` : '';
+    ? ` <span style="font-size:10px;color:var(--ash)">[${e.results.join(', ')}]</span>` : '';
   const labelStr = e.label ? ` — ${esc(e.label)}` : '';
-  const natStr = isNat20 ? ' <span style="color:var(--ok)">✨ NAT 20!</span>'
-               : isNat1  ? ' <span style="color:var(--err)">💀 NAT 1</span>' : '';
+  const natStr = isNat20 ? ' <span style="color:var(--verdigris)">✨ NAT 20!</span>'
+               : isNat1  ? ' <span style="color:var(--blood)">💀 NAT 1</span>' : '';
   const descStr = e.description
-    ? `<div style="font-size:10px;color:var(--txd);margin-top:3px;font-style:italic;line-height:1.4;white-space:pre-wrap">${esc(e.description)}</div>`
+    ? `<div style="font-size:10px;color:var(--ash);margin-top:3px;font-style:italic;line-height:1.4;white-space:pre-wrap">${esc(e.description)}</div>`
     : '';
   div.className = `chat-entry${cls}`;
   div.innerHTML = `<div style="display:flex;justify-content:space-between;margin-bottom:2px">
     <span class="ce-sender">${esc(e.sender || '?')}</span>
-    <span style="color:var(--txd);font-size:10px">${time}</span>
+    <span style="color:var(--ash);font-size:10px">${time}</span>
   </div>
-  <span style="color:var(--txd);font-size:11px">${esc(e.dice || '')}${modStr}${labelStr}</span>${multiStr}
-  <div class="ce-total" style="color:${isNat20 ? 'var(--ok)' : isNat1 ? 'var(--err)' : 'var(--tx)'}">${e.total}${natStr}</div>${descStr}`;
+  <span style="color:var(--ash);font-size:11px">${esc(e.dice || '')}${modStr}${labelStr}</span>${multiStr}
+  <div class="ce-total" style="color:${isNat20 ? 'var(--verdigris)' : isNat1 ? 'var(--blood)' : 'var(--bone)'}">${e.total}${natStr}</div>${descStr}`;
   log.appendChild(div);
 }

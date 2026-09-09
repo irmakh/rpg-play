@@ -113,7 +113,7 @@ function renderActionsTab() {
 }
 
 function _actEmpty(msg) {
-  return `<div style="color:var(--txd);font-size:11px;padding:10px 4px;text-align:center">${esc(msg)}</div>`;
+  return `<div style="color:var(--ash);font-size:11px;padding:10px 4px;text-align:center">${esc(msg)}</div>`;
 }
 
 function _actRenderAttacks(attacks) {

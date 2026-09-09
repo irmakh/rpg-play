@@ -107,7 +107,7 @@ function renderTable() {
     return m.name.toLowerCase().includes(q) || type.includes(q);
   });
   if (filtered.length === 0) {
-    wrap.innerHTML = '<div style="text-align:center;color:var(--txd);padding:20px">' + (monsters.length === 0 ? 'No monsters imported yet.' : 'No monsters match your search.') + '</div>';
+    wrap.innerHTML = '<div style="text-align:center;color:var(--ash);padding:20px">' + (monsters.length === 0 ? 'No monsters imported yet.' : 'No monsters match your search.') + '</div>';
     return;
   }
   wrap.innerHTML = `<table>
@@ -236,7 +236,7 @@ async function exportMonster(id, name) {
     a.click();
   } catch (err) {
     const statusEl = document.getElementById('import-status');
-    if (statusEl) { statusEl.style.color = 'var(--err)'; statusEl.textContent = 'Export failed: ' + err.message; }
+    if (statusEl) { statusEl.style.color = 'var(--blood)'; statusEl.textContent = 'Export failed: ' + err.message; }
   }
 }
 
@@ -244,9 +244,9 @@ async function exportMonster(id, name) {
 async function importMonsters() {
   const raw = document.getElementById('import-text').value.trim();
   const statusEl = document.getElementById('import-status');
-  if (!raw) { statusEl.style.color = 'var(--err)'; statusEl.textContent = 'Paste JSON first.'; return; }
+  if (!raw) { statusEl.style.color = 'var(--blood)'; statusEl.textContent = 'Paste JSON first.'; return; }
   let parsed;
-  try { parsed = JSON.parse(raw); } catch(e) { statusEl.style.color = 'var(--err)'; statusEl.textContent = 'Invalid JSON: ' + e.message; return; }
+  try { parsed = JSON.parse(raw); } catch(e) { statusEl.style.color = 'var(--blood)'; statusEl.textContent = 'Invalid JSON: ' + e.message; return; }
   // Normalise: support single object, array, or 5etools {monster:[...]} format
   let list;
   if (Array.isArray(parsed)) {
@@ -256,9 +256,9 @@ async function importMonsters() {
   } else if (parsed && typeof parsed === 'object' && parsed.name) {
     list = [parsed];
   } else {
-    statusEl.style.color = 'var(--err)'; statusEl.textContent = 'Expected a monster object, array, or {monster:[...]} wrapper.'; return;
+    statusEl.style.color = 'var(--blood)'; statusEl.textContent = 'Expected a monster object, array, or {monster:[...]} wrapper.'; return;
   }
-  statusEl.style.color = 'var(--txd)'; statusEl.textContent = 'Importing…';
+  statusEl.style.color = 'var(--ash)'; statusEl.textContent = 'Importing…';
   try {
     const res = await fetch('/api/monsters/import', {
       method: 'POST',
@@ -267,11 +267,11 @@ async function importMonsters() {
     });
     if (res.status === 401) { location.href = '/dm.html'; return; }
     const data = await res.json();
-    if (!res.ok) { statusEl.style.color = 'var(--err)'; statusEl.textContent = data.error || 'Import failed.'; return; }
-    statusEl.style.color = 'var(--ok)'; statusEl.textContent = `✓ Imported ${data.count} monster${data.count !== 1 ? 's' : ''}.`;
+    if (!res.ok) { statusEl.style.color = 'var(--blood)'; statusEl.textContent = data.error || 'Import failed.'; return; }
+    statusEl.style.color = 'var(--verdigris)'; statusEl.textContent = `✓ Imported ${data.count} monster${data.count !== 1 ? 's' : ''}.`;
     document.getElementById('import-text').value = '';
     await loadMonsters();
-  } catch { statusEl.style.color = 'var(--err)'; statusEl.textContent = 'Network error.'; }
+  } catch { statusEl.style.color = 'var(--blood)'; statusEl.textContent = 'Network error.'; }
 }
 
 // ── Edit monster (form) ───────────────────────────────────────────────────────

@@ -59,7 +59,7 @@
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <button class="btn primary" onclick="importMonsters()">Import</button>
         <button class="btn" onclick="document.getElementById('import-text').value=''">Clear</button>
-        <span id="import-status" style="font-size:11px;color:var(--ok)"></span>
+        <span id="import-status" style="font-size:11px;color:var(--verdigris)"></span>
       </div>
     </div>
   </div>
@@ -72,7 +72,7 @@
         <input type="text" id="search-input" placeholder="Search by name or type…" oninput="renderTable()">
       </div>
       <div id="monster-table-wrap">
-        <div style="text-align:center;color:var(--txd);padding:20px">Loading…</div>
+        <div style="text-align:center;color:var(--ash);padding:20px">Loading…</div>
       </div>
     </div>
   </div>
@@ -108,8 +108,8 @@
 
       <div class="ef-sec">Portrait</div>
       <div style="display:flex;align-items:center;gap:12px;padding:4px 0 8px">
-        <img id="ef-portrait-preview" loading="lazy" style="width:64px;height:64px;object-fit:cover;border-radius:50%;border:2px solid var(--a44);display:none" alt="Portrait">
-        <div id="ef-portrait-none" style="font-size:11px;color:var(--txd)">No portrait set</div>
+        <img id="ef-portrait-preview" loading="lazy" style="width:64px;height:64px;object-fit:cover;border-radius:50%;border:2px solid var(--rule-hi);display:none" alt="Portrait">
+        <div id="ef-portrait-none" style="font-size:11px;color:var(--ash)">No portrait set</div>
         <button class="btn sm" onclick="efPickPortrait()">Upload Portrait</button>
         <button class="btn sm danger" id="ef-portrait-clear" onclick="efClearPortrait()" style="display:none">Remove</button>
         <input type="file" id="ef-portrait-input" accept="image/*" style="display:none" onchange="efPortraitChosen(this)">
@@ -132,7 +132,7 @@
         <div class="field"><label class="lbl">Init Modifier</label><input type="number" id="ef-init-bonus" min="-20" max="20" placeholder="0"></div>
         <div class="field" style="display:flex;align-items:center;gap:6px;padding-bottom:4px">
           <input type="checkbox" id="ef-init-prof" style="margin:0;cursor:pointer">
-          <label for="ef-init-prof" style="font-size:12px;cursor:pointer;color:var(--txd)">Add proficiency bonus to initiative</label>
+          <label for="ef-init-prof" style="font-size:12px;cursor:pointer;color:var(--ash)">Add proficiency bonus to initiative</label>
         </div>
       </div>
 
@@ -174,7 +174,7 @@
       <div class="ef-sec">Legendary Actions <button class="btn sm" onclick="addEditRow('ef-legendary')">+ Add</button></div>
       <div id="ef-legendary"></div>
 
-      <div id="edit-err" style="color:var(--err);font-size:11px;min-height:14px;margin-top:8px"></div>
+      <div id="edit-err" style="color:var(--blood);font-size:11px;min-height:14px;margin-top:8px"></div>
     </div>
     <div class="modal-btns">
       <button class="btn" onclick="closeEditMonsterModal()">Cancel</button>
@@ -188,7 +188,7 @@
   <div class="modal-box">
     <div class="ct" id="init-modal-title">Add to Initiative</div>
     <div class="modal-body">
-      <div style="margin-bottom:10px;font-size:12px;color:var(--txd)" id="init-modal-desc"></div>
+      <div style="margin-bottom:10px;font-size:12px;color:var(--ash)" id="init-modal-desc"></div>
       <div class="field">
         <label class="lbl">Name (optional override)</label>
         <input type="text" id="init-name-override" placeholder="">
@@ -197,7 +197,7 @@
         <label class="lbl">Initiative Bonus</label>
         <input type="number" id="init-bonus-val" min="-10" max="30">
       </div>
-      <div id="init-modal-err" style="color:var(--err);font-size:11px;min-height:14px"></div>
+      <div id="init-modal-err" style="color:var(--blood);font-size:11px;min-height:14px"></div>
     </div>
     <div class="modal-btns">
       <button class="btn" onclick="closeInitModal()">Cancel</button>

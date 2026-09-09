@@ -289,7 +289,7 @@ function renderSideHandoutsPane(charId) {
           + '</div>').join('')
       : '<div class="ho-rp-none">Every handout is already with this character.</div>';
     html += '<div class="ho-rp-none" style="margin-top:6px">'
-          + '<a href="/handouts.html" style="color:var(--ac)">Manage handouts →</a></div></div>';
+          + '<a href="/handouts.html" style="color:var(--bone)">Manage handouts →</a></div></div>';
   }
   return html;
 }
@@ -502,7 +502,7 @@ function renderHandoutModal() {
           + '<span class="ho-mo-pick-sub">' + check + (recs.length ? ' · with ' + recs.length : '') + '</span>'
           + '</button>';
       }).join('')
-    : '<div class="ho-rp-none">No handouts yet. <a href="/handouts.html" style="color:var(--ac)">Create one →</a></div>';
+    : '<div class="ho-rp-none">No handouts yet. <a href="/handouts.html" style="color:var(--bone)">Create one →</a></div>';
 
   const recById = new Map((picked ? picked.recipients || [] : []).map(r => [r.charId, r]));
   const anySuggested = [...recById.values()].some(r => r.outcome === 'rolled' && r.suggested);

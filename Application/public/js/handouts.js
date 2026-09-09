@@ -88,7 +88,7 @@ function renderList() {
         <div class="ho-thumb">${thumb ? `<img src="${esc(thumb)}" alt="">` : '📜'}</div>
         <div class="ho-meta">
           <div class="ho-name">${esc(h.title)}</div>
-          <div class="ho-sub">${check} · ${h.handedOut} handed out${out ? ` · ${out} resolved` : ''}${waiting ? ` · <span style="color:var(--warn)">${waiting} awaiting you</span>` : ''}</div>
+          <div class="ho-sub">${check} · ${h.handedOut} handed out${out ? ` · ${out} resolved` : ''}${waiting ? ` · <span style="color:var(--blood)">${waiting} awaiting you</span>` : ''}</div>
         </div>
       </button>`;
   }).join('');

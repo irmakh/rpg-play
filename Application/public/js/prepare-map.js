@@ -35,7 +35,7 @@ function _swatchGridHTML(selected, fnName) {
   const sc = String(selected || '').toLowerCase();
   return PM_TOKEN_COLORS.map(c => {
     const sel = sc === c.toLowerCase();
-    return `<div onclick="${fnName}('${c}')" title="${c}" style="width:24px;height:24px;border-radius:50%;background:${c};cursor:pointer;box-sizing:border-box;border:2px solid ${sel ? '#fff' : 'rgba(0,0,0,.35)'};outline:${sel ? '2px solid var(--ac)' : 'none'};outline-offset:1px"></div>`;
+    return `<div onclick="${fnName}('${c}')" title="${c}" style="width:24px;height:24px;border-radius:50%;background:${c};cursor:pointer;box-sizing:border-box;border:2px solid ${sel ? '#fff' : 'rgba(0,0,0,.35)'};outline:${sel ? '2px solid var(--bone)' : 'none'};outline-offset:1px"></div>`;
   }).join('');
 }
 
@@ -111,7 +111,7 @@ function escJs(s) {
 function showStatus(msg, isErr) {
   const el = document.getElementById('status-msg');
   el.textContent = msg;
-  el.style.color = isErr ? 'var(--err)' : 'var(--ok)';
+  el.style.color = isErr ? 'var(--blood)' : 'var(--verdigris)';
   if (msg) setTimeout(() => { if (el.textContent === msg) el.textContent = ''; }, 3000);
 }
 
@@ -434,8 +434,8 @@ function renderPrepFog() {
 
 // Undo affordance shown in place of a just-deleted row (fog / token / item).
 function _undoRowHTML(name) {
-  return `<div style="display:flex;align-items:center;gap:6px;padding:5px 7px;margin-bottom:4px;border:1px dashed var(--a55);border-radius:4px;background:var(--a22)">
-    <span style="flex:1;font-size:11px;color:var(--txd);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">🗑 Deleted "${esc(name)}"</span>
+  return `<div style="display:flex;align-items:center;gap:6px;padding:5px 7px;margin-bottom:4px;border:1px dashed var(--rule-hi);border-radius:4px;background:var(--wash)">
+    <span style="flex:1;font-size:11px;color:var(--ash);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">🗑 Deleted "${esc(name)}"</span>
     <button class="btn sm" onclick="undoDelete()" style="flex-shrink:0;font-size:10px;padding:2px 8px">↶ Undo</button>
   </div>`;
 }
@@ -471,8 +471,8 @@ function renderFogList() {
   const rows = prepState.fogRegions.map((r, i) => `
     <div class="fog-row">
       <input type="text" value="${esc(r.label)}" onchange="updateFogLabel(${i}, this.value)"
-        style="flex:1;padding:2px 5px;font-size:11px;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px">
-      <span style="font-size:10px;color:var(--txd);white-space:nowrap">${r.w}×${r.h} cells</span>
+        style="flex:1;padding:2px 5px;font-size:11px;background:var(--slate-hi);border:1px solid var(--rule-hi);color:var(--bone);border-radius:3px">
+      <span style="font-size:10px;color:var(--ash);white-space:nowrap">${r.w}×${r.h} cells</span>
       <button class="btn danger sm" onclick="deleteFogRegion(${i})">✕</button>
     </div>`);
   if (_lastDeleted && _lastDeleted.type === 'fog') {
@@ -480,7 +480,7 @@ function renderFogList() {
   }
   el.innerHTML = rows.length
     ? rows.join('')
-    : '<div style="font-size:11px;color:var(--txd);padding:4px 0">No regions yet. Enable draw mode and drag on the map.</div>';
+    : '<div style="font-size:11px;color:var(--ash);padding:4px 0">No regions yet. Enable draw mode and drag on the map.</div>';
 }
 
 function updateFogLabel(i, val) {
@@ -509,19 +509,19 @@ function renderItemList() {
     const expanded = _expandedItemId === item.id;
     const hasDesc = !!(item.description && item.description.trim());
     return `
-    <div style="border:1px solid var(--a44);border-radius:4px;margin-bottom:4px;overflow:hidden">
+    <div style="border:1px solid var(--rule-hi);border-radius:4px;margin-bottom:4px;overflow:hidden">
       <div style="display:flex;align-items:center;gap:4px;padding:4px 5px">
         <span style="font-size:12px;flex-shrink:0">${ITEM_TYPE_ICONS[item.type] || '?'}</span>
         <input type="text" value="${esc(item.label)}" onchange="updateItemLabel(${i}, this.value)"
-          style="flex:1;min-width:0;padding:2px 5px;font-size:11px;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px">
+          style="flex:1;min-width:0;padding:2px 5px;font-size:11px;background:var(--slate-hi);border:1px solid var(--rule-hi);color:var(--bone);border-radius:3px">
         <button class="btn sm" onclick="toggleItemExpand('${escJs(item.id)}')" title="${expanded ? 'Collapse' : 'Edit description'}"
-          style="padding:1px 6px;font-size:10px;flex-shrink:0;${hasDesc && !expanded ? 'color:var(--ac)' : ''}">${expanded ? '▴' : '▾'}</button>
+          style="padding:1px 6px;font-size:10px;flex-shrink:0;${hasDesc && !expanded ? 'color:var(--bone)' : ''}">${expanded ? '▴' : '▾'}</button>
         <button class="btn sm" onclick="cloneItem(${i})" title="Clone item" style="flex-shrink:0">⎘</button>
         <button class="btn danger sm" onclick="deleteItem(${i})" style="flex-shrink:0">✕</button>
       </div>
       ${expanded ? `<div style="padding:0 5px 5px">
         <textarea placeholder="DM description (players never see this)…" rows="2" onchange="updateItemDesc(${i}, this.value)"
-          style="width:100%;box-sizing:border-box;font-size:10px;background:var(--bg3);border:1px solid var(--a44);color:var(--txd);border-radius:3px;padding:3px 5px;resize:vertical">${esc(item.description || '')}</textarea>
+          style="width:100%;box-sizing:border-box;font-size:10px;background:var(--slate-hi);border:1px solid var(--rule-hi);color:var(--ash);border-radius:3px;padding:3px 5px;resize:vertical">${esc(item.description || '')}</textarea>
       </div>` : ''}
     </div>`;
   });
@@ -530,7 +530,7 @@ function renderItemList() {
   }
   el.innerHTML = rows.length
     ? rows.join('')
-    : '<div style="font-size:11px;color:var(--txd);padding:4px 0">No items yet. Enable place mode and drag on the map.</div>';
+    : '<div style="font-size:11px;color:var(--ash);padding:4px 0">No items yet. Enable place mode and drag on the map.</div>';
 }
 
 function updateItemLabel(i, val) {
@@ -582,7 +582,7 @@ function toggleMoveMode() {
     if (drawMode) toggleDrawMode();
     if (placeItemMode) togglePlaceItemMode();
     if (tokenPlacementMode) cancelTokenPlacement();
-    if (btn) { btn.style.background = 'var(--ac)'; btn.style.color = 'var(--bg)'; }
+    if (btn) { btn.style.background = 'var(--bone)'; btn.style.color = 'var(--ink)'; }
     if (hint) hint.style.display = '';
     drawCvs.style.cursor = 'grab';
   } else {
@@ -610,8 +610,8 @@ function toggleDrawMode() {
   }
   _syncDrawInteractive();
   if (drawMode) {
-    btn.style.background = 'var(--ac)';
-    btn.style.color = 'var(--bg)';
+    btn.style.background = 'var(--bone)';
+    btn.style.color = 'var(--ink)';
     hint.style.display = '';
     drawCvs.style.cursor = 'crosshair';
   } else {
@@ -641,8 +641,8 @@ function togglePlaceItemMode() {
   }
   _syncDrawInteractive();
   if (placeItemMode) {
-    btn.style.background = 'var(--ac)';
-    btn.style.color = 'var(--bg)';
+    btn.style.background = 'var(--bone)';
+    btn.style.color = 'var(--ink)';
     hint.style.display = '';
     drawCvs.style.cursor = 'crosshair';
   } else {
@@ -1134,22 +1134,22 @@ function pmRenderMonsterList(query) {
   if (!el) return;
   const q = (query || '').toLowerCase().trim();
   const list = q ? pmMonsterList.filter(m => m.name.toLowerCase().includes(q)) : pmMonsterList;
-  if (!pmMonsterLoaded) { el.innerHTML = '<div style="padding:8px;font-size:11px;color:var(--txd)">Loading…</div>'; return; }
-  if (!list.length) { el.innerHTML = '<div style="padding:8px;font-size:11px;color:var(--txd)">No monsters found.</div>'; return; }
+  if (!pmMonsterLoaded) { el.innerHTML = '<div style="padding:8px;font-size:11px;color:var(--ash)">Loading…</div>'; return; }
+  if (!list.length) { el.innerHTML = '<div style="padding:8px;font-size:11px;color:var(--ash)">No monsters found.</div>'; return; }
   el.innerHTML = list.slice(0, 60).map(m =>
     `<div onclick="pmSelectMonster('${escJs(m.id)}')" data-mid="${esc(m.id)}"
-      style="padding:5px 8px;border-bottom:1px solid var(--sep);font-size:11px;cursor:pointer;display:flex;align-items:center;gap:6px">
+      style="padding:5px 8px;border-bottom:1px solid var(--rule);font-size:11px;cursor:pointer;display:flex;align-items:center;gap:6px">
       <span style="flex:1">${esc(m.name)}</span>
-      <span style="font-size:10px;color:var(--txd)">CR ${esc(String(m.cr||'?'))}</span>
+      <span style="font-size:10px;color:var(--ash)">CR ${esc(String(m.cr||'?'))}</span>
     </div>`
   ).join('');
   if (pmSelectedMonsterId) {
     const row = el.querySelector(`[data-mid="${CSS.escape(pmSelectedMonsterId)}"]`);
-    if (row) row.style.background = 'var(--a22)';
+    if (row) row.style.background = 'var(--wash)';
     const mon = pmMonsterList.find(m => m.id === pmSelectedMonsterId);
     if (mon) {
       const sel = document.getElementById('pm-mon-selected');
-      if (sel && sel.textContent !== `✓ ${mon.name}`) { sel.textContent = `✓ ${mon.name}`; sel.style.color = 'var(--ok)'; }
+      if (sel && sel.textContent !== `✓ ${mon.name}`) { sel.textContent = `✓ ${mon.name}`; sel.style.color = 'var(--verdigris)'; }
     }
   }
 }
@@ -1162,9 +1162,9 @@ function pmSelectMonster(id) {
   if (!mon) return;
   document.querySelectorAll('#pm-mon-list [data-mid]').forEach(r => r.style.background = '');
   const row = document.querySelector(`#pm-mon-list [data-mid="${CSS.escape(id)}"]`);
-  if (row) row.style.background = 'var(--a22)';
+  if (row) row.style.background = 'var(--wash)';
   const sel = document.getElementById('pm-mon-selected');
-  if (sel) { sel.textContent = `✓ ${mon.name}`; sel.style.color = 'var(--ok)'; }
+  if (sel) { sel.textContent = `✓ ${mon.name}`; sel.style.color = 'var(--verdigris)'; }
   const d = mon.data || {};
   const hp = (d.hp?.average) ?? (typeof d.hp === 'number' ? d.hp : 10);
   const spd = d.speed?.walk || (typeof d.speed === 'string' ? parseInt(d.speed) : null) || 30;
@@ -1225,7 +1225,7 @@ function openPmTokModal(editIdx) {
       const spdEl = document.getElementById('pm-tok-speed'); if (spdEl) spdEl.value = tok.speed || 30;
       const acEl = document.getElementById('pm-tok-ac'); if (acEl) acEl.value = tok.ac != null ? tok.ac : '';
       const sel = document.getElementById('pm-mon-selected');
-      if (sel) { sel.textContent = 'Loading…'; sel.style.color = 'var(--txd)'; }
+      if (sel) { sel.textContent = 'Loading…'; sel.style.color = 'var(--ash)'; }
       const search = document.getElementById('pm-mon-search'); if (search) search.value = '';
     } else {
       const nameEl = document.getElementById('pm-tok-custom-name'); if (nameEl) nameEl.value = tok.name || '';
@@ -1245,7 +1245,7 @@ function openPmTokModal(editIdx) {
     document.getElementById('pm-tab-monster').style.display = '';
     document.getElementById('pm-tab-custom').style.display  = 'none';
     const sel = document.getElementById('pm-mon-selected');
-    if (sel) { sel.textContent = 'No monster selected'; sel.style.color = 'var(--txd)'; }
+    if (sel) { sel.textContent = 'No monster selected'; sel.style.color = 'var(--ash)'; }
     const search = document.getElementById('pm-mon-search'); if (search) search.value = '';
     ['pm-tok-identifier','pm-tok-custom-name'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
     const hpEl = document.getElementById('pm-tok-hp'); if (hpEl) hpEl.value = 10;
@@ -1274,7 +1274,7 @@ function _updateVisibleLbl() {
   if (!lbl) return;
   const on = cb ? cb.checked : true;
   lbl.textContent = on ? '👁 Visible' : '🚫 Hidden';
-  lbl.style.color = on ? 'var(--ok)' : 'var(--txd)';
+  lbl.style.color = on ? 'var(--verdigris)' : 'var(--ash)';
 }
 
 function _setPmPortraitPreview(src) {
@@ -1499,11 +1499,11 @@ function renderTokenList() {
   const rows = prepState.preparedTokens.map((tok, i) => {
     const hidden = tok.visibleToPlayers === false;
     const sel = _selectedTokenIds.has(tok.id);
-    return `<div style="display:flex;align-items:center;gap:4px;padding:3px 0;border-bottom:1px solid var(--sep)${sel ? ';background:var(--a22)' : ''}">
+    return `<div style="display:flex;align-items:center;gap:4px;padding:3px 0;border-bottom:1px solid var(--rule)${sel ? ';background:var(--wash)' : ''}">
       <input type="checkbox" ${sel ? 'checked' : ''} onchange="toggleTokenSelect('${escJs(tok.id)}', this.checked)" title="Select for recolor" style="cursor:pointer;flex-shrink:0;width:13px;height:13px">
       <div style="width:11px;height:11px;border-radius:50%;background:${esc(tok.color)};flex-shrink:0;border:1px solid rgba(255,255,255,.3);${hidden ? 'opacity:0.4' : ''}"></div>
       <span style="flex:1;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(tok.name)}">${esc(tok.name)}</span>
-      <span title="${hidden ? 'Hidden from players' : 'Visible to players'}" style="font-size:10px;flex-shrink:0;${hidden ? 'color:var(--txd)' : 'color:var(--ok)'}">${hidden ? '🚫' : '👁'}</span>
+      <span title="${hidden ? 'Hidden from players' : 'Visible to players'}" style="font-size:10px;flex-shrink:0;${hidden ? 'color:var(--ash)' : 'color:var(--verdigris)'}">${hidden ? '🚫' : '👁'}</span>
       <button class="btn sm" onclick="cloneToken(${i})" title="Duplicate token" style="padding:1px 5px;font-size:10px;flex-shrink:0">⎘</button>
       <button class="btn sm" onclick="openPmTokModal(${i})" style="padding:1px 5px;font-size:10px;flex-shrink:0" title="Edit">✏</button>
       <button class="btn danger sm" onclick="deleteToken(${i})" style="padding:1px 5px;font-size:10px;flex-shrink:0">✕</button>
@@ -1515,13 +1515,13 @@ function renderTokenList() {
   if (!count) {
     el.innerHTML = rows.length
       ? rows.join('')
-      : '<div style="font-size:11px;color:var(--txd);padding:4px 0">No tokens yet. Click + Add Token above.</div>';
+      : '<div style="font-size:11px;color:var(--ash);padding:4px 0">No tokens yet. Click + Add Token above.</div>';
     return;
   }
   const selCount = _selectedTokenCount();
   const allChecked = selCount > 0 && selCount === count;
-  const controls = `<div style="display:flex;align-items:center;gap:6px;padding:2px 0 5px;border-bottom:1px solid var(--sep);margin-bottom:3px">
-    <label style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--txd);cursor:pointer">
+  const controls = `<div style="display:flex;align-items:center;gap:6px;padding:2px 0 5px;border-bottom:1px solid var(--rule);margin-bottom:3px">
+    <label style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--ash);cursor:pointer">
       <input type="checkbox" ${allChecked ? 'checked' : ''} onchange="toggleSelectAllTokens(this.checked)" style="cursor:pointer;width:13px;height:13px"> all
     </label>
     <span style="flex:1"></span>

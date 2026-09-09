@@ -161,7 +161,7 @@ function renderSideCharacter() {
     spellListHtml = `<div class="rp-flat-hdr">Prepared Spells</div>`;
     for (const lvl of Object.keys(byLevel).sort((a, b) => Number(a) - Number(b))) {
       const lvlName = lvl === '0' ? 'Cantrips' : `Level ${lvl}`;
-      spellListHtml += `<div style="font-size:9px;color:var(--txd);padding:3px 10px 1px;text-transform:uppercase;letter-spacing:.5px">${lvlName}</div>`;
+      spellListHtml += `<div style="font-size:9px;color:var(--ash);padding:3px 10px 1px;text-transform:uppercase;letter-spacing:.5px">${lvlName}</div>`;
       for (const s of byLevel[lvl]) {
         const idx = preparedSpells.indexOf(s);
         const sName = s[1] || '?';
@@ -399,7 +399,7 @@ function _renderSidePanelSpell(s, idx, d) {
   const atk = (spAtk !== undefined && spAtk !== null && spAtk !== '')
     ? `<span class="qroll-val" onclick="event.stopPropagation();qroll('Spell Attack','${escJs(String(spAtk))}')" style="font-size:11px;cursor:pointer" title="Spell attack">⚡</span>`
     : '';
-  return `<div class="qroll-row" style="padding:3px 10px;font-size:11px">${nameSpan} <span style="font-size:10px;color:var(--txd)">${lvl}</span> ${atk}</div>`;
+  return `<div class="qroll-row" style="padding:3px 10px;font-size:11px">${nameSpan} <span style="font-size:10px;color:var(--ash)">${lvl}</span> ${atk}</div>`;
 }
 
 function _renderSidePanelCustom(a, canEdit) {

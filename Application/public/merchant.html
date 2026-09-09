@@ -14,13 +14,13 @@
 <link rel="stylesheet" href="/css/merchant.css">
 <style>
   .tag-group { margin-bottom: 2px; }
-  .tag-hdr { display:flex; align-items:center; padding:6px 10px; background:var(--bg2); border-radius:4px; cursor:pointer; user-select:none; font-size:12px; font-weight:bold; color:var(--ac); }
-  .tag-hdr:hover { background:var(--bg3); }
+  .tag-hdr { display:flex; align-items:center; padding:6px 10px; background:var(--slate); border-radius:4px; cursor:pointer; user-select:none; font-size:12px; font-weight:bold; color:var(--bone); }
+  .tag-hdr:hover { background:var(--slate-hi); }
   .tag-body { display:none; }
   .tag-body.open { display:block; }
-  .bulk-bar { display:none; align-items:center; gap:8px; padding:7px 10px; background:var(--bg2); border-radius:4px; margin-bottom:8px; flex-wrap:wrap; }
+  .bulk-bar { display:none; align-items:center; gap:8px; padding:7px 10px; background:var(--slate); border-radius:4px; margin-bottom:8px; flex-wrap:wrap; }
   .bulk-bar.visible { display:flex; }
-  .bulk-bar-label { font-size:11px; color:var(--txd); white-space:nowrap; }
+  .bulk-bar-label { font-size:11px; color:var(--ash); white-space:nowrap; }
 </style>
 <script src="/js/lib/icons.js"></script>
 </head>
@@ -51,7 +51,7 @@
     <div class="hdr-right">
       <button class="btn" id="shop-status-btn" onclick="toggleShopStatus()" style="min-width:130px">Loading…</button>
       <div style="display:flex;align-items:center;gap:4px">
-        <select id="open-tag-input" style="font-size:12px;padding:4px 7px;border:1px solid var(--bdr);border-radius:4px;background:var(--bg2);color:var(--tx)"><option value="">— Tag —</option></select>
+        <select id="open-tag-input" style="font-size:12px;padding:4px 7px;border:1px solid var(--bdr);border-radius:4px;background:var(--slate);color:var(--bone)"><option value="">— Tag —</option></select>
         <button class="btn" onclick="openShopByTag()" title="Open shop for this tag">Open</button>
       </div>
       <button class="btn" onclick="refreshAll()" title="Refresh data"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-refresh"></use></svg> Refresh</button>
@@ -69,7 +69,7 @@
 
     <!-- Shop Items tab -->
     <div class="tab-panel active" id="tab-items">
-      <div id="shop-loading" style="padding:12px;font-size:11px;color:var(--txd)">Loading…</div>
+      <div id="shop-loading" style="padding:12px;font-size:11px;color:var(--ash)">Loading…</div>
       <div class="bulk-bar" id="bulk-bar">
         <span class="bulk-bar-label" id="bulk-count">0 selected</span>
         <input type="text" id="bulk-tag" placeholder="Tag…" list="tag-datalist-bulk" style="flex:1;min-width:100px">
@@ -79,12 +79,12 @@
         <button class="btn" onclick="clearSelection()">Clear</button>
       </div>
       <div id="shop-groups"></div>
-      <div id="empty-msg" style="padding:12px;font-size:11px;color:var(--txd);display:none">No items in the shop yet. Click "+ Add Item" to add one.</div>
+      <div id="empty-msg" style="padding:12px;font-size:11px;color:var(--ash);display:none">No items in the shop yet. Click "+ Add Item" to add one.</div>
     </div>
 
     <!-- Purchase Logs tab -->
     <div class="tab-panel" id="tab-logs">
-      <div id="logs-loading" style="padding:12px;font-size:11px;color:var(--txd);display:none">Loading…</div>
+      <div id="logs-loading" style="padding:12px;font-size:11px;color:var(--ash);display:none">Loading…</div>
       <div id="logs-table-wrap" style="overflow-x:auto">
         <table>
           <thead>
@@ -96,7 +96,7 @@
               <th>Amount</th>
             </tr>
           </thead>
-          <tbody id="logs-tbody"><tr><td colspan="5" style="color:var(--txd);padding:12px;font-size:11px">No purchases yet.</td></tr></tbody>
+          <tbody id="logs-tbody"><tr><td colspan="5" style="color:var(--ash);padding:12px;font-size:11px">No purchases yet.</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -164,7 +164,7 @@
         <div class="field" style="margin-top:6px">
           <label class="lbl">Properties <span style="text-transform:none;letter-spacing:0;font-weight:normal">(max 3)</span></label>
           <div id="props-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;margin-top:6px"></div>
-          <div id="f-props-err" style="font-size:10px;color:var(--err);min-height:12px;margin-top:2px"></div>
+          <div id="f-props-err" style="font-size:10px;color:var(--blood);min-height:12px;margin-top:2px"></div>
         </div>
       </div>
 

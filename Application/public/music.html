@@ -10,6 +10,9 @@
 <link rel="stylesheet" href="/css/fonts.css">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
+/* base.css is not loaded on this page (its 36px controls are wrong for the
+   460x150 Now Playing window), so the icon rule has to live here. */
+.lt-icon{width:1.15em;height:1.15em;flex:none;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;vertical-align:-.15em}
 html,body{height:100%}
 body{
   background:var(--slate); color:var(--bone);
@@ -135,7 +138,7 @@ body.dm #lnk-playlists{display:inline-block}
   <!-- DM: transport -->
   <div class="dm-only" id="transport">
     <button class="btn" onclick="sendControl({action:'prev'})" title="Previous track"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-prev"></use></svg> </button>
-    <button class="btn primary" id="play-btn" onclick="togglePlay()" style="min-width:76px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-right"></use></svg> Play</button>
+    <button class="btn primary" id="play-btn" onclick="togglePlay()" style="min-width:76px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-play"></use></svg> Play</button>
     <button class="btn" onclick="sendControl({action:'next'})" title="Next track"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-next"></use></svg> </button>
     <button class="btn danger" onclick="sendControl({action:'stop'})" title="Stop for everyone"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-stop"></use></svg> </button>
   </div>
@@ -240,14 +243,14 @@ function renderNowPlaying() {
   if (!stName) {
     stateEl.textContent = 'Nothing playing';
     nameEl.textContent  = '—';
-    iconEl.textContent  = '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-music"></use></svg> ';
+    iconEl.innerHTML  = '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-music"></use></svg> ';
   } else {
     stateEl.textContent = stPlaying ? 'Now playing:' : 'Paused:';
     nameEl.textContent  = stName;
-    iconEl.textContent  = stPlaying ? '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-music"></use></svg> ' : '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-pause"></use></svg> ';
+    iconEl.innerHTML  = stPlaying ? '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-music"></use></svg> ' : '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-pause"></use></svg> ';
   }
   const btn = $('play-btn');
-  if (btn) btn.textContent = stPlaying ? '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-pause"></use></svg> Pause' : '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-right"></use></svg> Play';
+  if (btn) btn.innerHTML = stPlaying ? '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-pause"></use></svg> Pause' : '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-play"></use></svg> Play';
 }
 
 function renderDuration() {
@@ -285,7 +288,7 @@ function renderTracks() {
   const activeIdx = (currentPl && currentPl.id === stPlaylist) ? stTrackIdx : -1;
   el.innerHTML = tracks.map((t, i) => `
     <div class="trk${i === activeIdx ? ' active' : ''}" onclick="playTrack(${i})" title="${esc(t.name)}">
-      <span class="trk-idx">${i === activeIdx ? (stPlaying ? '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-right"></use></svg> ' : '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-pause"></use></svg> ') : (i + 1) + '.'}</span>
+      <span class="trk-idx">${i === activeIdx ? (stPlaying ? '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-play"></use></svg> ' : '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-pause"></use></svg> ') : (i + 1) + '.'}</span>
       <span class="trk-name">${esc(t.name)}</span>
     </div>`).join('');
 }

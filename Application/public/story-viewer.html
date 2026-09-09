@@ -25,7 +25,7 @@
     <p>Enter your password to continue.</p>
     <input type="password" id="gate-pw" placeholder="Password…" autocomplete="off"
            onkeydown="if(event.key==='Enter')storiesGateSubmit()">
-    <div id="gate-err" style="color:var(--err);font-size:12px;min-height:16px;margin-top:6px"></div>
+    <div id="gate-err" style="color:var(--blood);font-size:12px;min-height:16px;margin-top:6px"></div>
     <button class="btn primary" style="width:100%;margin-top:8px" onclick="storiesGateSubmit()">Enter</button>
   </div>
 </div>
@@ -156,7 +156,7 @@ function renderCast() {
 function render() {
   const seqs = story.sequences || [];
   if (!seqs.length) {
-    setBody('<div class="empty-hint">This story has no panels yet.<br><a href="/story-builder.html?id=' + story.id + '" style="color:var(--ac)">Add panels <svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-arrow-right"></use></svg> </a></div>');
+    setBody('<div class="empty-hint">This story has no panels yet.<br><a href="/story-builder.html?id=' + story.id + '" style="color:var(--bone)">Add panels <svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-arrow-right"></use></svg> </a></div>');
     return;
   }
 

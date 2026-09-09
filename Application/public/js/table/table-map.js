@@ -188,9 +188,9 @@ function renderFogPanel() {
   panel.style.display = show ? '' : 'none';
   if (!show) return;
   list.innerHTML = fogRegions.map(r => `
-    <div style="display:flex;align-items:center;gap:6px;padding:3px 0;border-bottom:1px solid var(--sep);cursor:default"
+    <div style="display:flex;align-items:center;gap:6px;padding:3px 0;border-bottom:1px solid var(--rule);cursor:default"
          onmouseenter="highlightMapRegion('${escJs(r.id)}')" onmouseleave="clearMapHighlight()">
-      <span style="flex:1;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:${r.visible ? 'var(--ok)' : 'var(--txd)'}">${esc(r.label || 'Region')}</span>
+      <span style="flex:1;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:${r.visible ? 'var(--verdigris)' : 'var(--ash)'}">${esc(r.label || 'Region')}</span>
       ${!r.visible
         ? `<button class="btn sm" onclick="revealFogRegion('${escJs(r.id)}')">Reveal</button>`
         : `<button class="btn sm" onclick="hideFogRegion('${escJs(r.id)}')" style="font-size:10px">Hide</button>`}
@@ -265,19 +265,19 @@ function renderItemsPanel() {
   panel.style.display = show ? '' : 'none';
   if (!show) return;
   list.innerHTML = hiddenItems.map(item => `
-    <div style="border:1px solid var(--a44);border-radius:4px;margin-bottom:4px;overflow:hidden"
+    <div style="border:1px solid var(--rule-hi);border-radius:4px;margin-bottom:4px;overflow:hidden"
          onmouseenter="highlightMapItem('${escJs(item.id)}')" onmouseleave="clearMapHighlight()">
       <div style="display:flex;align-items:center;gap:6px;padding:4px 5px;cursor:pointer;user-select:none"
            onclick="const b=this.parentElement.querySelector('.item-body');if(b){const open=b.style.display==='block';b.style.display=open?'none':'block';this.querySelector('span').textContent=open?'▶':'▼'}">
-        <span style="font-size:10px;color:var(--txd)">▶</span>
+        <span style="font-size:10px;color:var(--ash)">▶</span>
         <span style="font-size:13px">${ITEM_ICONS[item.type] || '?'}</span>
-        <span style="flex:1;font-size:11px;font-weight:bold;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:${item.visible ? 'var(--ok)' : 'var(--txd)'}">${esc(item.label || 'Item')}</span>
+        <span style="flex:1;font-size:11px;font-weight:bold;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:${item.visible ? 'var(--verdigris)' : 'var(--ash)'}">${esc(item.label || 'Item')}</span>
         ${!item.visible
           ? `<button class="btn sm" onclick="event.stopPropagation();revealItem('${escJs(item.id)}')">Reveal</button>`
           : `<button class="btn sm" onclick="event.stopPropagation();hideItem('${escJs(item.id)}')" style="font-size:10px">Hide</button>`}
       </div>
-      <div class="item-body" style="padding:4px 5px 5px;border-top:1px solid var(--sep)">
-        ${item.description ? `<div style="font-size:10px;color:var(--txd);white-space:pre-wrap">${esc(item.description)}</div>` : '<div style="font-size:10px;color:var(--a44);font-style:italic">No description.</div>'}
+      <div class="item-body" style="padding:4px 5px 5px;border-top:1px solid var(--rule)">
+        ${item.description ? `<div style="font-size:10px;color:var(--ash);white-space:pre-wrap">${esc(item.description)}</div>` : '<div style="font-size:10px;color:var(--rule-hi);font-style:italic">No description.</div>'}
       </div>
     </div>`).join('');
   list.querySelectorAll('.item-body').forEach(b => { b.style.display = 'none'; });
@@ -355,7 +355,7 @@ function _dismissMapCtxMenu() {
 function _showMapCtxMenu(cx, cy, html) {
   _dismissMapCtxMenu();
   const div = document.createElement('div');
-  div.style.cssText = 'position:fixed;z-index:9999;background:#0f1424;border:1px solid rgba(200,160,74,.4);border-radius:6px;padding:8px 10px;font-size:12px;color:var(--tx);box-shadow:0 4px 18px rgba(0,0,0,.75);min-width:155px;max-width:220px';
+  div.style.cssText = 'position:fixed;z-index:9999;background:#0f1424;border:1px solid rgba(200,160,74,.4);border-radius:6px;padding:8px 10px;font-size:12px;color:var(--bone);box-shadow:0 4px 18px rgba(0,0,0,.75);min-width:155px;max-width:220px';
   div.innerHTML = html;
   document.body.appendChild(div);
   _mapCtxMenu = div;
@@ -378,10 +378,10 @@ canvasArea.addEventListener('click', e => {
       _showMapCtxMenu(e.clientX, e.clientY,
         `<div style="font-size:9px;color:rgba(200,160,74,.6);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Fog Region</div>`
         + `<div style="font-weight:bold;margin-bottom:3px">${esc(r.label || 'Region')}</div>`
-        + `<div style="font-size:10px;margin-bottom:7px;color:${r.visible ? '#88ff88' : 'var(--txd)'}">${r.visible ? '👁 Revealed to players' : '🌫 Hidden from players'}</div>`
+        + `<div style="font-size:10px;margin-bottom:7px;color:${r.visible ? '#88ff88' : 'var(--ash)'}">${r.visible ? '👁 Revealed to players' : '🌫 Hidden from players'}</div>`
         + (r.visible
           ? `<button class="btn sm" onclick="_dismissMapCtxMenu();hideFogRegion('${escJs(r.id)}')" style="width:100%;font-size:11px">🚫 Hide Region</button>`
-          : `<button class="btn sm" onclick="_dismissMapCtxMenu();revealFogRegion('${escJs(r.id)}')" style="width:100%;font-size:11px;background:var(--ok);color:#000;border-color:var(--ok)">👁 Reveal Region</button>`)
+          : `<button class="btn sm" onclick="_dismissMapCtxMenu();revealFogRegion('${escJs(r.id)}')" style="width:100%;font-size:11px;background:var(--verdigris);color:#000;border-color:var(--verdigris)">👁 Reveal Region</button>`)
       );
       return;
     }
@@ -394,11 +394,11 @@ canvasArea.addEventListener('click', e => {
       _showMapCtxMenu(e.clientX, e.clientY,
         `<div style="font-size:9px;color:rgba(200,160,74,.6);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">${icon} Hidden Item</div>`
         + `<div style="font-weight:bold;margin-bottom:3px">${esc(item.label || 'Item')}</div>`
-        + (item.description ? `<div style="font-size:10px;color:var(--txd);margin-bottom:5px;max-height:54px;overflow-y:auto;white-space:pre-wrap;word-break:break-word">${esc(item.description)}</div>` : '')
+        + (item.description ? `<div style="font-size:10px;color:var(--ash);margin-bottom:5px;max-height:54px;overflow-y:auto;white-space:pre-wrap;word-break:break-word">${esc(item.description)}</div>` : '')
         + `<div style="font-size:10px;margin-bottom:7px;color:${item.visible ? '#88ff88' : '#ff8888'}">${item.visible ? '👁 Revealed to players' : '🔴 Hidden from players'}</div>`
         + (item.visible
           ? `<button class="btn sm" onclick="_dismissMapCtxMenu();hideItem('${escJs(item.id)}')" style="width:100%;font-size:11px">🚫 Hide Item</button>`
-          : `<button class="btn sm" onclick="_dismissMapCtxMenu();revealItem('${escJs(item.id)}')" style="width:100%;font-size:11px;background:var(--ok);color:#000;border-color:var(--ok)">👁 Reveal Item</button>`)
+          : `<button class="btn sm" onclick="_dismissMapCtxMenu();revealItem('${escJs(item.id)}')" style="width:100%;font-size:11px;background:var(--verdigris);color:#000;border-color:var(--verdigris)">👁 Reveal Item</button>`)
       );
       return;
     }

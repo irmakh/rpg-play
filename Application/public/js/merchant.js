@@ -119,11 +119,11 @@ function renderShopStatusBtn() {
   if (shopIsOpen) {
     const tagLabel = shopActiveTag ? ` (${shopActiveTag})` : '';
     btn.textContent = `🟢 Shop Open${tagLabel}`;
-    btn.style.color = 'var(--ok)';
+    btn.style.color = 'var(--verdigris)';
     btn.style.borderColor = '#88ff8844';
   } else {
     btn.textContent = '🔴 Shop Closed';
-    btn.style.color = 'var(--err)';
+    btn.style.color = 'var(--blood)';
     btn.style.borderColor = '#ff888844';
   }
 }
@@ -245,7 +245,7 @@ async function loadLogs() {
     const logs = await res.json();
     loadEl.style.display = 'none';
     if (logs.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="5" style="color:var(--txd);padding:12px;font-size:11px">No purchases yet.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="5" style="color:var(--ash);padding:12px;font-size:11px">No purchases yet.</td></tr>';
       return;
     }
     tbody.innerHTML = logs.map(l => {
@@ -253,11 +253,11 @@ async function loadLogs() {
       const dateStr = dt.toLocaleDateString();
       const timeStr = dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       return `<tr>
-        <td style="white-space:nowrap;color:var(--txd);font-size:11px">${dateStr} ${timeStr}</td>
+        <td style="white-space:nowrap;color:var(--ash);font-size:11px">${dateStr} ${timeStr}</td>
         <td><strong>${esc(l.charName)}</strong></td>
         <td>${esc(l.itemName)}</td>
         <td style="text-align:center">${l.qty}</td>
-        <td style="color:var(--exp);white-space:nowrap">${cpToGp(l.totalCp)}</td>
+        <td style="color:var(--arc);white-space:nowrap">${cpToGp(l.totalCp)}</td>
       </tr>`;
     }).join('');
   } catch { showStatus('Network error.', true); loadEl.style.display = 'none'; }
@@ -325,16 +325,16 @@ function renderTable() {
 
     const rows = items.map(item => {
       const qtyText = item.quantity === -1 ? '∞' : item.quantity;
-      const qtyStyle = item.quantity === 0 ? 'color:var(--err)' : '';
+      const qtyStyle = item.quantity === 0 ? 'color:var(--blood)' : '';
       const checked = selectedItems.has(item.id) ? 'checked' : '';
       return `<tr>
-        <td style="width:28px"><input type="checkbox" ${checked} onchange="toggleItemSelection('${escJs(item.id)}')" style="accent-color:var(--ac)"></td>
+        <td style="width:28px"><input type="checkbox" ${checked} onchange="toggleItemSelection('${escJs(item.id)}')" style="accent-color:var(--bone)"></td>
         <td><strong>${esc(item.name)}</strong></td>
-        <td style="color:var(--txd)">${esc(item.itemType)}</td>
-        <td style="color:var(--exp)">${cpToGp(item.valueCp)}</td>
+        <td style="color:var(--ash)">${esc(item.itemType)}</td>
+        <td style="color:var(--arc)">${cpToGp(item.valueCp)}</td>
         <td style="${qtyStyle}">${qtyText}</td>
-        <td style="color:var(--txd);font-size:11px">${esc(bonusSummary(item))}</td>
-        <td style="color:var(--txd);font-size:11px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(item.notes)}">${esc(item.notes) || '—'}</td>
+        <td style="color:var(--ash);font-size:11px">${esc(bonusSummary(item))}</td>
+        <td style="color:var(--ash);font-size:11px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(item.notes)}">${esc(item.notes) || '—'}</td>
         <td style="white-space:nowrap">
           <button class="btn sm" onclick="openItemModal('${escJs(item.id)}')" style="margin-right:4px">Edit</button>
           <button class="btn sm danger" onclick="deleteItem('${escJs(item.id)}')">Delete</button>
@@ -345,9 +345,9 @@ function renderTable() {
     return `<div class="tag-group">
       <div class="tag-hdr" onclick="toggleTag(${tagAttr})">
         <span style="margin-right:6px">${isOpen ? '▼' : '▶'}</span>
-        <input type="checkbox" ${allSel ? 'checked' : ''} onclick="event.stopPropagation();toggleGroupSelection(${tagAttr})" style="accent-color:var(--ac);margin-right:8px" title="Select all in group">
+        <input type="checkbox" ${allSel ? 'checked' : ''} onclick="event.stopPropagation();toggleGroupSelection(${tagAttr})" style="accent-color:var(--bone);margin-right:8px" title="Select all in group">
         <span>${esc(label)}</span>
-        <span style="margin-left:8px;font-size:11px;color:var(--txd);font-weight:normal">${items.length} item${items.length !== 1 ? 's' : ''}</span>
+        <span style="margin-left:8px;font-size:11px;color:var(--ash);font-weight:normal">${items.length} item${items.length !== 1 ? 's' : ''}</span>
       </div>
       <div class="tag-body${isOpen ? ' open' : ''}">
         <table style="width:100%">
@@ -371,7 +371,7 @@ function initPropsGrid() {
   if (!grid || grid.childElementCount > 0) return;
   grid.innerHTML = WEAPON_PROPS.map(p =>
     `<label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:12px">
-      <input type="checkbox" id="${propId(p)}" value="${p}" onchange="onPropChange()" style="width:13px;height:13px;accent-color:var(--ac)">
+      <input type="checkbox" id="${propId(p)}" value="${p}" onchange="onPropChange()" style="width:13px;height:13px;accent-color:var(--bone)">
       ${p}
     </label>`
   ).join('');

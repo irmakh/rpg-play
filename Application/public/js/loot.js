@@ -60,7 +60,7 @@ async function loadLogs() {
     const logs = await res.json();
     loadEl.style.display = 'none';
     if (logs.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="3" style="color:var(--txd);padding:12px;font-size:11px">No claims yet.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="3" style="color:var(--ash);padding:12px;font-size:11px">No claims yet.</td></tr>';
       return;
     }
     tbody.innerHTML = logs.map(l => {
@@ -68,7 +68,7 @@ async function loadLogs() {
       const dateStr = dt.toLocaleDateString();
       const timeStr = dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       return `<tr>
-        <td style="white-space:nowrap;color:var(--txd);font-size:11px">${dateStr} ${timeStr}</td>
+        <td style="white-space:nowrap;color:var(--ash);font-size:11px">${dateStr} ${timeStr}</td>
         <td><strong>${esc(l.charName)}</strong></td>
         <td>${esc(l.itemName)}</td>
       </tr>`;
@@ -138,8 +138,8 @@ function renderItemRow(item) {
     ? `<button class="btn sm danger" onclick="toggleDescVisible('${escJs(item.id)}', false)" style="margin-left:4px">Hide Desc</button>`
     : `<button class="btn sm success" onclick="toggleDescVisible('${escJs(item.id)}', true)" style="margin-left:4px">Show Desc</button>`;
   const descPreview = item.description
-    ? `<span style="color:var(--txd);font-size:11px">${esc(item.description.length > 80 ? item.description.slice(0,80)+'…' : item.description)}</span>`
-    : '<span style="color:var(--sep)">—</span>';
+    ? `<span style="color:var(--ash);font-size:11px">${esc(item.description.length > 80 ? item.description.slice(0,80)+'…' : item.description)}</span>`
+    : '<span style="color:var(--rule)">—</span>';
   const checked = selectedItems.has(item.id) ? 'checked' : '';
   return `<tr>
     <td style="text-align:center;width:30px"><input type="checkbox" ${checked} onchange="toggleItemSelection('${escJs(item.id)}')"></td>
@@ -256,7 +256,7 @@ async function importItems() {
   const text = document.getElementById('import-text').value.trim();
   const tag = document.getElementById('import-tag').value.trim();
   const statusEl = document.getElementById('import-status');
-  if (!text) { statusEl.textContent = 'Paste some items first.'; statusEl.style.color = 'var(--err)'; return; }
+  if (!text) { statusEl.textContent = 'Paste some items first.'; statusEl.style.color = 'var(--blood)'; return; }
   try {
     const res = await fetch('/api/loot/import', {
       method: 'POST',
@@ -265,13 +265,13 @@ async function importItems() {
     });
     if (res.status === 401) { handleUnauth(); return; }
     const data = await res.json();
-    if (!res.ok) { statusEl.textContent = data.error || 'Import failed.'; statusEl.style.color = 'var(--err)'; return; }
+    if (!res.ok) { statusEl.textContent = data.error || 'Import failed.'; statusEl.style.color = 'var(--blood)'; return; }
     document.getElementById('import-text').value = '';
     statusEl.textContent = `Imported ${data.count} item${data.count !== 1 ? 's' : ''}.`;
-    statusEl.style.color = 'var(--ok)';
+    statusEl.style.color = 'var(--verdigris)';
     setTimeout(() => { statusEl.textContent = ''; }, 4000);
     await loadLootItems();
-  } catch { statusEl.textContent = 'Network error.'; statusEl.style.color = 'var(--err)'; }
+  } catch { statusEl.textContent = 'Network error.'; statusEl.style.color = 'var(--blood)'; }
 }
 
 function openItemModal(id) {

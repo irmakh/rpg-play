@@ -25,7 +25,7 @@
     <p>Enter your password to continue.</p>
     <input type="password" id="gate-pw" placeholder="Password…" autocomplete="off"
            onkeydown="if(event.key==='Enter')storiesGateSubmit()">
-    <div id="gate-err" style="color:var(--err);font-size:12px;min-height:16px;margin-top:6px"></div>
+    <div id="gate-err" style="color:var(--blood);font-size:12px;min-height:16px;margin-top:6px"></div>
     <button class="btn primary" style="width:100%;margin-top:8px" onclick="storiesGateSubmit()">Enter</button>
   </div>
 </div>
@@ -100,7 +100,7 @@ async function storiesGateSubmit() {
   <!-- Footer -->
   <div class="builder-foot">
     <button class="btn primary" onclick="addPanel()">+ Add Panel</button>
-    <span id="panel-count" style="font-size:11px;color:var(--txd)"></span>
+    <span id="panel-count" style="font-size:11px;color:var(--ash)"></span>
   </div>
 
 </div>
@@ -110,7 +110,7 @@ async function storiesGateSubmit() {
   <div class="modal-box" style="max-width:340px;width:96%">
     <div class="ct">Delete Panel</div>
     <div class="modal-body">
-      <p style="font-size:13px;color:var(--tx)">Delete this panel and its image? This cannot be undone.</p>
+      <p style="font-size:13px;color:var(--bone)">Delete this panel and its image? This cannot be undone.</p>
     </div>
     <div class="modal-btns">
       <button class="btn" onclick="closeDelPanel()">Cancel</button>
@@ -415,7 +415,7 @@ function fileToDataUrl(file) {
 function showStatus(msg, isErr) {
   const el = document.getElementById('save-status');
   el.textContent = msg;
-  el.style.color = isErr ? 'var(--err)' : 'var(--txd)';
+  el.style.color = isErr ? 'var(--blood)' : 'var(--ash)';
 }
 
 function esc(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }

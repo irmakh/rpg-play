@@ -67,7 +67,7 @@
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <input type="text" id="import-tag" placeholder="Tag (optional)" style="width:160px;flex:0 0 auto">
         <button class="btn primary" onclick="importItems()">Import</button>
-        <span id="import-status" style="font-size:11px;color:var(--ok)"></span>
+        <span id="import-status" style="font-size:11px;color:var(--verdigris)"></span>
       </div>
     </div>
   </div>
@@ -80,14 +80,14 @@
 
     <!-- Loot Items tab -->
     <div class="tab-panel active" id="tab-items">
-      <div id="loot-loading" style="padding:12px;font-size:11px;color:var(--txd)">Loading…</div>
+      <div id="loot-loading" style="padding:12px;font-size:11px;color:var(--ash)">Loading…</div>
       <div id="table-wrap" style="display:none"></div>
-      <div id="empty-msg" style="padding:12px;font-size:11px;color:var(--txd);display:none">No loot items yet. Use the import tool or click "+ Add Item".</div>
+      <div id="empty-msg" style="padding:12px;font-size:11px;color:var(--ash);display:none">No loot items yet. Use the import tool or click "+ Add Item".</div>
     </div>
 
     <!-- Claim Logs tab -->
     <div class="tab-panel" id="tab-logs">
-      <div id="logs-loading" style="padding:12px;font-size:11px;color:var(--txd);display:none">Loading…</div>
+      <div id="logs-loading" style="padding:12px;font-size:11px;color:var(--ash);display:none">Loading…</div>
       <div id="logs-table-wrap" style="overflow-x:auto">
         <table>
           <thead>
@@ -97,7 +97,7 @@
               <th>Item</th>
             </tr>
           </thead>
-          <tbody id="logs-tbody"><tr><td colspan="3" style="color:var(--txd);padding:12px;font-size:11px">No claims yet.</td></tr></tbody>
+          <tbody id="logs-tbody"><tr><td colspan="3" style="color:var(--ash);padding:12px;font-size:11px">No claims yet.</td></tr></tbody>
         </table>
       </div>
     </div>

@@ -119,7 +119,7 @@ function renderRollHistory() {
   const list = document.getElementById('rh-list');
   if (!list) return;
   if (rollHistory.length === 0) {
-    list.innerHTML = '<li style="color:var(--txd);font-size:12px;padding:8px">No rolls yet — click any modifier on the sheet to roll!</li>';
+    list.innerHTML = '<li style="color:var(--ash);font-size:12px;padding:8px">No rolls yet — click any modifier on the sheet to roll!</li>';
     return;
   }
   const pad = n => String(n).padStart(2,'0');

@@ -32,7 +32,7 @@ function renderInitiativeTracker(showBadge) {
     const canEdit  = isDM() || !e.monsterId;
     const rollHtml = canEdit
       ? `<input type="number" class="init-roll-input" value="${e.roll}" data-id="${e.id}" data-monster="${e.monsterId ? '1' : ''}"
-           style="width:36px;background:var(--bg3);border:1px solid var(--a55);color:var(--ac);border-radius:3px;padding:2px 3px;font-size:11px;font-weight:bold;text-align:center"
+           style="width:36px;background:var(--slate-hi);border:1px solid var(--rule-hi);color:var(--bone);border-radius:3px;padding:2px 3px;font-size:11px;font-weight:bold;text-align:center"
            onchange="updateInitRoll(this)" onclick="event.stopPropagation()">`
       : `<span class="init-row-roll">${e.roll}</span>`;
     const delHtml  = isDM()

@@ -52,7 +52,7 @@ function renderHandouts() {
   if (!box) return;
 
   if (!_handouts.length) {
-    box.innerHTML = '<div style="color:var(--txd);font-size:12px;padding:14px 0;text-align:center">'
+    box.innerHTML = '<div style="color:var(--ash);font-size:12px;padding:14px 0;text-align:center">'
       + 'Nothing has been handed to you yet.</div>';
     return;
   }

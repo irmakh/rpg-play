@@ -167,7 +167,7 @@ function pcalRenderEventsList() {
     }
     const m = FR_MONTHS.find(mo => mo.num === pcalView.month);
     const allMonthLabel = pcalSelectedDay.festival ? frFestivalName(pcalSelectedDay.festival) : (m ? m.name : '');
-    showAllLink = `<a href="#" style="font-size:10px;color:var(--txd);text-decoration:none;margin-left:8px" onclick="pcalClearSelection();return false">&#8592; All of ${allMonthLabel}</a>`;
+    showAllLink = `<a href="#" style="font-size:10px;color:var(--ash);text-decoration:none;margin-left:8px" onclick="pcalClearSelection();return false">&#8592; All of ${allMonthLabel}</a>`;
   } else {
     evs = pcalEventsForView();
     if (pcalView.type === 'festival') {

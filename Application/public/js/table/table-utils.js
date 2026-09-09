@@ -11,8 +11,8 @@ function showToast(msg, isErr) {
   const el = document.getElementById('toast');
   if (!el) return;
   el.textContent = msg;
-  el.style.borderColor = isErr ? 'var(--err)' : 'var(--a66)';
-  el.style.color = isErr ? 'var(--err)' : 'var(--tx)';
+  el.style.borderColor = isErr ? 'var(--blood)' : 'var(--rule-hi)';
+  el.style.color = isErr ? 'var(--blood)' : 'var(--bone)';
   el.style.display = '';
   clearTimeout(_toastTimer);
   _toastTimer = setTimeout(() => { el.style.display = 'none'; }, 3000);

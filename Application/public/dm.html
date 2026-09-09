@@ -149,7 +149,7 @@
         <a href="monsters.html" class="btn" style="white-space:nowrap;text-decoration:none">Manage <svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-arrow-right"></use></svg> </a>
       </div>
       <div id="dm-monster-table-wrap">
-        <div style="text-align:center;color:var(--txd);font-size:12px;padding:12px 0">Loading…</div>
+        <div style="text-align:center;color:var(--ash);font-size:12px;padding:12px 0">Loading…</div>
       </div>
     </div>
   </div>
@@ -190,7 +190,7 @@
         <button class="dice-btn chat-send-btn" onclick="sendChatInput()">Send</button>
       </div>
       <div style="margin-top:6px">
-        <button class="btn" onclick="clearChat()" style="color:var(--err);border-color:var(--err);font-size:11px;padding:3px 10px" title="Clear all chat messages"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-trash"></use></svg> Clear Chat</button>
+        <button class="btn" onclick="clearChat()" style="color:var(--blood);border-color:var(--blood);font-size:11px;padding:3px 10px" title="Clear all chat messages"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-trash"></use></svg> Clear Chat</button>
       </div>
     </div>
   </div>
@@ -210,7 +210,7 @@
         <label class="lbl">Initiative Bonus</label>
         <input type="number" id="npc-bonus" value="0" min="-10" max="30">
       </div>
-      <div id="npc-err" style="color:var(--err);font-size:11px;min-height:14px;margin-top:4px"></div>
+      <div id="npc-err" style="color:var(--blood);font-size:11px;min-height:14px;margin-top:4px"></div>
     </div>
     <div class="modal-btns">
       <button class="btn" onclick="closeAddNpcModal()">Cancel</button>
@@ -232,7 +232,7 @@
         <label class="lbl">Roll</label>
         <input type="number" id="edit-roll" min="-10" max="50">
       </div>
-      <div id="edit-err" style="color:var(--err);font-size:11px;min-height:14px;margin-top:4px"></div>
+      <div id="edit-err" style="color:var(--blood);font-size:11px;min-height:14px;margin-top:4px"></div>
     </div>
     <div class="modal-btns">
       <button class="btn" onclick="closeEditModal()">Cancel</button>
@@ -246,35 +246,35 @@
   <div class="modal-box" style="max-width:360px">
     <div class="ct"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-save"></use></svg> Select Backup Files</div>
     <div class="modal-body">
-      <p style="font-size:12px;color:var(--txd);margin:0 0 14px">Each selected section downloads as a separate JSON file.</p>
+      <p style="font-size:12px;color:var(--ash);margin:0 0 14px">Each selected section downloads as a separate JSON file.</p>
       <div style="display:flex;flex-direction:column;gap:10px">
         <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px">
-          <input type="checkbox" id="bk-characters" checked style="width:15px;height:15px;accent-color:var(--ac)">
+          <input type="checkbox" id="bk-characters" checked style="width:15px;height:15px;accent-color:var(--bone)">
           <span><strong>Characters</strong> — sheets, portraits &amp; media</span>
         </label>
         <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px">
-          <input type="checkbox" id="bk-monsters" checked style="width:15px;height:15px;accent-color:var(--ac)">
+          <input type="checkbox" id="bk-monsters" checked style="width:15px;height:15px;accent-color:var(--bone)">
           <span><strong>Monsters</strong> — library &amp; portraits</span>
         </label>
         <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px">
-          <input type="checkbox" id="bk-treasury" checked style="width:15px;height:15px;accent-color:var(--ac)">
+          <input type="checkbox" id="bk-treasury" checked style="width:15px;height:15px;accent-color:var(--bone)">
           <span><strong>Treasury</strong> — items, images, claim &amp; purchase logs</span>
         </label>
         <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px">
-          <input type="checkbox" id="bk-maps" checked style="width:15px;height:15px;accent-color:var(--ac)">
+          <input type="checkbox" id="bk-maps" checked style="width:15px;height:15px;accent-color:var(--bone)">
           <span><strong>Maps</strong> — prepared maps &amp; chat media</span>
         </label>
       </div>
-      <div id="backup-status" style="margin-top:12px;font-size:12px;min-height:18px;color:var(--txd)"></div>
+      <div id="backup-status" style="margin-top:12px;font-size:12px;min-height:18px;color:var(--ash)"></div>
 
       <div style="border-top:1px solid var(--bd,#3a3a4a);margin:16px 0 12px"></div>
       <div class="ct" style="font-size:14px;margin-bottom:6px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-folder"></use></svg> Raw Database Files</div>
-      <p style="font-size:12px;color:var(--txd);margin:0 0 10px">
+      <p style="font-size:12px;color:var(--ash);margin:0 0 10px">
         Downloads every SQLite database file as-is, bundled into one <code>.tar.gz</code> — for a full off-site backup.
-        <br><span style="color:var(--err)">Note:</span> uploaded images &amp; audio (under <code>uploads/</code>) are stored separately and are <strong>not</strong> included yet.
+        <br><span style="color:var(--blood)">Note:</span> uploaded images &amp; audio (under <code>uploads/</code>) are stored separately and are <strong>not</strong> included yet.
       </p>
       <button class="btn" id="dbbk-dl-btn" onclick="downloadRawDbBackup()" style="width:100%"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-arrow-down"></use></svg> Download Raw DB Files (.tar.gz)</button>
-      <div id="dbbk-status" style="margin-top:10px;font-size:12px;min-height:18px;color:var(--txd)"></div>
+      <div id="dbbk-status" style="margin-top:10px;font-size:12px;min-height:18px;color:var(--ash)"></div>
     </div>
     <div class="modal-btns">
       <button class="btn" onclick="closeBackupModal()">Cancel</button>

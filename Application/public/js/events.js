@@ -79,7 +79,7 @@ function setSaveStatus(msg, isErr) {
   const el = document.getElementById('save-status');
   if (!el) return;
   el.textContent = msg;
-  el.style.color = isErr ? 'var(--err)' : 'var(--txd)';
+  el.style.color = isErr ? 'var(--blood)' : 'var(--ash)';
 }
 
 // ── Render ────────────────────────────────────────────────────────────────────
@@ -519,15 +519,15 @@ function weatherRenderHistory() {
   const el = document.getElementById('weather-history');
   const log = Object.values(calWeather);
   if (!log.length) {
-    el.innerHTML = '<div style="font-size:12px;color:var(--txd);padding:6px 0">No weather recorded yet.</div>';
+    el.innerHTML = '<div style="font-size:12px;color:var(--ash);padding:6px 0">No weather recorded yet.</div>';
     return;
   }
   el.innerHTML = log.map(e => `
-    <div style="display:flex;justify-content:space-between;gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid var(--sep);font-size:12px">
+    <div style="display:flex;justify-content:space-between;gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid var(--rule);font-size:12px">
       <span style="flex:1;min-width:0;cursor:pointer" onclick="weatherEditFromHistory('${escJs(e.id)}')" title="Edit this day">
         ${weatherIconSpan(weatherTempIconClass(e), 18)}
         <b style="margin-left:4px">${esc(e.dateLabel || frFormatDate(e))}</b>
-        <span style="color:var(--txd)"> — ${esc(weatherSummary(e))}</span>
+        <span style="color:var(--ash)"> — ${esc(weatherSummary(e))}</span>
       </span>
       <button class="btn sm" style="flex-shrink:0" onclick="weatherDeleteEntry('${escJs(e.id)}')" title="Delete">✕</button>
     </div>`).join('');

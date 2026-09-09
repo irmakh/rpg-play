@@ -440,7 +440,7 @@ input[type=number]{-moz-appearance:textfield;appearance:textfield}
 .rp-act-item{padding:5px 10px 6px;border-bottom:1px solid var(--wash)}
 .rp-act-item:last-child{border-bottom:none}
 .rp-act-head{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
-.rp-act-name{font-size:12px;font-weight:bold;color:var(--ahi,var(--rule-hi))}
+.rp-act-name{font-size:12px;font-weight:bold;color:var(--bone)}
 .rp-act-roll{margin-left:auto;font-size:10px;color:#ff9966;cursor:pointer;white-space:nowrap}
 .rp-act-roll:hover{filter:brightness(1.2)}
 .rp-act-desc{font-size:10px;color:var(--ash);margin-top:2px;line-height:1.35;white-space:pre-wrap}
@@ -668,7 +668,7 @@ input[type=number]{-moz-appearance:textfield;appearance:textfield}
 .wp-card:hover{border-color:var(--bone);transform:translateY(-1px)}
 .wp-card.active{border-color:var(--arc);box-shadow:0 0 0 1px var(--arc) inset}
 .wp-card img{display:block;width:100%;height:88px;object-fit:cover}
-.wp-noimg{display:flex;align-items:center;justify-content:center;height:88px;font-size:11px;color:var(--ash);background:var(--bg3,#12121c)}
+.wp-noimg{display:flex;align-items:center;justify-content:center;height:88px;font-size:11px;color:var(--ash);background:var(--slate-hi)}
 .wp-name{padding:7px 9px;font-size:12px;color:var(--bone);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .wp-badge{position:absolute;top:6px;right:6px;padding:2px 7px;border-radius:4px;font-size:10px;background:var(--slate-hi);color:#12121c}
 .wp-empty{grid-column:1/-1;padding:22px;text-align:center;font-size:12px;color:var(--ash)}
