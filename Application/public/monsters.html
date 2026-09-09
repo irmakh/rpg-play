@@ -13,13 +13,14 @@
 <link rel="stylesheet" href="/css/base.css">
 <link rel="stylesheet" href="/css/monsters.css">
 <link rel="stylesheet" href="/css/notifications.css">
+<script src="/js/lib/icons.js"></script>
 </head>
 <body>
 
 <!-- Password gate -->
 <div class="gate" id="gate">
   <div class="gate-box">
-    <div style="font-size:36px;margin-bottom:10px">🐉</div>
+    <div style="font-size:36px;margin-bottom:10px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-swords"></use></svg> </div>
     <h2>Monsters</h2>
     <p>Enter master password to manage monsters.</p>
     <input type="password" id="gate-pw" placeholder="Master password…" autocomplete="off"
@@ -34,13 +35,13 @@
 
   <div class="hdr">
     <div class="hdr-left">
-      <button class="btn" onclick="location.href='/dm.html'" title="Back to DM Panel">← DM</button>
-      <h1>🐉 Monsters</h1>
+      <button class="btn" onclick="location.href='/dm.html'" title="Back to DM Panel"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-arrow-left"></use></svg> DM</button>
+      <h1><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-swords"></use></svg> Monsters</h1>
       
     </div>
     <div class="hdr-right">
-      <button class="btn" data-notif-bell="connect" title="Notifications">🔔</button>
-      <button class="btn" onclick="loadMonsters()">↻ Refresh</button>
+      <button class="btn" data-notif-bell="connect" title="Notifications"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-bell"></use></svg> </button>
+      <button class="btn" onclick="loadMonsters()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-refresh"></use></svg> Refresh</button>
       <button class="btn primary" onclick="openAddMonsterModal()">+ Add Monster</button>
     </div>
   </div>

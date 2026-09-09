@@ -22,13 +22,14 @@
   .bulk-bar.visible { display:flex; }
   .bulk-bar-label { font-size:11px; color:var(--txd); white-space:nowrap; }
 </style>
+<script src="/js/lib/icons.js"></script>
 </head>
 <body>
 
 <!-- Password gate -->
 <div class="gate" id="gate">
   <div class="gate-box">
-    <div style="font-size:36px;margin-bottom:10px">🏪</div>
+    <div style="font-size:36px;margin-bottom:10px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-coins"></use></svg> </div>
     <h2>Merchant Manager</h2>
     <p>Enter master password to access the shop.</p>
     <input type="password" id="gate-pw" placeholder="Master password…" autocomplete="off"
@@ -43,8 +44,8 @@
 
   <div class="hdr">
     <div class="hdr-left">
-      <button class="btn" onclick="location.href='/dm.html'" title="Back to DM Panel">← DM</button>
-      <h1>🏪 Merchant</h1>
+      <button class="btn" onclick="location.href='/dm.html'" title="Back to DM Panel"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-arrow-left"></use></svg> DM</button>
+      <h1><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-coins"></use></svg> Merchant</h1>
       
     </div>
     <div class="hdr-right">
@@ -53,7 +54,7 @@
         <select id="open-tag-input" style="font-size:12px;padding:4px 7px;border:1px solid var(--bdr);border-radius:4px;background:var(--bg2);color:var(--tx)"><option value="">— Tag —</option></select>
         <button class="btn" onclick="openShopByTag()" title="Open shop for this tag">Open</button>
       </div>
-      <button class="btn" onclick="refreshAll()" title="Refresh data">↻ Refresh</button>
+      <button class="btn" onclick="refreshAll()" title="Refresh data"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-refresh"></use></svg> Refresh</button>
       <button class="btn primary" onclick="openItemModal(null)">+ Add Item</button>
     </div>
   </div>
@@ -62,7 +63,7 @@
 
   <div class="tabs">
     <div class="tab active" id="tab-btn-items" onclick="showMerchantTab('items',this)">Shop Items</div>
-    <div class="tab" id="tab-btn-logs" onclick="showMerchantTab('logs',this)">📋 Purchase Logs</div>
+    <div class="tab" id="tab-btn-logs" onclick="showMerchantTab('logs',this)"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-clipboard"></use></svg> Purchase Logs</div>
   </div>
   <div class="tab-wrap">
 

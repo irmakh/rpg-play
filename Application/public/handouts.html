@@ -13,14 +13,15 @@
 <link rel="stylesheet" href="/css/handouts.css">
 <link rel="stylesheet" href="/css/notifications.css">
 <script>if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js');</script>
+<script src="/js/lib/icons.js"></script>
 </head>
 <body>
 
 <div class="top">
-  <a href="/dm.html" class="btn ghost sm" style="text-decoration:none">← Back</a>
-  <h1>📜 Handouts</h1>
+  <a href="/dm.html" class="btn ghost sm" style="text-decoration:none"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-arrow-left"></use></svg> Back</a>
+  <h1><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-document"></use></svg> Handouts</h1>
   <span id="campaign-badge" style="display:none;background:var(--bg3);border:1px solid var(--a44);color:var(--txd);padding:2px 8px;border-radius:3px;font-size:11px;cursor:pointer"></span>
-  <button class="btn sm" data-notif-bell title="Notifications">🔔</button>
+  <button class="btn sm" data-notif-bell title="Notifications"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-bell"></use></svg> </button>
   <span class="spacer"></span>
   <button class="btn sm" onclick="newHandout()">+ New Handout</button>
 </div>
@@ -37,7 +38,7 @@
 
   <div class="detail-pane" id="detail">
     <div class="detail-empty">
-      <div class="big">📜</div>
+      <div class="big"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-document"></use></svg> </div>
       <div>Select a handout, or create one.</div>
     </div>
   </div>

@@ -25,7 +25,7 @@
 <!-- Stories password gate -->
 <div class="gate" id="stories-gate" style="display:none">
   <div class="gate-box">
-    <div style="font-size:36px;margin-bottom:10px">📖</div>
+    <div style="font-size:36px;margin-bottom:10px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-book"></use></svg> </div>
     <h2>Stories</h2>
     <p>Enter your password to continue.</p>
     <input type="password" id="gate-pw" placeholder="Password…" autocomplete="off"
@@ -68,10 +68,10 @@ async function storiesGateSubmit() {
 <div class="stories-wrap">
 
   <div class="stories-hdr">
-    <a href="/dm.html" class="btn" style="padding:4px 10px;font-size:11px">← Back</a>
+    <a href="/dm.html" class="btn" style="padding:4px 10px;font-size:11px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-arrow-left"></use></svg> Back</a>
     <h1>Stories</h1>
     <div class="hdr-right">
-      <button class="btn" data-notif-bell="connect" title="Notifications">🔔</button>
+      <button class="btn" data-notif-bell="connect" title="Notifications"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-bell"></use></svg> </button>
       <span id="status-msg" class="status-msg"></span>
       <select id="char-filter" class="stories-filter" onchange="renderGrid()">
         <option value="">All characters</option>
@@ -167,7 +167,7 @@ function renderGrid() {
   grid.innerHTML = list.map(s => {
     const cover = s.cover_image
       ? `<img class="story-cover" src="${esc(s.cover_image)}?v=${Date.now()}" alt="" loading="lazy">`
-      : `<div class="story-cover-empty">📖</div>`;
+      : `<div class="story-cover-empty"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-book"></use></svg> </div>`;
     const panels = s.seq_count === 1 ? '1 panel' : `${s.seq_count || 0} panels`;
     const date   = (s.updated_at || s.created_at || '').slice(0, 10);
     return `<div class="story-card">

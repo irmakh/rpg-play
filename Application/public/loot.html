@@ -12,13 +12,14 @@
 <link rel="stylesheet" href="/css/fonts.css">
 <link rel="stylesheet" href="/css/base.css">
 <link rel="stylesheet" href="/css/loot.css">
+<script src="/js/lib/icons.js"></script>
 </head>
 <body>
 
 <!-- Password gate -->
 <div class="gate" id="gate">
   <div class="gate-box">
-    <div style="font-size:36px;margin-bottom:10px">⚔️</div>
+    <div style="font-size:36px;margin-bottom:10px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-swords"></use></svg> </div>
     <h2>Loot Manager</h2>
     <p>Enter master password to manage dungeon loot.</p>
     <input type="password" id="gate-pw" placeholder="Master password…" autocomplete="off"
@@ -33,12 +34,12 @@
 
   <div class="hdr">
     <div class="hdr-left">
-      <button class="btn" onclick="location.href='/dm.html'" title="Back to DM Panel">← DM</button>
-      <h1>⚔️ Loot Manager</h1>
+      <button class="btn" onclick="location.href='/dm.html'" title="Back to DM Panel"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-arrow-left"></use></svg> DM</button>
+      <h1><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-swords"></use></svg> Loot Manager</h1>
       
     </div>
     <div class="hdr-right">
-      <button class="btn" onclick="refreshAll()" title="Refresh">↻ Refresh</button>
+      <button class="btn" onclick="refreshAll()" title="Refresh"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-refresh"></use></svg> Refresh</button>
       <button class="btn primary" onclick="openItemModal(null)">+ Add Item</button>
     </div>
   </div>
@@ -73,7 +74,7 @@
 
   <div class="tabs">
     <div class="tab active" id="tab-btn-items" onclick="showLootTab('items',this)">Loot Items</div>
-    <div class="tab" id="tab-btn-logs" onclick="showLootTab('logs',this)">📋 Claim Logs</div>
+    <div class="tab" id="tab-btn-logs" onclick="showLootTab('logs',this)"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-clipboard"></use></svg> Claim Logs</div>
   </div>
   <div class="tab-wrap">
 

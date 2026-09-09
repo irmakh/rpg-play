@@ -13,13 +13,14 @@
 <link rel="stylesheet" href="/css/base.css">
 <link rel="stylesheet" href="/css/treasury.css">
 <link rel="stylesheet" href="/css/notifications.css">
+<script src="/js/lib/icons.js"></script>
 </head>
 <body>
 
 <!-- Password gate -->
 <div class="gate" id="gate">
   <div class="gate-box">
-    <div style="font-size:36px;margin-bottom:10px">💰</div>
+    <div style="font-size:36px;margin-bottom:10px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-coins"></use></svg> </div>
     <h2>Treasury</h2>
     <p>Enter master password to manage loot and shop stock.</p>
     <input type="password" id="gate-pw" placeholder="Master password…" autocomplete="off"
@@ -33,16 +34,16 @@
 
   <div class="hdr">
     <div class="hdr-left">
-      <button class="btn" onclick="location.href='/dm.html'" title="Back to DM Panel">← DM</button>
-      <h1>💰 Treasury</h1>
+      <button class="btn" onclick="location.href='/dm.html'" title="Back to DM Panel"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-arrow-left"></use></svg> DM</button>
+      <h1><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-coins"></use></svg> Treasury</h1>
       
       <span id="status-msg"></span>
     </div>
     <div class="hdr-right">
-      <button class="btn" data-notif-bell title="Notifications">🔔</button>
+      <button class="btn" data-notif-bell title="Notifications"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-bell"></use></svg> </button>
       <button class="btn" id="shop-status-btn" onclick="toggleShopStatus()">Loading…</button>
       <div class="pop-wrap">
-        <button class="btn" id="open-tags-btn" onclick="toggleTagsPopup()" title="Choose which tags are on sale">🏷 Tags ▾</button>
+        <button class="btn" id="open-tags-btn" onclick="toggleTagsPopup()" title="Choose which tags are on sale"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-document"></use></svg> Tags <svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-down"></use></svg> </button>
         <div class="pop" id="tags-popup">
           <div class="pop-hdr">
             <span>Open the shop for…</span>
@@ -58,9 +59,9 @@
         </div>
       </div>
       <button class="btn" id="btn-requests" onclick="toggleRequests()" title="Players waiting on free loot">🙋 Requests<span id="req-count" class="req-pill" style="display:none">0</span></button>
-      <button class="btn" id="btn-ledger" onclick="toggleLedger()" title="Claim &amp; purchase history">📋 Ledger</button>
-      <button class="btn" onclick="openImportModal()" title="Bulk text import">⬇ Import</button>
-      <button class="btn" onclick="refreshAll()" title="Refresh">↻</button>
+      <button class="btn" id="btn-ledger" onclick="toggleLedger()" title="Claim &amp; purchase history"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-clipboard"></use></svg> Ledger</button>
+      <button class="btn" onclick="openImportModal()" title="Bulk text import"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-arrow-down"></use></svg> Import</button>
+      <button class="btn" onclick="refreshAll()" title="Refresh"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-refresh"></use></svg> </button>
       <button class="btn primary" onclick="createItem()">+ Add Item</button>
     </div>
   </div>

@@ -13,13 +13,14 @@
 <link rel="stylesheet" href="/css/base.css">
 <link rel="stylesheet" href="/css/dm.css">
 <link rel="stylesheet" href="/css/notifications.css">
+<script src="/js/lib/icons.js"></script>
 </head>
 <body>
 
 <!-- Password gate -->
 <div class="gate" id="gate">
   <div class="gate-box">
-    <div style="font-size:36px;margin-bottom:10px">🎲</div>
+    <div style="font-size:36px;margin-bottom:10px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg> </div>
     <h2>DM Panel</h2>
     <p>Enter master password to access the DM controls.</p>
     <input type="password" id="gate-pw" placeholder="Master password…" autocomplete="off"
@@ -34,15 +35,15 @@
 
   <div class="hdr">
     <div class="hdr-left">
-      <h1>🎲 DM Panel</h1>
+      <h1><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg> DM Panel</h1>
       
     </div>
     <div class="hdr-right">
-      <button class="btn" data-notif-bell title="Notifications">🔔</button>
-      <button class="btn success" onclick="openBackupModal()" title="Download database backup">💾 Backup</button>
-      <button class="btn" onclick="triggerImport()" title="Restore from backup file">📥 Import</button>
+      <button class="btn" data-notif-bell title="Notifications"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-bell"></use></svg> </button>
+      <button class="btn success" onclick="openBackupModal()" title="Download database backup"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-save"></use></svg> Backup</button>
+      <button class="btn" onclick="triggerImport()" title="Restore from backup file"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-download"></use></svg> Import</button>
       <input type="file" id="import-file-input" accept=".json" multiple style="display:none" onchange="doImport(this)">
-      <button class="btn" onclick="refreshAll()" title="Refresh">↻ Refresh</button>
+      <button class="btn" onclick="refreshAll()" title="Refresh"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-refresh"></use></svg> Refresh</button>
     </div>
   </div>
 
@@ -51,70 +52,70 @@
   <!-- Navigation links -->
   <div class="nav-links">
     <a href="treasury.html" class="nav-link">
-      <span class="nav-icon">💰</span>
+      <span class="nav-icon"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-coins"></use></svg> </span>
       <div>
         <div>Treasury</div>
         <span class="nav-label">Loot &amp; Shop Manager</span>
       </div>
     </a>
     <a href="monsters.html" class="nav-link">
-      <span class="nav-icon">🐉</span>
+      <span class="nav-icon"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-swords"></use></svg> </span>
       <div>
         <div>Monsters</div>
         <span class="nav-label">Monster Manager</span>
       </div>
     </a>
     <a href="/index.html" class="nav-link">
-      <span class="nav-icon">📋</span>
+      <span class="nav-icon"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-clipboard"></use></svg> </span>
       <div>
         <div>Characters</div>
         <span class="nav-label">Character Sheets</span>
       </div>
     </a>
     <a href="/table.html" class="nav-link">
-      <span class="nav-icon">🗺</span>
+      <span class="nav-icon"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-map"></use></svg> </span>
       <div>
         <div>Tactical Map</div>
         <span class="nav-label">Grid Combat</span>
       </div>
     </a>
     <a href="prepare-map.html" class="nav-link">
-      <span class="nav-icon">🏔</span>
+      <span class="nav-icon"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-image"></use></svg> </span>
       <div>
         <div>Map Prep</div>
         <span class="nav-label">Prepare Maps &amp; Fog</span>
       </div>
     </a>
     <a href="handouts.html" class="nav-link">
-      <span class="nav-icon">📜</span>
+      <span class="nav-icon"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-document"></use></svg> </span>
       <div>
         <div>Handouts</div>
         <span class="nav-label">Player Handouts &amp; Checks</span>
       </div>
     </a>
     <a href="waiting-screens.html" class="nav-link">
-      <span class="nav-icon">⏸</span>
+      <span class="nav-icon"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-pause"></use></svg> </span>
       <div>
         <div>Waiting Screens</div>
         <span class="nav-label">Park the table between scenes</span>
       </div>
     </a>
     <a href="events.html" class="nav-link">
-      <span class="nav-icon">📅</span>
+      <span class="nav-icon"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-calendar"></use></svg> </span>
       <div>
         <div>Events</div>
         <span class="nav-label">Challenges, Results &amp; Travel</span>
       </div>
     </a>
     <a href="music.html" class="nav-link">
-      <span class="nav-icon">🎵</span>
+      <span class="nav-icon"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-music"></use></svg> </span>
       <div>
         <div>Music</div>
         <span class="nav-label">Play &amp; control the table's music</span>
       </div>
     </a>
     <a href="playlists.html" class="nav-link">
-      <span class="nav-icon">📚</span>
+      <span class="nav-icon"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-book"></use></svg> </span>
       <div>
         <div>Music Library</div>
         <span class="nav-label">Upload sounds &amp; edit playlists</span>
@@ -124,14 +125,14 @@
 
   <!-- Initiative Tracker -->
   <div class="card">
-    <div class="ct">⚔ Initiative Tracker</div>
+    <div class="ct"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-swords"></use></svg> Initiative Tracker</div>
     <div class="cb">
       <div class="init-controls">
         <button class="btn primary" onclick="openAddNpcModal()">+ Add NPC</button>
-        <button class="btn" onclick="prevTurn()">◀ Prev Turn</button>
-        <button class="btn" onclick="nextTurn()">▶ Next Turn</button>
-        <button class="btn" onclick="cleanupInitiative()" title="Remove initiative entries for monsters no longer on the map">🧹 Clean Orphans</button>
-        <button class="btn danger" onclick="clearInitiative()">✕ Clear All</button>
+        <button class="btn" onclick="prevTurn()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-left"></use></svg> Prev Turn</button>
+        <button class="btn" onclick="nextTurn()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-right"></use></svg> Next Turn</button>
+        <button class="btn" onclick="cleanupInitiative()" title="Remove initiative entries for monsters no longer on the map"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-trash"></use></svg> Clean Orphans</button>
+        <button class="btn danger" onclick="clearInitiative()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg> Clear All</button>
       </div>
       <div id="init-list" class="init-list">
         <div class="init-empty">No combatants in tracker.</div>
@@ -141,11 +142,11 @@
 
   <!-- Monsters -->
   <div class="card">
-    <div class="ct">🐉 Monsters</div>
+    <div class="ct"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-swords"></use></svg> Monsters</div>
     <div class="cb">
       <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
         <input type="text" id="dm-monster-search" placeholder="Search by name or type…" oninput="renderDmMonsters()" style="flex:1;min-width:120px">
-        <a href="monsters.html" class="btn" style="white-space:nowrap;text-decoration:none">Manage →</a>
+        <a href="monsters.html" class="btn" style="white-space:nowrap;text-decoration:none">Manage <svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-arrow-right"></use></svg> </a>
       </div>
       <div id="dm-monster-table-wrap">
         <div style="text-align:center;color:var(--txd);font-size:12px;padding:12px 0">Loading…</div>
@@ -155,7 +156,7 @@
 
   <!-- Media Share -->
   <div class="card">
-    <div class="ct">📎 Share Media to Chat</div>
+    <div class="ct"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-paperclip"></use></svg> Share Media to Chat</div>
     <div class="cb">
       <div class="media-drop" id="media-drop" onclick="document.getElementById('media-file-input').click()"
            ondragover="event.preventDefault();this.classList.add('drag-over')"
@@ -172,8 +173,8 @@
         <input type="text" id="media-caption" placeholder="Add a caption…" maxlength="120">
       </div>
       <div style="display:flex;gap:8px;align-items:center;margin-top:8px">
-        <button class="btn primary" id="media-share-btn" onclick="shareMedia()" style="display:none">📤 Share to Chat</button>
-        <button class="btn" id="media-clear-btn" onclick="clearMedia()" style="display:none">✕ Clear</button>
+        <button class="btn primary" id="media-share-btn" onclick="shareMedia()" style="display:none"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-upload"></use></svg> Share to Chat</button>
+        <button class="btn" id="media-clear-btn" onclick="clearMedia()" style="display:none"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg> Clear</button>
         <span id="media-status" style="font-size:11px;min-height:14px"></span>
       </div>
     </div>
@@ -181,7 +182,7 @@
 
   <!-- Dice Chat -->
   <div class="card">
-    <div class="ct">🎲 Chat</div>
+    <div class="ct"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg> Chat</div>
     <div class="cb">
       <div class="chat-log" id="chat-log"></div>
       <div class="chat-input-row">
@@ -189,7 +190,7 @@
         <button class="dice-btn chat-send-btn" onclick="sendChatInput()">Send</button>
       </div>
       <div style="margin-top:6px">
-        <button class="btn" onclick="clearChat()" style="color:var(--err);border-color:var(--err);font-size:11px;padding:3px 10px" title="Clear all chat messages">🗑 Clear Chat</button>
+        <button class="btn" onclick="clearChat()" style="color:var(--err);border-color:var(--err);font-size:11px;padding:3px 10px" title="Clear all chat messages"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-trash"></use></svg> Clear Chat</button>
       </div>
     </div>
   </div>
@@ -243,7 +244,7 @@
 <!-- Backup selection modal -->
 <div class="modal-overlay" id="backup-modal" style="display:none">
   <div class="modal-box" style="max-width:360px">
-    <div class="ct">💾 Select Backup Files</div>
+    <div class="ct"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-save"></use></svg> Select Backup Files</div>
     <div class="modal-body">
       <p style="font-size:12px;color:var(--txd);margin:0 0 14px">Each selected section downloads as a separate JSON file.</p>
       <div style="display:flex;flex-direction:column;gap:10px">
@@ -267,12 +268,12 @@
       <div id="backup-status" style="margin-top:12px;font-size:12px;min-height:18px;color:var(--txd)"></div>
 
       <div style="border-top:1px solid var(--bd,#3a3a4a);margin:16px 0 12px"></div>
-      <div class="ct" style="font-size:14px;margin-bottom:6px">🗄️ Raw Database Files</div>
+      <div class="ct" style="font-size:14px;margin-bottom:6px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-folder"></use></svg> Raw Database Files</div>
       <p style="font-size:12px;color:var(--txd);margin:0 0 10px">
         Downloads every SQLite database file as-is, bundled into one <code>.tar.gz</code> — for a full off-site backup.
         <br><span style="color:var(--err)">Note:</span> uploaded images &amp; audio (under <code>uploads/</code>) are stored separately and are <strong>not</strong> included yet.
       </p>
-      <button class="btn" id="dbbk-dl-btn" onclick="downloadRawDbBackup()" style="width:100%">⬇️ Download Raw DB Files (.tar.gz)</button>
+      <button class="btn" id="dbbk-dl-btn" onclick="downloadRawDbBackup()" style="width:100%"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-arrow-down"></use></svg> Download Raw DB Files (.tar.gz)</button>
       <div id="dbbk-status" style="margin-top:10px;font-size:12px;min-height:18px;color:var(--txd)"></div>
     </div>
     <div class="modal-btns">

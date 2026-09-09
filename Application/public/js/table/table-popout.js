@@ -155,14 +155,21 @@
     const v = _assetVer();
     win.document.open();
     win.document.write(
-      '<!DOCTYPE html><html><head><meta charset="utf-8">' +
+      // class="lamplit" and the token/font/base sheets are REQUIRED here. The
+      // token block used to live inside table.css, so linking table.css alone
+      // was enough; once tokens moved to their own file this window was left
+      // with 363 var() references and nothing defining them.
+      '<!DOCTYPE html><html lang="en" class="lamplit"><head><meta charset="utf-8">' +
       '<meta name="viewport" content="width=device-width,initial-scale=1">' +
       '<title>' + cfg.title + '</title>' +
+      '<link rel="stylesheet" href="/css/tokens.css' + v + '">' +
+      '<link rel="stylesheet" href="/css/fonts.css' + v + '">' +
+      '<link rel="stylesheet" href="/css/base.css' + v + '">' +
       '<link rel="stylesheet" href="/css/table.css' + v + '">' +
       '<link rel="stylesheet" href="/css/table-theme-modern.css' + v + '">' +
       '<link rel="stylesheet" href="/css/table-sheet-popout.css' + v + '">' +
       '<style>' +
-        'html,body{margin:0;height:100%;overflow:hidden;background:var(--bg2,#1e1e1e)}' +
+        'html,body{margin:0;height:100%;overflow:hidden;background:var(--ink,#16130F);color:var(--bone,#E8E1D4)}' +
         '#po-host{position:fixed;inset:0;display:flex;flex-direction:column}' +
         '#po-host>*{flex:1 1 auto;min-height:0;width:100%!important;max-width:none!important;' +
           'height:auto!important;border:0!important;box-shadow:none!important}' +
@@ -174,6 +181,16 @@
       '</style></head><body><div id="po-host"></div></body></html>'
     );
     win.document.close();
+
+    // Clone the opener's icon sprite rather than loading icons.js here: an
+    // external script inside a document.write'd document blocks the parser,
+    // which leaves win.document.body null on the very next line.
+    try {
+      const sprite = document.querySelector('[data-icon-sprite]');
+      if (sprite && win.document.body) {
+        win.document.body.insertBefore(win.document.importNode(sprite, true), win.document.body.firstChild);
+      }
+    } catch {}
     win.document.body.dataset.theme = theme;
     win.document.body.className = document.body.className;
     // The Character/Details pop-out gets the redesigned full-sheet layout. All of
