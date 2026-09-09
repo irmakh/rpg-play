@@ -5,8 +5,29 @@ export default function register(app, ctx) {
     processImageSizes, saveUploadFile,
     IMAGE_MIME, SHARED_MEDIA_MIME, MAX_MEDIA_BYTES,
     insertSharedMedia, _mediaGet,
-    broadcast, chatLog, CHAT_MAX,
+    broadcast,
   } = ctx;
+  // Older harnesses register these routes without the campaign helper; then
+  // every request shares one key, which is exactly the pre-campaign behaviour.
+  const currentCampaignId = ctx.currentCampaignId || (() => '');
+  const CHAT_MAX = ctx.CHAT_MAX || 100;
+
+  // The in-memory chat log, per campaign. Only the non-localdb providers use it
+  // (localdb keeps chat in the campaign's own database, via the ldb proxy). One
+  // shared array made GET /api/chat hand a campaign another campaign's history
+  // — including its dmOnly rolls — so the log is keyed the same way the sound
+  // playback state is.
+  const chatLogs = new Map();   // campaignId -> entry[]
+
+  // '' keys an install with no campaign resolved at all. The campaign
+  // middleware answers 409 for those before a handler runs, so it stays empty
+  // in practice.
+  function chatLog() {
+    const key = currentCampaignId() || '';
+    let log = chatLogs.get(key);
+    if (!log) { log = []; chatLogs.set(key, log); }
+    return log;
+  }
 
   // ── Shared Media ──────────────────────────────────────────────────────────────
   app.post('/api/chat/media', async (req, res) => {
@@ -40,8 +61,9 @@ export default function register(app, ctx) {
       if (DB_PROVIDER === 'localdb') {
         ldb.appendChatLog(entry);
       } else {
-        chatLog.push(entry);
-        if (chatLog.length > CHAT_MAX) chatLog.shift();
+        const log = chatLog();
+        log.push(entry);
+        if (log.length > CHAT_MAX) log.shift();
       }
       broadcast('chat', entry);
       res.json({ ok: true, mediaId });
@@ -92,8 +114,9 @@ export default function register(app, ctx) {
       if (DB_PROVIDER === 'localdb') {
         ldb.appendChatLog(entry);
       } else {
-        chatLog.push(entry);
-        if (chatLog.length > CHAT_MAX) chatLog.shift();
+        const log = chatLog();
+        log.push(entry);
+        if (log.length > CHAT_MAX) log.shift();
       }
       broadcast('chat', entry);
       res.json({ ok: true, mediaId });
@@ -107,7 +130,8 @@ export default function register(app, ctx) {
       const all = ldb.listChatLog();
       return res.json(isMaster ? all : all.filter(e => !e.dmOnly));
     }
-    res.json(isMaster ? chatLog : chatLog.filter(e => !e.dmOnly));
+    const log = chatLog();
+    res.json(isMaster ? log : log.filter(e => !e.dmOnly));
   });
 
   /**
@@ -201,8 +225,9 @@ export default function register(app, ctx) {
     if (DB_PROVIDER === 'localdb') {
       ldb.appendChatLog(entry);
     } else {
-      chatLog.push(entry);
-      if (chatLog.length > CHAT_MAX) chatLog.shift();
+      const log = chatLog();
+      log.push(entry);
+      if (log.length > CHAT_MAX) log.shift();
     }
     broadcast('chat', entry);
     notifyChat(entry);
@@ -215,8 +240,9 @@ export default function register(app, ctx) {
     if (DB_PROVIDER === 'localdb') {
       ldb.deleteChatMessage(id);
     } else {
-      const idx = chatLog.findIndex(e => e.id === id);
-      if (idx !== -1) chatLog.splice(idx, 1);
+      const log = chatLog();
+      const idx = log.findIndex(e => e.id === id);
+      if (idx !== -1) log.splice(idx, 1);
     }
     broadcast('chat-delete', { id });
     res.json({ ok: true });
@@ -227,7 +253,7 @@ export default function register(app, ctx) {
     if (DB_PROVIDER === 'localdb') {
       ldb.clearChatLog();
     } else {
-      chatLog.length = 0;
+      chatLog().length = 0;
     }
     broadcast('chat-clear', {});
     res.json({ ok: true });

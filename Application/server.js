@@ -542,8 +542,9 @@ app.post('/api/console/event', (req, res) => {
   res.json({ ok: true });
 });
 
-// ── In-memory chat log (instantdb mode) ──────────────────────────────────────
-const chatLog = [];
+// ── In-memory chat log cap (instantdb mode) ──────────────────────────────────
+// The log itself lives in server/routes/chat.js, keyed by campaign — a single
+// shared array here handed every campaign every other campaign's history.
 const CHAT_MAX = 100;
 
 // ── Shared context for all route modules ─────────────────────────────────────
@@ -571,7 +572,7 @@ const ctx = {
   cdb, campaignIdFromReq, currentCampaignId, currentCampaign,
   isSuperAdminPassword, broadcastAll, CAMPAIGN_COOKIE, FRONTEND_VERSION,
   // In-memory state
-  chatLog, CHAT_MAX,
+  CHAT_MAX,
   // Node modules
   sharp, crypto, path, fs, express, __dirname,
 };

@@ -85,7 +85,12 @@ function makeMediaDbStub() {
   };
 }
 
-export function makeApp() {
+/**
+ * @param {object}  [opts]
+ * @param {string}  [opts.dbProvider='localdb']  Set to 'instantdb' to exercise
+ *        the in-memory paths (chat log) instead of the campaign database.
+ */
+export function makeApp({ dbProvider = 'localdb' } = {}) {
   const ldb = makeLdb();
   const app = express();
   app.use(express.json({ limit: '10mb' }));
@@ -130,7 +135,7 @@ export function makeApp() {
   const ctx = {
     ldb,
     idb: null,
-    DB_PROVIDER: 'localdb',
+    DB_PROVIDER: dbProvider,
     genId: () => crypto.randomUUID(),
     masterAuth,
     charAuth,
@@ -161,7 +166,6 @@ export function makeApp() {
     path,
     fs,
     __dirname: path.resolve(__dirname, '../..'),
-    chatLog: [],
     CHAT_MAX: 100,
     currentCampaignId: () => activeCampaignId,
   };

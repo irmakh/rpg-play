@@ -9,7 +9,6 @@ export default function register(app, ctx) {
     mediaDb, _mediaGet, _mapUpsert,
     broadcast,
     crypto, path, fs, __dirname,
-    chatLog, CHAT_MAX,
   } = ctx;
 
   const TABLE_STATE_ID = 'c8a04a12-4372-4c78-9abc-def012345601';
