@@ -22,6 +22,14 @@ body{
 /* Embedded in the table modal the page is framed by the modal chrome, so it
    drops its own background and border and lets the modal supply them. */
 body.embed{background:transparent}
+/* Embedded in the table modal the page is measured by its parent and the
+   iframe is sized to fit, so here it must take its NATURAL height rather than
+   stretching to fill whatever box it is given - otherwise the track list
+   spreads to fill the frame and the modal is mostly empty space. */
+body.embed, html:has(body.embed){height:auto}
+body.embed #body{flex:none; overflow:visible}
+body.embed #tracks-wrap{flex:none}
+body.embed #tracks{flex:none; max-height:46vh; overflow-y:auto}
 
 #hdr{
   flex-shrink:0; display:flex; align-items:center; gap:8px;
