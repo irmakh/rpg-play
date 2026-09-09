@@ -648,3 +648,42 @@ input[type=number]{-moz-appearance:textfield;appearance:textfield}
 .ho-mo-rec-btns { display: flex; gap: 4px; flex-wrap: wrap; }
 .ho-mo-rec-btns .ho-ok  { border-color: #88ff8855; color: #88ff88; background: transparent; }
 .ho-mo-rec-btns .ho-bad { border-color: #ff888855; color: #ff8888; background: transparent; }
+
+/* ── Waiting screens ──────────────────────────────────────────────────────────
+   The overlay covers #table-wrap and the right panel is lifted above it, so the
+   image hides the map and the left panel at any panel width — including the
+   resizable and modern-theme cases — without needing to know that width.
+
+   Scoped to #table-wrap on purpose, never fixed to the viewport: #now-playing-bar
+   and #bg-music are siblings outside it, so the music keeps playing and its
+   track name, seek bar and volume stay reachable while the screen is up. */
+#waiting-overlay{position:absolute;inset:0;z-index:60;background:#05060c;display:flex;align-items:center;justify-content:center;overflow:hidden}
+#waiting-overlay-img{max-width:100%;max-height:100%;width:100%;height:100%;object-fit:contain;display:block}
+#waiting-overlay-caption{position:absolute;left:0;right:0;bottom:0;padding:14px 18px;text-align:center;font-size:15px;letter-spacing:.3px;color:var(--ac);background:linear-gradient(transparent,rgba(5,6,12,.86) 55%);pointer-events:none}
+#side-panel{position:relative;z-index:70}
+
+/* DM banner — the DM still sees the map, so this is the only thing telling them
+   the players do not. */
+#waiting-dm-banner{position:absolute;left:50%;transform:translateX(-50%);bottom:14px;z-index:65;display:flex;align-items:center;gap:9px;padding:7px 13px;border-radius:8px;font-size:12px;color:var(--tx);background:rgba(10,10,20,.92);border:1px solid var(--a66);box-shadow:0 6px 26px #000a;backdrop-filter:blur(6px)}
+#waiting-dm-banner .wdb-dot{width:8px;height:8px;border-radius:50%;background:var(--ac);box-shadow:0 0 8px var(--ac);animation:wdb-pulse 1.8s ease-in-out infinite;flex-shrink:0}
+#waiting-dm-banner b{color:var(--ac)}
+@keyframes wdb-pulse{0%,100%{opacity:1}50%{opacity:.35}}
+
+/* Picker modal */
+#waiting-picker-body{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;padding:4px 2px;max-height:56vh;overflow-y:auto}
+.wp-card{position:relative;padding:0;border:1px solid var(--a44);border-radius:8px;background:var(--bg2);cursor:pointer;overflow:hidden;text-align:left;transition:border-color .12s,transform .12s}
+.wp-card:hover{border-color:var(--ac);transform:translateY(-1px)}
+.wp-card.active{border-color:var(--ac);box-shadow:0 0 0 1px var(--ac) inset}
+.wp-card img{display:block;width:100%;height:88px;object-fit:cover}
+.wp-noimg{display:flex;align-items:center;justify-content:center;height:88px;font-size:11px;color:var(--txd);background:var(--bg3,#12121c)}
+.wp-name{padding:7px 9px;font-size:12px;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wp-badge{position:absolute;top:6px;right:6px;padding:2px 7px;border-radius:4px;font-size:10px;background:var(--ac);color:#12121c}
+.wp-empty{grid-column:1/-1;padding:22px;text-align:center;font-size:12px;color:var(--txd)}
+.wp-empty a{color:var(--ac)}
+
+@media (max-width:760px){
+  /* On a phone the right panel is not beside the image but under it; the
+     overlay must not swallow the whole screen or the character panel with it. */
+  #waiting-overlay{position:absolute}
+  #waiting-dm-banner{bottom:8px;font-size:11px;padding:6px 10px}
+}

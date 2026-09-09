@@ -525,6 +525,12 @@ async function loadSideQroll() {
   if (!targetId) {
     targetId = getActiveTurnTokenId() || null;
   }
+  // Parked on a waiting screen there is no map to click and often no combat, so
+  // fall back to the player's own token — the character panel beside the image
+  // is the whole reason it stays visible, and it should not open empty.
+  if (!targetId && typeof isWaitingScreenActive === 'function' && isWaitingScreenActive() && !isDM()) {
+    targetId = (tokens.find(t => isMyToken(t)) || {}).id || null;
+  }
 
   if (targetId === _sideQrollTokenId) return; // already rendered (data unchanged)
   // Only reset section/tab state when switching to a genuinely different token

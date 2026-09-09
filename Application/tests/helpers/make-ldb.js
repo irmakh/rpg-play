@@ -41,7 +41,13 @@ export function makeLdb() {
     CREATE TABLE IF NOT EXISTS table_state (
       id TEXT PRIMARY KEY, cellSize INTEGER DEFAULT 50, offsetX INTEGER DEFAULT 0,
       offsetY INTEGER DEFAULT 0, mapWidth INTEGER DEFAULT 0, mapHeight INTEGER DEFAULT 0,
-      hasMap INTEGER DEFAULT 0, fogRegions TEXT DEFAULT '[]', hiddenItems TEXT DEFAULT '[]'
+      hasMap INTEGER DEFAULT 0, fogRegions TEXT DEFAULT '[]', hiddenItems TEXT DEFAULT '[]',
+      waitingScreenId TEXT DEFAULT ''
+    );
+    CREATE TABLE IF NOT EXISTS waiting_screens (
+      id TEXT PRIMARY KEY, name TEXT DEFAULT '', caption TEXT DEFAULT '',
+      imageUrl TEXT DEFAULT '', imageThumb TEXT DEFAULT '', imageMedium TEXT DEFAULT '',
+      createdAt TEXT DEFAULT (datetime('now'))
     );
     CREATE TABLE IF NOT EXISTS calendar_events (
       id TEXT PRIMARY KEY, title TEXT NOT NULL DEFAULT '', description TEXT DEFAULT '',
@@ -208,12 +214,29 @@ export function makeLdb() {
   // ── table state ────────────────────────────────────────────────────────────
   function getTableState() {
     return db.prepare('SELECT * FROM table_state WHERE id = ?').get(TABLE_STATE_ID)
-      || { id: TABLE_STATE_ID, cellSize: 50, offsetX: 0, offsetY: 0, mapWidth: 0, mapHeight: 0, hasMap: 0 };
+      || { id: TABLE_STATE_ID, cellSize: 50, offsetX: 0, offsetY: 0, mapWidth: 0, mapHeight: 0, hasMap: 0, waitingScreenId: '' };
   }
   function updateTableState(fields) {
     const mapped = { ...fields };
     if ('hasMap' in mapped) mapped.hasMap = mapped.hasMap ? 1 : 0;
     dynUpdate('table_state', TABLE_STATE_ID, mapped);
+  }
+
+  // ── waiting screens ────────────────────────────────────────────────────────
+  function listWaitingScreens() {
+    return db.prepare('SELECT * FROM waiting_screens ORDER BY createdAt DESC').all();
+  }
+  function getWaitingScreen(id) {
+    return db.prepare('SELECT * FROM waiting_screens WHERE id = ?').get(id) || null;
+  }
+  function createWaitingScreen(id, f) {
+    db.prepare('INSERT INTO waiting_screens (id, name, caption, imageUrl, imageThumb, imageMedium, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?)')
+      .run(id, f.name || '', f.caption || '', f.imageUrl || '', f.imageThumb || '', f.imageMedium || '',
+           f.createdAt || new Date().toISOString());
+  }
+  function updateWaitingScreen(id, fields) { dynUpdate('waiting_screens', id, fields); }
+  function deleteWaitingScreen(id) {
+    db.prepare('DELETE FROM waiting_screens WHERE id = ?').run(id);
   }
 
   // ── table tokens ───────────────────────────────────────────────────────────
@@ -628,6 +651,8 @@ export function makeLdb() {
     listOrphanMonsterInitEntries, clearInitEntries, getInitState, setInitState, getInitEntry_byCharId, getInitEntryByCharId,
     // table state
     getTableState, updateTableState,
+    // waiting screens
+    listWaitingScreens, getWaitingScreen, createWaitingScreen, updateWaitingScreen, deleteWaitingScreen,
     // table tokens
     listTableTokens, getTableToken, getTableTokensByInitId,
     createTableToken, updateTableToken, deleteTableToken, clearTableTokens,

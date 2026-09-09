@@ -129,9 +129,10 @@ export function makeApp() {
 
   const broadcasts = [];
   // Records the campaign each event was sent to, so tests can prove an event
-  // never leaked into another campaign's stream.
-  const broadcast = (channel, payload) =>
-    { broadcasts.push({ channel, payload, campaignId: activeCampaignId }); };
+  // never leaked into another campaign's stream, and whether it was addressed
+  // to DM clients only (waiting screens gate the table channel that way).
+  const broadcast = (channel, payload, _campaignId, opts) =>
+    { broadcasts.push({ channel, payload, campaignId: activeCampaignId, dmOnly: !!(opts && opts.dmOnly) }); };
   // Records every deleteUploadFile() call so image-cleanup can be asserted.
   const deletedFiles = [];
 
@@ -149,6 +150,9 @@ export function makeApp() {
     }
     return 200;
   }
+
+  // Mirrors the Set in server.js that gates the static map URL.
+  const parkedCampaigns = new Set();
 
   const mediaDbStub = makeMediaDbStub();
   const _mediaGetStub = { get: () => null };
@@ -187,6 +191,7 @@ export function makeApp() {
     fs,
     __dirname: path.resolve(__dirname, '../..'),
     currentCampaignId: () => activeCampaignId,
+    parkedCampaigns,
   };
 
   // notify() needs the finished ctx, and is attached before any route module —
@@ -203,5 +208,5 @@ export function makeApp() {
   registerChat(app, ctx);
   registerNotifs(app, ctx);
 
-  return { app, ldb, ldbFor, masterPw: TEST_MASTER_PW, hashPassword, broadcasts, deletedFiles };
+  return { app, ldb, ldbFor, masterPw: TEST_MASTER_PW, hashPassword, broadcasts, deletedFiles, parkedCampaigns };
 }

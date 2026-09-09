@@ -61,6 +61,25 @@ const ldb = ldbProxy;
 // pre-multi-tenant databases into it (no-op once a campaign exists).
 bootstrapCampaigns({ defaultDmPassword: process.env.MASTER_PASSWORD || '15243' });
 
+/**
+ * Re-derive which campaigns are parked on a waiting screen.
+ *
+ * A restart must not un-park a table: the DM could be mid-break with the map
+ * half rearranged, and the players' next page load would otherwise show it.
+ * table_state holds the truth, so read it back for every campaign at boot
+ * rather than waiting for the first client fetch to reconcile.
+ */
+function reconcileParkedCampaigns() {
+  try {
+    for (const c of cdb.listCampaigns()) {
+      try {
+        const st = getCampaignData(c.id).ldb.getTableState();
+        if (st && st.waitingScreenId) parkedCampaigns.add(c.id);
+      } catch {}
+    }
+  } catch {}
+}
+
 function genId() {
   return crypto.randomUUID();
 }
@@ -239,16 +258,31 @@ const consoleSseClients = new Set();
  * legitimate listener, and leaking another campaign's table state is worse than
  * a missed refresh.
  */
-function broadcast(eventName, payload = {}, campaignId = currentCampaignId()) {
+/**
+ * @param {object}  [opts]
+ * @param {boolean} [opts.dmOnly]  Deliver only to clients that connected as the
+ *   DM. Used while a waiting screen is up, so the DM rearranging the map does
+ *   not stream to the players being held on the image.
+ *
+ *   Note what this is and is not: `role` comes from a query parameter the
+ *   client supplies (clientMetaFromReq), so it routes honest clients and
+ *   nothing more. The real guarantee is on the authenticated paths — the map
+ *   and the table payload are gated on the DM password, so a crafted socket
+ *   claiming role=dm still cannot fetch either.
+ */
+function broadcast(eventName, payload = {}, campaignId = currentCampaignId(), opts = {}) {
+  const dmOnly = !!opts.dmOnly;
   const sseMsg = `event: ${eventName}\ndata: ${JSON.stringify(payload)}\n\n`;
   for (const res of [...sseClients]) {
     if (res._meta?.campaignId !== campaignId) continue;
+    if (dmOnly && res._meta?.role !== 'dm') continue;
     try { res.write(sseMsg); } catch { sseClients.delete(res); }
   }
   const wsMsg = JSON.stringify({ event: eventName, data: payload });
   for (const ws of [...wsClients]) {
     if (ws.readyState !== 1) { wsClients.delete(ws); continue; }
     if (ws._meta?.campaignId !== campaignId) continue;
+    if (dmOnly && ws._meta?.role !== 'dm') continue;
     ws.send(wsMsg);
   }
 }
@@ -312,7 +346,7 @@ const MAX_MEDIA_BYTES = 25 * 1024 * 1024;
 // Bump this number whenever frontend JS or CSS files change.
 // Also bump CACHE in public/sw.js to the same value.
 // Both must always match. See deployment notes in CLAUDE.md.
-const FRONTEND_VERSION = 147;
+const FRONTEND_VERSION = 148;
 
 // ── Express app ───────────────────────────────────────────────────────────────
 const app = express();
@@ -348,6 +382,35 @@ app.use((req, res, next) => {
     { campaignId: campaign.id, campaign, data: getCampaignData(campaign.id) },
     next
   );
+});
+
+// ── Waiting screens: gate the table map's static URL ──────────────────────────
+// While a campaign is parked on a waiting screen its players must not reach the
+// map. Withholding it from GET /api/table alone would be cosmetic: the file is
+// also served straight off this static mount at the fixed, guessable path
+// /uploads/maps/table-map.<ext>, so the mount needs the same gate.
+//
+// The DM does not lose the map — while a screen is up their client fetches it
+// through GET /api/table/map with the DM password, which an <img src> could
+// never send, and renders it from a blob.
+//
+// Held in memory rather than read per request because this mount sits ahead of
+// the route modules and serves every image on every page; table_state stays the
+// source of truth and seeds this at boot (see reconcileParkedCampaigns below).
+const parkedCampaigns = new Set();
+reconcileParkedCampaigns();   // declared above; called here, after the Set exists
+
+// The map file is NOT campaign-scoped — UPLOADS_DIR is one shared directory and
+// every campaign writes the same table-map.<ext>. So one campaign being parked
+// closes the path for all of them, which is the safe reading while that remains
+// true. A request that resolved no campaign cannot be attributed at all, which
+// is the other reason this gate is global rather than per campaign.
+const TABLE_MAP_FILE = /^\/maps\/table-map\.[A-Za-z0-9]+$/;
+app.use('/uploads', (req, res, next) => {
+  if (parkedCampaigns.size > 0 && TABLE_MAP_FILE.test(req.path)) {
+    return res.status(403).send('Map unavailable');
+  }
+  next();
 });
 
 app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads'), {
@@ -544,6 +607,8 @@ const ctx = {
   // Campaigns
   cdb, campaignIdFromReq, currentCampaignId, currentCampaign,
   isSuperAdminPassword, broadcastAll, CAMPAIGN_COOKIE, FRONTEND_VERSION,
+  // Waiting screens — the static-mount gate above reads this Set.
+  parkedCampaigns,
   // Node modules
   sharp, crypto, path, fs, express, __dirname,
 };

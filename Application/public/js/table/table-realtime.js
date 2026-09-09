@@ -61,6 +61,11 @@ function startSSE() {
           showImageRevealModal(d.mediumUrl || d.url); break;
       }
     },
+    // The DM parked or un-parked the table. Guarded like the other optional
+    // handlers so a page that does not load table-waiting.js is unaffected.
+    'waiting-screen': (d) => {
+      if (typeof applyWaitingScreen === 'function') applyWaitingScreen(d && d.active);
+    },
     initiative: async (d) => {
       const prevCurrentId = initData.currentId;
       await fetchInitiative();
@@ -196,10 +201,39 @@ function replaceToken(newTok) {
   else tokens.push(newTok);
 }
 
+// ── Map image loading ─────────────────────────────────────────────────────────
+// Normally the map is just an <img src="/api/table/map">, which redirects to the
+// file's static URL. While a waiting screen is up that static URL is closed on
+// the server, because leaving it open would make the whole feature cosmetic —
+// so the DM fetches the bytes with their password instead and renders a blob.
+// An <img src> can never send a header, which is precisely why players can't.
+let _mapBlobUrl = null;
+function releaseMapBlob() {
+  if (_mapBlobUrl) { try { URL.revokeObjectURL(_mapBlobUrl); } catch {} _mapBlobUrl = null; }
+}
+
+async function loadMapInto(img) {
+  releaseMapBlob();
+  if (!isWaitingScreenActive()) {
+    img.src = '/api/table/map?' + Date.now();     // unchanged everyday path
+    return;
+  }
+  if (!isDM()) { img.src = ''; img.style.display = 'none'; return; }
+  try {
+    const r = await fetch('/api/table/map', { headers: authHeaders() });
+    if (!r.ok) { img.src = ''; return; }
+    _mapBlobUrl = URL.createObjectURL(await r.blob());
+    img.src = _mapBlobUrl;
+  } catch { img.src = ''; }
+}
+
 // ── Data fetching ─────────────────────────────────────────────────────────────
 async function fetchAll() {
   try {
-    const res = await fetch('/api/table');
+    // Authenticated: while a waiting screen is up the server decides what this
+    // caller may see, and it can only do that if it knows who is asking. A
+    // player gets no map and only their own token; the DM gets everything.
+    const res = await fetch('/api/table', { headers: authHeaders() });
     if (!res.ok) return;
     const { state, tokens: tok } = await res.json();
     tableState = state;
@@ -209,10 +243,11 @@ async function fetchAll() {
     if (tableState.hasMap) {
       mapImg.onload  = hideMapLoadingOverlay;
       mapImg.onerror = hideMapLoadingOverlay;
-      mapImg.src = '/api/table/map?' + Date.now();
+      await loadMapInto(mapImg);
       mapImg.style.display = '';
     } else {
       hideMapLoadingOverlay();
+      releaseMapBlob();
       mapImg.src = '';
       mapImg.style.display = 'none';
     }

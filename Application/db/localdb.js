@@ -186,6 +186,15 @@ db.exec(`
     id TEXT PRIMARY KEY, entryJson TEXT NOT NULL,
     timestamp TEXT DEFAULT (datetime('now'))
   );
+  -- Waiting screens: a full-bleed image the DM parks the table on between
+  -- scenes. While one is showing, players get the image instead of the map and
+  -- the map is withheld server-side (see GET /api/table in
+  -- server/routes/table.js) so the DM can keep arranging tokens unseen.
+  CREATE TABLE IF NOT EXISTS waiting_screens (
+    id TEXT PRIMARY KEY, name TEXT DEFAULT '', caption TEXT DEFAULT '',
+    imageUrl TEXT DEFAULT '', imageThumb TEXT DEFAULT '', imageMedium TEXT DEFAULT '',
+    createdAt TEXT DEFAULT (datetime('now'))
+  );
   CREATE TABLE IF NOT EXISTS prepared_maps (
     id TEXT PRIMARY KEY, name TEXT DEFAULT '',
     cellSize INTEGER DEFAULT 50, offsetX INTEGER DEFAULT 0,
@@ -321,6 +330,10 @@ try { db.exec(`ALTER TABLE purchase_logs ADD COLUMN itemId TEXT DEFAULT ''`); } 
 // How many events a notification stands for. Rolls and chat arrive in bursts,
 // so they fold into one row that counts up rather than a dozen separate ones.
 try { db.exec(`ALTER TABLE notifications ADD COLUMN count INTEGER DEFAULT 1`); } catch {}
+// Which waiting screen the table is parked on, '' for none. It lives in
+// table_state rather than in memory so a player who reloads during a break is
+// still held on the screen, and a restart cannot silently expose the map.
+try { db.exec(`ALTER TABLE table_state ADD COLUMN waitingScreenId TEXT DEFAULT ''`); } catch {}
 
 // Ensure singleton rows exist
 db.prepare("INSERT OR IGNORE INTO shop_config (id, isOpen) VALUES (?, 1)").run(SHOP_CONFIG_ID);
@@ -786,7 +799,7 @@ function clearDrawings() {
 // ── Table State ───────────────────────────────────────────────────────────────
 function getTableState() {
   return db.prepare('SELECT * FROM table_state WHERE id = ?').get(TABLE_STATE_ID)
-    || { id: TABLE_STATE_ID, cellSize: 50, offsetX: 0, offsetY: 0, mapWidth: 0, mapHeight: 0, hasMap: 0 };
+    || { id: TABLE_STATE_ID, cellSize: 50, offsetX: 0, offsetY: 0, mapWidth: 0, mapHeight: 0, hasMap: 0, waitingScreenId: '' };
 }
 function updateTableState(fields) {
   if (!fields || Object.keys(fields).length === 0) return;
@@ -1026,6 +1039,28 @@ function importMaps(preparedMaps) {
       ins.run(r.id, r.name || '', r.cellSize || 50, r.offsetX || 0, r.offsetY || 0, r.mapWidth || 0, r.mapHeight || 0, fr, hi, r.createdAt || new Date().toISOString());
     }
   })();
+}
+
+// ── Waiting Screens ───────────────────────────────────────────────────────────
+function listWaitingScreens() {
+  return db.prepare('SELECT * FROM waiting_screens ORDER BY createdAt DESC').all();
+}
+function getWaitingScreen(id) {
+  return db.prepare('SELECT * FROM waiting_screens WHERE id = ?').get(id) || null;
+}
+function createWaitingScreen(id, fields) {
+  db.prepare('INSERT INTO waiting_screens (id, name, caption, imageUrl, imageThumb, imageMedium, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?)')
+    .run(id, fields.name || '', fields.caption || '', fields.imageUrl || '',
+         fields.imageThumb || '', fields.imageMedium || '',
+         fields.createdAt || new Date().toISOString());
+}
+function updateWaitingScreen(id, fields) {
+  if (!fields || Object.keys(fields).length === 0) return;
+  const sets = Object.keys(fields).map(k => `"${k}" = ?`).join(', ');
+  db.prepare(`UPDATE waiting_screens SET ${sets} WHERE id = ?`).run(...Object.values(fields), id);
+}
+function deleteWaitingScreen(id) {
+  db.prepare('DELETE FROM waiting_screens WHERE id = ?').run(id);
 }
 
 // ── Prepared Maps ─────────────────────────────────────────────────────────────
@@ -1373,6 +1408,7 @@ function exportAll() {
     getTableToken, getTableTokensByInitId, getMovedTableTokens, createTableToken, updateTableToken, deleteTableToken,
     clearTableTokens, listChatLog, appendChatLog, deleteChatMessage, clearChatLog, importAll,
     importCharacters, importMonsters, importTreasury, importShop, importLoot, importMaps,
+    listWaitingScreens, getWaitingScreen, createWaitingScreen, updateWaitingScreen, deleteWaitingScreen,
     listPreparedMaps, getPreparedMap, createPreparedMap, updatePreparedMap, deletePreparedMap, getEventsData,
     saveEventsData, getCalendarState, saveCalendarState, getWeatherConfig, saveWeatherConfig, listWeatherLog,
     getWeatherForDate, saveWeatherEntry, deleteWeatherEntry, listCalendarEvents, getCalendarEvent, createCalendarEvent,

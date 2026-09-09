@@ -210,7 +210,9 @@ window.addEventListener('load', async () => {
 
   try {
     const [tableRes, initRes, charsRes] = await Promise.all([
-      fetch('/api/table'),
+      // Authenticated so the server can decide what this caller may see while a
+      // waiting screen is up — see fetchAll() in table-realtime.js.
+      fetch('/api/table', { headers: authHeaders() }),
       fetch('/api/initiative'),
       fetch('/api/characters')
     ]);
@@ -227,11 +229,15 @@ window.addEventListener('load', async () => {
     await populateAddTokenModal(_charList);
   } catch (err) { console.error('Init error:', err); }
 
+  // Before the map: a player joining while the table is parked must never get
+  // a frame of it, and the DM's map has to load through the authenticated path.
+  await initWaitingScreen();
+
   const { w, h } = getCanvasSize();
   resizeCanvases(w, h);
 
   if (tableState.hasMap) {
-    mapImg.src = '/api/table/map?' + Date.now();
+    await loadMapInto(mapImg);
     mapImg.style.display = '';
   }
 

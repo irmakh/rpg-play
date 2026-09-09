@@ -3,15 +3,177 @@ import express from 'express';
 export default function register(app, ctx) {
   const {
     ldb, genId,
-    masterAuth,
+    masterAuth, charAuth,
     getCharacter,
     processImageSizes, saveUploadFile, deleteUploadFile,
     mediaDb, _mediaGet, _mapUpsert,
-    broadcast,
+    broadcast: _rawBroadcast,
     crypto, path, fs, __dirname,
   } = ctx;
+  // Older harnesses register these routes without the campaign helpers.
+  const currentCampaignId = ctx.currentCampaignId || (() => '');
+  const parkedCampaigns   = ctx.parkedCampaigns || new Set();
+
+  /**
+   * While the table is parked on a waiting screen, everything on the 'table'
+   * channel — token moves, fog, map swaps, pings — is the DM rearranging things
+   * the players are not supposed to be watching, so it goes only to DM clients.
+   *
+   * Wrapping the one function rather than tagging 24 call sites is deliberate:
+   * a broadcast added here later is covered without anyone remembering to.
+   * Other channels ('characters', 'initiative', 'waiting-screen') are
+   * unaffected and still reach everyone.
+   */
+  function broadcast(eventName, payload = {}, campaignId, opts = {}) {
+    const gated = eventName === 'table' && !!activeWaitingId();
+    return _rawBroadcast(eventName, payload, campaignId ?? currentCampaignId(),
+                         gated ? { ...opts, dmOnly: true } : opts);
+  }
 
   const TABLE_STATE_ID = 'c8a04a12-4372-4c78-9abc-def012345601';
+
+  // ── Waiting screens ─────────────────────────────────────────────────────────
+  // A waiting screen parks the table on a full-bleed image. Players get the
+  // image instead of the map; the DM keeps the map and carries on arranging it.
+  // The hiding is done here, on the server, not by covering things in the
+  // browser — the same choice treasury.js makes for unidentified items.
+
+  /** The id of the screen this campaign is parked on, or '' for none. */
+  function activeWaitingId() {
+    try { return ldb.getTableState().waitingScreenId || ''; } catch { return ''; }
+  }
+
+  /** Keep the static-mount gate in server.js in step with the database. */
+  function syncParked(showing) {
+    const id = currentCampaignId() || '';
+    if (showing) parkedCampaigns.add(id);
+    else parkedCampaigns.delete(id);
+  }
+
+  function waitingObj(r) {
+    if (!r) return null;
+    return {
+      id: r.id, name: r.name || '', caption: r.caption || '',
+      imageUrl: r.imageUrl || '', imageThumb: r.imageThumb || '',
+      imageMedium: r.imageMedium || '', createdAt: r.createdAt || '',
+    };
+  }
+
+  /** Remove a screen's image files from disk. Safe when there is no image. */
+  function dropWaitingImages(rec) {
+    for (const url of [rec?.imageUrl, rec?.imageThumb, rec?.imageMedium]) {
+      if (url) deleteUploadFile(url);
+    }
+  }
+
+  app.get('/api/waiting-screens', (req, res) => {
+    try {
+      if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
+      res.json({ screens: ldb.listWaitingScreens().map(waitingObj), activeId: activeWaitingId() });
+    } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
+  });
+
+  // What the players are being shown. Unauthenticated on purpose: the image is
+  // the one thing they ARE meant to see, and a signed-out tab still needs it.
+  app.get('/api/table/waiting-screen', (req, res) => {
+    try {
+      const id = activeWaitingId();
+      if (!id) return res.json({ active: null });
+      const rec = ldb.getWaitingScreen(id);
+      if (!rec) return res.json({ active: null });
+      res.json({ active: waitingObj(rec) });
+    } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
+  });
+
+  app.post('/api/waiting-screens', (req, res) => {
+    try {
+      if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
+      const name = String(req.body?.name || '').trim().slice(0, 80) || 'Untitled screen';
+      const caption = String(req.body?.caption || '').trim().slice(0, 200);
+      const id = genId();
+      ldb.createWaitingScreen(id, { name, caption, createdAt: new Date().toISOString() });
+      res.json({ ok: true, id });
+    } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
+  });
+
+  app.put('/api/waiting-screens/:id', (req, res) => {
+    try {
+      if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
+      const rec = ldb.getWaitingScreen(req.params.id);
+      if (!rec) return res.status(404).json({ error: 'Not found' });
+      const fields = {};
+      if (req.body?.name !== undefined) fields.name = String(req.body.name).trim().slice(0, 80);
+      if (req.body?.caption !== undefined) fields.caption = String(req.body.caption).trim().slice(0, 200);
+      if (Object.keys(fields).length === 0) return res.json({ ok: true });
+      ldb.updateWaitingScreen(req.params.id, fields);
+      // A rename or a new caption is visible to whoever is being held on it.
+      if (activeWaitingId() === req.params.id) {
+        broadcast('waiting-screen', { active: waitingObj(ldb.getWaitingScreen(req.params.id)) });
+      }
+      res.json({ ok: true });
+    } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
+  });
+
+  app.post('/api/waiting-screens/:id/image', express.json({ limit: '30mb' }), async (req, res) => {
+    try {
+      if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
+      const rec = ldb.getWaitingScreen(req.params.id);
+      if (!rec) return res.status(404).json({ error: 'Not found' });
+      const { dataUrl } = req.body || {};
+      if (!dataUrl || !dataUrl.startsWith('data:image/')) return res.status(400).json({ error: 'Image required' });
+      const m = dataUrl.match(/^data:(image\/[^;]+);base64,(.+)$/s);
+      if (!m) return res.status(400).json({ error: 'Invalid image format' });
+      if (Math.ceil(m[2].length * 0.75) > 30_000_000) return res.status(413).json({ error: 'Image too large (max ~30 MB)' });
+
+      dropWaitingImages(rec);   // replacing: the old files are now unreachable
+      const urls = await processImageSizes(m[1], Buffer.from(m[2], 'base64'), 'waiting', req.params.id);
+      const fields = { imageUrl: urls.original, imageThumb: urls.thumb, imageMedium: urls.medium };
+      ldb.updateWaitingScreen(req.params.id, fields);
+      if (activeWaitingId() === req.params.id) {
+        broadcast('waiting-screen', { active: waitingObj({ ...rec, ...fields }) });
+      }
+      res.json({ ok: true, ...fields });
+    } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
+  });
+
+  app.delete('/api/waiting-screens/:id', (req, res) => {
+    try {
+      if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
+      const rec = ldb.getWaitingScreen(req.params.id);
+      if (!rec) return res.status(404).json({ error: 'Not found' });
+      // Deleting the screen the table is parked on must also un-park it, or the
+      // players would be held on an image that no longer exists.
+      const wasActive = activeWaitingId() === req.params.id;
+      dropWaitingImages(rec);
+      ldb.deleteWaitingScreen(req.params.id);
+      if (wasActive) {
+        ldb.updateTableState({ waitingScreenId: '' });
+        syncParked(false);
+        broadcast('waiting-screen', { active: null });
+      }
+      res.json({ ok: true, closed: wasActive });
+    } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
+  });
+
+  // Open ({id}) or close ({id:''}) — the only route that parks the table.
+  app.post('/api/table/waiting-screen', (req, res) => {
+    try {
+      if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
+      const id = String(req.body?.id || '').trim();
+      if (id) {
+        const rec = ldb.getWaitingScreen(id);
+        if (!rec) return res.status(404).json({ error: 'Not found' });
+        ldb.updateTableState({ waitingScreenId: id });
+        syncParked(true);
+        broadcast('waiting-screen', { active: waitingObj(rec) });
+        return res.json({ ok: true, active: waitingObj(rec) });
+      }
+      ldb.updateTableState({ waitingScreenId: '' });
+      syncParked(false);
+      broadcast('waiting-screen', { active: null });
+      res.json({ ok: true, active: null });
+    } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
+  });
 
   async function getTableState() {
     try {
@@ -31,10 +193,38 @@ export default function register(app, ctx) {
   const TABLE_MAP_MEDIA_ID = 'table-map';
 
   // ── Table state ───────────────────────────────────────────────────────────────
+  /**
+   * The table as this caller is allowed to see it.
+   *
+   * Normally that is everything. While the campaign is parked on a waiting
+   * screen it is everything for the DM and, for a player, only their own
+   * token and no map at all — the tactical picture is withheld here rather
+   * than covered in the browser, so a player cannot read it out of the
+   * network payload.
+   *
+   * Their own token still travels, because the character panel on the right
+   * of the waiting screen is built from it and is the whole point of being
+   * able to keep rolling during a break.
+   */
   app.get('/api/table', async (req, res) => {
     try {
       const [state, tokens] = await Promise.all([getTableState(), getTableTokens()]);
-      res.json({ state, tokens });
+      const parkedOn = state.waitingScreenId || '';
+      syncParked(!!parkedOn);   // self-heals the static gate if it drifted
+
+      if (!parkedOn || masterAuth(req)) return res.json({ state, tokens });
+
+      // A player: prove who they are before handing back even their own token.
+      const charId = String(req.headers['x-character-id'] || '');
+      let mine = [];
+      if (charId && (await charAuth(charId, req)) === 200) {
+        mine = tokens.filter(t => (t.assignedCharId && t.assignedCharId === charId)
+                              || (!t.assignedCharId && t.linkedId && t.linkedId === charId));
+      }
+      res.json({
+        state: { ...state, hasMap: false, mapWidth: 0, mapHeight: 0, fogRegions: [], hiddenItems: [] },
+        tokens: mine,
+      });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
   });
 
@@ -59,6 +249,25 @@ export default function register(app, ctx) {
     const item = _mediaGet.get(TABLE_MAP_MEDIA_ID);
     if (!item) return res.status(404).send('No map uploaded');
     const dataStr = item.data.toString();
+
+    // Parked on a waiting screen: the map belongs to the DM alone. Normally
+    // this redirects to the file's static URL, but that URL is gated while
+    // parked (see the /uploads guard in server.js), so the bytes are streamed
+    // straight back instead. The DM's client asks for this with fetch() and the
+    // DM password and renders the result from a blob — an <img src> could never
+    // send that header, which is exactly why players cannot reach it.
+    if (activeWaitingId()) {
+      if (!masterAuth(req)) return res.status(403).send('Map unavailable');
+      if (dataStr.startsWith('FILE:')) {
+        const abs = path.join(__dirname, 'public', dataStr.slice(5).split('?')[0]);
+        res.set('Cache-Control', 'no-store');
+        return res.sendFile(abs, err => { if (err && !res.headersSent) res.status(404).send('No map uploaded'); });
+      }
+      res.set('Content-Type', item.mime_type);
+      res.set('Cache-Control', 'no-store');
+      return res.send(item.data);
+    }
+
     if (dataStr.startsWith('FILE:')) {
       // The on-disk path (table-map.<ext>) is reused when a new map shares the same
       // extension, so the static URL is byte-identical across map swaps and the

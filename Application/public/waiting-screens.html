@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Waiting Screens — DM</title>
+<script>(function(){try{var s=JSON.parse(sessionStorage.getItem('rpgSession')||'null');if(!s||s.role!=='dm'){location.replace('/login.html?next='+encodeURIComponent(location.pathname));}}catch(e){location.replace('/login.html');}})();</script>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#1a1a2e">
+<link rel="stylesheet" href="/css/waiting-screens.css">
+<link rel="stylesheet" href="/css/notifications.css">
+<script>if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js');</script>
+</head>
+<body>
+
+<div class="top">
+  <a href="/dm.html" class="btn ghost sm" style="text-decoration:none">← Back</a>
+  <h1>⏸ Waiting Screens</h1>
+  <span id="campaign-badge" style="display:none;background:var(--bg3);border:1px solid var(--a44);color:var(--txd);padding:2px 8px;border-radius:3px;font-size:11px;cursor:pointer"></span>
+  <button class="btn sm" data-notif-bell title="Notifications">🔔</button>
+  <span class="spacer"></span>
+  <button class="btn sm" onclick="newScreen()">+ New Screen</button>
+</div>
+
+<div class="banner" id="active-banner" style="display:none">
+  <span class="dot"></span>
+  <span>The table is parked on <b id="active-name"></b> — players cannot see the map.</span>
+  <button class="btn sm" onclick="stopShowing()">▶ Bring players back</button>
+</div>
+
+<div class="hint">
+  A waiting screen parks the table on a full-bleed image between scenes. Players see the
+  image instead of the map and keep their character panel, so they can still roll and act.
+  You keep the map and carry on arranging it.
+</div>
+
+<div class="grid" id="ws-grid">
+  <div class="empty">Loading…</div>
+</div>
+
+<input type="file" id="img-picker" accept="image/*" style="display:none">
+
+<script src="/js/lib/esc.js" defer></script>
+<script src="/js/lib/realtime.js" defer></script>
+<script src="/js/lib/notifications.js" defer></script>
+<script src="/js/waiting-screens.js" defer></script>
+</body>
+</html>

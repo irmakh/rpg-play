@@ -1,4 +1,4 @@
-const CACHE = 'rpg-v147';
+const CACHE = 'rpg-v148';
 
 const STATIC = [
   // Core pages
@@ -9,6 +9,9 @@ const STATIC = [
   '/handouts.html',
   '/css/handouts.css',
   '/js/handouts.js',
+  '/waiting-screens.html',
+  '/css/waiting-screens.css',
+  '/js/waiting-screens.js',
   '/login.html',
   '/index.html',
   '/table.html',
@@ -38,6 +41,7 @@ const STATIC = [
   '/js/lib/chat-render.js',
   '/js/lib/dnd-data.js',
   '/js/lib/realtime.js',
+  '/js/table/table-waiting.js',
   '/js/lib/notifications.js',
   '/js/lib/music-sync.js',
   '/js/lib/dice-engine.js',

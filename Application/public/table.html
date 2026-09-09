@@ -27,6 +27,7 @@
     <button class="btn" data-notif-bell title="Notifications">🔔</button>
     <button class="btn" id="btn-music" onclick="openMusicModal()" title="Music Player">🎵</button>
     <button class="btn" id="btn-handouts" onclick="openHandoutModal()" title="Hand out a handout to one or more characters">📜</button>
+    <button class="btn" id="btn-waiting" onclick="openWaitingPicker()" title="Park the table on a waiting screen — players stop seeing the map">⏸</button>
   </div>
   <button class="btn" onclick="openDMToolsModal()" title="Map Tools &amp; HP Overview">🗺</button>
   <button class="btn" onclick="logout()" style="margin-left:4px" title="Logout">
@@ -689,6 +690,28 @@
 <!-- Music Player Modal (DM only) — the controls live in /music.html, loaded in
      an iframe so the modal, the pop-out window and the desktop client all show
      the exact same player. -->
+<!-- Waiting Screen picker (DM only) — park the table on an image. While one is
+     showing the server withholds the map and other players' tokens from
+     players, so this is not just a cover over the canvas. -->
+<div id="waiting-picker-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:2000;align-items:center;justify-content:center">
+  <div style="background:var(--bg2);border:1px solid var(--ac);border-radius:8px;width:620px;max-width:96vw;max-height:88vh;display:flex;flex-direction:column;overflow:hidden">
+    <div class="modal-drag-handle" style="display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid var(--a44)">
+      <span style="font-weight:bold;font-size:14px;flex:1">⏸ Waiting screen</span>
+      <a class="btn sm" href="/waiting-screens.html" style="text-decoration:none" title="Create and edit waiting screens">Manage →</a>
+      <button class="btn sm" onclick="closeWaitingPicker()">✕</button>
+    </div>
+    <div style="padding:12px 16px;overflow-y:auto">
+      <div style="font-size:11px;color:var(--txd);margin-bottom:9px">
+        Players see the image instead of the map and keep their character panel. You keep the map.
+      </div>
+      <div id="waiting-picker-body"></div>
+    </div>
+    <div style="padding:10px 16px;border-top:1px solid var(--a44);display:flex;justify-content:flex-end">
+      <button class="btn" onclick="closeWaitingScreen()">▶ Bring players back</button>
+    </div>
+  </div>
+</div>
+
 <div id="music-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:2000;align-items:center;justify-content:center">
   <div style="background:var(--bg2);border:1px solid var(--ac);border-radius:8px;width:400px;max-width:96vw;height:600px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden">
     <div class="modal-drag-handle" style="display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid var(--a44)">
@@ -727,6 +750,7 @@
 <script src="/js/table/table-weather.js" defer></script>
 <script src="/js/table/table-handouts.js" defer></script>
 <script src="/js/lib/modal-guard.js" defer></script>
+<script src="/js/table/table-waiting.js" defer></script>
 <script src="/js/table/table-main.js" defer></script>
 </body>
 </html>
