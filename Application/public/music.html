@@ -13,6 +13,11 @@
 /* base.css is not loaded on this page (its 36px controls are wrong for the
    460x150 Now Playing window), so the icon rule has to live here. */
 .lt-icon{width:1.15em;height:1.15em;flex:none;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;vertical-align:-.15em}
+/* This page does not load base.css, so it must declare the colour scheme
+   itself. Without it the UA canvas is LIGHT, and a transparent document in the
+   table's iframe painted white over the iframe's own background. It also gets
+   the scrollbars and form controls right. */
+html{color-scheme:dark}
 html,body{height:100%}
 body{
   background:var(--slate); color:var(--bone);
@@ -21,7 +26,11 @@ body{
 }
 /* Embedded in the table modal the page is framed by the modal chrome, so it
    drops its own background and border and lets the modal supply them. */
-body.embed{background:transparent}
+/* Embedded in the table modal. It used to be transparent and let the modal
+   supply the background, which relied on the UA canvas behind it being dark -
+   it is not. Painting the surface explicitly is the same colour as the modal
+   box and does not depend on canvas behaviour. */
+body.embed{background:var(--slate)}
 /* Embedded in the table modal the page is measured by its parent and the
    iframe is sized to fit, so here it must take its NATURAL height rather than
    stretching to fill whatever box it is given - otherwise the track list

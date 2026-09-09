@@ -10,6 +10,14 @@
 <link rel="stylesheet" href="/css/tokens.css">
 <link rel="stylesheet" href="/css/fonts.css">
 <style>
+/* No base.css on this page, so the colour scheme is declared here: without it
+   the UA paints a light canvas and renders form controls and scrollbars light. */
+html{color-scheme:dark}
+/* .lt-icon's sizing lives in base.css, which this page does not load, so an
+   icon would render at the SVG default 300x150 instead of inline with the text. */
+.lt-icon{width:1.15em;height:1.15em;flex:none;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;vertical-align:-.15em}
+
+
 *{box-sizing:border-box;margin:0;padding:0}
 
 body{font-family:var(--ui);background:var(--ink);color:var(--bone);min-height:100vh;display:flex;align-items:center;justify-content:center}
