@@ -108,4 +108,7 @@ function applyDMControls() {
     dmControls.forEach(el => el.style.display = 'none');
     renderFogPanel();
   }
+  // A player can always reach their own sheet, token on the map or not.
+  const mySheetBtn = document.getElementById('btn-my-sheet');
+  if (mySheetBtn) mySheetBtn.style.display = isCharSession() ? '' : 'none';
 }

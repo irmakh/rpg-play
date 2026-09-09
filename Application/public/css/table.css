@@ -687,3 +687,11 @@ input[type=number]{-moz-appearance:textfield;appearance:textfield}
   #waiting-overlay{position:absolute}
   #waiting-dm-banner{bottom:8px;font-size:11px;padding:6px 10px}
 }
+
+/* Tokenless "my sheet" view: the signed-in player's own sheet with no token on
+   the map. The header blocks below are all driven by a token, so they are
+   hidden rather than left showing the last token's numbers. openHpPanel()
+   removes this class when a real token is selected. */
+.rp-selfsheet .rp-stats-row,
+.rp-selfsheet #hp-conditions-row,
+.rp-selfsheet #hp-edit-area{display:none!important}

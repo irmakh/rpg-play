@@ -6,6 +6,9 @@ async function openHpPanel(tok) {
   _hpPanelAc = tok.ac != null ? tok.ac : null;
 
   // Show right panel token details
+  // A real token takes over from the tokenless "my sheet" view, so drop that
+  // marker and let the token-only chrome (HP, AC, conditions) show again.
+  document.getElementById('rp-token-details')?.classList.remove('rp-selfsheet');
   const details = document.getElementById('rp-token-details');
   const placeholder = document.getElementById('rp-placeholder');
   if (details) details.style.display = '';

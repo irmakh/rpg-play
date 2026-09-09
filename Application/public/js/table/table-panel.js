@@ -507,6 +507,95 @@ async function tableActionRest(type) {
 // Post an action-flagged spell to chat (indexes into _sideAllSpells).
 function postSpellInfoFromAll(idx) { _postSpellInfo(_sideAllSpells[idx]); }
 
+// Marks the right panel as showing the signed-in player's OWN sheet rather than
+// a token's. Not a token id, so it can never collide with one.
+const SIDE_SELF = '__self__';
+
+/**
+ * Show the signed-in character's sheet with no token involved.
+ *
+ * The right panel is otherwise driven entirely by a selected token, so a player
+ * whose character is not on the map — between scenes, or before the DM places
+ * them — had no way to reach their own sheet at all. That is most obvious on a
+ * waiting screen, where there is no map to click in the first place.
+ */
+async function loadOwnCharacterSheet() {
+  const content = document.getElementById('side-qroll-content');
+  if (!content || !isCharSession()) return false;
+
+  _sideViewInitId = null;
+  selectedTokenId = null;
+  if (_sideQrollTokenId !== SIDE_SELF) { _sideOpenSections.clear(); _sideActiveTab = 'skills'; _sideCombatTab = 'attacks'; }
+  _sidePrevTokenId = SIDE_SELF;
+  _sideQrollTokenId = SIDE_SELF;
+
+  const subtitleEl = document.getElementById('rp-subtitle');
+  try {
+    const headers = sessionCharPw ? { 'X-Character-Password': sessionCharPw } : {};
+    const r = await fetch(`/api/characters/${sessionCharId}/qroll`, { headers });
+    if (!r.ok) return false;
+    const char = await r.json();
+    qrollCharName = char.name || sessionCharName || 'Character';
+    qrollData = char.data || {};
+    _sideCharId = sessionCharId;
+    if (subtitleEl) subtitleEl.textContent = _sideSubtitleFor(qrollData);
+    content.innerHTML = renderSideCharacter();
+    _showOwnSheetChrome();
+    if (typeof loadSideHandouts === 'function') loadSideHandouts(_sideCharId);
+    return true;
+  } catch { return false; }
+}
+
+// The panel header is built for a token: portrait, live HP/AC/Speed, conditions,
+// damage controls. With no token there is nothing to fill those with, and
+// leaving the previous token's numbers up would be worse than hiding them — so
+// the whole token-only block is hidden by the `rp-selfsheet` class, which
+// openHpPanel() removes again the moment a real token is selected. A class
+// rather than inline styles, so nothing has to remember to unhide each one.
+function _showOwnSheetChrome() {
+  const details = document.getElementById('rp-token-details');
+  const placeholder = document.getElementById('rp-placeholder');
+  if (details) { details.style.display = ''; details.classList.add('rp-selfsheet'); }
+  if (placeholder) placeholder.style.display = 'none';
+
+  const nameEl = document.getElementById('hp-panel-name');
+  if (nameEl) nameEl.textContent = qrollCharName || '';
+  // No token portrait to show; fall back to the placeholder crest.
+  const img = document.getElementById('rp-portrait-img');
+  const ph  = document.getElementById('rp-portrait-ph');
+  if (img) img.style.display = 'none';
+  if (ph)  ph.style.display = '';
+  for (const id of ['hp-edit-label-btn', 'hp-del-btn']) {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  }
+  const sp = document.getElementById('side-panel');
+  if (sp) { sp.style.display = ''; sp.classList.add('rp-open'); }
+  if (typeof updateZoomFloat === 'function') updateZoomFloat();
+}
+
+function _sideSubtitleFor(d) {
+  const race = d.race || d['race-name'] || '';
+  const cls  = d.class || d['class-name'] || d['class-1'] || '';
+  const sub  = d.subclass || d['subclass-1'] || '';
+  const lvl  = d.level || d['total-level'] || d['char-level'] || '';
+  const parts = [];
+  if (race) parts.push(race);
+  if (cls) {
+    const clsPart = sub ? `${cls} (${sub})` : cls;
+    parts.push(lvl ? `${clsPart} ${lvl}` : clsPart);
+  } else if (lvl) {
+    parts.push(`Level ${lvl}`);
+  }
+  return parts.join(' · ');
+}
+
+/** Toolbar button: open my own sheet, with or without a token, any time. */
+function showMySheet() {
+  if (!isCharSession()) return;
+  loadOwnCharacterSheet();
+}
+
 async function loadSideQroll() {
   const content = document.getElementById('side-qroll-content');
   if (!content) return;
@@ -526,11 +615,20 @@ async function loadSideQroll() {
     targetId = getActiveTurnTokenId() || null;
   }
   // Parked on a waiting screen there is no map to click and often no combat, so
-  // fall back to the player's own token — the character panel beside the image
-  // is the whole reason it stays visible, and it should not open empty.
-  if (!targetId && typeof isWaitingScreenActive === 'function' && isWaitingScreenActive() && !isDM()) {
-    targetId = (tokens.find(t => isMyToken(t)) || {}).id || null;
+  // fall back to the player's own character — the panel beside the image is the
+  // whole reason it stays visible, and it must not open empty. Their token is
+  // preferred when they have one (it carries live HP and conditions), but a
+  // player with no token on the map still gets their sheet.
+  if (!targetId && !isDM() && isCharSession()
+      && typeof isWaitingScreenActive === 'function' && isWaitingScreenActive()) {
+    const mine = tokens.find(t => isMyToken(t));
+    if (mine) targetId = mine.id;
+    else return void loadOwnCharacterSheet();
   }
+
+  // Nothing to switch to, and the player is deliberately looking at their own
+  // sheet — leave it up rather than blanking the panel underneath them.
+  if (!targetId && _sideQrollTokenId === SIDE_SELF) return;
 
   if (targetId === _sideQrollTokenId) return; // already rendered (data unchanged)
   // Only reset section/tab state when switching to a genuinely different token

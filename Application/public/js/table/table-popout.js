@@ -253,4 +253,7 @@
 
   window.togglePopout = togglePopout;
   window.dockAllPopouts = function () { for (const id in _popouts) _dock(id); };
+  // Lets callers ask before docking — a waiting screen docks the left panel so
+  // its pop-out cannot show players what the image is meant to be covering.
+  window.isPoppedOut = function (id) { return !!_popouts[id]; };
 })();

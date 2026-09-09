@@ -39,6 +39,7 @@ function applyWaitingScreen(ws, opts = {}) {
   else _removeWaitingOverlay();
 
   _renderDmBanner();
+  _applyPopoutLock(!!_waitingActive);
 
   // Opening and closing changes what the server will hand this client, so the
   // table has to be re-read. Deliberately a refetch and never a reload: a
@@ -101,22 +102,46 @@ async function _openCharacterPanel() {
   // Open it ON the player's own character rather than the "select a token"
   // placeholder — there is no map left to click, so nothing else would.
   //
+  // Their token is preferred when they have one, because it carries live HP and
+  // conditions. A player with NO token on the map still gets their sheet, via
+  // the token-free path — that is the common case between scenes, and without
+  // it the panel beside the image would be empty for them.
+  //
   // openHpPanel() is async and closes the panel again for a token it does not
   // consider yours, and the table refetch re-renders underneath it, so the
   // class is (re)applied LAST and the whole thing is idempotent. Getting this
   // order wrong leaves the player with an image and no way to roll.
-  if (typeof tokens !== 'undefined' && typeof isMyToken === 'function' && typeof openHpPanel === 'function') {
-    const mine = tokens.find(t => isMyToken(t));
-    if (mine) {
-      if (typeof selectedTokenId !== 'undefined') selectedTokenId = mine.id;
-      try { await openHpPanel(mine); } catch {}
-    }
+  const mine = (typeof tokens !== 'undefined' && typeof isMyToken === 'function')
+    ? tokens.find(t => isMyToken(t)) : null;
+
+  if (mine && typeof openHpPanel === 'function') {
+    if (typeof selectedTokenId !== 'undefined') selectedTokenId = mine.id;
+    try { await openHpPanel(mine); } catch {}
+    if (typeof loadSideQroll === 'function') { try { await loadSideQroll(); } catch {} }
+  } else if (typeof loadOwnCharacterSheet === 'function') {
+    try { await loadOwnCharacterSheet(); } catch {}
   }
-  if (typeof loadSideQroll === 'function') { try { await loadSideQroll(); } catch {} }
 
   const sp = document.getElementById('side-panel');
   if (sp) { sp.style.display = ''; sp.classList.add('rp-open'); }
   if (typeof updateZoomFloat === 'function') updateZoomFloat();
+}
+
+/**
+ * Popping the left panel out into its own window would put initiative and chat
+ * back on screen beside the image, undoing the cover the DM just chose. The
+ * button is hidden for players while parked (and any open pop-out is docked);
+ * the DM keeps it, since nothing is hidden from them.
+ */
+function _applyPopoutLock(active) {
+  const btn = document.getElementById('btn-pop-left');
+  if (!btn) return;
+  const lock = active && !isDM();
+  if (lock && typeof isPoppedOut === 'function' && isPoppedOut('left-panel')
+      && typeof togglePopout === 'function') {
+    try { togglePopout('left-panel'); } catch {}
+  }
+  btn.style.display = lock ? 'none' : '';
 }
 
 function _removeWaitingOverlay() {
