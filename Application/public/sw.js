@@ -1,4 +1,4 @@
-const CACHE = 'rpg-v164';
+const CACHE = 'rpg-v167';
 
 const STATIC = [
   // Core pages
@@ -43,6 +43,7 @@ const STATIC = [
   '/js/lib/dnd-data.js',
   '/js/lib/realtime.js',
   '/js/table/table-waiting.js',
+  '/js/lib/icons.js',
   '/js/lib/notifications.js',
   '/js/lib/music-sync.js',
   '/js/lib/dice-engine.js',

@@ -74,7 +74,7 @@
 
   <!-- Inline unlock screen -->
   <div id="unlock-screen" style="display:none;text-align:center;padding:48px 20px">
-    <div style="font-size:44px;margin-bottom:14px">🔒</div>
+    <div style="font-size:44px;margin-bottom:14px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-lock"></use></svg> </div>
     <div style="font-size:12px;color:var(--txd);margin-bottom:24px">This character is password-protected</div>
     <div style="max-width:300px;margin:0 auto">
       <input type="password" id="unlock-pw-input" placeholder="Enter password…" autocomplete="off"
@@ -130,11 +130,11 @@
     <div class="card"><div class="ct">Character Info</div><div class="cb">
       <div class="char-info-grid" style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr 1fr;gap:8px;margin-bottom:8px">
         <div class="field char-info-name"><label class="lbl">Name</label><input type="text" data-key="name"></div>
-        <div class="field"><label class="lbl">Class <a href="#" class="tools-link" onclick="open5e('class','classes');return false" title="Open in 5e.tools">↗</a></label><input type="text" data-key="class"></div>
+        <div class="field"><label class="lbl">Class <a href="#" class="tools-link" onclick="open5e('class','classes');return false" title="Open in 5e.tools"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-external"></use></svg> </a></label><input type="text" data-key="class"></div>
         <div class="field"><label class="lbl">Subclass</label><input type="text" data-key="subclass"></div>
         <div class="field"><label class="lbl">Level</label><input type="number" data-key="level"></div>
-        <div class="field"><label class="lbl">Background <a href="#" class="tools-link" onclick="open5e('background','backgrounds');return false" title="Open in 5e.tools">↗</a></label><input type="text" data-key="background"></div>
-        <div class="field"><label class="lbl">Species <a href="#" class="tools-link" onclick="open5e('species','races');return false" title="Open in 5e.tools">↗</a></label><input type="text" data-key="species"></div>
+        <div class="field"><label class="lbl">Background <a href="#" class="tools-link" onclick="open5e('background','backgrounds');return false" title="Open in 5e.tools"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-external"></use></svg> </a></label><input type="text" data-key="background"></div>
+        <div class="field"><label class="lbl">Species <a href="#" class="tools-link" onclick="open5e('species','races');return false" title="Open in 5e.tools"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-external"></use></svg> </a></label><input type="text" data-key="species"></div>
       </div>
       <div class="g4">
         <div class="field"><label class="lbl">XP</label><input type="number" data-key="xp"></div>
@@ -196,7 +196,7 @@
         <div class="card"><div class="ct">Combat</div><div class="cb">
           <div class="g3">
             <div class="field"><label class="lbl">Armor Class</label><input type="number" data-key="ac" class="big"><div style="display:flex;align-items:center;gap:4px;margin-top:3px"><label class="lbl" style="margin:0;white-space:nowrap">Bonus</label><input type="number" data-key="ac-bonus" style="width:100%;text-align:center" placeholder="0"></div></div>
-            <div class="field"><label class="lbl">Initiative</label><div class="rollable-field"><input type="text" data-key="init" class="big" readonly title="Click to roll Initiative — auto-calculated"><button class="edit-btn" style="pointer-events:none;opacity:0.3">🎲</button></div><div style="display:flex;align-items:center;gap:4px;margin-top:3px"><label class="lbl" style="margin:0;white-space:nowrap">Bonus</label><input type="number" data-key="init-bonus" style="width:100%;text-align:center" placeholder="0"></div></div>
+            <div class="field"><label class="lbl">Initiative</label><div class="rollable-field"><input type="text" data-key="init" class="big" readonly title="Click to roll Initiative — auto-calculated"><button class="edit-btn" style="pointer-events:none;opacity:0.3"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg> </button></div><div style="display:flex;align-items:center;gap:4px;margin-top:3px"><label class="lbl" style="margin:0;white-space:nowrap">Bonus</label><input type="number" data-key="init-bonus" style="width:100%;text-align:center" placeholder="0"></div></div>
             <div class="field"><label class="lbl">Speed</label><input type="text" data-key="speed" class="big" readonly title="Auto-calculated: base + item bonuses + bonus"><input type="hidden" data-key="speed-base" value="30"><div style="display:flex;align-items:center;gap:4px;margin-top:3px"><label class="lbl" style="margin:0;white-space:nowrap">Bonus</label><input type="number" data-key="speed-bonus" style="width:100%;text-align:center" placeholder="0"></div></div>
           </div>
           <div class="g3" style="margin-top:8px">
@@ -231,7 +231,7 @@
           <textarea data-key="features" style="min-height:110px"></textarea>
         </div></div>
 
-        <div class="card"><div class="ct">Feats <a href="#" class="tools-link" onclick="openFeats5e();return false" title="Open all feats in 5e.tools" style="font-size:11px;opacity:0.75">↗</a></div><div class="cb">
+        <div class="card"><div class="ct">Feats <a href="#" class="tools-link" onclick="openFeats5e();return false" title="Open all feats in 5e.tools" style="font-size:11px;opacity:0.75"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-external"></use></svg> </a></div><div class="cb">
           <textarea data-key="feats" style="min-height:60px"></textarea>
         </div></div>
 
@@ -266,8 +266,8 @@
         <a href="#" class="tools-link act-manage" onclick="openActionModal(null);return false" title="Add a custom action">MANAGE CUSTOM</a>
       </div>
       <div class="act-rest-bar">
-        <button type="button" class="add-btn" style="width:auto" onclick="actionRest('short')" title="Restore uses that recharge on a Short Rest">↻ Short Rest</button>
-        <button type="button" class="add-btn" style="width:auto" onclick="actionRest('long')" title="Restore uses that recharge on a Long or Short Rest">↻ Long Rest</button>
+        <button type="button" class="add-btn" style="width:auto" onclick="actionRest('short')" title="Restore uses that recharge on a Short Rest"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-refresh"></use></svg> Short Rest</button>
+        <button type="button" class="add-btn" style="width:auto" onclick="actionRest('long')" title="Restore uses that recharge on a Long or Short Rest"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-refresh"></use></svg> Long Rest</button>
       </div>
       <div id="actions-body"></div>
     </div></div>
@@ -316,7 +316,7 @@
       <div class="g5">
         <div class="field"><label class="lbl">Ability</label><input type="text" data-key="sp-ability"></div>
         <div class="field"><label class="lbl">Spell Save DC</label><input type="number" data-key="sp-dc"></div>
-        <div class="field"><label class="lbl">Spell Atk Bonus</label><div class="rollable-field"><input type="text" data-key="sp-atk"><button class="edit-btn" onclick="setSpAtkEditMode()" title="Edit value">✏</button></div></div>
+        <div class="field"><label class="lbl">Spell Atk Bonus</label><div class="rollable-field"><input type="text" data-key="sp-atk"><button class="edit-btn" onclick="setSpAtkEditMode()" title="Edit value"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-pencil"></use></svg> </button></div></div>
         <div class="field"><label class="lbl">Spell Modifier</label><input type="text" data-key="sp-mod"></div>
         <div class="field"><label class="lbl">Prepared</label><input type="text" id="prep-count" readonly style="text-align:center;font-weight:bold;cursor:default"></div>
       </div>
@@ -379,7 +379,7 @@
       <div class="ct">Roll History</div>
       <div class="cb">
         <ul class="rh-list" id="rh-list"><li style="color:var(--txd);font-size:12px;padding:8px">No rolls yet — click any modifier on the sheet to roll!</li></ul>
-        <button onclick="clearRollHistory()" class="char-btn danger" style="margin-top:10px;width:100%;padding:7px">🗑 Clear Roll History</button>
+        <button onclick="clearRollHistory()" class="char-btn danger" style="margin-top:10px;width:100%;padding:7px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-trash"></use></svg> Clear Roll History</button>
       </div>
     </div>
   </div>
@@ -396,7 +396,7 @@
         </div>
         <div style="flex:1;min-width:140px">
           <p style="font-size:11px;color:var(--txd);margin-bottom:10px">Upload an image to use as your character's portrait. It will appear beside the sheet title.</p>
-          <button class="add-btn" style="width:auto;padding:6px 16px;margin-bottom:6px" onclick="document.getElementById('portrait-file-input').click()">📷 Upload Portrait</button>
+          <button class="add-btn" style="width:auto;padding:6px 16px;margin-bottom:6px" onclick="document.getElementById('portrait-file-input').click()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-camera"></use></svg> Upload Portrait</button>
           <input type="file" id="portrait-file-input" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none" onchange="uploadMedia(this,true)">
           <div id="portrait-upload-status" style="font-size:11px;min-height:16px"></div>
         </div>
@@ -406,8 +406,8 @@
     <!-- Gallery -->
     <div class="card"><div class="ct">Media Gallery</div><div class="cb">
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
-        <button class="add-btn" style="width:auto;padding:6px 14px" onclick="document.getElementById('gallery-img-input').click()">🖼 Add Image</button>
-        <button class="add-btn" style="width:auto;padding:6px 14px" onclick="document.getElementById('gallery-vid-input').click()">🎥 Add Video</button>
+        <button class="add-btn" style="width:auto;padding:6px 14px" onclick="document.getElementById('gallery-img-input').click()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-image"></use></svg> Add Image</button>
+        <button class="add-btn" style="width:auto;padding:6px 14px" onclick="document.getElementById('gallery-vid-input').click()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-camera"></use></svg> Add Video</button>
         <input type="file" id="gallery-img-input" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none" onchange="uploadMedia(this,false)">
         <input type="file" id="gallery-vid-input" accept="video/mp4,video/webm" style="display:none" onchange="uploadMedia(this,false)">
       </div>
@@ -420,7 +420,7 @@
   <!-- HANDOUTS (DM-issued, one body per outcome) -->
   <div id="tab-handouts" role="tabpanel" aria-labelledby="tab-btn-handouts" tabindex="0" class="page">
     <div class="sec">
-      <div class="ct">📜 Handouts</div>
+      <div class="ct"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-document"></use></svg> Handouts</div>
       <div class="cb">
         <div id="handouts-list"></div>
       </div>
@@ -431,8 +431,8 @@
   <div id="tab-treasury" role="tabpanel" aria-labelledby="tab-btn-treasury" tabindex="0" class="page">
 
     <div id="treasury-seg">
-      <button class="seg-btn on" data-seg="loot" onclick="setTreasurySeg('loot')">⚔️ Free Loot</button>
-      <button class="seg-btn" data-seg="shop" onclick="setTreasurySeg('shop')">🛒 Shop</button>
+      <button class="seg-btn on" data-seg="loot" onclick="setTreasurySeg('loot')"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-swords"></use></svg> Free Loot</button>
+      <button class="seg-btn" data-seg="shop" onclick="setTreasurySeg('shop')"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-coins"></use></svg> Shop</button>
     </div>
 
     <div class="card" id="treasury-wallet-card" style="display:none">
@@ -535,7 +535,7 @@
             <span id="nc-filename" style="font-size:11px;color:#aaa">No file chosen</span>
           </div>
           <input type="file" id="nc-file" accept=".xml" style="display:none" onchange="ncFileSelected(this)">
-          <a href="/gaston.xml" download style="font-size:10px;color:#7ec8e3;text-decoration:none;display:inline-block;margin-top:4px">⬇ Download template (gaston.xml)</a>
+          <a href="/gaston.xml" download style="font-size:10px;color:#7ec8e3;text-decoration:none;display:inline-block;margin-top:4px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-arrow-down"></use></svg> Download template (gaston.xml)</a>
         </div>
         <div id="nc-import-name-wrap" class="field" style="display:none">
           <label class="lbl">Name (from file)</label>
@@ -620,8 +620,8 @@
       <div class="field" style="margin-bottom:8px">
         <label class="lbl">Visibility</label>
         <div style="display:flex;gap:14px;flex-wrap:wrap">
-          <label style="font-size:12px;cursor:pointer"><input type="radio" name="pcal-journal-vis" value="shared" checked> 🌐 Shared (everyone)</label>
-          <label style="font-size:12px;cursor:pointer"><input type="radio" name="pcal-journal-vis" value="private"> 🔒 Private (you + DM)</label>
+          <label style="font-size:12px;cursor:pointer"><input type="radio" name="pcal-journal-vis" value="shared" checked> <svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-external"></use></svg> Shared (everyone)</label>
+          <label style="font-size:12px;cursor:pointer"><input type="radio" name="pcal-journal-vis" value="private"> <svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-lock"></use></svg> Private (you + DM)</label>
         </div>
       </div>
       <div class="field" style="margin-bottom:8px">
@@ -746,7 +746,7 @@
       <div id="im-attune-wrap" style="display:none;margin-bottom:6px">
         <div style="display:flex;align-items:center;gap:8px;padding:4px 0">
           <input type="checkbox" id="im-attuned" style="width:16px;height:16px;accent-color:#cc88ff">
-          <label for="im-attuned" style="font-size:12px;cursor:pointer;color:#cc88ff">🔮 Attuned</label>
+          <label for="im-attuned" style="font-size:12px;cursor:pointer;color:#cc88ff"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-eye"></use></svg> Attuned</label>
         </div>
       </div>
       <div style="font-size:10px;color:var(--ac);text-transform:uppercase;letter-spacing:.5px;margin:10px 0 6px;font-weight:bold;border-bottom:1px solid var(--a44);padding-bottom:2px">Bonuses (applied when equipped)</div>
@@ -858,6 +858,7 @@
   <div class="loading-label" id="loading-label">Loading…</div>
 </div>
 
+<script src="/js/lib/icons.js"></script>
 <script src="/js/lib/esc.js" defer></script>
 <script src="/js/lib/lightbox.js" defer></script>
 <script src="/js/lib/fr_calendar.js" defer></script>
@@ -891,15 +892,15 @@
   <div class="float-panel">
     <div class="panel-body" id="init-body-wrap">
       <div class="init-panel-btns">
-        <button class="dice-btn" onclick="rollMyInitiative()" title="Roll your initiative">🎲 Roll</button>
-        <button class="dice-btn" onclick="initSkipTurn()" title="Next turn">⏭ Next</button>
-        <button class="dice-btn" style="border-color:#ff444466;color:#ff8888;background:#ff444411" onclick="initClear()" title="Clear all">✕</button>
+        <button class="dice-btn" onclick="rollMyInitiative()" title="Roll your initiative"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg> Roll</button>
+        <button class="dice-btn" onclick="initSkipTurn()" title="Next turn"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-next"></use></svg> Next</button>
+        <button class="dice-btn" style="border-color:#ff444466;color:#ff8888;background:#ff444411" onclick="initClear()" title="Clear all"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg> </button>
       </div>
       <div id="init-tracker-list"><div class="init-empty-msg">No combatants yet.</div></div>
     </div>
     <div class="panel-hdr" onclick="initTogglePanel()">
-      <span>⚔️ Initiative <span id="init-badge" class="chat-new-badge" style="display:none">!</span></span>
-      <span id="init-chevron">▲</span>
+      <span><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-swords"></use></svg> Initiative <span id="init-badge" class="chat-new-badge" style="display:none">!</span></span>
+      <span id="init-chevron"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-up"></use></svg> </span>
     </div>
   </div>
 
@@ -915,8 +916,8 @@
       </div>
     </div>
     <div class="panel-hdr" onclick="chatToggle()">
-      <span>🎲 Chat <span id="chat-badge" class="chat-new-badge" style="display:none">0</span></span>
-      <span id="chat-chevron">▲</span>
+      <span><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg> Chat <span id="chat-badge" class="chat-new-badge" style="display:none">0</span></span>
+      <span id="chat-chevron"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-up"></use></svg> </span>
     </div>
   </div>
 
