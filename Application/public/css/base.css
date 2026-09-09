@@ -131,7 +131,7 @@ html.lamplit .lt-btn-quiet:hover{background:var(--slate); color:var(--bone)}
 html.lamplit button:disabled,
 html.lamplit .lt-btn:disabled{opacity:.5; cursor:default}
 
-html.lamplit input,
+html.lamplit input:not([type=checkbox]):not([type=radio]),
 html.lamplit select,
 html.lamplit textarea{
   font:inherit;
@@ -142,6 +142,11 @@ html.lamplit textarea{
   padding:var(--s2) var(--s3);
   min-height:36px;
 }
+/* Checkboxes and radios are sized by the pages that use them; the 36px
+   min-height above would otherwise stretch them into ovals. */
+html.lamplit input[type=checkbox],
+html.lamplit input[type=radio]{accent-color:var(--arc);cursor:pointer}
+
 html.lamplit input::placeholder,
 html.lamplit textarea::placeholder{color:var(--ash-dim)}
 

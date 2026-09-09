@@ -360,12 +360,15 @@ a.char-btn{display:inline-block;text-decoration:none;line-height:1.5}
 .shop-cart-name{flex:1;font-size:12px}
 .shop-cart-subtotal{font-size:11px;color:var(--exp);white-space:nowrap;min-width:60px;text-align:right}
 /* ── Floating panel stack (bottom-right, initiative above chat) ── */
-.panel-stack{position:fixed;bottom:0;right:16px;width:300px;z-index:500;display:flex;flex-direction:column;border-radius:6px 6px 0 0;overflow:hidden;box-shadow:0 -2px 16px #0008}
+/* Initiative and Chat dock. These are ambient - you glance at them, you do not
+   read them - so the header is a quiet surface rather than a solid gold bar
+   competing with the sheet for attention. */
+.panel-stack{position:fixed;bottom:0;right:16px;width:320px;z-index:500;display:flex;flex-direction:column;border-radius:var(--r-md) var(--r-md) 0 0;overflow:hidden;box-shadow:0 -2px 24px #0009}
 .float-panel{display:flex;flex-direction:column}
-.panel-hdr{background:var(--ac);color:var(--bg);padding:7px 12px;font-weight:bold;font-size:12px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;letter-spacing:.5px}
-.panel-hdr:hover{background:var(--ahi)}
-.float-panel+.float-panel .panel-hdr{border-top:1px solid rgba(0,0,0,0.25)}
-.panel-body{background:var(--bg2);border:1px solid var(--a44);border-bottom:none;display:none;flex-direction:column}
+.panel-hdr{background:var(--slate-hi);color:var(--bone);padding:var(--s2) var(--s3);font-weight:600;font-size:var(--t-sm);min-height:40px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;border-top:1px solid var(--rule-hi)}
+.panel-hdr:hover{background:color-mix(in srgb, var(--slate-hi) 80%, var(--bone) 6%)}
+.float-panel+.float-panel .panel-hdr{border-top:1px solid var(--rule)}
+.panel-body{background:var(--slate);border:1px solid var(--rule);border-bottom:none;display:none;flex-direction:column}
 .panel-body.open{display:flex}
 .init-panel-btns{display:flex;gap:4px;padding:8px;border-bottom:1px solid var(--a44);flex-wrap:wrap}
 #init-tracker-list{padding:4px 0;max-height:240px;overflow-y:auto}
@@ -675,7 +678,7 @@ a.char-btn{display:inline-block;text-decoration:none;line-height:1.5}
      A player, who sees neither "+ New" nor the DM panel, gets two rows. */
   .cb-identity{flex:1 1 auto;min-width:0}
   .char-bar select{flex:1 1 120px;max-width:none;min-width:0}
-  .cb-more{order:2;margin-left:auto}
+  .cb-more{order:2}
   .cb-nav{order:3;flex:1 1 100%;margin-left:0}
 }
 
@@ -710,5 +713,29 @@ html.lamplit #vitals-amt{width:76px;text-align:center;font-size:var(--t-md);font
   .vitals{gap:var(--s3);padding:var(--s2)}
   .vitals-stats{margin-left:0;gap:var(--s4)}
   .vitals-act{flex:1 1 100%}
-  html.lamplit #vitals-amt{flex:1 1 60px;width:auto}
+  html.lamplit #vitals-amt{flex:0 0 84px;width:84px}
+}
+
+
+/* On a phone the dock covered the sheet. It now spans the full width, sits
+   flush, and the collapsed headers are all that show until you open one -
+   the sheet already reserves bottom padding for it. */
+@media (max-width:760px){
+  .panel-stack{right:0;left:0;width:auto;border-radius:0}
+  .panel-hdr{min-height:44px}
+  .panel-body{max-height:50vh;overflow-y:auto}
+}
+
+/* ── Touch targets ──────────────────────────────────────────────────────────
+   Skill and save checkboxes were ~14px, a third of the 44px minimum, on the
+   two densest lists in the app. */
+html.lamplit .sk-row input[type=checkbox]{width:20px;height:20px;flex-shrink:0}
+html.lamplit .sk-row{min-height:40px}
+/* Death saves decide whether a character lives. They were the smallest
+   targets on the sheet at 16px. */
+html.lamplit .ds-g input[type=checkbox]{width:22px;height:22px;flex-shrink:0;margin:0 3px}
+@media (max-width:760px){
+  html.lamplit .sk-row input[type=checkbox]{width:22px;height:22px}
+  html.lamplit .sk-row{min-height:44px}
+  html.lamplit .ds-g input[type=checkbox]{width:26px;height:26px}
 }
