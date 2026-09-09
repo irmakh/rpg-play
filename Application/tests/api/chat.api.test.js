@@ -1,14 +1,12 @@
 /**
- * API integration tests for /api/chat — the in-memory chat log is per campaign.
+ * API integration tests for /api/chat — a campaign's history is its own.
  *
- * Only the non-localdb providers use the in-memory log; localdb keeps chat in
- * the campaign's own database and was always isolated. The in-memory log was a
- * single shared array, so GET /api/chat handed one campaign another campaign's
- * history — including its dmOnly rolls, which no other table should ever see —
- * and a clear or a delete in one campaign reached into every other one.
+ * Chat lives in the campaign's database, reached through the request-scoped
+ * ldb proxy, so two tables never see each other's messages. What no other
+ * table may EVER see is a dmOnly roll: it is addressed to one campaign's DM,
+ * and another campaign's DM authenticates just as successfully.
  *
- * These run with dbProvider 'instantdb' precisely because that is the path the
- * bug lived on.
+ * These guard that boundary across every verb — read, delete and clear.
  */
 import { describe, it, expect } from 'vitest';
 import request from 'supertest';
@@ -21,7 +19,7 @@ const asDM = (a, campaignId) =>
   a.set('X-Master-Password', TEST_MASTER_PW).set('X-Campaign-Id', campaignId);
 const asPlayer = (a, campaignId) => a.set('X-Campaign-Id', campaignId);
 
-const setup = () => makeApp({ dbProvider: 'instantdb' });
+const setup = () => makeApp();
 
 const say = (app, campaignId, sender, message) =>
   asPlayer(request(app).post('/api/chat'), campaignId)
@@ -37,7 +35,7 @@ const readAsPlayer = (app, campaignId) =>
 const readAsDM = (app, campaignId) =>
   asDM(request(app).get('/api/chat'), campaignId);
 
-describe('in-memory chat log is per campaign', () => {
+describe('chat history is per campaign', () => {
   it('starts empty in a campaign that has never said anything', async () => {
     const { app } = setup();
     const res = await readAsPlayer(app, AMN);
@@ -121,18 +119,16 @@ describe('in-memory chat log is per campaign', () => {
     expect((await readAsPlayer(app, AMN)).body).toHaveLength(1);
   });
 
-  it('trims to CHAT_MAX per campaign, not across all of them', async () => {
+  it('keeps a long history in one campaign out of another', async () => {
     const { app } = setup();
     await say(app, WEST, 'Aliyr', 'Waterdeep survives');
 
-    // 120 lines in Amn is well past the 100-entry cap.
     for (let i = 0; i < 120; i++) await say(app, AMN, 'Gerion', `line ${i}`);
 
     const amn = await readAsPlayer(app, AMN);
-    expect(amn.body).toHaveLength(100);
-    expect(amn.body[0].message).toBe('line 20');
+    expect(amn.body).toHaveLength(120);
 
-    // Waterdeep's single line was never at risk of being shifted out.
+    // Waterdeep's single line is untouched by the flood next door.
     const west = await readAsPlayer(app, WEST);
     expect(west.body.map(e => e.message)).toEqual(['Waterdeep survives']);
   });

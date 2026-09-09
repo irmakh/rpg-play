@@ -9,7 +9,7 @@ import { DM_RECIPIENT } from '../notify.js';
  * viewer first and then uses that key — never one taken from the request body.
  */
 export default function register(app, ctx) {
-  const { ldb, DB_PROVIDER, masterAuth, charAuth } = ctx;
+  const { ldb, masterAuth, charAuth } = ctx;
 
   /**
    * Who is asking? The DM password wins; otherwise a character id backed by
@@ -25,7 +25,6 @@ export default function register(app, ctx) {
 
   app.get('/api/notifications', async (req, res) => {
     try {
-      if (DB_PROVIDER !== 'localdb') return res.json({ items: [], unread: 0 });
       const me = await viewer(req);
       if (!me) return res.status(401).json({ error: 'Unauthorized' });
 
@@ -42,7 +41,6 @@ export default function register(app, ctx) {
 
   app.post('/api/notifications/:rowId/seen', async (req, res) => {
     try {
-      if (DB_PROVIDER !== 'localdb') return res.json({ ok: true, unread: 0 });
       const me = await viewer(req);
       if (!me) return res.status(401).json({ error: 'Unauthorized' });
       // Scoped to the viewer, so passing somebody else's row id does nothing.
@@ -53,7 +51,6 @@ export default function register(app, ctx) {
 
   app.post('/api/notifications/seen-all', async (req, res) => {
     try {
-      if (DB_PROVIDER !== 'localdb') return res.json({ ok: true, unread: 0 });
       const me = await viewer(req);
       if (!me) return res.status(401).json({ error: 'Unauthorized' });
       const changed = ldb.markAllNotificationsSeen(me);
@@ -63,7 +60,6 @@ export default function register(app, ctx) {
 
   app.delete('/api/notifications', async (req, res) => {
     try {
-      if (DB_PROVIDER !== 'localdb') return res.json({ ok: true });
       const me = await viewer(req);
       if (!me) return res.status(401).json({ error: 'Unauthorized' });
       // Only this viewer's copies go; the event itself survives for everyone

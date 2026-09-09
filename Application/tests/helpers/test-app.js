@@ -85,13 +85,7 @@ function makeMediaDbStub() {
   };
 }
 
-/**
- * @param {object}  [opts]
- * @param {string}  [opts.dbProvider='localdb']  Set to 'instantdb' to exercise
- *        the in-memory paths (chat log) instead of the campaign database.
- */
-export function makeApp({ dbProvider = 'localdb' } = {}) {
-  const ldb = makeLdb();
+export function makeApp() {
   const app = express();
   app.use(express.json({ limit: '10mb' }));
 
@@ -103,6 +97,34 @@ export function makeApp({ dbProvider = 'localdb' } = {}) {
   app.use((req, _res, next) => {
     activeCampaignId = String(req.headers['x-campaign-id'] || '');
     next();
+  });
+
+  // One database per campaign, exactly as production keeps one SQLite file per
+  // campaign (db/campaign-store.js). A shared store would have let a test pass
+  // while a route leaked another campaign's rows.
+  //
+  // `ldb` is a proxy that resolves at property-access time, mirroring the
+  // scopedProxy in lib/request-context.js: route modules destructure their
+  // dependencies once at register() time, so a plain object would freeze one
+  // campaign's handle into the closure forever.
+  const stores = new Map();
+  const ldbFor = (campaignId = '') => {
+    let store = stores.get(campaignId);
+    if (!store) { store = makeLdb(); stores.set(campaignId, store); }
+    return store;
+  };
+  const ldb = new Proxy(Object.create(null), {
+    get(_t, prop) {
+      const target = ldbFor(activeCampaignId);
+      const value = target[prop];
+      return typeof value === 'function' ? value.bind(target) : value;
+    },
+    has(_t, prop) { return prop in ldbFor(activeCampaignId); },
+    ownKeys()     { return Reflect.ownKeys(ldbFor(activeCampaignId)); },
+    getOwnPropertyDescriptor(_t, prop) {
+      const d = Reflect.getOwnPropertyDescriptor(ldbFor(activeCampaignId), prop);
+      return d ? { ...d, configurable: true } : undefined;
+    },
   });
 
   const broadcasts = [];
@@ -134,8 +156,6 @@ export function makeApp({ dbProvider = 'localdb' } = {}) {
 
   const ctx = {
     ldb,
-    idb: null,
-    DB_PROVIDER: dbProvider,
     genId: () => crypto.randomUUID(),
     masterAuth,
     charAuth,
@@ -166,7 +186,6 @@ export function makeApp({ dbProvider = 'localdb' } = {}) {
     path,
     fs,
     __dirname: path.resolve(__dirname, '../..'),
-    CHAT_MAX: 100,
     currentCampaignId: () => activeCampaignId,
   };
 
@@ -184,5 +203,5 @@ export function makeApp({ dbProvider = 'localdb' } = {}) {
   registerChat(app, ctx);
   registerNotifs(app, ctx);
 
-  return { app, ldb, masterPw: TEST_MASTER_PW, hashPassword, broadcasts, deletedFiles };
+  return { app, ldb, ldbFor, masterPw: TEST_MASTER_PW, hashPassword, broadcasts, deletedFiles };
 }

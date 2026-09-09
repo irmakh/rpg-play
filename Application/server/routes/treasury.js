@@ -298,76 +298,32 @@ function cpToGpStringSafe(valueCp) {
 
 export default function register(app, ctx) {
   const {
-    ldb, idb, DB_PROVIDER, genId,
+    ldb, genId,
     masterAuth, charAuth, getCharacter,
-    getShopConfig, deductCurrency, SHOP_CONFIG_ID,
+    getShopConfig, deductCurrency,
     processImageSizes, deleteUploadFile,
     IMAGE_MIME, MAX_MEDIA_BYTES,
     broadcast,
   } = ctx;
 
-  // ── Storage helpers (dual provider) ─────────────────────────────────────────
-  async function listAll() {
-    if (DB_PROVIDER === 'localdb') return ldb.listTreasuryItems();
-    const result = await idb.query({ treasuryItems: {} });
-    return (result.treasuryItems || []).sort((a, b) => (a.createdAt || '').localeCompare(b.createdAt || ''));
-  }
-  async function getOne(id) {
-    if (DB_PROVIDER === 'localdb') return ldb.getTreasuryItem(id);
-    const result = await idb.query({ treasuryItems: { $: { where: { id } } } });
-    return result.treasuryItems?.[0] || null;
-  }
-  async function getMany(ids) {
-    if (DB_PROVIDER === 'localdb') return ldb.getTreasuryItemsByIds(ids);
-    const result = await idb.query({ treasuryItems: { $: { where: { id: { in: ids } } } } });
-    return result.treasuryItems || [];
-  }
-  async function createOne(id, fields) {
-    if (DB_PROVIDER === 'localdb') return ldb.createTreasuryItem(id, fields);
-    return idb.transact([idb.tx.treasuryItems[id].update(fields)]);
-  }
-  async function updateOne(id, fields) {
-    if (DB_PROVIDER === 'localdb') return ldb.updateTreasuryItem(id, fields);
-    return idb.transact([idb.tx.treasuryItems[id].update(fields)]);
-  }
-  async function deleteOne(id) {
-    if (DB_PROVIDER === 'localdb') return ldb.deleteTreasuryItem(id);
-    return idb.transact([idb.tx.treasuryItems[id].delete()]);
-  }
+  // ── Storage helpers ─────────────────────────────────────────────────────────
+  // Thin names over the campaign database, kept because the routes below read
+  // better for them than for the raw ldb calls.
+  async function listAll()               { return ldb.listTreasuryItems(); }
+  async function getOne(id)              { return ldb.getTreasuryItem(id); }
+  async function getMany(ids)            { return ldb.getTreasuryItemsByIds(ids); }
+  async function createOne(id, fields)   { return ldb.createTreasuryItem(id, fields); }
+  async function updateOne(id, fields)   { return ldb.updateTreasuryItem(id, fields); }
+  async function deleteOne(id)           { return ldb.deleteTreasuryItem(id); }
   // ── Free-loot requests ──────────────────────────────────────────────────────
   // A player asks for a piece of free loot; the DM decides who gets it. Nothing
   // reaches an inventory until an approval, so these rows are just intent.
-  async function listRequests(status) {
-    if (DB_PROVIDER === 'localdb') return ldb.listTreasuryRequests(status);
-    const where = status ? { status } : {};
-    return (await idb.query({ treasuryRequests: { $: { where } } })).treasuryRequests || [];
-  }
-  async function requestsForItem(itemId, status) {
-    if (DB_PROVIDER === 'localdb') return ldb.listTreasuryRequestsForItem(itemId, status);
-    const where = status ? { itemId, status } : { itemId };
-    return (await idb.query({ treasuryRequests: { $: { where } } })).treasuryRequests || [];
-  }
-  async function getRequest(id) {
-    if (DB_PROVIDER === 'localdb') return ldb.getTreasuryRequest(id);
-    const rows = (await idb.query({ treasuryRequests: { $: { where: { id } } } })).treasuryRequests || [];
-    return rows[0] || null;
-  }
-  async function createRequest(id, fields) {
-    if (DB_PROVIDER === 'localdb') return ldb.createTreasuryRequest(id, fields);
-    return idb.transact([idb.tx.treasuryRequests[id].update(fields)]);
-  }
-  async function updateRequest(id, fields) {
-    if (DB_PROVIDER === 'localdb') return ldb.updateTreasuryRequest(id, fields);
-    return idb.transact([idb.tx.treasuryRequests[id].update(fields)]);
-  }
-  async function declinePendingFor(itemId, at) {
-    if (DB_PROVIDER === 'localdb') return ldb.declinePendingTreasuryRequests(itemId, at);
-    const open = await requestsForItem(itemId, 'pending');
-    if (open.length) {
-      await idb.transact(open.map(r => idb.tx.treasuryRequests[r.id].update({ status: 'declined', decidedAt: at })));
-    }
-    return open.length;
-  }
+  async function listRequests(status)          { return ldb.listTreasuryRequests(status); }
+  async function requestsForItem(itemId, st)   { return ldb.listTreasuryRequestsForItem(itemId, st); }
+  async function getRequest(id)                { return ldb.getTreasuryRequest(id); }
+  async function createRequest(id, fields)     { return ldb.createTreasuryRequest(id, fields); }
+  async function updateRequest(id, fields)     { return ldb.updateTreasuryRequest(id, fields); }
+  async function declinePendingFor(itemId, at) { return ldb.declinePendingTreasuryRequests(itemId, at); }
 
   /**
    * Who has their name on each of these items, as {itemId: [{id, charId, charName}]}.
@@ -379,9 +335,7 @@ export default function register(app, ctx) {
     if (wanted.size === 0) return {};
     const rows = (await listRequests('pending')).filter(r => wanted.has(r.itemId));
     if (rows.length === 0) return {};
-    const characters = DB_PROVIDER === 'localdb'
-      ? ldb.listCharacters()
-      : (await idb.query({ characters: {} })).characters || [];
+    const characters = ldb.listCharacters();
     const liveIds = new Set(characters.map(c => c.id));
     const out = {};
     for (const r of rows) {
@@ -392,26 +346,17 @@ export default function register(app, ctx) {
   }
 
   async function claimedIdsFor(charId) {
-    if (DB_PROVIDER === 'localdb') return ldb.listClaimedItemIds(charId);
-    const result = await idb.query({ lootLogs: { $: { where: { charId } } } });
-    return [...new Set((result.lootLogs || []).map(r => r.itemId).filter(Boolean))];
+    return ldb.listClaimedItemIds(charId);
   }
 
   // Push a newly-revealed item's real name and stats onto every character
   // already holding an unidentified copy, then tell their sheets to refresh.
   async function identifyForEveryone(record) {
     const item = objFromRecord(record);
-    const characters = DB_PROVIDER === 'localdb'
-      ? ldb.listCharacters()
-      : (await idb.query({ characters: {} })).characters || [];
+    const characters = ldb.listCharacters();
     const touched = identifyHeldCopies(characters, item);
     if (touched.length === 0) return;
-    if (DB_PROVIDER === 'localdb') {
-      for (const { char, dataJson } of touched) ldb.updateCharacter(char.id, { dataJson, name: char.name });
-    } else {
-      await idb.transact(touched.map(({ char, dataJson }) =>
-        idb.tx.characters[char.id].update({ dataJson, name: char.name })));
-    }
+    for (const { char, dataJson } of touched) ldb.updateCharacter(char.id, { dataJson, name: char.name });
     for (const { char } of touched) broadcast('characters', { action: 'updated', id: char.id });
   }
 
@@ -510,8 +455,7 @@ export default function register(app, ctx) {
       const raw = req.body?.activeTags !== undefined ? req.body.activeTags : req.body?.activeTag;
       const activeTags = isOpen ? normalizeTags(raw) : [];
       const activeTag = activeTags[0] || '';
-      if (DB_PROVIDER === 'localdb') ldb.setShopConfig(isOpen, activeTags);
-      else await idb.transact([idb.tx.shopConfig[SHOP_CONFIG_ID].update({ isOpen, activeTag, activeTags })]);
+      ldb.setShopConfig(isOpen, activeTags);
       broadcast('treasury', { action: 'statusChanged', isOpen, activeTag, activeTags });
       ctx.notify?.({
         to: 'players', kind: isOpen ? 'shop-open' : 'shop-closed',
@@ -582,8 +526,7 @@ export default function register(app, ctx) {
       const { ids, tag } = req.body || {};
       if (!Array.isArray(ids) || ids.length === 0) return res.status(400).json({ error: 'ids array required' });
       const tagStr = tag !== undefined ? String(tag).trim().slice(0, TAG_MAX) : '';
-      if (DB_PROVIDER === 'localdb') ldb.bulkUpdateTreasuryTag(ids, tagStr);
-      else await idb.transact(ids.map(id => idb.tx.treasuryItems[id].update({ tag: tagStr })));
+      ldb.bulkUpdateTreasuryTag(ids, tagStr);
       broadcast('treasury', { action: 'bulk-updated' });
       res.json({ ok: true, count: ids.length });
     } catch (err) { console.error('POST /api/treasury/bulk-update-tag:', err); res.status(500).json({ error: 'Server error' }); }
@@ -595,8 +538,7 @@ export default function register(app, ctx) {
       const { ids, mode } = req.body || {};
       if (!Array.isArray(ids) || ids.length === 0) return res.status(400).json({ error: 'ids array required' });
       if (!MODES.has(mode)) return res.status(400).json({ error: 'Invalid mode' });
-      if (DB_PROVIDER === 'localdb') ldb.bulkUpdateTreasuryMode(ids, mode);
-      else await idb.transact(ids.map(id => idb.tx.treasuryItems[id].update({ mode })));
+      ldb.bulkUpdateTreasuryMode(ids, mode);
       // Same rule as the single-item edit: leaving the loot pool closes the queue.
       if (mode !== 'loot') {
         const at = new Date().toISOString();
@@ -614,8 +556,7 @@ export default function register(app, ctx) {
       if (!Array.isArray(ids) || ids.length === 0) return res.status(400).json({ error: 'ids array required' });
       const rows = await getMany(ids);
       for (const r of rows) dropImageFiles(r);
-      if (DB_PROVIDER === 'localdb') ldb.bulkDeleteTreasuryItems(ids);
-      else await idb.transact(ids.map(id => idb.tx.treasuryItems[id].delete()));
+      ldb.bulkDeleteTreasuryItems(ids);
       {
         const at = new Date().toISOString();
         for (const id of ids) await declinePendingFor(id, at);
@@ -655,8 +596,7 @@ export default function register(app, ctx) {
       // Stagger createdAt so the imported batch keeps its pasted order.
       const t0 = Date.now();
       rows.forEach((r, i) => { r.fields.createdAt = new Date(t0 + i).toISOString(); });
-      if (DB_PROVIDER === 'localdb') ldb.bulkCreateTreasuryItems(rows);
-      else await idb.transact(rows.map(({ id, fields }) => idb.tx.treasuryItems[id].update(fields)));
+      ldb.bulkCreateTreasuryItems(rows);
       broadcast('treasury', { action: 'imported' });
       res.json({ ok: true, count: rows.length });
     } catch (err) { console.error('POST /api/treasury/import:', err); res.status(500).json({ error: 'Server error' }); }
@@ -752,8 +692,7 @@ export default function register(app, ctx) {
       const open = (await requestsForItem(itemId, 'pending')).filter(r => r.charId === charId);
       if (open.length === 0) return res.status(404).json({ error: 'No pending request' });
       for (const r of open) {
-        if (DB_PROVIDER === 'localdb') ldb.deleteTreasuryRequest(r.id);
-        else await idb.transact([idb.tx.treasuryRequests[r.id].delete()]);
+        ldb.deleteTreasuryRequest(r.id);
       }
 
       broadcast('treasury', { action: 'requested' });
@@ -817,20 +756,10 @@ export default function register(app, ctx) {
         : (left <= 0 ? { quantity: 0, mode: 'hidden' } : { quantity: left });
       const exhausted = item.quantity !== -1 && left <= 0;
 
-      if (DB_PROVIDER === 'localdb') {
-        ldb.updateCharacter(reqRow.charId, { dataJson: JSON.stringify(charData), name: charRecord.name });
-        if (stockUpdate) ldb.updateTreasuryItem(item.id, stockUpdate);
-        ldb.createLootLog(genId(), { charId: reqRow.charId, charName, itemName: item.name, itemId: item.id, claimedAt: now });
-        ldb.updateTreasuryRequest(reqRow.id, { status: 'approved', decidedAt: now });
-      } else {
-        const txns = [
-          idb.tx.characters[reqRow.charId].update({ dataJson: JSON.stringify(charData), name: charRecord.name }),
-          idb.tx.lootLogs[genId()].update({ charId: reqRow.charId, charName, itemName: item.name, itemId: item.id, claimedAt: now }),
-          idb.tx.treasuryRequests[reqRow.id].update({ status: 'approved', decidedAt: now }),
-        ];
-        if (stockUpdate) txns.push(idb.tx.treasuryItems[item.id].update(stockUpdate));
-        await idb.transact(txns);
-      }
+      ldb.updateCharacter(reqRow.charId, { dataJson: JSON.stringify(charData), name: charRecord.name });
+      if (stockUpdate) ldb.updateTreasuryItem(item.id, stockUpdate);
+      ldb.createLootLog(genId(), { charId: reqRow.charId, charName, itemName: item.name, itemId: item.id, claimedAt: now });
+      ldb.updateTreasuryRequest(reqRow.id, { status: 'approved', decidedAt: now });
 
       // Once the last one is handed out there is nothing left to compete for,
       // so everybody still waiting is told no rather than left hanging.
@@ -932,21 +861,11 @@ export default function register(app, ctx) {
       const charName = charData.name || 'Unknown';
       const now = new Date().toISOString();
 
-      if (DB_PROVIDER === 'localdb') {
-        for (const { item, qty } of resolved) {
-          if (item.quantity !== -1) ldb.updateTreasuryItem(item.id, { quantity: item.quantity - qty });
-          ldb.createPurchaseLog(genId(), { charId, charName, itemName: item.name, itemId: item.id, qty, totalCp: (item.valueCp ?? 0) * qty, purchasedAt: now });
-        }
-        ldb.updateCharacter(charId, { dataJson: JSON.stringify(charData), name: charRecord.name });
-      } else {
-        const txns = [];
-        for (const { item, qty } of resolved) {
-          if (item.quantity !== -1) txns.push(idb.tx.treasuryItems[item.id].update({ quantity: item.quantity - qty }));
-          txns.push(idb.tx.purchaseLogs[genId()].update({ charId, charName, itemName: item.name, itemId: item.id, qty, totalCp: (item.valueCp ?? 0) * qty, purchasedAt: now }));
-        }
-        txns.push(idb.tx.characters[charId].update({ dataJson: JSON.stringify(charData), name: charRecord.name }));
-        await idb.transact(txns);
+      for (const { item, qty } of resolved) {
+        if (item.quantity !== -1) ldb.updateTreasuryItem(item.id, { quantity: item.quantity - qty });
+        ldb.createPurchaseLog(genId(), { charId, charName, itemName: item.name, itemId: item.id, qty, totalCp: (item.valueCp ?? 0) * qty, purchasedAt: now });
       }
+      ldb.updateCharacter(charId, { dataJson: JSON.stringify(charData), name: charRecord.name });
 
       broadcast('treasury', { action: 'purchase' });
       broadcast('characters', { action: 'updated', id: charId });
@@ -958,15 +877,8 @@ export default function register(app, ctx) {
   app.get('/api/treasury/logs', async (req, res) => {
     try {
       if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
-      let claims, purchases;
-      if (DB_PROVIDER === 'localdb') {
-        claims = ldb.listLootLogs();
-        purchases = ldb.listPurchaseLogs();
-      } else {
-        const [cr, pr] = await Promise.all([idb.query({ lootLogs: {} }), idb.query({ purchaseLogs: {} })]);
-        claims = cr.lootLogs || [];
-        purchases = pr.purchaseLogs || [];
-      }
+      const claims = ldb.listLootLogs();
+      const purchases = ldb.listPurchaseLogs();
       const rows = [
         ...claims.map(r => ({ id: r.id, type: 'claim', charName: r.charName, itemName: r.itemName, itemId: r.itemId || '', qty: 1, totalCp: 0, at: r.claimedAt })),
         ...purchases.map(r => ({ id: r.id, type: 'purchase', charName: r.charName, itemName: r.itemName, itemId: r.itemId || '', qty: r.qty, totalCp: r.totalCp, at: r.purchasedAt })),

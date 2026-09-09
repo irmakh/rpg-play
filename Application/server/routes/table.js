@@ -2,7 +2,7 @@ import express from 'express';
 
 export default function register(app, ctx) {
   const {
-    ldb, idb, DB_PROVIDER, genId,
+    ldb, genId,
     masterAuth,
     getCharacter,
     processImageSizes, saveUploadFile, deleteUploadFile,
@@ -15,13 +15,7 @@ export default function register(app, ctx) {
 
   async function getTableState() {
     try {
-      let raw;
-      if (DB_PROVIDER === 'localdb') {
-        raw = ldb.getTableState();
-      } else {
-        const r = await idb.query({ tableState: { $: { where: { id: TABLE_STATE_ID } } } });
-        raw = r.tableState?.[0] || { id: TABLE_STATE_ID, cellSize: 50, offsetX: 0, offsetY: 0, mapWidth: 0, mapHeight: 0, hasMap: false };
-      }
+      const raw = ldb.getTableState();
       raw.fogRegions = (() => { try { return JSON.parse(raw.fogRegions || '[]'); } catch { return []; } })();
       raw.hiddenItems = (() => { try { return JSON.parse(raw.hiddenItems || '[]'); } catch { return []; } })();
       return raw;
@@ -30,9 +24,7 @@ export default function register(app, ctx) {
 
   async function getTableTokens() {
     try {
-      if (DB_PROVIDER === 'localdb') return ldb.listTableTokens();
-      const r = await idb.query({ tableTokens: {} });
-      return (r.tableTokens || []).sort((a, b) => (a.createdAt || '').localeCompare(b.createdAt || ''));
+      return ldb.listTableTokens();
     } catch { return []; }
   }
 
@@ -56,11 +48,7 @@ export default function register(app, ctx) {
       if (offsetY !== undefined) update.offsetY = parseInt(offsetY) || 0;
       if (mapWidth !== undefined) update.mapWidth = parseInt(mapWidth) || 0;
       if (mapHeight !== undefined) update.mapHeight = parseInt(mapHeight) || 0;
-      if (DB_PROVIDER === 'localdb') {
-        ldb.updateTableState(update);
-      } else {
-        await idb.transact([idb.tx.tableState[TABLE_STATE_ID].update(update)]);
-      }
+      ldb.updateTableState(update);
       broadcast('table', { action: 'state-updated' });
       res.json({ ok: true });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
@@ -103,11 +91,7 @@ export default function register(app, ctx) {
       const mapFileUrl = saveUploadFile('maps', TABLE_MAP_MEDIA_ID, mimeType, b64);
       _mapUpsert.run(TABLE_MAP_MEDIA_ID, mimeType, Buffer.from('FILE:' + mapFileUrl), Date.now());
       const stateUpdate = { hasMap: true, mapWidth: parseInt(mapWidth) || 0, mapHeight: parseInt(mapHeight) || 0 };
-      if (DB_PROVIDER === 'localdb') {
-        ldb.updateTableState(stateUpdate);
-      } else {
-        await idb.transact([idb.tx.tableState[TABLE_STATE_ID].update(stateUpdate)]);
-      }
+      ldb.updateTableState(stateUpdate);
       broadcast('table', { action: 'map-updated' });
       res.json({ ok: true });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
@@ -120,11 +104,7 @@ export default function register(app, ctx) {
       if (oldMapDel) { const s = oldMapDel.data.toString(); if (s.startsWith('FILE:')) deleteUploadFile(s.slice(5)); }
       mediaDb.prepare('DELETE FROM shared_media WHERE id = ?').run(TABLE_MAP_MEDIA_ID);
       const stateUpdate = { hasMap: false, mapWidth: 0, mapHeight: 0 };
-      if (DB_PROVIDER === 'localdb') {
-        ldb.updateTableState(stateUpdate);
-      } else {
-        await idb.transact([idb.tx.tableState[TABLE_STATE_ID].update(stateUpdate)]);
-      }
+      ldb.updateTableState(stateUpdate);
       broadcast('table', { action: 'map-updated' });
       res.json({ ok: true });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
@@ -141,11 +121,7 @@ export default function register(app, ctx) {
       if (!region) return res.status(404).json({ error: 'Region not found' });
       region.visible = true;
       const fogJson = JSON.stringify(regions);
-      if (DB_PROVIDER === 'localdb') {
-        ldb.updateTableState({ fogRegions: fogJson });
-      } else {
-        await idb.transact([idb.tx.tableState[TABLE_STATE_ID].update({ fogRegions: fogJson })]);
-      }
+      ldb.updateTableState({ fogRegions: fogJson });
       broadcast('table', { action: 'fog-updated', fogRegions: regions });
       res.json({ ok: true });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
@@ -161,11 +137,7 @@ export default function register(app, ctx) {
       if (!region) return res.status(404).json({ error: 'Region not found' });
       region.visible = false;
       const fogJson = JSON.stringify(regions);
-      if (DB_PROVIDER === 'localdb') {
-        ldb.updateTableState({ fogRegions: fogJson });
-      } else {
-        await idb.transact([idb.tx.tableState[TABLE_STATE_ID].update({ fogRegions: fogJson })]);
-      }
+      ldb.updateTableState({ fogRegions: fogJson });
       broadcast('table', { action: 'fog-updated', fogRegions: regions });
       res.json({ ok: true });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
@@ -182,11 +154,7 @@ export default function register(app, ctx) {
       if (!item) return res.status(404).json({ error: 'Item not found' });
       item.visible = true;
       const itemsJson = JSON.stringify(items);
-      if (DB_PROVIDER === 'localdb') {
-        ldb.updateTableState({ hiddenItems: itemsJson });
-      } else {
-        await idb.transact([idb.tx.tableState[TABLE_STATE_ID].update({ hiddenItems: itemsJson })]);
-      }
+      ldb.updateTableState({ hiddenItems: itemsJson });
       broadcast('table', { action: 'items-updated', hiddenItems: items });
       res.json({ ok: true });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
@@ -202,11 +170,7 @@ export default function register(app, ctx) {
       if (!item) return res.status(404).json({ error: 'Item not found' });
       item.visible = false;
       const itemsJson = JSON.stringify(items);
-      if (DB_PROVIDER === 'localdb') {
-        ldb.updateTableState({ hiddenItems: itemsJson });
-      } else {
-        await idb.transact([idb.tx.tableState[TABLE_STATE_ID].update({ hiddenItems: itemsJson })]);
-      }
+      ldb.updateTableState({ hiddenItems: itemsJson });
       broadcast('table', { action: 'items-updated', hiddenItems: items });
       res.json({ ok: true });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
@@ -240,11 +204,7 @@ export default function register(app, ctx) {
         ac: ac != null ? (parseInt(ac) || null) : null,
         createdAt: new Date().toISOString()
       };
-      if (DB_PROVIDER === 'localdb') {
-        ldb.createTableToken(newId, token);
-      } else {
-        await idb.transact([idb.tx.tableTokens[newId].update({ id: newId, ...token })]);
-      }
+      ldb.createTableToken(newId, token);
       broadcast('table', { action: 'token-added', token: { id: newId, ...token } });
       res.json({ ok: true, id: newId });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
@@ -252,7 +212,7 @@ export default function register(app, ctx) {
 
   app.put('/api/table/tokens/:id', async (req, res) => {
     try {
-      const tok = DB_PROVIDER === 'localdb' ? ldb.getTableToken(req.params.id) : (await idb.query({ tableTokens: { $: { where: { id: req.params.id } } } })).tableTokens?.[0];
+      const tok = ldb.getTableToken(req.params.id);
       if (!tok) return res.status(404).json({ error: 'Not found' });
 
       if (masterAuth(req)) {
@@ -260,23 +220,15 @@ export default function register(app, ctx) {
         const bodyKeys = Object.keys(body);
         if (bodyKeys.length === 2 && body.x !== undefined && body.y !== undefined) {
           const newX = parseInt(body.x) || 0, newY = parseInt(body.y) || 0;
-          let currentId = '';
-          if (DB_PROVIDER === 'localdb') {
-            currentId = ldb.getInitState().currentId || '';
-          } else {
-            const initResult = await idb.query({ initiativeState: {} });
-            currentId = initResult.initiativeState?.[0]?.currentId || '';
-          }
+          const currentId = ldb.getInitState().currentId || '';
           if (currentId) {
             const dx = Math.abs(newX - (tok.x || 0)), dy = Math.abs(newY - (tok.y || 0));
             const dist = Math.max(dx, dy) * 5;
             const newMovedFt = (tok.movedFt || 0) + dist;
-            if (DB_PROVIDER === 'localdb') { ldb.updateTableToken(req.params.id, { x: newX, y: newY, movedFt: newMovedFt }); }
-            else { await idb.transact([idb.tx.tableTokens[req.params.id].update({ x: newX, y: newY, movedFt: newMovedFt })]); }
+            ldb.updateTableToken(req.params.id, { x: newX, y: newY, movedFt: newMovedFt });
             broadcast('table', { action: 'token-moved', id: req.params.id, x: newX, y: newY, movedFt: newMovedFt });
           } else {
-            if (DB_PROVIDER === 'localdb') { ldb.updateTableToken(req.params.id, { x: newX, y: newY }); }
-            else { await idb.transact([idb.tx.tableTokens[req.params.id].update({ x: newX, y: newY })]); }
+            ldb.updateTableToken(req.params.id, { x: newX, y: newY });
             broadcast('table', { action: 'token-moved', id: req.params.id, x: newX, y: newY, movedFt: tok.movedFt || 0 });
           }
           return res.json({ ok: true });
@@ -300,8 +252,7 @@ export default function register(app, ctx) {
         if (conditions !== undefined)    update.conditions = Array.isArray(conditions) ? JSON.stringify(conditions) : String(conditions);
         if (linkedId !== undefined)      update.linkedId = String(linkedId);
         if (assignedCharId !== undefined) update.assignedCharId = String(assignedCharId);
-        if (DB_PROVIDER === 'localdb') { ldb.updateTableToken(req.params.id, update); }
-        else { await idb.transact([idb.tx.tableTokens[req.params.id].update(update)]); }
+        ldb.updateTableToken(req.params.id, update);
         const updated = { ...tok, ...update };
         broadcast('table', { action: 'token-updated', token: updated });
 
@@ -334,8 +285,7 @@ export default function register(app, ctx) {
               if (hpCurrent !== undefined) cdata.hpcur  = String(update.hpCurrent);
               if (hpMax !== undefined)     cdata.hpmax  = String(update.hpMax);
               if (hpTemp !== undefined)    cdata.hptemp = String(update.hpTemp);
-              if (DB_PROVIDER === 'localdb') { ldb.updateCharacter(tok.linkedId, { dataJson: JSON.stringify(cdata) }); }
-              else { await idb.transact([idb.tx.characters[tok.linkedId].update({ dataJson: JSON.stringify(cdata) })]); }
+              ldb.updateCharacter(tok.linkedId, { dataJson: JSON.stringify(cdata) });
               broadcast('characters', { action: 'updated', id: tok.linkedId });
 
               // This branch is the DM's, so an HP change here was done TO the
@@ -365,8 +315,7 @@ export default function register(app, ctx) {
         const body = req.body || {};
         if (body.conditions !== undefined && Object.keys(body).length === 1) {
           const condVal = Array.isArray(body.conditions) ? JSON.stringify(body.conditions) : String(body.conditions);
-          if (DB_PROVIDER === 'localdb') { ldb.updateTableToken(req.params.id, { conditions: condVal }); }
-          else { await idb.transact([idb.tx.tableTokens[req.params.id].update({ conditions: condVal })]); }
+          ldb.updateTableToken(req.params.id, { conditions: condVal });
           broadcast('table', { action: 'token-updated', token: { ...tok, conditions: condVal } });
           return res.json({ ok: true });
         }
@@ -374,8 +323,7 @@ export default function register(app, ctx) {
           const update = {};
           if (body.hpCurrent !== undefined) update.hpCurrent = Math.max(0, parseInt(body.hpCurrent) || 0);
           if (body.hpTemp !== undefined)    update.hpTemp    = Math.max(0, parseInt(body.hpTemp) || 0);
-          if (DB_PROVIDER === 'localdb') { ldb.updateTableToken(req.params.id, update); }
-          else { await idb.transact([idb.tx.tableTokens[req.params.id].update(update)]); }
+          ldb.updateTableToken(req.params.id, update);
           const updated = { ...tok, ...update };
           broadcast('table', { action: 'token-updated', token: updated });
           if (tok.linkedId) {
@@ -386,8 +334,7 @@ export default function register(app, ctx) {
                 try { cdata = JSON.parse(char.dataJson || '{}'); } catch {}
                 if (update.hpCurrent !== undefined) cdata.hpcur  = String(update.hpCurrent);
                 if (update.hpTemp !== undefined)    cdata.hptemp = String(update.hpTemp);
-                if (DB_PROVIDER === 'localdb') { ldb.updateCharacter(tok.linkedId, { dataJson: JSON.stringify(cdata) }); }
-                else { await idb.transact([idb.tx.characters[tok.linkedId].update({ dataJson: JSON.stringify(cdata) })]); }
+                ldb.updateCharacter(tok.linkedId, { dataJson: JSON.stringify(cdata) });
                 broadcast('characters', { action: 'updated', id: tok.linkedId });
               }
             } catch (syncErr) { console.error('char HP sync:', syncErr); }
@@ -400,24 +347,16 @@ export default function register(app, ctx) {
         // Item 11: token movement is open to everyone. Players may move any token
         // (characters and monsters) regardless of ownership or whose turn it is.
         // Accidental moves are recoverable via the client-side Undo button.
-        let currentId = '';
-        if (DB_PROVIDER === 'localdb') {
-          currentId = ldb.getInitState().currentId || '';
-        } else {
-          const initResult = await idb.query({ initiativeState: {} });
-          currentId = initResult.initiativeState?.[0]?.currentId || '';
-        }
+        const currentId = ldb.getInitState().currentId || '';
         const newX = parseInt(x) || 0, newY = parseInt(y) || 0;
         if (currentId) {
           const dx = Math.abs(newX - (tok.x || 0)), dy = Math.abs(newY - (tok.y || 0));
           const dist = Math.max(dx, dy) * 5;
           const newMovedFt = (tok.movedFt || 0) + dist;
-          if (DB_PROVIDER === 'localdb') { ldb.updateTableToken(req.params.id, { x: newX, y: newY, movedFt: newMovedFt }); }
-          else { await idb.transact([idb.tx.tableTokens[req.params.id].update({ x: newX, y: newY, movedFt: newMovedFt })]); }
+          ldb.updateTableToken(req.params.id, { x: newX, y: newY, movedFt: newMovedFt });
           broadcast('table', { action: 'token-moved', id: req.params.id, x: newX, y: newY, movedFt: newMovedFt });
         } else {
-          if (DB_PROVIDER === 'localdb') { ldb.updateTableToken(req.params.id, { x: newX, y: newY }); }
-          else { await idb.transact([idb.tx.tableTokens[req.params.id].update({ x: newX, y: newY })]); }
+          ldb.updateTableToken(req.params.id, { x: newX, y: newY });
           broadcast('table', { action: 'token-moved', id: req.params.id, x: newX, y: newY, movedFt: tok.movedFt || 0 });
         }
         res.json({ ok: true });
@@ -428,43 +367,27 @@ export default function register(app, ctx) {
   app.delete('/api/table/tokens/:id', async (req, res) => {
     try {
       if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
-      const tok = DB_PROVIDER === 'localdb' ? ldb.getTableToken(req.params.id) : (await idb.query({ tableTokens: { $: { where: { id: req.params.id } } } })).tableTokens?.[0];
+      const tok = ldb.getTableToken(req.params.id);
       if (!tok) return res.status(404).json({ error: 'Not found' });
 
       let initiativeBroadcastNeeded = false;
       if (tok.initiativeId) {
-        if (DB_PROVIDER === 'localdb') {
-          const state = ldb.getInitState();
-          const wasCurrentTurn = state.currentId === tok.initiativeId;
-          if (wasCurrentTurn) {
-            const entries = ldb.listInitEntries();
-            const idx = entries.findIndex(e => e.id === tok.initiativeId);
-            const remaining = entries.filter(e => e.id !== tok.initiativeId);
-            const nextId = remaining.length > 0 ? (remaining[idx % remaining.length]?.id || remaining[0].id) : '';
-            ldb.deleteInitEntry(tok.initiativeId);
-            ldb.setInitState(nextId);
-          } else {
-            ldb.deleteInitEntry(tok.initiativeId);
-          }
+        const state = ldb.getInitState();
+        const wasCurrentTurn = state.currentId === tok.initiativeId;
+        if (wasCurrentTurn) {
+          const entries = ldb.listInitEntries();
+          const idx = entries.findIndex(e => e.id === tok.initiativeId);
+          const remaining = entries.filter(e => e.id !== tok.initiativeId);
+          const nextId = remaining.length > 0 ? (remaining[idx % remaining.length]?.id || remaining[0].id) : '';
+          ldb.deleteInitEntry(tok.initiativeId);
+          ldb.setInitState(nextId);
         } else {
-          const result = await idb.query({ initiativeEntries: { $: { where: { id: tok.initiativeId } } }, initiativeState: {} });
-          const state = result.initiativeState?.[0];
-          if (state?.currentId === tok.initiativeId) {
-            const allEntries = (await idb.query({ initiativeEntries: {} })).initiativeEntries || [];
-            const sorted = allEntries.sort((a, b) => (b.roll || 0) - (a.roll || 0));
-            const idx = sorted.findIndex(e => e.id === tok.initiativeId);
-            const remaining = sorted.filter(e => e.id !== tok.initiativeId);
-            const nextId = remaining.length > 0 ? (remaining[idx % remaining.length]?.id || remaining[0].id) : '';
-            await idb.transact([idb.tx.initiativeEntries[tok.initiativeId].delete(), idb.tx.initiativeState[state.id].update({ currentId: nextId })]);
-          } else {
-            await idb.transact([idb.tx.initiativeEntries[tok.initiativeId].delete()]);
-          }
+          ldb.deleteInitEntry(tok.initiativeId);
         }
         initiativeBroadcastNeeded = true;
       }
 
-      if (DB_PROVIDER === 'localdb') { ldb.deleteTableToken(req.params.id); }
-      else { await idb.transact([idb.tx.tableTokens[req.params.id].delete()]); }
+      ldb.deleteTableToken(req.params.id);
 
       broadcast('table', { action: 'token-removed', id: req.params.id });
       if (initiativeBroadcastNeeded) broadcast('initiative', { action: 'delete' });
@@ -478,7 +401,7 @@ export default function register(app, ctx) {
       const { dataUrl } = req.body || {};
       if (typeof dataUrl !== 'string' || (dataUrl !== '' && !dataUrl.match(/^data:image\//)))
         return res.status(400).json({ error: 'Image data URL required' });
-      const tok = DB_PROVIDER === 'localdb' ? ldb.getTableToken(req.params.id) : (await idb.query({ tableTokens: { $: { where: { id: req.params.id } } } })).tableTokens?.[0];
+      const tok = ldb.getTableToken(req.params.id);
       if (!tok) return res.status(404).json({ error: 'Not found' });
 
       let portrait = null, portraitThumb = null, customPortrait = 0;
@@ -488,7 +411,7 @@ export default function register(app, ctx) {
         deleteUploadFile(tok.portrait);
         deleteUploadFile(tok.portraitThumb);
         // Restore from linked monster if present
-        if (tok.linkedId && DB_PROVIDER === 'localdb') {
+        if (tok.linkedId) {
           const mon = ldb.getMonster(tok.linkedId);
           if (mon) {
             let d = {};
@@ -512,11 +435,7 @@ export default function register(app, ctx) {
       }
 
       const update = { portrait, portraitThumb, customPortrait };
-      if (DB_PROVIDER === 'localdb') {
-        ldb.updateTableToken(req.params.id, update);
-      } else {
-        await idb.transact([idb.tx.tableTokens[req.params.id].update(update)]);
-      }
+      ldb.updateTableToken(req.params.id, update);
       broadcast('table', { action: 'token-updated', token: { ...tok, ...update } });
       res.json({ ok: true, portrait, portraitThumb });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
@@ -534,19 +453,9 @@ export default function register(app, ctx) {
   app.post('/api/table/clear', async (req, res) => {
     try {
       if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
-      if (DB_PROVIDER === 'localdb') {
-        ldb.clearTableTokens();
-        ldb.clearInitEntries();
-        ldb.setInitState('');
-      } else {
-        const result = await idb.query({ tableTokens: {}, initiativeEntries: {}, initiativeState: {} });
-        const txns = [
-          ...(result.tableTokens || []).map(t => idb.tx.tableTokens[t.id].delete()),
-          ...(result.initiativeEntries || []).map(e => idb.tx.initiativeEntries[e.id].delete()),
-          ...(result.initiativeState || []).map(s => idb.tx.initiativeState[s.id].delete()),
-        ];
-        if (txns.length > 0) await idb.transact(txns);
-      }
+      ldb.clearTableTokens();
+      ldb.clearInitEntries();
+      ldb.setInitState('');
       broadcast('table', { action: 'tokens-cleared' });
       broadcast('initiative', { action: 'clear' });
       res.json({ ok: true });
@@ -556,14 +465,7 @@ export default function register(app, ctx) {
   // ── Prepared Maps ─────────────────────────────────────────────────────────────
   app.get('/api/prepared-maps', async (req, res) => {
     try {
-      let maps;
-      if (DB_PROVIDER === 'localdb') {
-        maps = ldb.listPreparedMaps();
-      } else {
-        const r = await idb.query({ preparedMaps: {} });
-        maps = r.preparedMaps || [];
-      }
-      maps = maps.map(m => ({
+      const maps = ldb.listPreparedMaps().map(m => ({
         ...m,
         fogRegions: (() => { try { return JSON.parse(m.fogRegions || '[]'); } catch { return []; } })(),
         hiddenItems: (() => { try { return JSON.parse(m.hiddenItems || '[]'); } catch { return []; } })(),
@@ -580,11 +482,7 @@ export default function register(app, ctx) {
       const name = (req.body?.name || '').trim() || 'Untitled Map';
       const id = genId();
       const fields = { name, createdAt: new Date().toISOString() };
-      if (DB_PROVIDER === 'localdb') {
-        ldb.createPreparedMap(id, fields);
-      } else {
-        await idb.transact([idb.tx.preparedMaps[id].update({ id, ...fields, fogRegions: '[]' })]);
-      }
+      ldb.createPreparedMap(id, fields);
       res.json({ ok: true, id });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
   });
@@ -604,11 +502,7 @@ export default function register(app, ctx) {
       if (body.hiddenItems !== undefined) fields.hiddenItems = JSON.stringify(Array.isArray(body.hiddenItems) ? body.hiddenItems : []);
       if (body.preparedTokens !== undefined) fields.preparedTokens = JSON.stringify(Array.isArray(body.preparedTokens) ? body.preparedTokens : []);
       if (Object.keys(fields).length === 0) return res.json({ ok: true });
-      if (DB_PROVIDER === 'localdb') {
-        ldb.updatePreparedMap(req.params.id, fields);
-      } else {
-        await idb.transact([idb.tx.preparedMaps[req.params.id].update(fields)]);
-      }
+      ldb.updatePreparedMap(req.params.id, fields);
       res.json({ ok: true });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
   });
@@ -617,11 +511,7 @@ export default function register(app, ctx) {
     try {
       if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
       const { id } = req.params;
-      if (DB_PROVIDER === 'localdb') {
-        ldb.deletePreparedMap(id);
-      } else {
-        await idb.transact([idb.tx.preparedMaps[id].delete()]);
-      }
+      ldb.deletePreparedMap(id);
       const prepDelId = 'prep-map-' + id;
       const prepDelItem = _mediaGet.get(prepDelId);
       if (prepDelItem) { const s = prepDelItem.data.toString(); if (s.startsWith('FILE:')) deleteUploadFile(s.slice(5)); }
@@ -665,11 +555,7 @@ export default function register(app, ctx) {
       const prepFileUrl = saveUploadFile('maps', prepMapId, mimeType, b64);
       _mapUpsert.run(prepMapId, mimeType, Buffer.from('FILE:' + prepFileUrl), Date.now());
       const sizeFields = { mapWidth: parseInt(mapWidth) || 0, mapHeight: parseInt(mapHeight) || 0 };
-      if (DB_PROVIDER === 'localdb') {
-        ldb.updatePreparedMap(req.params.id, sizeFields);
-      } else {
-        await idb.transact([idb.tx.preparedMaps[req.params.id].update(sizeFields)]);
-      }
+      ldb.updatePreparedMap(req.params.id, sizeFields);
       res.json({ ok: true });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
   });
@@ -677,13 +563,7 @@ export default function register(app, ctx) {
   app.post('/api/prepared-maps/:id/load-to-table', async (req, res) => {
     try {
       if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
-      let map;
-      if (DB_PROVIDER === 'localdb') {
-        map = ldb.getPreparedMap(req.params.id);
-      } else {
-        const r = await idb.query({ preparedMaps: { $: { where: { id: req.params.id } } } });
-        map = r.preparedMaps?.[0];
-      }
+      const map = ldb.getPreparedMap(req.params.id);
       if (!map) return res.status(404).json({ error: 'Prepared map not found' });
       const srcId = 'prep-map-' + req.params.id;
       const imgRow = _mediaGet.get(srcId);
@@ -714,29 +594,15 @@ export default function register(app, ctx) {
         fogRegions: JSON.stringify(fogRegions),
         hiddenItems: JSON.stringify(hiddenItems),
       };
-      if (DB_PROVIDER === 'localdb') {
-        ldb.updateTableState(stateUpdate);
-      } else {
-        await idb.transact([idb.tx.tableState[TABLE_STATE_ID].update(stateUpdate)]);
-      }
+      ldb.updateTableState(stateUpdate);
       broadcast('table', { action: 'map-updated' });
       broadcast('table', { action: 'fog-updated', fogRegions });
       broadcast('table', { action: 'items-updated', hiddenItems });
 
       // Clear all existing tokens and initiative before placing prepared tokens
-      if (DB_PROVIDER === 'localdb') {
-        ldb.clearTableTokens();
-        ldb.clearInitEntries();
-        ldb.setInitState('');
-      } else {
-        const clearResult = await idb.query({ tableTokens: {}, initiativeEntries: {}, initiativeState: {} });
-        const clearTxns = [
-          ...(clearResult.tableTokens || []).map(t => idb.tx.tableTokens[t.id].delete()),
-          ...(clearResult.initiativeEntries || []).map(e => idb.tx.initiativeEntries[e.id].delete()),
-          ...(clearResult.initiativeState || []).map(s => idb.tx.initiativeState[s.id].delete()),
-        ];
-        if (clearTxns.length > 0) await idb.transact(clearTxns);
-      }
+      ldb.clearTableTokens();
+      ldb.clearInitEntries();
+      ldb.setInitState('');
       broadcast('table', { action: 'tokens-cleared' });
       broadcast('initiative', { action: 'clear' });
 
@@ -767,11 +633,7 @@ export default function register(app, ctx) {
           ac: pt.ac != null ? (parseInt(pt.ac) || null) : null,
           createdAt: new Date().toISOString(),
         };
-        if (DB_PROVIDER === 'localdb') {
-          ldb.createTableToken(tokenId, token);
-        } else {
-          await idb.transact([idb.tx.tableTokens[tokenId].update({ id: tokenId, ...token })]);
-        }
+        ldb.createTableToken(tokenId, token);
         broadcast('table', { action: 'token-added', token: { id: tokenId, ...token } });
       }
 

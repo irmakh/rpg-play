@@ -1,6 +1,6 @@
 export default function register(app, ctx) {
   const {
-    ldb, idb, DB_PROVIDER, genId,
+    ldb, genId,
     masterAuth, charAuth, getCharacter,
     hashPassword, verifyPassword, isMasterPassword,
     processImageSizes, saveUploadFile, deleteUploadFile,
@@ -10,14 +10,7 @@ export default function register(app, ctx) {
 
   app.get('/api/characters', async (req, res) => {
     try {
-      let chars;
-      if (DB_PROVIDER === 'localdb') {
-        chars = ldb.listCharacters();
-      } else {
-        const result = await idb.query({ characters: {} });
-        chars = result.characters || [];
-      }
-      res.json(chars
+      res.json(ldb.listCharacters()
         .map(c => ({ id: c.id, name: c.name || 'Unnamed', has_password: !!c.passwordHash, char_type: c.charType || 'pc' }))
         .sort((a, b) => a.name.localeCompare(b.name)));
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
@@ -62,11 +55,7 @@ export default function register(app, ctx) {
       try { data = JSON.parse(char.dataJson || '{}'); } catch {}
       data[`slot-${level}-used`] = Math.max(0, Math.min(parseInt(used) || 0, parseInt(data[`slot-${level}-total`]) || 0));
       const dataJson = JSON.stringify(data);
-      if (DB_PROVIDER === 'localdb') {
-        ldb.updateCharacter(charId, { dataJson });
-      } else {
-        await idb.transact([idb.tx.characters[charId].update({ dataJson })]);
-      }
+      ldb.updateCharacter(charId, { dataJson });
       broadcast('characters', { action: 'updated', id: charId });
       res.json({ ok: true, used: data[`slot-${level}-used`] });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
@@ -94,11 +83,7 @@ export default function register(app, ctx) {
       a.used = Math.max(0, Math.min(parseInt(used) || 0, max));
       data._actions = JSON.stringify(acts);
       const dataJson = JSON.stringify(data);
-      if (DB_PROVIDER === 'localdb') {
-        ldb.updateCharacter(charId, { dataJson });
-      } else {
-        await idb.transact([idb.tx.characters[charId].update({ dataJson })]);
-      }
+      ldb.updateCharacter(charId, { dataJson });
       broadcast('characters', { action: 'updated', id: charId });
       res.json({ ok: true, used: a.used });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
@@ -125,11 +110,7 @@ export default function register(app, ctx) {
       });
       data._actions = JSON.stringify(acts);
       const dataJson = JSON.stringify(data);
-      if (DB_PROVIDER === 'localdb') {
-        ldb.updateCharacter(charId, { dataJson });
-      } else {
-        await idb.transact([idb.tx.characters[charId].update({ dataJson })]);
-      }
+      ldb.updateCharacter(charId, { dataJson });
       broadcast('characters', { action: 'updated', id: charId });
       res.json({ ok: true });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
@@ -224,9 +205,7 @@ export default function register(app, ctx) {
   // broadcast token-updated. Shared by PUT (full save) and PATCH (partial save).
   async function syncLinkedTokens(charId, data) {
     try {
-      const linkedTokens = DB_PROVIDER === 'localdb'
-        ? ldb.getLinkedTokens(charId)
-        : (await idb.query({ tableTokens: { $: { where: { linkedId: charId } } } })).tableTokens || [];
+      const linkedTokens = ldb.getLinkedTokens(charId);
       if (linkedTokens.length === 0) return;
       const newHpMax = parseInt(data.hpmax) || 0;
       const newHpCur = Math.min(parseInt(data.hpcur) || 0, newHpMax);
@@ -250,14 +229,9 @@ export default function register(app, ctx) {
       const newAc = data.ac != null && data.ac !== '' ? (parseInt(data.ac) || null) : null;
       const updFields = { hpCurrent: newHpCur, hpMax: newHpMax, hpTemp: newHpTemp, speed: newSpeed };
       if (newAc != null) updFields.ac = newAc;
-      if (DB_PROVIDER === 'localdb') {
-        for (const t of linkedTokens) {
-          ldb.updateTableToken(t.id, updFields);
-          broadcast('table', { action: 'token-updated', token: { ...t, ...updFields } });
-        }
-      } else {
-        await idb.transact(linkedTokens.map(t => idb.tx.tableTokens[t.id].update(updFields)));
-        for (const t of linkedTokens) broadcast('table', { action: 'token-updated', token: { ...t, ...updFields } });
+      for (const t of linkedTokens) {
+        ldb.updateTableToken(t.id, updFields);
+        broadcast('table', { action: 'token-updated', token: { ...t, ...updFields } });
       }
     } catch (syncErr) { console.error('token sync:', syncErr); }
   }
@@ -284,29 +258,18 @@ export default function register(app, ctx) {
       data._items = JSON.stringify(items);
       recalcDerived(data);
       const dataJson = JSON.stringify(data);
-      if (DB_PROVIDER === 'localdb') {
-        ldb.updateCharacter(charId, { dataJson });
-      } else {
-        await idb.transact([idb.tx.characters[charId].update({ dataJson })]);
-      }
+      ldb.updateCharacter(charId, { dataJson });
       broadcast('characters', { action: 'updated', id: charId });
 
       // Sync the recomputed AC / speed to any linked table tokens.
       try {
-        const linkedTokens = DB_PROVIDER === 'localdb'
-          ? ldb.getLinkedTokens(charId)
-          : (await idb.query({ tableTokens: { $: { where: { linkedId: charId } } } })).tableTokens || [];
+        const linkedTokens = ldb.getLinkedTokens(charId);
         if (linkedTokens.length > 0) {
           const updFields = {};
           const acN = parseInt(data.ac); if (!isNaN(acN)) updFields.ac = acN;
           const spN = parseInt(String(data.speed).replace(/[^0-9]/g, '')); if (!isNaN(spN)) updFields.speed = spN;
           if (Object.keys(updFields).length) {
-            if (DB_PROVIDER === 'localdb') {
-              for (const t of linkedTokens) { ldb.updateTableToken(t.id, updFields); broadcast('table', { action: 'token-updated', token: { ...t, ...updFields } }); }
-            } else {
-              await idb.transact(linkedTokens.map(t => idb.tx.tableTokens[t.id].update(updFields)));
-              for (const t of linkedTokens) broadcast('table', { action: 'token-updated', token: { ...t, ...updFields } });
-            }
+            for (const t of linkedTokens) { ldb.updateTableToken(t.id, updFields); broadcast('table', { action: 'token-updated', token: { ...t, ...updFields } }); }
           }
         }
       } catch (syncErr) { console.error('equip token sync:', syncErr); }
@@ -329,11 +292,7 @@ export default function register(app, ctx) {
       if (hist.length > 100) hist.pop();
       data._rollHistory = JSON.stringify(hist);
       const dataJson = JSON.stringify(data);
-      if (DB_PROVIDER === 'localdb') {
-        ldb.updateCharacter(req.params.id, { dataJson });
-      } else {
-        await idb.transact([idb.tx.characters[req.params.id].update({ dataJson })]);
-      }
+      ldb.updateCharacter(req.params.id, { dataJson });
       broadcast('characters', { action: 'updated', id: req.params.id });
       res.json({ ok: true });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
@@ -362,11 +321,7 @@ export default function register(app, ctx) {
       const hash = password ? hashPassword(password) : '';
       const newId = genId();
       const fields = { name: name.trim(), dataJson: '{}', charType: type, passwordHash: hash, createdAt: new Date().toISOString() };
-      if (DB_PROVIDER === 'localdb') {
-        ldb.createCharacter(newId, fields);
-      } else {
-        await idb.transact([idb.tx.characters[newId].update(fields)]);
-      }
+      ldb.createCharacter(newId, fields);
       broadcast('characters', { action: 'created', id: newId });
       res.json({ id: newId, name: name.trim(), char_type: type, has_password: !!password });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
@@ -384,11 +339,7 @@ export default function register(app, ctx) {
       const { data } = req.body;
       if (!data) return res.status(400).json({ error: 'Data required' });
       const name = (data.name || '').trim() || 'Unnamed';
-      if (DB_PROVIDER === 'localdb') {
-        ldb.updateCharacter(req.params.id, { name, dataJson: JSON.stringify(data) });
-      } else {
-        await idb.transact([idb.tx.characters[req.params.id].update({ name, dataJson: JSON.stringify(data) })]);
-      }
+      ldb.updateCharacter(req.params.id, { name, dataJson: JSON.stringify(data) });
       broadcast('characters', { action: 'updated', id: req.params.id });
 
       await syncLinkedTokens(req.params.id, data);
@@ -419,11 +370,7 @@ export default function register(app, ctx) {
       const keys = Object.keys(patch);
       for (const k of keys) data[k] = patch[k];
       const name = (data.name || '').trim() || 'Unnamed';
-      if (DB_PROVIDER === 'localdb') {
-        ldb.updateCharacter(charId, { name, dataJson: JSON.stringify(data) });
-      } else {
-        await idb.transact([idb.tx.characters[charId].update({ name, dataJson: JSON.stringify(data) })]);
-      }
+      ldb.updateCharacter(charId, { name, dataJson: JSON.stringify(data) });
       broadcast('characters', { action: 'updated', id: charId, keys });
 
       // Only touch linked tokens when the patch could have changed HP/AC/speed.
@@ -444,11 +391,7 @@ export default function register(app, ctx) {
           return res.status(401).json({ error: 'Wrong current password' });
       }
       const newHash = new_password ? hashPassword(new_password) : '';
-      if (DB_PROVIDER === 'localdb') {
-        ldb.updateCharacter(req.params.id, { passwordHash: newHash });
-      } else {
-        await idb.transact([idb.tx.characters[req.params.id].update({ passwordHash: newHash })]);
-      }
+      ldb.updateCharacter(req.params.id, { passwordHash: newHash });
       res.json({ ok: true, has_password: !!new_password });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
   });
@@ -462,11 +405,7 @@ export default function register(app, ctx) {
         if (!pw || (!verifyPassword(pw, char.passwordHash) && !isMasterPassword(pw)))
           return res.status(401).json({ error: 'Wrong password' });
       }
-      if (DB_PROVIDER === 'localdb') {
-        ldb.deleteCharacter(req.params.id);
-      } else {
-        await idb.transact([idb.tx.characters[req.params.id].delete()]);
-      }
+      ldb.deleteCharacter(req.params.id);
       broadcast('characters', { action: 'deleted', id: req.params.id });
       res.json({ ok: true });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
@@ -478,14 +417,7 @@ export default function register(app, ctx) {
       const charId = req.params.id;
       const status = await charAuth(charId, req);
       if (status !== 200) return res.status(status).json({ error: status === 404 ? 'Not found' : 'Unauthorized' });
-      let mediaRows;
-      if (DB_PROVIDER === 'localdb') {
-        mediaRows = ldb.listMedia(charId);
-      } else {
-        const result = await idb.query({ media: { $: { where: { charId } } } });
-        mediaRows = (result.media || []).sort((a, b) => (a.createdAt || '').localeCompare(b.createdAt || ''));
-      }
-      res.json(mediaRows.map(r => ({ id: r.id, name: r.originalName, mimeType: r.mimeType, dataUrl: r.dataUrl, thumbUrl: r.thumbUrl || '', mediumUrl: r.mediumUrl || '', isPortrait: !!r.isPortrait, createdAt: r.createdAt })));
+      res.json(ldb.listMedia(charId).map(r => ({ id: r.id, name: r.originalName, mimeType: r.mimeType, dataUrl: r.dataUrl, thumbUrl: r.thumbUrl || '', mediumUrl: r.mediumUrl || '', isPortrait: !!r.isPortrait, createdAt: r.createdAt })));
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
   });
 
@@ -518,28 +450,18 @@ export default function register(app, ctx) {
         fileUrl = saveUploadFile('characters', newId, mimeType, mimeMatch[2]);
       }
 
-      if (DB_PROVIDER === 'localdb') {
-        if (isPortrait) {
-          const oldRows = ldb.listMedia(charId);
-          const oldPortrait = oldRows.find(r => r.isPortrait);
-          if (oldPortrait) {
-            deleteUploadFile(oldPortrait.dataUrl);
-            deleteUploadFile(oldPortrait.thumbUrl);
-            deleteUploadFile(oldPortrait.mediumUrl);
-          }
-          ldb.setPortrait(charId, '');
+      if (isPortrait) {
+        const oldRows = ldb.listMedia(charId);
+        const oldPortrait = oldRows.find(r => r.isPortrait);
+        if (oldPortrait) {
+          deleteUploadFile(oldPortrait.dataUrl);
+          deleteUploadFile(oldPortrait.thumbUrl);
+          deleteUploadFile(oldPortrait.mediumUrl);
         }
-        ldb.createMedia(newId, { charId, originalName: safeName, mimeType, dataUrl: fileUrl, thumbUrl, mediumUrl, isPortrait: !!isPortrait, createdAt: new Date().toISOString() });
-        if (isPortrait) ldb.setPortrait(charId, newId);
-      } else {
-        const txns = [];
-        if (isPortrait) {
-          const existing = await idb.query({ media: { $: { where: { charId } } } });
-          for (const m of existing.media || []) if (m.isPortrait) txns.push(idb.tx.media[m.id].update({ isPortrait: false }));
-        }
-        txns.push(idb.tx.media[newId].update({ charId, originalName: safeName, mimeType, dataUrl: fileUrl, thumbUrl, mediumUrl, isPortrait: !!isPortrait, createdAt: new Date().toISOString() }));
-        await idb.transact(txns);
+        ldb.setPortrait(charId, '');
       }
+      ldb.createMedia(newId, { charId, originalName: safeName, mimeType, dataUrl: fileUrl, thumbUrl, mediumUrl, isPortrait: !!isPortrait, createdAt: new Date().toISOString() });
+      if (isPortrait) ldb.setPortrait(charId, newId);
       res.json({ id: newId, name: safeName, mimeType, isPortrait: !!isPortrait, thumbUrl, mediumUrl });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
   });
@@ -548,14 +470,8 @@ export default function register(app, ctx) {
     try {
       if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
       let portrait = null, portraitThumb = null;
-      if (DB_PROVIDER === 'localdb') {
-        const rows = ldb.listMedia(req.params.id);
-        const p = rows.find(r => r.isPortrait);
-        if (p) { portrait = p.dataUrl; portraitThumb = p.thumbUrl || null; }
-      } else {
-        const result = await idb.query({ media: { $: { where: { charId: req.params.id, isPortrait: true } } } });
-        if (result.media?.[0]) { portrait = result.media[0].dataUrl; portraitThumb = result.media[0].thumbUrl || null; }
-      }
+      const p = ldb.listMedia(req.params.id).find(r => r.isPortrait);
+      if (p) { portrait = p.dataUrl; portraitThumb = p.thumbUrl || null; }
       res.json({ portrait, portraitThumb });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
   });
@@ -567,21 +483,10 @@ export default function register(app, ctx) {
       const status = await charAuth(charId, req);
       if (status !== 200) return res.status(status).json({ error: status === 404 ? 'Not found' : 'Unauthorized' });
 
-      if (DB_PROVIDER === 'localdb') {
-        const target = ldb.getMediaById(mediaId);
-        if (!target || target.charId !== charId) return res.status(404).json({ error: 'Media not found' });
-        if (!target.mimeType.startsWith('image/')) return res.status(400).json({ error: 'Portrait must be an image' });
-        ldb.setPortrait(charId, mediaId);
-      } else {
-        const result = await idb.query({ media: { $: { where: { charId } } } });
-        const allMedia = result.media || [];
-        const target = allMedia.find(m => m.id === mediaId);
-        if (!target) return res.status(404).json({ error: 'Media not found' });
-        if (!target.mimeType.startsWith('image/')) return res.status(400).json({ error: 'Portrait must be an image' });
-        const txns = allMedia.filter(m => m.isPortrait).map(m => idb.tx.media[m.id].update({ isPortrait: false }));
-        txns.push(idb.tx.media[mediaId].update({ isPortrait: true }));
-        await idb.transact(txns);
-      }
+      const target = ldb.getMediaById(mediaId);
+      if (!target || target.charId !== charId) return res.status(404).json({ error: 'Media not found' });
+      if (!target.mimeType.startsWith('image/')) return res.status(400).json({ error: 'Portrait must be an image' });
+      ldb.setPortrait(charId, mediaId);
       res.json({ ok: true });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
   });
@@ -592,22 +497,12 @@ export default function register(app, ctx) {
       const mediaId = req.params.mid;
       const status = await charAuth(charId, req);
       if (status !== 200) return res.status(status).json({ error: status === 404 ? 'Not found' : 'Unauthorized' });
-      if (DB_PROVIDER === 'localdb') {
-        const m = ldb.getMediaById(mediaId);
-        if (!m || m.charId !== charId) return res.status(404).json({ error: 'Media not found' });
-        deleteUploadFile(m.dataUrl);
-        deleteUploadFile(m.thumbUrl);
-        deleteUploadFile(m.mediumUrl);
-        ldb.deleteMedia(mediaId);
-      } else {
-        const result = await idb.query({ media: { $: { where: { charId } } } });
-        const m = result.media?.find(m => m.id === mediaId);
-        if (!m) return res.status(404).json({ error: 'Media not found' });
-        deleteUploadFile(m.dataUrl);
-        deleteUploadFile(m.thumbUrl);
-        deleteUploadFile(m.mediumUrl);
-        await idb.transact([idb.tx.media[mediaId].delete()]);
-      }
+      const m = ldb.getMediaById(mediaId);
+      if (!m || m.charId !== charId) return res.status(404).json({ error: 'Media not found' });
+      deleteUploadFile(m.dataUrl);
+      deleteUploadFile(m.thumbUrl);
+      deleteUploadFile(m.mediumUrl);
+      ldb.deleteMedia(mediaId);
       res.json({ ok: true });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
   });

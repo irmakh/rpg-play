@@ -23,7 +23,7 @@ function tarHeader(name, size, mtimeMs) {
 
 export default function register(app, ctx) {
   const {
-    ldb, idb, DB_PROVIDER,
+    ldb,
     masterAuth,
     processImageSizes, saveUploadFile, readUploadAsBase64,
     IMAGE_MIME, extToMime,
@@ -36,33 +36,6 @@ export default function register(app, ctx) {
   // but restore still accepts backup files carrying those older types.
   const BACKUP_PARTS = ['characters', 'monsters', 'treasury', 'maps'];
 
-  // Legacy → treasury field mapping for the InstantDB restore path. The localdb
-  // path uses the exported converters in db/localdb.js; ldb is not loaded in
-  // instantdb mode, so the same rules are repeated here.
-  const TREASURY_DEFAULTS = {
-    itemType: 'other', armorType: 'light', acBase: 10, valueCp: 0, quantity: 1,
-    acBonus: 0, initBonus: 0, speedBonus: 0, spellAtkBonus: 0, spellDcBonus: 0,
-    requiresAttunement: false, weaponAtk: '', weaponDmg: '', weaponPropertiesJson: '[]',
-    imageUrl: '', imageThumb: '', imageMedium: '',
-  };
-  function treasuryFields(r) {
-    const out = { ...TREASURY_DEFAULTS };
-    for (const k of Object.keys(out)) if (r[k] !== undefined) out[k] = r[k];
-    return {
-      ...out,
-      name: r.name || '', tag: r.tag || '', mode: r.mode || 'hidden',
-      description: r.description || '', descVisible: !!r.descVisible,
-      createdAt: r.createdAt,
-    };
-  }
-  function lootToTreasuryFields(r) {
-    return treasuryFields({ ...r, mode: r.visible ? 'loot' : 'hidden', ...TREASURY_DEFAULTS });
-  }
-  function shopToTreasuryFields(r) {
-    // Shop notes were always player-visible, so they become a visible description.
-    return treasuryFields({ ...r, mode: 'shop', description: r.notes || '', descVisible: true });
-  }
-
   function _sharedMediaWithData(rows) {
     return rows.map(r => {
       const s = r.data.toString();
@@ -73,63 +46,45 @@ export default function register(app, ctx) {
 
   async function buildBackupPart(partName) {
     const timestamp = new Date().toISOString();
-    const base = { version: '1.0', type: partName, timestamp, dbProvider: DB_PROVIDER };
+    // The provider is still written into the file: restore reads it back to find
+    // the payload key, and files produced before this was the only backend say
+    // 'instantdb' there.
+    const base = { version: '1.0', type: partName, timestamp, dbProvider: 'localdb' };
     switch (partName) {
       case 'characters': {
-        if (DB_PROVIDER === 'localdb') {
-          const { characters, media } = ldb.exportAll();
-          return { ...base, characters, media: media.map(r => ({
-            id: r.id, charId: r.charId, originalName: r.originalName,
-            mimeType: r.mimeType, dataUrl: r.dataUrl,
-            isPortrait: r.isPortrait, createdAt: r.createdAt,
-            dataB64: readUploadAsBase64(r.dataUrl),
-          })) };
-        }
-        const [cr, mr] = await Promise.all([idb.query({ characters: {} }), idb.query({ media: {} })]);
-        return { ...base, characters: cr.characters || [], media: mr.media || [] };
+        const { characters, media } = ldb.exportAll();
+        return { ...base, characters, media: media.map(r => ({
+          id: r.id, charId: r.charId, originalName: r.originalName,
+          mimeType: r.mimeType, dataUrl: r.dataUrl,
+          isPortrait: r.isPortrait, createdAt: r.createdAt,
+          dataB64: readUploadAsBase64(r.dataUrl),
+        })) };
       }
       case 'monsters': {
-        if (DB_PROVIDER === 'localdb') {
-          const monsterRows = ldb.listMonsters();
-          const monsters = await Promise.all(monsterRows.map(async m => {
-            let d = {}; try { d = JSON.parse(m.dataJson || '{}'); } catch {}
-            const { portraitThumb, portraitMedium, ...dWithoutThumbs } = d;
-            return { ...m, dataJson: JSON.stringify(dWithoutThumbs), portraitB64: readUploadAsBase64(d.portrait) };
-          }));
-          return { ...base, monsters };
-        }
-        const mr = await idb.query({ monsters: {} });
-        return { ...base, monsters: mr.monsters || [] };
+        const monsterRows = ldb.listMonsters();
+        const monsters = await Promise.all(monsterRows.map(async m => {
+          let d = {}; try { d = JSON.parse(m.dataJson || '{}'); } catch {}
+          const { portraitThumb, portraitMedium, ...dWithoutThumbs } = d;
+          return { ...m, dataJson: JSON.stringify(dWithoutThumbs), portraitB64: readUploadAsBase64(d.portrait) };
+        }));
+        return { ...base, monsters };
       }
       case 'treasury': {
-        if (DB_PROVIDER === 'localdb') {
-          // Item images travel as base64 like monster portraits do; the derived
-          // thumb/medium are stripped and regenerated on restore.
-          const treasuryItems = ldb.listTreasuryItems().map(r => {
-            const { imageThumb, imageMedium, ...rest } = r;
-            return { ...rest, imageB64: readUploadAsBase64(r.imageUrl) };
-          });
-          return {
-            ...base, treasuryItems,
-            shopConfig: [ldb.getShopConfig()],
-            purchaseLogs: ldb.listPurchaseLogs(),
-            lootLogs: ldb.listLootLogs(),
-          };
-        }
-        const [tr, cr, pr, lr] = await Promise.all([
-          idb.query({ treasuryItems: {} }), idb.query({ shopConfig: {} }),
-          idb.query({ purchaseLogs: {} }), idb.query({ lootLogs: {} }),
-        ]);
+        // Item images travel as base64 like monster portraits do; the derived
+        // thumb/medium are stripped and regenerated on restore.
+        const treasuryItems = ldb.listTreasuryItems().map(r => {
+          const { imageThumb, imageMedium, ...rest } = r;
+          return { ...rest, imageB64: readUploadAsBase64(r.imageUrl) };
+        });
         return {
-          ...base,
-          treasuryItems: tr.treasuryItems || [],
-          shopConfig: cr.shopConfig || [],
-          purchaseLogs: pr.purchaseLogs || [],
-          lootLogs: lr.lootLogs || [],
+          ...base, treasuryItems,
+          shopConfig: [ldb.getShopConfig()],
+          purchaseLogs: ldb.listPurchaseLogs(),
+          lootLogs: ldb.listLootLogs(),
         };
       }
       case 'maps': {
-        const preparedMaps = DB_PROVIDER === 'localdb' ? ldb.listPreparedMaps() : [];
+        const preparedMaps = ldb.listPreparedMaps();
         const mapMediaIds = new Set(preparedMaps.map(m => 'prep-map-' + m.id));
         const mapIds = [...mapMediaIds];
         let mapRows = [], chatRows = [];
@@ -254,128 +209,93 @@ export default function register(app, ctx) {
       }
 
       if (backup.type && (BACKUP_PARTS.includes(backup.type) || backup.type === 'monster')) {
-        if (DB_PROVIDER === 'localdb') {
-          switch (backup.type) {
-            case 'characters': {
-              const restoredMedia = [];
-              for (const r of (backup.media || [])) {
-                writeUploadFile(r.dataUrl, r.dataB64);
-                let thumbUrl = '', mediumUrl = '';
-                if (IMAGE_MIME.has(r.mimeType) && r.dataB64) {
-                  try {
-                    const buf = Buffer.from(r.dataB64, 'base64');
-                    const baseId = path.basename(r.dataUrl, path.extname(r.dataUrl));
-                    const urls = await processImageSizes(r.mimeType, buf, 'characters', baseId);
-                    thumbUrl = urls.thumb; mediumUrl = urls.medium;
-                  } catch {}
-                }
-                restoredMedia.push({ ...r, thumbUrl, mediumUrl });
+        switch (backup.type) {
+          case 'characters': {
+            const restoredMedia = [];
+            for (const r of (backup.media || [])) {
+              writeUploadFile(r.dataUrl, r.dataB64);
+              let thumbUrl = '', mediumUrl = '';
+              if (IMAGE_MIME.has(r.mimeType) && r.dataB64) {
+                try {
+                  const buf = Buffer.from(r.dataB64, 'base64');
+                  const baseId = path.basename(r.dataUrl, path.extname(r.dataUrl));
+                  const urls = await processImageSizes(r.mimeType, buf, 'characters', baseId);
+                  thumbUrl = urls.thumb; mediumUrl = urls.medium;
+                } catch {}
               }
-              ldb.importCharacters(backup.characters, restoredMedia);
-              broadcast('characters', { action: 'reload' });
-              break;
+              restoredMedia.push({ ...r, thumbUrl, mediumUrl });
             }
-            case 'monster':
-            case 'monsters': {
-              const restoredMonsters = [];
-              for (const m of (backup.monsters || [])) {
-                let d = {}; try { d = JSON.parse(m.dataJson || '{}'); } catch {}
-                if (m.portraitB64 && d.portrait) {
-                  writeUploadFile(d.portrait, m.portraitB64);
-                  try {
-                    const buf = Buffer.from(m.portraitB64, 'base64');
-                    const baseId = path.basename(d.portrait, path.extname(d.portrait));
-                    const urls = await processImageSizes(extToMime(d.portrait), buf, 'monsters', baseId);
-                    d.portraitThumb = urls.thumb;
-                    d.portraitMedium = urls.medium;
-                  } catch {}
-                }
-                restoredMonsters.push({ ...m, dataJson: JSON.stringify(d) });
-              }
-              ldb.importMonsters(restoredMonsters);
-              broadcast('monsters', { action: 'reload' });
-              break;
-            }
-            case 'treasury': {
-              const restored = [];
-              for (const r of (backup.treasuryItems || [])) {
-                const it = { ...r };
-                if (r.imageB64 && r.imageUrl) {
-                  writeUploadFile(r.imageUrl, r.imageB64);
-                  try {
-                    const buf = Buffer.from(r.imageB64, 'base64');
-                    const baseId = path.basename(r.imageUrl, path.extname(r.imageUrl));
-                    const urls = await processImageSizes(extToMime(r.imageUrl), buf, 'treasury', baseId);
-                    it.imageThumb = urls.thumb;
-                    it.imageMedium = urls.medium;
-                  } catch {}
-                }
-                delete it.imageB64;
-                restored.push(it);
-              }
-              ldb.importTreasury(restored, backup.shopConfig, backup.purchaseLogs, backup.lootLogs);
-              broadcast('treasury', { action: 'reload' });
-              break;
-            }
-            // Pre-merge backup files: their rows convert into treasury_items.
-            case 'shop': {
-              ldb.importShop(backup.shopConfig, backup.shopItems, backup.purchaseLogs);
-              broadcast('treasury', { action: 'reload' });
-              break;
-            }
-            case 'loot': {
-              ldb.importLoot(backup.lootItems, backup.lootLogs);
-              broadcast('treasury', { action: 'reload' });
-              break;
-            }
-            case 'maps': {
-              ldb.importMaps(backup.preparedMaps);
-              const checkMedia = mediaDb.prepare('SELECT id FROM shared_media WHERE id = ?');
-              const insMedia   = mediaDb.prepare('INSERT OR IGNORE INTO shared_media (id, mime_type, data, created_at) VALUES (?, ?, ?, ?)');
-              for (const r of [...(backup.mapImages || []), ...(backup.chatMedia || [])]) {
-                if (r.id && r.mime_type && r.dataB64 && !checkMedia.get(r.id)) {
-                  const subdir = r.id.startsWith('prep-map-') ? 'maps' : 'media';
-                  const fileUrl = saveUploadFile(subdir, r.id, r.mime_type, r.dataB64);
-                  insMedia.run(r.id, r.mime_type, Buffer.from('FILE:' + fileUrl), r.created_at || Date.now());
-                }
-              }
-              broadcast('table', { action: 'map-updated' });
-              break;
-            }
-          }
-        } else {
-          const ops = [];
-          if (backup.type === 'characters') {
-            const [exC, exM] = await Promise.all([idb.query({ characters: {} }), idb.query({ media: {} })]);
-            ops.push(...(exC.characters || []).map(r => idb.tx.characters[r.id].delete()));
-            ops.push(...(exM.media || []).map(r => idb.tx.media[r.id].delete()));
-            ops.push(...(backup.characters || []).map(r => idb.tx.characters[r.id].update({ name: r.name || '', dataJson: r.dataJson || '{}', charType: r.charType || 'pc', passwordHash: r.passwordHash || '', createdAt: r.createdAt })));
-            ops.push(...(backup.media || []).map(r => idb.tx.media[r.id].update({ charId: r.charId || '', name: r.originalName || '', mimeType: r.mimeType || '', dataJson: r.dataUrl || '', createdAt: r.createdAt })));
+            ldb.importCharacters(backup.characters, restoredMedia);
             broadcast('characters', { action: 'reload' });
-          } else if (backup.type === 'monsters' || backup.type === 'monster') {
-            const exM = await idb.query({ monsters: {} });
-            ops.push(...(exM.monsters || []).map(r => idb.tx.monsters[r.id].delete()));
-            ops.push(...(backup.monsters || []).map(r => idb.tx.monsters[r.id].update({ name: r.name || '', cr: r.cr || '?', dataJson: r.dataJson || '{}', createdAt: r.createdAt })));
-            broadcast('monsters', { action: 'reload' });
-          } else if (backup.type === 'treasury' || backup.type === 'shop' || backup.type === 'loot') {
-            const [exT, exP, exL] = await Promise.all([
-              idb.query({ treasuryItems: {} }), idb.query({ purchaseLogs: {} }), idb.query({ lootLogs: {} }),
-            ]);
-            ops.push(...(exT.treasuryItems || []).map(r => idb.tx.treasuryItems[r.id].delete()));
-            ops.push(...(exP.purchaseLogs || []).map(r => idb.tx.purchaseLogs[r.id].delete()));
-            ops.push(...(exL.lootLogs || []).map(r => idb.tx.lootLogs[r.id].delete()));
-            ops.push(...(backup.shopConfig || []).map(r => idb.tx.shopConfig[r.id].update({ isOpen: !!r.isOpen, activeTag: r.activeTag || '' })));
-
-            // A current backup carries treasuryItems; older shop/loot files convert.
-            ops.push(...(backup.treasuryItems || []).map(r => idb.tx.treasuryItems[r.id].update(treasuryFields(r))));
-            ops.push(...(backup.shopItems     || []).map(r => idb.tx.treasuryItems[r.id].update(shopToTreasuryFields(r))));
-            ops.push(...(backup.lootItems     || []).map(r => idb.tx.treasuryItems[r.id].update(lootToTreasuryFields(r))));
-
-            ops.push(...(backup.purchaseLogs || []).map(r => idb.tx.purchaseLogs[r.id].update({ charId: r.charId || '', charName: r.charName || '', itemName: r.itemName || '', itemId: r.itemId || '', qty: r.qty || 1, totalCp: r.totalCp || 0, purchasedAt: r.purchasedAt || r.createdAt })));
-            ops.push(...(backup.lootLogs     || []).map(r => idb.tx.lootLogs[r.id].update({ charId: r.charId || '', charName: r.charName || '', itemName: r.itemName || '', itemId: r.itemId || '', claimedAt: r.claimedAt || r.createdAt })));
-            broadcast('treasury', { action: 'reload' });
+            break;
           }
-          for (let i = 0; i < ops.length; i += 100) await idb.transact(ops.slice(i, i + 100));
+          case 'monster':
+          case 'monsters': {
+            const restoredMonsters = [];
+            for (const m of (backup.monsters || [])) {
+              let d = {}; try { d = JSON.parse(m.dataJson || '{}'); } catch {}
+              if (m.portraitB64 && d.portrait) {
+                writeUploadFile(d.portrait, m.portraitB64);
+                try {
+                  const buf = Buffer.from(m.portraitB64, 'base64');
+                  const baseId = path.basename(d.portrait, path.extname(d.portrait));
+                  const urls = await processImageSizes(extToMime(d.portrait), buf, 'monsters', baseId);
+                  d.portraitThumb = urls.thumb;
+                  d.portraitMedium = urls.medium;
+                } catch {}
+              }
+              restoredMonsters.push({ ...m, dataJson: JSON.stringify(d) });
+            }
+            ldb.importMonsters(restoredMonsters);
+            broadcast('monsters', { action: 'reload' });
+            break;
+          }
+          case 'treasury': {
+            const restored = [];
+            for (const r of (backup.treasuryItems || [])) {
+              const it = { ...r };
+              if (r.imageB64 && r.imageUrl) {
+                writeUploadFile(r.imageUrl, r.imageB64);
+                try {
+                  const buf = Buffer.from(r.imageB64, 'base64');
+                  const baseId = path.basename(r.imageUrl, path.extname(r.imageUrl));
+                  const urls = await processImageSizes(extToMime(r.imageUrl), buf, 'treasury', baseId);
+                  it.imageThumb = urls.thumb;
+                  it.imageMedium = urls.medium;
+                } catch {}
+              }
+              delete it.imageB64;
+              restored.push(it);
+            }
+            ldb.importTreasury(restored, backup.shopConfig, backup.purchaseLogs, backup.lootLogs);
+            broadcast('treasury', { action: 'reload' });
+            break;
+          }
+          // Pre-merge backup files: their rows convert into treasury_items.
+          case 'shop': {
+            ldb.importShop(backup.shopConfig, backup.shopItems, backup.purchaseLogs);
+            broadcast('treasury', { action: 'reload' });
+            break;
+          }
+          case 'loot': {
+            ldb.importLoot(backup.lootItems, backup.lootLogs);
+            broadcast('treasury', { action: 'reload' });
+            break;
+          }
+          case 'maps': {
+            ldb.importMaps(backup.preparedMaps);
+            const checkMedia = mediaDb.prepare('SELECT id FROM shared_media WHERE id = ?');
+            const insMedia   = mediaDb.prepare('INSERT OR IGNORE INTO shared_media (id, mime_type, data, created_at) VALUES (?, ?, ?, ?)');
+            for (const r of [...(backup.mapImages || []), ...(backup.chatMedia || [])]) {
+              if (r.id && r.mime_type && r.dataB64 && !checkMedia.get(r.id)) {
+                const subdir = r.id.startsWith('prep-map-') ? 'maps' : 'media';
+                const fileUrl = saveUploadFile(subdir, r.id, r.mime_type, r.dataB64);
+                insMedia.run(r.id, r.mime_type, Buffer.from('FILE:' + fileUrl), r.created_at || Date.now());
+              }
+            }
+            broadcast('table', { action: 'map-updated' });
+            break;
+          }
         }
         return res.json({ ok: true, type: backup.type });
       }
@@ -386,36 +306,7 @@ export default function register(app, ctx) {
       const data = { ...rawData };
       if (data.media) data.media = data.media.map(m => ({ ...m, originalName: m.originalName || m.name || '', dataUrl: m.dataUrl || m.dataJson || '' }));
 
-      if (DB_PROVIDER === 'localdb') {
-        ldb.importAll(data);
-      } else {
-        const [exChars, exMedia, exTreasury, exPurchLogs, exLootLogs, exMonsters] = await Promise.all([
-          idb.query({ characters: {} }), idb.query({ media: {} }), idb.query({ treasuryItems: {} }),
-          idb.query({ purchaseLogs: {} }), idb.query({ lootLogs: {} }), idb.query({ monsters: {} }),
-        ]);
-        const delOps = [
-          ...(exChars.characters || []).map(r => idb.tx.characters[r.id].delete()),
-          ...(exMedia.media || []).map(r => idb.tx.media[r.id].delete()),
-          ...(exTreasury.treasuryItems || []).map(r => idb.tx.treasuryItems[r.id].delete()),
-          ...(exPurchLogs.purchaseLogs || []).map(r => idb.tx.purchaseLogs[r.id].delete()),
-          ...(exLootLogs.lootLogs || []).map(r => idb.tx.lootLogs[r.id].delete()),
-          ...(exMonsters.monsters || []).map(r => idb.tx.monsters[r.id].delete()),
-        ];
-        const insOps = [
-          ...(data.characters || []).map(r => idb.tx.characters[r.id].update({ name: r.name || '', dataJson: r.dataJson || '{}', charType: r.charType || 'pc', passwordHash: r.passwordHash || '', createdAt: r.createdAt })),
-          ...(data.media || []).map(r => idb.tx.media[r.id].update({ charId: r.charId || '', name: r.originalName || '', mimeType: r.mimeType || '', dataJson: r.dataUrl || '', createdAt: r.createdAt })),
-          ...(data.shopConfig || []).map(r => idb.tx.shopConfig[r.id].update({ isOpen: !!r.isOpen, activeTag: r.activeTag || '' })),
-          // Current backups carry treasuryItems; older ones convert on the way in.
-          ...(data.treasuryItems || []).map(r => idb.tx.treasuryItems[r.id].update(treasuryFields(r))),
-          ...(data.shopItems || []).map(r => idb.tx.treasuryItems[r.id].update(shopToTreasuryFields(r))),
-          ...(data.lootItems || []).map(r => idb.tx.treasuryItems[r.id].update(lootToTreasuryFields(r))),
-          ...(data.purchaseLogs || []).map(r => idb.tx.purchaseLogs[r.id].update({ charId: r.charId || '', charName: r.charName || '', itemName: r.itemName || '', itemId: r.itemId || '', qty: r.qty || 1, totalCp: r.totalCp || 0, purchasedAt: r.purchasedAt || r.createdAt })),
-          ...(data.lootLogs || []).map(r => idb.tx.lootLogs[r.id].update({ charId: r.charId || '', charName: r.charName || '', itemName: r.itemName || '', itemId: r.itemId || '', claimedAt: r.claimedAt || r.createdAt })),
-          ...(data.monsters || []).map(r => idb.tx.monsters[r.id].update({ name: r.name || '', cr: r.cr || '?', dataJson: r.dataJson || '{}', createdAt: r.createdAt })),
-        ];
-        const allOps = [...delOps, ...insOps];
-        for (let i = 0; i < allOps.length; i += 100) await idb.transact(allOps.slice(i, i + 100));
-      }
+      ldb.importAll(data);
 
       if (backup.sqlite && Array.isArray(backup.sqlite.shared_media)) {
         mediaDb.prepare('DELETE FROM shared_media').run();

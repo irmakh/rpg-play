@@ -19,18 +19,20 @@ const asDM = (a, campaignId) =>
 const asPlayer = (a, campaignId) => a.set('X-Campaign-Id', campaignId);
 
 function setup() {
-  const { app, ldb, broadcasts } = makeApp();
+  const { app, ldb, ldbFor, broadcasts } = makeApp();
 
-  // Two playlists with distinct tracks. The databases are genuinely separate in
-  // production (one SQLite file per campaign); here one store holds both, which
-  // only makes the playback-state assertions stricter.
-  ldb.createSoundFile('snd-tavern', { name: 'Tavern Brawl', url: '/uploads/sounds/tavern.mp3' });
-  ldb.createSoundFile('snd-chase',  { name: 'Chase',        url: '/uploads/sounds/chase.mp3' });
-  ldb.createSoundFile('snd-dirge',  { name: 'Dirge',        url: '/uploads/sounds/dirge.mp3' });
-  ldb.createPlaylist('pl-amn',  { name: 'Amn',       sounds: ['snd-tavern', 'snd-chase'] });
-  ldb.createPlaylist('pl-west', { name: 'Waterdeep', sounds: ['snd-dirge'] });
+  // Each campaign gets its own database, as in production (one SQLite file per
+  // campaign), so each library is seeded into its own store.
+  const amn = ldbFor(AMN);
+  amn.createSoundFile('snd-tavern', { name: 'Tavern Brawl', url: '/uploads/sounds/tavern.mp3' });
+  amn.createSoundFile('snd-chase',  { name: 'Chase',        url: '/uploads/sounds/chase.mp3' });
+  amn.createPlaylist('pl-amn', { name: 'Amn', sounds: ['snd-tavern', 'snd-chase'] });
 
-  return { app, ldb, broadcasts };
+  const west = ldbFor(WEST);
+  west.createSoundFile('snd-dirge', { name: 'Dirge', url: '/uploads/sounds/dirge.mp3' });
+  west.createPlaylist('pl-west', { name: 'Waterdeep', sounds: ['snd-dirge'] });
+
+  return { app, ldb, ldbFor, broadcasts };
 }
 
 const play = (app, campaignId, playlistId, trackIndex = 0, extra = {}) =>

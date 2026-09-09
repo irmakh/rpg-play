@@ -513,7 +513,7 @@ const AIDM_VERSION = 9;
 
 // ── Main route registration ───────────────────────────────────────────────────
 export default function register(app, ctx) {
-  const { path: nodePath, fs, express, __dirname: appDir, getCharacter, verifyPassword, isMasterPassword, ldb, idb, DB_PROVIDER } = ctx;
+  const { path: nodePath, fs, express, __dirname: appDir, getCharacter, verifyPassword, isMasterPassword, ldb } = ctx;
 
   // ── Static files for AI DM ────────────────────────────────────────────────
   const publicDir = nodePath.join(__dirname, 'public');
@@ -624,14 +624,7 @@ Return ONLY the JSON object. No markdown code fences. No explanation.`
   // ── Characters (read-only, for character selection) ───────────────────────
   app.get('/api/ai-dm/characters', async (req, res) => {
     try {
-      let chars;
-      if (DB_PROVIDER === 'localdb') {
-        chars = ldb.listCharacters();
-      } else {
-        const result = await ctx.idb.query({ characters: {} });
-        chars = result.characters || [];
-      }
-      res.json(chars
+      res.json(ldb.listCharacters()
         .filter(c => c.charType !== 'npc')
         .map(c => ({ id: c.id, name: c.name || 'Unnamed', has_password: !!c.passwordHash }))
         .sort((a, b) => a.name.localeCompare(b.name)));
@@ -653,13 +646,11 @@ Return ONLY the JSON object. No markdown code fences. No explanation.`
 
       // Extract portrait thumb if available
       let portrait = null;
-      if (DB_PROVIDER === 'localdb') {
-        try {
-          const media = ldb.listMedia ? ldb.listMedia(char.id) : [];
-          const p = media.find(m => m.isPortrait);
-          if (p) portrait = p.thumbUrl || p.dataUrl || null;
-        } catch {}
-      }
+      try {
+        const media = ldb.listMedia ? ldb.listMedia(char.id) : [];
+        const p = media.find(m => m.isPortrait);
+        if (p) portrait = p.thumbUrl || p.dataUrl || null;
+      } catch {}
 
       res.json({ id: char.id, name: char.name, data, portrait });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
@@ -976,11 +967,7 @@ Return ONLY the JSON object. No markdown code fences. No explanation.`
       }
 
       const dataJson = JSON.stringify(data);
-      if (DB_PROVIDER === 'localdb') {
-        ldb.updateCharacter(characterId, { name: char.name, dataJson });
-      } else {
-        await idb.transact([idb.tx.characters[characterId].update({ dataJson })]);
-      }
+      ldb.updateCharacter(characterId, { name: char.name, dataJson });
       res.json({ ok: true, data });
     } catch (err) { console.error(err); res.status(500).json({ error: err.message }); }
   });

@@ -1,5 +1,5 @@
 export default function register(app, ctx) {
-  const { ldb, DB_PROVIDER, masterAuth, saveUploadFile, broadcast, genId } = ctx;
+  const { ldb, masterAuth, saveUploadFile, broadcast, genId } = ctx;
   // Older harnesses register these routes without the campaign helper; then
   // every request shares one key, which is exactly the pre-campaign behaviour.
   const currentCampaignId = ctx.currentCampaignId || (() => '');
@@ -41,10 +41,7 @@ export default function register(app, ctx) {
 
   app.get('/api/sounds', (req, res) => {
     if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
-    if (DB_PROVIDER === 'localdb') {
-      return res.json(ldb.listSoundFiles());
-    }
-    res.json([]);
+    res.json(ldb.listSoundFiles());
   });
 
   app.post('/api/sounds', async (req, res) => {
@@ -59,19 +56,17 @@ export default function register(app, ctx) {
       const newId = genId();
       const url = saveUploadFile('sounds', newId, mimeType, mimeMatch[2]);
       const fields = { name: String(name).trim().slice(0, 120), url, mime_type: mimeType, tags: Array.isArray(tags) ? tags : [], created_at: new Date().toISOString() };
-      if (DB_PROVIDER === 'localdb') ldb.createSoundFile(newId, fields);
+      ldb.createSoundFile(newId, fields);
       res.json({ ok: true, id: newId, url, name: fields.name, tags: fields.tags });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
   });
 
   app.delete('/api/sounds/:id', (req, res) => {
     if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
-    if (DB_PROVIDER === 'localdb') {
-      const sf = ldb.getSoundFile(req.params.id);
-      if (!sf) return res.status(404).json({ error: 'Not found' });
-      ctx.deleteUploadFile(sf.url);
-      ldb.deleteSoundFile(req.params.id);
-    }
+    const sf = ldb.getSoundFile(req.params.id);
+    if (!sf) return res.status(404).json({ error: 'Not found' });
+    ctx.deleteUploadFile(sf.url);
+    ldb.deleteSoundFile(req.params.id);
     res.json({ ok: true });
   });
 
@@ -79,20 +74,14 @@ export default function register(app, ctx) {
     if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
     const { name } = req.body || {};
     if (!name) return res.status(400).json({ error: 'name required' });
-    if (DB_PROVIDER === 'localdb') {
-      if (!ldb.getSoundFile(req.params.id)) return res.status(404).json({ error: 'Not found' });
-      ldb.updateSoundFile(req.params.id, { name: String(name).trim().slice(0, 120) });
-    }
+    if (!ldb.getSoundFile(req.params.id)) return res.status(404).json({ error: 'Not found' });
+    ldb.updateSoundFile(req.params.id, { name: String(name).trim().slice(0, 120) });
     res.json({ ok: true });
   });
 
   app.get('/api/playlists', (req, res) => {
     if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
-    if (DB_PROVIDER === 'localdb') {
-      const playlists = ldb.listPlaylists().map(pl => ({ ...pl, sounds: ldb.getSoundsForPlaylist(pl.id) }));
-      return res.json(playlists);
-    }
-    res.json([]);
+    res.json(ldb.listPlaylists().map(pl => ({ ...pl, sounds: ldb.getSoundsForPlaylist(pl.id) })));
   });
 
   app.post('/api/playlists', (req, res) => {
@@ -101,32 +90,28 @@ export default function register(app, ctx) {
     if (!name) return res.status(400).json({ error: 'name required' });
     const newId = genId();
     const fields = { name: String(name).trim().slice(0, 80), type: type === 'map' ? 'map' : 'generic', sounds: Array.isArray(sounds) ? sounds : [], map_name: String(map_name).slice(0, 80) };
-    if (DB_PROVIDER === 'localdb') ldb.createPlaylist(newId, fields);
+    ldb.createPlaylist(newId, fields);
     res.json({ ok: true, id: newId, ...fields });
   });
 
   app.put('/api/playlists/:id', (req, res) => {
     if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
-    if (DB_PROVIDER === 'localdb') {
-      const pl = ldb.getPlaylist(req.params.id);
-      if (!pl) return res.status(404).json({ error: 'Not found' });
-      const { name, type, sounds, map_name } = req.body || {};
-      const update = {};
-      if (name     !== undefined) update.name     = String(name).trim().slice(0, 80);
-      if (type     !== undefined) update.type     = type === 'map' ? 'map' : 'generic';
-      if (sounds   !== undefined) update.sounds   = Array.isArray(sounds) ? sounds : [];
-      if (map_name !== undefined) update.map_name = String(map_name).slice(0, 80);
-      ldb.updatePlaylist(req.params.id, update);
-    }
+    const pl = ldb.getPlaylist(req.params.id);
+    if (!pl) return res.status(404).json({ error: 'Not found' });
+    const { name, type, sounds, map_name } = req.body || {};
+    const update = {};
+    if (name     !== undefined) update.name     = String(name).trim().slice(0, 80);
+    if (type     !== undefined) update.type     = type === 'map' ? 'map' : 'generic';
+    if (sounds   !== undefined) update.sounds   = Array.isArray(sounds) ? sounds : [];
+    if (map_name !== undefined) update.map_name = String(map_name).slice(0, 80);
+    ldb.updatePlaylist(req.params.id, update);
     res.json({ ok: true });
   });
 
   app.delete('/api/playlists/:id', (req, res) => {
     if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
-    if (DB_PROVIDER === 'localdb') {
-      if (!ldb.getPlaylist(req.params.id)) return res.status(404).json({ error: 'Not found' });
-      ldb.deletePlaylist(req.params.id);
-    }
+    if (!ldb.getPlaylist(req.params.id)) return res.status(404).json({ error: 'Not found' });
+    ldb.deletePlaylist(req.params.id);
     res.json({ ok: true });
   });
 
@@ -146,7 +131,7 @@ export default function register(app, ctx) {
     const state = playbackState();
     if (action === 'play') {
       let tracks = [];
-      if (DB_PROVIDER === 'localdb' && playlistId) tracks = ldb.getSoundsForPlaylist(playlistId);
+      if (playlistId) tracks = ldb.getSoundsForPlaylist(playlistId);
       const idx = Math.max(0, parseInt(trackIndex) || 0);
       const track = tracks[idx] || null;
       const pos = typeof position === 'number' ? Math.max(0, position) : 0;
@@ -179,7 +164,7 @@ export default function register(app, ctx) {
       broadcast('sound', { action: 'stop' });
     } else if (action === 'next' || action === 'prev') {
       let tracks = [];
-      if (DB_PROVIDER === 'localdb' && state.playlistId) tracks = ldb.getSoundsForPlaylist(state.playlistId);
+      if (state.playlistId) tracks = ldb.getSoundsForPlaylist(state.playlistId);
       if (tracks.length === 0) return res.json({ ok: true });
       const dir = action === 'next' ? 1 : -1;
       const newIdx = ((state.trackIndex + dir) + tracks.length) % tracks.length;

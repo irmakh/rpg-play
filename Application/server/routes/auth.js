@@ -1,5 +1,5 @@
 export default function register(app, ctx) {
-  const { getCharacter, isMasterPassword, verifyPassword, ldb, DB_PROVIDER } = ctx;
+  const { getCharacter, isMasterPassword, verifyPassword, ldb } = ctx;
 
   // Accepts any valid password (DM or any character) — used by stories gate
   app.post('/api/auth/verify-any', async (req, res) => {
@@ -7,12 +7,9 @@ export default function register(app, ctx) {
       const { password } = req.body || {};
       if (!password) return res.status(400).json({ error: 'password required' });
       if (isMasterPassword(password)) return res.json({ ok: true });
-      if (DB_PROVIDER === 'localdb') {
-        const chars = ldb.listCharacters();
-        for (const c of chars) {
-          if (c.passwordHash && verifyPassword(password, c.passwordHash))
-            return res.json({ ok: true });
-        }
+      for (const c of ldb.listCharacters()) {
+        if (c.passwordHash && verifyPassword(password, c.passwordHash))
+          return res.json({ ok: true });
       }
       return res.status(401).json({ error: 'Wrong password' });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }

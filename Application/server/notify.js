@@ -34,10 +34,9 @@ const KEEP_EVENTS = 300;
 const COALESCE_MS = 45000;
 
 export default function makeNotify(ctx) {
-  const { ldb, DB_PROVIDER, broadcast, genId } = ctx;
+  const { ldb, broadcast, genId } = ctx;
 
   function characterIds() {
-    if (DB_PROVIDER !== 'localdb') return [];
     try { return ldb.listCharacters().map(c => c.id); } catch { return []; }
   }
 
@@ -74,7 +73,6 @@ export default function makeNotify(ctx) {
    */
   function notify(n) {
     try {
-      if (DB_PROVIDER !== 'localdb') return null;   // see README: instantdb path not implemented
       const recipients = resolveRecipients(n.to, n.exclude);
       if (recipients.length === 0) return null;
 

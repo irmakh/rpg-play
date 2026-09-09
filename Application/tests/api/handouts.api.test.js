@@ -61,7 +61,6 @@ beforeEach(() => {
   app.use(express.json({ limit: '10mb' }));
   registerHandouts(app, {
     ldb,
-    DB_PROVIDER: 'localdb',
     genId: () => crypto.randomUUID(),
     broadcast: (event, payload) => broadcasts.push({ event, payload }),
     masterAuth: req => isMasterPassword(req.headers['x-master-password']),

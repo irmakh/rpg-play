@@ -86,7 +86,7 @@ beforeAll(async () => {
   });
 
   const ctx = {
-    ldb: ctxMod.ldb, sdb: ctxMod.sdb, DB_PROVIDER: 'localdb',
+    ldb: ctxMod.ldb, sdb: ctxMod.sdb,
     genId: () => crypto.randomUUID(), crypto,
     broadcast: () => {},
     masterAuth, isMasterPassword, isSuperAdminPassword,

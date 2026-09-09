@@ -1,6 +1,6 @@
 export default function register(app, ctx) {
   const {
-    ldb, idb, DB_PROVIDER, masterAuth, broadcast, crypto,
+    ldb, masterAuth, broadcast, crypto,
     charAuth, getCharacter, genId,
     processImageSizes, saveUploadFile, IMAGE_MIME, SHARED_MEDIA_MIME, MAX_MEDIA_BYTES,
   } = ctx;
@@ -35,7 +35,7 @@ export default function register(app, ctx) {
   app.get('/api/events-data', async (req, res) => {
     try {
       if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
-      const data = DB_PROVIDER === 'localdb' ? ldb.getEventsData() : {};
+      const data = ldb.getEventsData();
       res.set('Cache-Control', 'no-store');
       res.json(data);
     } catch (err) { console.error('GET /api/events-data:', err); res.status(500).json({ error: 'Server error' }); }
@@ -46,7 +46,7 @@ export default function register(app, ctx) {
       if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
       const data = req.body;
       if (!data || typeof data !== 'object') return res.status(400).json({ error: 'Invalid body' });
-      if (DB_PROVIDER === 'localdb') ldb.saveEventsData(data);
+      ldb.saveEventsData(data);
       res.json({ ok: true });
     } catch (err) { console.error('PUT /api/events-data:', err); res.status(500).json({ error: 'Server error' }); }
   });
@@ -54,7 +54,7 @@ export default function register(app, ctx) {
   // ── Calendar ──────────────────────────────────────────────────────────────────
   app.get('/api/calendar/state', async (req, res) => {
     try {
-      const state = DB_PROVIDER === 'localdb' ? ldb.getCalendarState() : { frYear: 1492, frMonth: 1, frDay: 1, frFestival: '' };
+      const state = ldb.getCalendarState();
       res.set('Cache-Control', 'no-store');
       res.json(state);
     } catch (err) { console.error('GET /api/calendar/state:', err); res.status(500).json({ error: 'Server error' }); }
@@ -65,7 +65,7 @@ export default function register(app, ctx) {
       if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
       const s = req.body;
       if (!s || typeof s.frYear !== 'number') return res.status(400).json({ error: 'Invalid body' });
-      if (DB_PROVIDER === 'localdb') ldb.saveCalendarState(s);
+      ldb.saveCalendarState(s);
       broadcast('calendar-updated', { type: 'state' });
       ctx.notify?.({
         to: 'players', kind: 'calendar', title: 'The date has moved on',
@@ -128,7 +128,7 @@ export default function register(app, ctx) {
   app.get('/api/weather/config', (req, res) => {
     try {
       if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
-      const cfg = DB_PROVIDER === 'localdb' ? ldb.getWeatherConfig() : { sessionNormal: 60, level1Min: 15, level2Min: 18 };
+      const cfg = ldb.getWeatherConfig();
       res.set('Cache-Control', 'no-store');
       res.json(cfg);
     } catch (err) { console.error('GET /api/weather/config:', err); res.status(500).json({ error: 'Server error' }); }
@@ -145,7 +145,7 @@ export default function register(app, ctx) {
         patch.sessionNormal = n;
       }
       if (body.level1Min != null || body.level2Min != null) {
-        const cur = DB_PROVIDER === 'localdb' ? ldb.getWeatherConfig() : { level1Min: 15, level2Min: 18 };
+        const cur = ldb.getWeatherConfig();
         const { level1Min, level2Min } = _clampThresholds(
           body.level1Min != null ? body.level1Min : cur.level1Min,
           body.level2Min != null ? body.level2Min : cur.level2Min);
@@ -153,7 +153,7 @@ export default function register(app, ctx) {
         patch.level2Min = level2Min;
       }
       if (!Object.keys(patch).length) return res.status(400).json({ error: 'Nothing to update' });
-      if (DB_PROVIDER === 'localdb') ldb.saveWeatherConfig(patch);
+      ldb.saveWeatherConfig(patch);
       res.json({ ok: true, ...patch });
     } catch (err) { console.error('PUT /api/weather/config:', err); res.status(500).json({ error: 'Server error' }); }
   });
@@ -162,7 +162,7 @@ export default function register(app, ctx) {
   // screen reads "today's" weather. Weather is environmental, not secret.
   app.get('/api/weather/log', (req, res) => {
     try {
-      const log = DB_PROVIDER === 'localdb' ? ldb.listWeatherLog() : [];
+      const log = ldb.listWeatherLog();
       res.set('Cache-Control', 'no-store');
       res.json(log);
     } catch (err) { console.error('GET /api/weather/log:', err); res.status(500).json({ error: 'Server error' }); }
@@ -184,7 +184,6 @@ export default function register(app, ctx) {
   app.post('/api/weather/set', (req, res) => {
     try {
       if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
-      if (DB_PROVIDER !== 'localdb') return res.status(501).json({ error: 'Weather requires localdb' });
       const { date, sessionNormal, dateLabel, temperature, wind, precipitation } = req.body || {};
       if (!date || typeof date.frYear !== 'number') return res.status(400).json({ error: 'Invalid date' });
       const t = _normCategory(temperature, true);
@@ -212,7 +211,7 @@ export default function register(app, ctx) {
   app.delete('/api/weather/log/:id', (req, res) => {
     try {
       if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
-      if (DB_PROVIDER === 'localdb') ldb.deleteWeatherEntry(req.params.id);
+      ldb.deleteWeatherEntry(req.params.id);
       broadcast('calendar-updated', { type: 'weather' });
       res.json({ ok: true });
     } catch (err) { console.error('DELETE /api/weather/log:', err); res.status(500).json({ error: 'Server error' }); }
@@ -221,7 +220,6 @@ export default function register(app, ctx) {
   app.post('/api/weather/roll', (req, res) => {
     try {
       if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
-      if (DB_PROVIDER !== 'localdb') return res.status(501).json({ error: 'Weather requires localdb' });
       const { date, sessionNormal, dateLabel } = req.body || {};
       if (!date || typeof date.frYear !== 'number') return res.status(400).json({ error: 'Invalid date' });
       const sn = parseInt(sessionNormal);
@@ -255,7 +253,7 @@ export default function register(app, ctx) {
         const cid = req.headers['x-character-id'];
         if (cid && (await charAuth(cid, req)) === 200) charId = cid;
       }
-      const events = DB_PROVIDER === 'localdb' ? ldb.listCalendarEvents({ isDM, charId }) : [];
+      const events = ldb.listCalendarEvents({ isDM, charId });
       res.set('Cache-Control', 'no-store');
       res.json(events);
     } catch (err) { console.error('GET /api/calendar/events:', err); res.status(500).json({ error: 'Server error' }); }
@@ -283,7 +281,7 @@ export default function register(app, ctx) {
           eventType: 'journal',
         };
       }
-      if (DB_PROVIDER === 'localdb') ldb.createCalendarEvent(record);
+      ldb.createCalendarEvent(record);
       broadcast('calendar-updated', { type: 'events' });
       res.json({ ok: true, id });
     } catch (err) { console.error('POST /api/calendar/events:', err); res.status(500).json({ error: 'Server error' }); }
@@ -295,7 +293,7 @@ export default function register(app, ctx) {
       if (!actor) return res.status(401).json({ error: 'Unauthorized' });
       const ev = req.body;
       if (!ev || typeof ev.frYear !== 'number') return res.status(400).json({ error: 'Invalid body' });
-      const existing = DB_PROVIDER === 'localdb' ? ldb.getCalendarEvent(req.params.id) : null;
+      const existing = ldb.getCalendarEvent(req.params.id);
       if (!existing) return res.status(404).json({ error: 'Not found' });
       // Ownership: DM may edit anything; a player may only edit their own journal.
       if (!actor.isDM && existing.authorCharId !== actor.charId) {
@@ -316,7 +314,7 @@ export default function register(app, ctx) {
           eventType: existing.eventType || 'journal',
         };
       }
-      if (DB_PROVIDER === 'localdb') ldb.updateCalendarEvent(req.params.id, record);
+      ldb.updateCalendarEvent(req.params.id, record);
       broadcast('calendar-updated', { type: 'events' });
       res.json({ ok: true });
     } catch (err) { console.error('PUT /api/calendar/events/:id:', err); res.status(500).json({ error: 'Server error' }); }
@@ -326,12 +324,12 @@ export default function register(app, ctx) {
     try {
       const actor = await resolveCalActor(req);
       if (!actor) return res.status(401).json({ error: 'Unauthorized' });
-      const existing = DB_PROVIDER === 'localdb' ? ldb.getCalendarEvent(req.params.id) : null;
+      const existing = ldb.getCalendarEvent(req.params.id);
       if (!existing) return res.status(404).json({ error: 'Not found' });
       if (!actor.isDM && existing.authorCharId !== actor.charId) {
         return res.status(403).json({ error: 'Forbidden' });
       }
-      if (DB_PROVIDER === 'localdb') ldb.deleteCalendarEvent(req.params.id);
+      ldb.deleteCalendarEvent(req.params.id);
       broadcast('calendar-updated', { type: 'events' });
       res.json({ ok: true });
     } catch (err) { console.error('DELETE /api/calendar/events/:id:', err); res.status(500).json({ error: 'Server error' }); }

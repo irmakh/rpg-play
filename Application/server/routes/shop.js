@@ -1,22 +1,16 @@
 export default function register(app, ctx) {
   const {
-    ldb, idb, DB_PROVIDER, genId,
+    ldb, genId,
     masterAuth, charAuth, getCharacter,
     getShopConfig, shopObjFromRecord, deductCurrency, cpToGpString,
-    SHOP_CONFIG_ID, broadcast,
+    broadcast,
   } = ctx;
 
   app.get('/api/shop', async (req, res) => {
     try {
       const cfg = await getShopConfig();
       if (!cfg.isOpen) return res.json({ isOpen: false, items: [] });
-      let items;
-      if (DB_PROVIDER === 'localdb') {
-        items = ldb.listShopItems().filter(r => r.quantity !== 0);
-      } else {
-        const result = await idb.query({ shopItems: {} });
-        items = (result.shopItems || []).filter(r => r.quantity !== 0);
-      }
+      let items = ldb.listShopItems().filter(r => r.quantity !== 0);
       if (cfg.activeTag) items = items.filter(r => (r.tag || '') === cfg.activeTag);
       items.sort((a, b) => (a.itemType || '').localeCompare(b.itemType || '') || (a.name || '').localeCompare(b.name || ''));
       res.json({ isOpen: true, activeTag: cfg.activeTag, items: items.map(shopObjFromRecord) });
@@ -36,11 +30,7 @@ export default function register(app, ctx) {
       if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
       const isOpen = !!(req.body?.isOpen);
       const activeTag = isOpen ? String(req.body?.activeTag || '').trim().slice(0, 40) : '';
-      if (DB_PROVIDER === 'localdb') {
-        ldb.setShopConfig(isOpen, activeTag);
-      } else {
-        await idb.transact([idb.tx.shopConfig[SHOP_CONFIG_ID].update({ isOpen, activeTag })]);
-      }
+      ldb.setShopConfig(isOpen, activeTag);
       broadcast('shop', { action: 'statusChanged', isOpen, activeTag });
       res.json({ ok: true, isOpen, activeTag });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
@@ -49,14 +39,9 @@ export default function register(app, ctx) {
   app.get('/api/shop/all', async (req, res) => {
     try {
       if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
-      let items;
-      if (DB_PROVIDER === 'localdb') {
-        items = ldb.listShopItems().sort((a, b) => (a.createdAt || '').localeCompare(b.createdAt || ''));
-      } else {
-        const result = await idb.query({ shopItems: {} });
-        items = (result.shopItems || []).sort((a, b) => (a.createdAt || '').localeCompare(b.createdAt || ''));
-      }
-      res.json(items.map(shopObjFromRecord));
+      res.json(ldb.listShopItems()
+        .sort((a, b) => (a.createdAt || '').localeCompare(b.createdAt || ''))
+        .map(shopObjFromRecord));
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
   });
 
@@ -82,11 +67,7 @@ export default function register(app, ctx) {
         tag: String(tag).trim().slice(0, 40),
         createdAt: new Date().toISOString()
       };
-      if (DB_PROVIDER === 'localdb') {
-        ldb.createShopItem(newId, fields);
-      } else {
-        await idb.transact([idb.tx.shopItems[newId].update(fields)]);
-      }
+      ldb.createShopItem(newId, fields);
       broadcast('shop', { action: 'created', id: newId });
       res.json({ id: newId, ok: true });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
@@ -95,7 +76,7 @@ export default function register(app, ctx) {
   app.put('/api/shop/:id', async (req, res) => {
     try {
       if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
-      const existing = DB_PROVIDER === 'localdb' ? ldb.getShopItem(req.params.id) : (await idb.query({ shopItems: { $: { where: { id: req.params.id } } } })).shopItems?.[0];
+      const existing = ldb.getShopItem(req.params.id);
       if (!existing) return res.status(404).json({ error: 'Not found' });
       const { name, itemType, armorType, acBase, valueCp, quantity, acBonus, initBonus, speedBonus, spellAtkBonus, spellDcBonus, requiresAttunement, notes, weaponAtk, weaponDmg, weaponProperties, tag } = req.body || {};
       const update = {};
@@ -117,11 +98,7 @@ export default function register(app, ctx) {
       if (weaponProperties !== undefined)   update.weaponPropertiesJson = JSON.stringify(Array.isArray(weaponProperties) ? weaponProperties.slice(0, 3) : []);
       if (tag !== undefined)                update.tag = String(tag).trim().slice(0, 40);
       if (Object.keys(update).length === 0) return res.status(400).json({ error: 'Nothing to update' });
-      if (DB_PROVIDER === 'localdb') {
-        ldb.updateShopItem(req.params.id, update);
-      } else {
-        await idb.transact([idb.tx.shopItems[req.params.id].update(update)]);
-      }
+      ldb.updateShopItem(req.params.id, update);
       broadcast('shop', { action: 'updated', id: req.params.id });
       res.json({ ok: true });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
@@ -130,13 +107,9 @@ export default function register(app, ctx) {
   app.delete('/api/shop/:id', async (req, res) => {
     try {
       if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
-      const existing = DB_PROVIDER === 'localdb' ? ldb.getShopItem(req.params.id) : (await idb.query({ shopItems: { $: { where: { id: req.params.id } } } })).shopItems?.[0];
+      const existing = ldb.getShopItem(req.params.id);
       if (!existing) return res.status(404).json({ error: 'Not found' });
-      if (DB_PROVIDER === 'localdb') {
-        ldb.deleteShopItem(req.params.id);
-      } else {
-        await idb.transact([idb.tx.shopItems[req.params.id].delete()]);
-      }
+      ldb.deleteShopItem(req.params.id);
       broadcast('shop', { action: 'deleted', id: req.params.id });
       res.json({ ok: true });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
@@ -148,11 +121,7 @@ export default function register(app, ctx) {
       const { ids, tag } = req.body || {};
       if (!Array.isArray(ids) || ids.length === 0) return res.status(400).json({ error: 'ids array required' });
       const tagStr = tag !== undefined ? String(tag).trim().slice(0, 40) : '';
-      if (DB_PROVIDER === 'localdb') {
-        ldb.bulkUpdateShopTag(ids, tagStr);
-      } else {
-        for (const id of ids) await idb.transact([idb.tx.shopItems[id].update({ tag: tagStr })]);
-      }
+      ldb.bulkUpdateShopTag(ids, tagStr);
       broadcast('shop', { action: 'bulk-updated' });
       res.json({ ok: true, count: ids.length });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
@@ -175,7 +144,7 @@ export default function register(app, ctx) {
       let totalCp = 0;
       const resolvedItems = [];
       for (const { shopItemId, qty = 1 } of cart) {
-        const shopItem = DB_PROVIDER === 'localdb' ? ldb.getShopItem(shopItemId) : (await idb.query({ shopItems: { $: { where: { id: shopItemId } } } })).shopItems?.[0];
+        const shopItem = ldb.getShopItem(shopItemId);
         if (!shopItem) return res.status(400).json({ error: `Shop item ${shopItemId} not found` });
         if (shopItem.quantity !== -1 && shopItem.quantity < qty) return res.status(400).json({ error: `Not enough stock for "${shopItem.name}"` });
         totalCp += (shopItem.valueCp ?? 0) * qty;
@@ -235,21 +204,11 @@ export default function register(app, ctx) {
       charData.pp2 = String(newCurrency.pp);
 
       const charName = charData.name || 'Unknown';
-      if (DB_PROVIDER === 'localdb') {
-        for (const { shopItem, qty } of resolvedItems) {
-          if (shopItem.quantity !== -1) ldb.updateShopItem(shopItem.id, { quantity: shopItem.quantity - qty });
-          ldb.createPurchaseLog(genId(), { charId, charName, itemName: shopItem.name, qty, totalCp: (shopItem.valueCp ?? 0) * qty, purchasedAt: new Date().toISOString() });
-        }
-        ldb.updateCharacter(charId, { dataJson: JSON.stringify(charData), name: charRecord.name });
-      } else {
-        const txns = [];
-        for (const { shopItem, qty } of resolvedItems) {
-          if (shopItem.quantity !== -1) txns.push(idb.tx.shopItems[shopItem.id].update({ quantity: shopItem.quantity - qty }));
-          txns.push(idb.tx.purchaseLogs[genId()].update({ charId, charName, itemName: shopItem.name, qty, totalCp: (shopItem.valueCp ?? 0) * qty, purchasedAt: new Date().toISOString() }));
-        }
-        txns.push(idb.tx.characters[charId].update({ dataJson: JSON.stringify(charData), name: charRecord.name }));
-        await idb.transact(txns);
+      for (const { shopItem, qty } of resolvedItems) {
+        if (shopItem.quantity !== -1) ldb.updateShopItem(shopItem.id, { quantity: shopItem.quantity - qty });
+        ldb.createPurchaseLog(genId(), { charId, charName, itemName: shopItem.name, qty, totalCp: (shopItem.valueCp ?? 0) * qty, purchasedAt: new Date().toISOString() });
       }
+      ldb.updateCharacter(charId, { dataJson: JSON.stringify(charData), name: charRecord.name });
 
       broadcast('shop', { action: 'purchase' });
       broadcast('characters', { action: 'updated', id: charId });
@@ -260,14 +219,7 @@ export default function register(app, ctx) {
   app.get('/api/shop/logs', async (req, res) => {
     try {
       if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
-      let logs;
-      if (DB_PROVIDER === 'localdb') {
-        logs = ldb.listPurchaseLogs();
-      } else {
-        const result = await idb.query({ purchaseLogs: {} });
-        logs = (result.purchaseLogs || []).sort((a, b) => (b.purchasedAt || '').localeCompare(a.purchasedAt || '')).slice(0, 500);
-      }
-      res.json(logs.map(r => ({ id: r.id, charId: r.charId, charName: r.charName, itemName: r.itemName, qty: r.qty, totalCp: r.totalCp, purchasedAt: r.purchasedAt })));
+      res.json(ldb.listPurchaseLogs().map(r => ({ id: r.id, charId: r.charId, charName: r.charName, itemName: r.itemName, qty: r.qty, totalCp: r.totalCp, purchasedAt: r.purchasedAt })));
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
   });
 }

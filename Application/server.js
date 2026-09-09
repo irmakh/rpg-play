@@ -41,33 +41,28 @@ import registerAiDM      from './aiDM/routes.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// ── DB provider selection ─────────────────────────────────────────────────────
-const DB_PROVIDER = (process.env.DB_PROVIDER || 'instantdb').trim().toLowerCase();
-
-let idb = null;
-let _idbGenId;
+// ── Database ──────────────────────────────────────────────────────────────────
+// One backend: per-campaign SQLite. The hosted InstantDB alternative that used
+// to sit behind a DB_PROVIDER switch is gone — it had drifted years behind
+// (handouts, notifications, weather, calendar events, drawings and prepared
+// maps were never implemented there) and nothing ran it.
+const _legacyProvider = (process.env.DB_PROVIDER || '').trim().toLowerCase();
+if (_legacyProvider && _legacyProvider !== 'localdb') {
+  console.warn(`DB_PROVIDER=${_legacyProvider} is ignored — this build has only the local SQLite backend.`);
+}
 
 // Campaign data is reached through request-scoped proxies, never a module-level
 // handle — see lib/request-context.js. `ldb` therefore resolves to whichever
 // campaign the in-flight request belongs to.
 const ldb = ldbProxy;
 
-if (DB_PROVIDER === 'localdb') {
-  // Nothing to open here: db/campaign-store.js opens each campaign's files on
-  // first use. Bootstrap creates the first campaign and migrates the
-  // pre-multi-tenant databases into it (no-op once a campaign exists).
-  bootstrapCampaigns({ defaultDmPassword: process.env.MASTER_PASSWORD || '15243' });
-} else {
-  const { init, id: _gid } = await import('@instantdb/admin');
-  _idbGenId = _gid;
-  const APP_ID      = process.env.INSTANT_APP_ID || '78945351-e9c4-4172-adac-b6c4b481a73f';
-  const ADMIN_TOKEN = process.env.INSTANT_ADMIN_TOKEN;
-  if (!ADMIN_TOKEN) { console.error('INSTANT_ADMIN_TOKEN env var is required when DB_PROVIDER=instantdb'); process.exit(1); }
-  idb = init({ appId: APP_ID, adminToken: ADMIN_TOKEN });
-}
+// Nothing to open here: db/campaign-store.js opens each campaign's files on
+// first use. Bootstrap creates the first campaign and migrates the
+// pre-multi-tenant databases into it (no-op once a campaign exists).
+bootstrapCampaigns({ defaultDmPassword: process.env.MASTER_PASSWORD || '15243' });
 
 function genId() {
-  return DB_PROVIDER === 'localdb' ? crypto.randomUUID() : _idbGenId();
+  return crypto.randomUUID();
 }
 
 // ── File-based upload storage ─────────────────────────────────────────────────
@@ -214,9 +209,7 @@ function campaignIdFromReq(req) {
 }
 
 async function getCharacter(charId) {
-  if (DB_PROVIDER === 'localdb') return ldb.getCharacter(charId);
-  const result = await idb.query({ characters: { $: { where: { id: charId } } } });
-  return result.characters?.[0] || null;
+  return ldb.getCharacter(charId);
 }
 
 async function charAuth(charId, req) {
@@ -252,13 +245,11 @@ function broadcast(eventName, payload = {}, campaignId = currentCampaignId()) {
     if (res._meta?.campaignId !== campaignId) continue;
     try { res.write(sseMsg); } catch { sseClients.delete(res); }
   }
-  if (DB_PROVIDER === 'localdb') {
-    const wsMsg = JSON.stringify({ event: eventName, data: payload });
-    for (const ws of [...wsClients]) {
-      if (ws.readyState !== 1) { wsClients.delete(ws); continue; }
-      if (ws._meta?.campaignId !== campaignId) continue;
-      ws.send(wsMsg);
-    }
+  const wsMsg = JSON.stringify({ event: eventName, data: payload });
+  for (const ws of [...wsClients]) {
+    if (ws.readyState !== 1) { wsClients.delete(ws); continue; }
+    if (ws._meta?.campaignId !== campaignId) continue;
+    ws.send(wsMsg);
   }
 }
 
@@ -268,31 +259,18 @@ function broadcastAll(eventName, payload = {}) {
   for (const res of [...sseClients]) {
     try { res.write(sseMsg); } catch { sseClients.delete(res); }
   }
-  if (DB_PROVIDER === 'localdb') {
-    const wsMsg = JSON.stringify({ event: eventName, data: payload });
-    for (const ws of [...wsClients]) {
-      if (ws.readyState === 1) ws.send(wsMsg);
-      else wsClients.delete(ws);
-    }
+  const wsMsg = JSON.stringify({ event: eventName, data: payload });
+  for (const ws of [...wsClients]) {
+    if (ws.readyState === 1) ws.send(wsMsg);
+    else wsClients.delete(ws);
   }
 }
 
 // ── Shop helpers ──────────────────────────────────────────────────────────────
-const SHOP_CONFIG_ID = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
-
 async function getShopConfig() {
   try {
-    if (DB_PROVIDER === 'localdb') {
-      const cfg = ldb.getShopConfig();
-      return { isOpen: !!cfg.isOpen, activeTag: cfg.activeTag || '', activeTags: cfg.activeTags || [] };
-    }
-    const result = await idb.query({ shopConfig: { $: { where: { id: SHOP_CONFIG_ID } } } });
-    const cfg = result.shopConfig?.[0];
-    if (!cfg) return { isOpen: true, activeTag: '', activeTags: [] };
-    // activeTags is the source of truth; activeTag is the legacy single value.
-    const tags = Array.isArray(cfg.activeTags) ? cfg.activeTags.filter(Boolean)
-               : (cfg.activeTag ? [cfg.activeTag] : []);
-    return { isOpen: !!cfg.isOpen, activeTag: tags[0] || '', activeTags: tags };
+    const cfg = ldb.getShopConfig();
+    return { isOpen: !!cfg.isOpen, activeTag: cfg.activeTag || '', activeTags: cfg.activeTags || [] };
   } catch { return { isOpen: true, activeTag: '', activeTags: [] }; }
 }
 
@@ -427,7 +405,7 @@ app.use(express.static(path.join(__dirname, 'public'), {
 app.get('/gaston.xml', (req, res) => res.sendFile(path.join(__dirname, 'gaston.xml')));
 
 // ── Config endpoint ───────────────────────────────────────────────────────────
-app.get('/api/config', (req, res) => res.json({ dbProvider: DB_PROVIDER, wsUrl: process.env.WS_URL || null }));
+app.get('/api/config', (req, res) => res.json({ dbProvider: 'localdb', wsUrl: process.env.WS_URL || null }));
 
 // ── Connected-client tracking (for the hidden maintenance page) ───────────────
 // Capture per-connection details when a real-time client connects. The client
@@ -542,15 +520,10 @@ app.post('/api/console/event', (req, res) => {
   res.json({ ok: true });
 });
 
-// ── In-memory chat log cap (instantdb mode) ──────────────────────────────────
-// The log itself lives in server/routes/chat.js, keyed by campaign — a single
-// shared array here handed every campaign every other campaign's history.
-const CHAT_MAX = 100;
-
 // ── Shared context for all route modules ─────────────────────────────────────
 const ctx = {
   // DB
-  ldb, idb, DB_PROVIDER, genId,
+  ldb, genId,
   // Broadcast
   broadcast, sseClients, consoleSseClients, wsClients,
   // Auth
@@ -562,7 +535,7 @@ const ctx = {
   // Media DB
   mediaDb, insertSharedMedia, _mediaGet, _mapUpsert,
   // Shop helpers
-  getShopConfig, shopObjFromRecord, deductCurrency, cpToGpString, SHOP_CONFIG_ID,
+  getShopConfig, shopObjFromRecord, deductCurrency, cpToGpString,
   // Constants
   UPLOADS_DIR, STORIES_DIR, STORY_IMAGES_DIR,
   ALLOWED_MIME, SHARED_MEDIA_MIME, MAX_MEDIA_BYTES, IMAGE_MIME,
@@ -571,8 +544,6 @@ const ctx = {
   // Campaigns
   cdb, campaignIdFromReq, currentCampaignId, currentCampaign,
   isSuperAdminPassword, broadcastAll, CAMPAIGN_COOKIE, FRONTEND_VERSION,
-  // In-memory state
-  CHAT_MAX,
   // Node modules
   sharp, crypto, path, fs, express, __dirname,
 };
@@ -618,19 +589,17 @@ if (useSSL) {
   httpServer = createHttpServer(app);
 }
 
-if (DB_PROVIDER === 'localdb') {
-  const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
-  wss.on('connection', (ws, req) => {
-    ws._meta = clientMetaFromReq(req, 'ws');
-    wsClients.add(ws);
-    ws.on('close', () => wsClients.delete(ws));
-    ws.on('error', () => wsClients.delete(ws));
-  });
-}
+const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
+wss.on('connection', (ws, req) => {
+  ws._meta = clientMetaFromReq(req, 'ws');
+  wsClients.add(ws);
+  ws.on('close', () => wsClients.delete(ws));
+  ws.on('error', () => wsClients.delete(ws));
+});
 
 httpServer.listen(PORT, () => {
   const proto = useSSL ? 'HTTPS' : 'HTTP';
-  console.log(`${proto} server listening on port ${PORT} [${DB_PROVIDER}]`);
+  console.log(`${proto} server listening on port ${PORT}`);
 });
 
 if (useSSL) {

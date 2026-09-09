@@ -1,33 +1,12 @@
 export default function register(app, ctx) {
   const {
-    ldb, idb, DB_PROVIDER, genId,
+    ldb, genId,
     masterAuth,
     processImageSizes, saveUploadFile,
     IMAGE_MIME, SHARED_MEDIA_MIME, MAX_MEDIA_BYTES,
     insertSharedMedia, _mediaGet,
     broadcast,
   } = ctx;
-  // Older harnesses register these routes without the campaign helper; then
-  // every request shares one key, which is exactly the pre-campaign behaviour.
-  const currentCampaignId = ctx.currentCampaignId || (() => '');
-  const CHAT_MAX = ctx.CHAT_MAX || 100;
-
-  // The in-memory chat log, per campaign. Only the non-localdb providers use it
-  // (localdb keeps chat in the campaign's own database, via the ldb proxy). One
-  // shared array made GET /api/chat hand a campaign another campaign's history
-  // — including its dmOnly rolls — so the log is keyed the same way the sound
-  // playback state is.
-  const chatLogs = new Map();   // campaignId -> entry[]
-
-  // '' keys an install with no campaign resolved at all. The campaign
-  // middleware answers 409 for those before a handler runs, so it stays empty
-  // in practice.
-  function chatLog() {
-    const key = currentCampaignId() || '';
-    let log = chatLogs.get(key);
-    if (!log) { log = []; chatLogs.set(key, log); }
-    return log;
-  }
 
   // ── Shared Media ──────────────────────────────────────────────────────────────
   app.post('/api/chat/media', async (req, res) => {
@@ -58,13 +37,7 @@ export default function register(app, ctx) {
         caption: caption ? String(caption).slice(0, 120) : null,
         timestamp: new Date().toISOString()
       };
-      if (DB_PROVIDER === 'localdb') {
-        ldb.appendChatLog(entry);
-      } else {
-        const log = chatLog();
-        log.push(entry);
-        if (log.length > CHAT_MAX) log.shift();
-      }
+      ldb.appendChatLog(entry);
       broadcast('chat', entry);
       res.json({ ok: true, mediaId });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
@@ -111,13 +84,7 @@ export default function register(app, ctx) {
         caption: null,
         timestamp: new Date().toISOString()
       };
-      if (DB_PROVIDER === 'localdb') {
-        ldb.appendChatLog(entry);
-      } else {
-        const log = chatLog();
-        log.push(entry);
-        if (log.length > CHAT_MAX) log.shift();
-      }
+      ldb.appendChatLog(entry);
       broadcast('chat', entry);
       res.json({ ok: true, mediaId });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
@@ -126,12 +93,8 @@ export default function register(app, ctx) {
   // ── Chat / Dice ───────────────────────────────────────────────────────────────
   app.get('/api/chat', (req, res) => {
     const isMaster = masterAuth(req);
-    if (DB_PROVIDER === 'localdb') {
-      const all = ldb.listChatLog();
-      return res.json(isMaster ? all : all.filter(e => !e.dmOnly));
-    }
-    const log = chatLog();
-    res.json(isMaster ? log : log.filter(e => !e.dmOnly));
+    const all = ldb.listChatLog();
+    res.json(isMaster ? all : all.filter(e => !e.dmOnly));
   });
 
   /**
@@ -152,7 +115,7 @@ export default function register(app, ctx) {
     let exclude = [];
     if (sender === 'DM') {
       exclude = ['dm'];
-    } else if (DB_PROVIDER === 'localdb') {
+    } else {
       try {
         const me = ldb.listCharacters().find(c => (c.name || '') === sender);
         if (me) exclude = [me.id];
@@ -222,13 +185,7 @@ export default function register(app, ctx) {
         timestamp: new Date().toISOString()
       };
     }
-    if (DB_PROVIDER === 'localdb') {
-      ldb.appendChatLog(entry);
-    } else {
-      const log = chatLog();
-      log.push(entry);
-      if (log.length > CHAT_MAX) log.shift();
-    }
+    ldb.appendChatLog(entry);
     broadcast('chat', entry);
     notifyChat(entry);
     res.json(entry);
@@ -237,24 +194,14 @@ export default function register(app, ctx) {
   app.delete('/api/chat/:id', (req, res) => {
     if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
     const id = String(req.params.id);
-    if (DB_PROVIDER === 'localdb') {
-      ldb.deleteChatMessage(id);
-    } else {
-      const log = chatLog();
-      const idx = log.findIndex(e => e.id === id);
-      if (idx !== -1) log.splice(idx, 1);
-    }
+    ldb.deleteChatMessage(id);
     broadcast('chat-delete', { id });
     res.json({ ok: true });
   });
 
   app.post('/api/chat/clear', (req, res) => {
     if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
-    if (DB_PROVIDER === 'localdb') {
-      ldb.clearChatLog();
-    } else {
-      chatLog().length = 0;
-    }
+    ldb.clearChatLog();
     broadcast('chat-clear', {});
     res.json({ ok: true });
   });
@@ -271,7 +218,7 @@ export default function register(app, ctx) {
   // ── Map Drawings ──────────────────────────────────────────────────────────────
   app.get('/api/drawings', (_req, res) => {
     try {
-      const drawings = DB_PROVIDER === 'localdb' ? ldb.listDrawings() : [];
+      const drawings = ldb.listDrawings();
       res.json(drawings);
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
   });
@@ -281,7 +228,7 @@ export default function register(app, ctx) {
       const { id, type, x1, y1, x2, y2, color, thickness } = req.body || {};
       if (!id || !type) return res.status(400).json({ error: 'id and type required' });
       const shape = { id: String(id), type: String(type), x1: +x1||0, y1: +y1||0, x2: +x2||0, y2: +y2||0, color: String(color||'#ff4444').slice(0,20), thickness: Math.max(1, Math.min(20, +thickness||2)) };
-      if (DB_PROVIDER === 'localdb') ldb.addDrawing(shape.id, shape);
+      ldb.addDrawing(shape.id, shape);
       broadcast('drawing', { action: 'add', shape });
       res.json({ ok: true });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
@@ -297,7 +244,7 @@ export default function register(app, ctx) {
 
   app.delete('/api/drawings', (_req, res) => {
     try {
-      if (DB_PROVIDER === 'localdb') ldb.clearDrawings();
+      ldb.clearDrawings();
       broadcast('drawing', { action: 'clear' });
       res.json({ ok: true });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
@@ -307,7 +254,7 @@ export default function register(app, ctx) {
     try {
       const { type, x1, y1, x2, y2, color, thickness } = req.body || {};
       const shape = { id: req.params.id, type: String(type||'line'), x1: +x1||0, y1: +y1||0, x2: +x2||0, y2: +y2||0, color: String(color||'#ff4444').slice(0,20), thickness: Math.max(1, Math.min(20, +thickness||2)) };
-      if (DB_PROVIDER === 'localdb') ldb.updateDrawing(req.params.id, shape);
+      ldb.updateDrawing(req.params.id, shape);
       broadcast('drawing', { action: 'update', shape });
       res.json({ ok: true });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
@@ -315,7 +262,7 @@ export default function register(app, ctx) {
 
   app.delete('/api/drawings/:id', (req, res) => {
     try {
-      if (DB_PROVIDER === 'localdb') ldb.deleteDrawing(req.params.id);
+      ldb.deleteDrawing(req.params.id);
       broadcast('drawing', { action: 'remove', id: req.params.id });
       res.json({ ok: true });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }

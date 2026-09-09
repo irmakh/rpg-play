@@ -49,7 +49,7 @@ Key things to confirm from memory:
 Before designing anything:
 
 1. **Clarify the request** — Is this a bug fix, new feature, or optimization? Who does it affect (DM only, players, both)?
-2. **Check both DB modes** — Every server route must work for `DB_PROVIDER=localdb` AND `DB_PROVIDER=instantdb`. Check if the change touches a route that has both branches.
+2. **Reach the database through `ldb`** — There is one backend: per-campaign SQLite, reached through the request-scoped `ldb` proxy in `lib/request-context.js`, which resolves to the campaign the in-flight request belongs to. Never hold a module-level database handle; it would freeze one campaign into the closure.
 3. **Check tools/manifest.md** — Does a helper already exist for what you need? Don't duplicate `processImageSizes`, `saveUploadFile`, `broadcast`, etc.
 4. **Identify backward-compat risk** — Does this change a DB schema, API response shape, or SSE event payload? Existing clients and backups must not break.
 
@@ -76,7 +76,7 @@ Follow these rules during implementation:
 **Server (server.js):**
 - Image uploads → call `processImageSizes(mimeType, buffer, subdir, id)` for `IMAGE_MIME` types; fall back to `saveUploadFile` for video/audio
 - Map uploads → always `saveUploadFile`, never `processImageSizes` (maps need full quality)
-- New endpoints → add both `localdb` and `instantdb` branches
+- New endpoints → read and write through `ldb`; never cache the handle outside the request
 - Token broadcast events → always include `portraitThumb` alongside `portrait` in payload
 - DB schema changes → add `try { db.exec('ALTER TABLE...') } catch {}` to the migrations block in `localdb.js`
 
@@ -184,7 +184,7 @@ After writing logs: commit any changed GOTCHA framework files (goals/, memory/ME
 
 | Constraint | Rule |
 |-----------|------|
-| DB modes | Every server route must have both `localdb` and `instantdb` branches |
+| Campaign scoping | Every route reaches data through the `ldb` proxy, never a stored handle — see `lib/request-context.js` |
 | Image processing | `processImageSizes` for images; `saveUploadFile` for video/audio/maps |
 | Derived image files | Never include `_thumb.webp` / `_medium.webp` in backups — regenerate on restore |
 | DB migrations | `try { ALTER TABLE ... ADD COLUMN } catch {}` — idempotent, runs on every startup |

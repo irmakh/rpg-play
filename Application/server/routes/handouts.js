@@ -33,11 +33,7 @@ export default function register(app, ctx) {
   const {
     ldb, genId, broadcast, masterAuth, charAuth, getCharacter,
     processImageSizes, deleteUploadFile, IMAGE_MIME, MAX_MEDIA_BYTES,
-    DB_PROVIDER,
   } = ctx;
-
-  const unavailable = (res) =>
-    res.status(501).json({ error: 'Handouts require DB_PROVIDER=localdb' });
 
   function skillName(i) {
     const n = parseInt(i);
@@ -152,7 +148,6 @@ export default function register(app, ctx) {
 
   app.get('/api/handouts', async (req, res) => {
     try {
-      if (DB_PROVIDER !== 'localdb') return unavailable(res);
       if (masterAuth(req)) return res.json(ldb.listHandouts().map(dmObj));
 
       // Player: only their own handouts, each redacted to their outcome.
@@ -164,7 +159,6 @@ export default function register(app, ctx) {
 
   app.get('/api/handouts/:id', async (req, res) => {
     try {
-      if (DB_PROVIDER !== 'localdb') return unavailable(res);
       const row = ldb.getHandout(req.params.id);
       if (!row) return res.status(404).json({ error: 'Handout not found' });
       if (masterAuth(req)) return res.json(dmObj(row));
@@ -181,7 +175,6 @@ export default function register(app, ctx) {
 
   app.post('/api/handouts', (req, res) => {
     try {
-      if (DB_PROVIDER !== 'localdb') return unavailable(res);
       if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
       const fields = readHandoutBody(req.body);
       if (!fields.title) return res.status(400).json({ error: 'title required' });
@@ -193,7 +186,6 @@ export default function register(app, ctx) {
 
   app.put('/api/handouts/:id', (req, res) => {
     try {
-      if (DB_PROVIDER !== 'localdb') return unavailable(res);
       if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
       const existing = ldb.getHandout(req.params.id);
       if (!existing) return res.status(404).json({ error: 'Handout not found' });
@@ -207,7 +199,6 @@ export default function register(app, ctx) {
 
   app.delete('/api/handouts/:id', (req, res) => {
     try {
-      if (DB_PROVIDER !== 'localdb') return unavailable(res);
       if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
       const row = ldb.getHandout(req.params.id);
       if (!row) return res.status(404).json({ error: 'Handout not found' });
@@ -225,7 +216,6 @@ export default function register(app, ctx) {
   // One image per call; the client PUTs the returned urls onto the handout.
   app.post('/api/handouts/media', async (req, res) => {
     try {
-      if (DB_PROVIDER !== 'localdb') return unavailable(res);
       if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
       const m = /^data:([^;]+);base64,(.+)$/.exec(req.body?.dataUrl || '');
       if (!m) return res.status(400).json({ error: 'dataUrl required' });
@@ -242,7 +232,6 @@ export default function register(app, ctx) {
 
   app.post('/api/handouts/:id/hand-out', (req, res) => {
     try {
-      if (DB_PROVIDER !== 'localdb') return unavailable(res);
       if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
       const row = ldb.getHandout(req.params.id);
       if (!row) return res.status(404).json({ error: 'Handout not found' });
@@ -280,7 +269,6 @@ export default function register(app, ctx) {
 
   app.post('/api/handouts/:id/recall', (req, res) => {
     try {
-      if (DB_PROVIDER !== 'localdb') return unavailable(res);
       if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
       const row = ldb.getHandout(req.params.id);
       if (!row) return res.status(404).json({ error: 'Handout not found' });
@@ -298,7 +286,6 @@ export default function register(app, ctx) {
   // cannot be forged. The response carries no number — only that it happened.
   app.post('/api/handouts/:id/roll', async (req, res) => {
     try {
-      if (DB_PROVIDER !== 'localdb') return unavailable(res);
       const row = ldb.getHandout(req.params.id);
       if (!row) return res.status(404).json({ error: 'Handout not found' });
 
@@ -345,7 +332,6 @@ export default function register(app, ctx) {
   // This is the only thing that makes a body readable. The DC merely suggested.
   app.patch('/api/handouts/:id/recipients/:charId', (req, res) => {
     try {
-      if (DB_PROVIDER !== 'localdb') return unavailable(res);
       if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
       const row = ldb.getHandout(req.params.id);
       if (!row) return res.status(404).json({ error: 'Handout not found' });
@@ -374,7 +360,6 @@ export default function register(app, ctx) {
   // ── Player: mark as read (clears the unread badge) ──────────────────────────
   app.post('/api/handouts/:id/seen', async (req, res) => {
     try {
-      if (DB_PROVIDER !== 'localdb') return unavailable(res);
       const charId = await requireChar(req, res);
       if (!charId) return;
       const rec = ldb.getHandoutRecipient(req.params.id, charId);
