@@ -73,6 +73,8 @@ Uploaded images and audio under `public/uploads/` are shared across campaigns. T
 - Prepared-map selector loads a preset from Map Prep
 - **DM shared-media reveal** — sending an image opens a draggable reveal card on every client (drag is local-only)
 - Permanent left sidebar (initiative + chat) with a collapse toggle
+- **Waiting screens** — the DM parks the table on a full-bleed image between scenes (`⏸` in the toolbar). Players get the image over the map and the left sidebar and keep their character panel, so they can still roll; the DM keeps the map and carries on arranging it. See [Waiting Screens](#waiting-screens-waiting-screenshtml--dm-only)
+- **My sheet** — a player can open their own character sheet in the right panel at any time, whether or not their character has a token on the map
 - DM unlock via master password; the DM can also **log in as any character** using the master password
 
 ### DM Dashboard (`/dm.html`)
@@ -143,6 +145,31 @@ One catalogue for everything you hand out, replacing the separate Merchant and L
 ### Map Prep (`/prepare-map.html`) — DM only
 - Upload a map and set grid size; draw fog regions; **place tokens** (with portrait and visible/hidden state) and hidden items on the prep canvas
 - Save named presets and load any to the live table instantly; export / import a map as `.map.json`; delete saved maps; load warning before overwriting the live map
+
+### Waiting Screens (`/waiting-screens.html`) — DM only
+
+Park the table on a full-bleed image between scenes — a title card while everyone
+gets a drink, while the DM lays out the next encounter unseen.
+
+- Define screens ahead of time: a name, an image, and an optional caption shown to players ("Back in 10")
+- Show or close one from this page or from `⏸` in the table toolbar; deleting the screen that is showing brings the players back automatically
+- **Players** see the image over the map and the left sidebar, and keep their character panel on the right — they can still roll, act and read their sheet. Music keeps playing, and the Now Playing bar with its seek and volume stays reachable
+- **The DM** sees the map exactly as normal and keeps arranging tokens, fog and prepared maps. A banner shows which screen the players are on, with a *Bring them back* button
+- The state lives in `table_state`, so it survives a reload **and** a server restart — a player who refreshes mid-break stays on the image
+- The console's map screen (`/console/table-console.html`) is covered too; the console's second screen is the info/character panel and is deliberately left visible
+
+**The map is withheld on the server, not just covered in the browser.** While a
+screen is showing, a player's `GET /api/table` returns no map, no fog, no hidden
+items and only their *own* token (their token still travels — the character panel
+is built from it). The map image is refused on both `/api/table/map` and its
+static `/uploads/maps/` URL, and the DM's own client fetches it with the DM
+password and renders it from a blob, which an `<img src>` cannot do. Token
+movement is not broadcast to players while parked.
+
+> One limit worth knowing: the realtime connection identifies its role with a
+> query parameter, so that filter routes honest clients rather than enforcing
+> anything. The authenticated paths — the table payload and the map image, both
+> gated on the DM password — are the real guarantee.
 
 ### Monster Library (`/monsters.html`) — DM only
 - Full stat blocks: abilities, skills, saves, senses, CR, HP, AC, speed, traits, actions, legendary actions (multi-line text renders correctly)
@@ -219,6 +246,7 @@ One catalogue for everything you hand out, replacing the separate Merchant and L
 | DM Calendar | `/events.html` | DM |
 | Monster Library | `/monsters.html` | DM |
 | Map Prep | `/prepare-map.html` | DM |
+| Waiting Screens | `/waiting-screens.html` | DM |
 | Treasury (loot + shop) | `/treasury.html` | DM |
 | Handouts | `/handouts.html` | DM |
 | Music & Sounds | `/playlists.html` | DM |
@@ -231,14 +259,17 @@ One catalogue for everything you hand out, replacing the separate Merchant and L
 
 ---
 
-## Database Modes
+## Storage
 
-| Mode | Storage | Real-time |
-|---|---|---|
-| `localdb` | SQLite (`better-sqlite3`) | WebSocket |
-| `instantdb` | [InstantDB](https://www.instantdb.com) cloud | SSE |
+Local SQLite (`better-sqlite3`) with real-time over WebSocket. There is nothing
+to configure and no cloud credentials to supply.
 
-Set `DB_PROVIDER` in `.env`. The default and fully-featured path is `localdb` — every feature above works with no external service.
+A hosted InstantDB backend used to sit behind a `DB_PROVIDER` switch. It was
+retired in September 2026: it had drifted years behind — handouts,
+notifications, weather, calendar events, map drawings and prepared maps were
+never implemented there — and nothing ran it. `DB_PROVIDER` is now ignored with
+a warning if it is still set. Backup files written under the old backend still
+restore.
 
 ---
 
@@ -253,7 +284,7 @@ git clone https://github.com/irmakh/rpg-play.git
 cd rpg-play
 
 cp .env.docker .env
-# Edit .env — at minimum set MASTER_PASSWORD and DB_PROVIDER=localdb
+# Edit .env — at minimum set MASTER_PASSWORD
 ```
 
 ```bash
@@ -372,13 +403,10 @@ plain Node and crash. A normal PowerShell window is unaffected.
 
 | Variable | Required | Default | Description |
 |---|---|---|---|
-| `DB_PROVIDER` | Yes | `instantdb` | `localdb` or `instantdb` |
 | `MASTER_PASSWORD` | Yes | — | Super-admin password: unlocks any campaign, required to create/delete campaigns, seeds the first campaign’s DM password on migration. Per-campaign DM passwords live in `campaigns.db` |
 | `PORT` | No | `3000` | Port the server listens on (use `443` for HTTPS) |
 | `SSL_KEY` | No | — | Path to TLS private key (enables HTTPS) |
 | `SSL_CERT` | No | — | Path to TLS certificate chain (enables HTTPS) |
-| `INSTANT_APP_ID` | InstantDB only | — | InstantDB application ID |
-| `INSTANT_ADMIN_TOKEN` | InstantDB only | — | InstantDB admin token |
 | `HOST_PORT` | Docker only | `3000` | Port exposed on the host machine |
 | `WS_URL` | No | auto | Override WebSocket URL (e.g. `wss://your-domain.com/ws`) |
 | `CAMPAIGNS_DB` | No | `Application/campaigns.db` | Override the campaign registry file |
@@ -388,9 +416,9 @@ plain Node and crash. A normal PowerShell window is unaffected.
 
 ## Tech Stack
 
-- **Backend:** Node.js (ES modules), Express — split into 15 semantic route modules under `server/routes/`, with a lean `server.js` entry point
-- **Database:** SQLite (`better-sqlite3`) for `localdb` / [InstantDB](https://www.instantdb.com) for cloud. One cross-tenant registry (`campaigns.db`) plus four SQLite files per campaign under `data/campaigns/<id>/`; multi-tenancy is `localdb` only
-- **Real-time:** WebSocket (`ws`) for `localdb` / Server-Sent Events for cloud
+- **Backend:** Node.js (ES modules), Express — split into 16 semantic route modules under `server/routes/`, with a lean `server.js` entry point
+- **Database:** SQLite (`better-sqlite3`). One cross-tenant registry (`campaigns.db`) plus four SQLite files per campaign under `data/campaigns/<id>/`
+- **Real-time:** WebSocket (`ws`), with a Server-Sent Events endpoint kept alongside it
 - **Frontend:** Vanilla JS, HTML, CSS — no build step, no framework, no bundler. The character sheet is 15 modules under `js/index/`, the table is 14 under `js/table/`, with shared helpers in `js/lib/`
 - **Dice:** 3D CSS dice (icosahedron d20, pentagonal-trapezohedron d10) driven by a shared `dice-engine.js`
 - **Image processing:** `sharp` — each upload generates `_thumb.webp` (80×80 crop) and `_medium.webp` (max 500 px); maps excluded

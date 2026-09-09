@@ -16,7 +16,7 @@
 cp .env.docker .env
 
 # Edit .env with your actual credentials
-# Required: INSTANT_APP_ID, INSTANT_ADMIN_TOKEN, MASTER_PASSWORD
+# Required: MASTER_PASSWORD
 ```
 
 ### 3. Start Development Container
@@ -163,10 +163,6 @@ Edit `.env` to configure:
 # Application
 PORT=3000                    # Port inside container
 HOST_PORT=3000              # Port on your machine
-
-# InstantDB
-INSTANT_APP_ID=...          # Your InstantDB app ID
-INSTANT_ADMIN_TOKEN=...     # Your InstantDB admin token
 
 # Security
 MASTER_PASSWORD=...         # DM master password

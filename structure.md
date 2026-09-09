@@ -53,6 +53,7 @@ char_sheet/
 │   │   │   ├── table-theme-modern.css  #     Modern HUD table theme
 │   │   │   ├── table.css               #     Virtual table styles
 │   │   │   ├── treasury.css            #     Treasury manager styles (master-detail)
+│   │   │   ├── waiting-screens.css     #     Waiting-screen manager styles
 │   │   │   └── weather.css             #     Weather sprite icons, tooltip, table widget
 │   │   ├── img/                        #   Static images & PWA icons
 │   │   │   ├── parchment/              #     Parchment theme assets
@@ -106,6 +107,7 @@ char_sheet/
 │   │   │   │   ├── table-realtime.js   #       SSE/WS event handling
 │   │   │   │   ├── table-state.js      #       Shared state + session
 │   │   │   │   ├── table-utils.js      #       Helpers (canvas pos, display names)
+│   │   │   │   ├── table-waiting.js    #       Waiting-screen overlay, picker + pop-out lock
 │   │   │   │   └── table-weather.js    #       Toolbar weather widget for the current date
 │   │   │   ├── dm.js                   #     DM dashboard
 │   │   │   ├── events.js               #     DM calendar + weather roller
@@ -118,7 +120,8 @@ char_sheet/
 │   │   │   ├── monster-stat-block.js   #     Shared monster stat-block renderer
 │   │   │   ├── monsters.js             #     Monster library (DM)
 │   │   │   ├── prepare-map.js          #     Map prep tool (DM)
-│   │   │   └── treasury.js             #     Treasury manager (DM) — master-detail, images, ledger
+│   │   │   ├── treasury.js             #     Treasury manager (DM) — master-detail, images, ledger
+│   │   │   └── waiting-screens.js      #     Waiting-screen manager (DM) — images, captions, show/close
 │   │   ├── dm.html                     #   DM dashboard page
 │   │   ├── campaigns.html              #   Campaign picker — served at / (the front door)
 │   │   ├── events.html                 #   DM calendar page
@@ -140,9 +143,11 @@ char_sheet/
 │   │   ├── story-viewer.html           #   Story viewer page (grid / strip)
 │   │   ├── sw.js                       #   Service worker (PWA cache; version-synced with FRONTEND_VERSION)
 │   │   ├── table.html                  #   Virtual table page
-│   │   └── treasury.html               #   Treasury manager page (loot + shop, DM)
+│   │   ├── treasury.html               #   Treasury manager page (loot + shop, DM)
+│   │   └── waiting-screens.html        #   Waiting-screen manager page (DM)
 │   ├── server/                         # Backend
-│   │   └── routes/                     #   14 Express route modules (each exports register(app, ctx))
+│   │   ├── notify.js                   #   Notification emitter — ctx.notify(), fan-out + coalescing
+│   │   └── routes/                     #   16 Express route modules (each exports register(app, ctx))
 │   │       ├── auth.js                 #     Login, passwords, stories gate
 │   │       ├── campaigns.js            #     Campaign registry API — list/detail/enter/create/settings/delete
 │   │       ├── backup.js               #     Per-section JSON export / restore
@@ -153,10 +158,11 @@ char_sheet/
 │   │       ├── initiative.js           #     Initiative CRUD + turn control
 │   │       ├── loot.js                 #     Legacy loot API — kept one release for cached clients
 │   │       ├── monsters.js             #     Monster library + XML/JSON import
+│   │       ├── notifications.js        #     Notification feed: list, mark seen, clear
 │   │       ├── shop.js                 #     Legacy shop API — kept one release for cached clients
 │   │       ├── sound.js                #     Playlists & synced playback
 │   │       ├── stories.js              #     Stories & panels
-│   │       ├── table.js                #     Tokens, map, fog, drawing
+│   │       ├── table.js                #     Tokens, map, fog, prepared maps, waiting screens
 │   │       └── treasury.js             #     Unified catalogue: modes, claim, purchase, images, ledger
 │   ├── tests/                          # Vitest suites
 │   │   ├── api/                        #   API / integration tests
@@ -190,9 +196,7 @@ char_sheet/
 │   │       └── table-utils.test.js     #     Table helper tests
 │   ├── .env.example                    # Environment template (app)
 │   ├── .gitignore                      # Git ignore rules (app)
-│   ├── clear-db.js                     # Wipe all InstantDB data (dev utility)
 │   ├── gaston.xml                       # Sample character export (committed reference)
-│   ├── migrate.js                      # One-time SQLite → InstantDB migration
 │   ├── package.json                    # Dependencies & npm scripts
 │   ├── server.js                       # Express entry point — loads route modules + shared context
 │   └── vitest.config.js                # Vitest configuration
@@ -296,7 +300,7 @@ char_sheet/
 | `aiDM/` | Self-contained AI Dungeon Master (own DB, routes, frontend) |
 | `public/` | All served HTML/CSS/JS and the companion PWA |
 | `public/js/index/` | 14 character-sheet modules |
-| `public/js/table/` | 15 virtual-table modules |
+| `public/js/table/` | 17 virtual-table modules |
 | `public/js/lib/` | 11 shared frontend helpers (dice engine, chat render, calendar, weather, music audio-ownership, …) |
 | `tests/` | 24 Vitest unit + API suites (750 tests) |
 

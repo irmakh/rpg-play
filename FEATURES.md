@@ -1,5 +1,13 @@
 # D&D Character Sheet - Features
 
+> **Historical note (September 2026).** This page describes the original
+> single-file backup, written when the app ran on InstantDB. Backup is now
+> per-section (characters / monsters / treasury / maps) plus a raw `.tar.gz` of
+> the SQLite files, the shop and loot systems have merged into the treasury, and
+> the InstantDB backend has been retired. The `instantdb` key below is still
+> read on restore so files of this vintage continue to import. See the README
+> for what the app does today.
+
 ## Database Backup
 
 ### Overview
