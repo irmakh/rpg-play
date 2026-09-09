@@ -541,9 +541,38 @@ async function loadOwnCharacterSheet() {
     if (subtitleEl) subtitleEl.textContent = _sideSubtitleFor(qrollData);
     content.innerHTML = renderSideCharacter();
     _showOwnSheetChrome();
+    _loadOwnPortrait();
     if (typeof loadSideHandouts === 'function') loadSideHandouts(_sideCharId);
     return true;
   } catch { return false; }
+}
+
+/**
+ * The header portrait, with no token to take it from.
+ *
+ * openHpPanel() reads tok.portraitThumb, which does not exist here — but a
+ * player can always read their own media, so the portrait comes from the
+ * character instead. Fired without blocking the sheet: the stats matter more
+ * than the picture, and the crest placeholder is already showing meanwhile.
+ */
+async function _loadOwnPortrait() {
+  const img = document.getElementById('rp-portrait-img');
+  const ph  = document.getElementById('rp-portrait-ph');
+  if (!img || !ph || !sessionCharId) return;
+  const forCharId = sessionCharId;
+  try {
+    const headers = sessionCharPw ? { 'X-Character-Password': sessionCharPw } : {};
+    const r = await fetch(`/api/characters/${forCharId}/media`, { headers });
+    if (!r.ok) return;
+    const media = await r.json();
+    const p = Array.isArray(media) ? media.find(m => m.isPortrait) : null;
+    const url = p && (p.thumbUrl || p.mediumUrl || p.dataUrl);
+    // The player may have switched to a token while this was in flight.
+    if (!url || _sideQrollTokenId !== SIDE_SELF || sessionCharId !== forCharId) return;
+    img.src = url;
+    img.style.display = '';
+    ph.style.display = 'none';
+  } catch {}
 }
 
 // The panel header is built for a token: portrait, live HP/AC/Speed, conditions,
