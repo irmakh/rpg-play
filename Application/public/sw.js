@@ -1,8 +1,9 @@
-const CACHE = 'rpg-v151';
+const CACHE = 'rpg-v158';
 
 const STATIC = [
   // Core pages
   '/campaigns.html',
+  '/css/tokens.css',
   '/css/campaigns.css',
   '/js/campaigns.js',
   '/js/lib/modal-guard.js',

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="lamplit">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,6 +8,9 @@
 <link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#1a1a2e">
 <script>if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js');</script>
+<link rel="stylesheet" href="/css/tokens.css">
+<link rel="stylesheet" href="/css/fonts.css">
+<link rel="stylesheet" href="/css/base.css">
 <link rel="stylesheet" href="/css/index.css">
 <link rel="stylesheet" href="/css/notifications.css">
 <link rel="stylesheet" href="/css/calendar.css">
@@ -17,28 +20,41 @@
 <div class="sheet">
 
   <!-- Character selector -->
+  <!-- Toolbar in three zones instead of fourteen equal buttons in one row.
+       WHO you are, WHERE you can go, and everything you rarely touch. The
+       destructive Delete now lives in the menu, not one tap from Export. -->
   <div class="char-bar">
-    <button class="char-btn" data-notif-bell title="Notifications">🔔</button>
-    <span id="char-user-label" style="display:none;font-size:11px;color:var(--ac);font-weight:bold;padding:0 4px"></span>
-    <label class="char-btn-dm-only">Character:</label>
-    <select id="char-select" onchange="loadCharacter(this.value)"></select>
-    <button class="char-btn char-btn-dm-only" onclick="newCharacter()">+ New</button>
-    <button class="char-btn" onclick="managePassword()">🔒 Password</button>
-    <button class="char-btn" onclick="exportCharacter()">Export</button>
-    <button class="char-btn danger char-btn-dm-only" onclick="deleteCharacter()">Delete</button>
-    <button class="char-btn char-btn-dm-only" onclick="location.href='/dm.html'" title="Open DM Panel">🎲 DM</button>
-    <button class="char-btn" onclick="location.href='/table.html'" title="Open Tactical Map">🗺 Map</button>
-    <button class="char-btn" onclick="location.href='/stories.html'" title="Stories">📖 Stories</button>
-    <button id="btn-ai-dm" class="char-btn" onclick="goToAIDM()" title="AI Dungeon Master — text adventure">⚔ AI DM</button>
-    <span id="campaign-badge" class="char-btn" style="display:none;cursor:pointer" title="Switch campaign"></span>
-    <button id="char-logout-btn" class="char-btn" style="display:none" onclick="indexLogout()" title="Logout">🚪 Logout</button>
-    <a id="desktop-app-link" data-desktop-link class="char-btn" href="/downloads/RPG-Table-portable.exe" download style="display:none" title="Download the Windows desktop app — separate windows per screen, global hotkeys and a tray icon">💻 Desktop App</a>
-    <select id="theme-sel" onchange="applyTheme(this.value)" title="Theme">
-      <option value="dark-gold">🌙 Dark Gold</option>
-      <option value="parchment">📜 Parchment</option>
-      <option value="midnight">🌌 Midnight</option>
-      <option value="mobile">📱 Mobile</option>
-    </select>
+
+    <div class="cb-group cb-identity">
+      <button class="char-btn" data-notif-bell type="button" title="Notifications" aria-label="Notifications">Alerts</button>
+      <span id="char-user-label" style="display:none"></span>
+      <label class="char-btn-dm-only cb-sel-label" for="char-select">Character</label>
+      <select id="char-select" onchange="loadCharacter(this.value)" aria-label="Choose character"></select>
+      <button class="char-btn char-btn-dm-only" type="button" onclick="newCharacter()">+ New</button>
+      <span id="campaign-badge" class="char-btn" style="display:none;cursor:pointer" title="Switch campaign"></span>
+    </div>
+
+    <nav class="cb-group cb-nav" aria-label="Go to">
+      <button class="char-btn char-btn-dm-only" type="button" onclick="location.href='/dm.html'">DM</button>
+      <button class="char-btn" type="button" onclick="location.href='/table.html'">Map</button>
+      <button class="char-btn" type="button" onclick="location.href='/stories.html'">Stories</button>
+      <button id="btn-ai-dm" class="char-btn" type="button" onclick="goToAIDM()" title="AI Dungeon Master - text adventure">AI DM</button>
+    </nav>
+
+    <div class="cb-group cb-more">
+      <button class="char-btn" id="cb-more-btn" type="button" aria-haspopup="true"
+              aria-expanded="false" aria-controls="cb-menu" onclick="toggleCharMenu()">More</button>
+      <div class="cb-menu" id="cb-menu" role="menu" hidden>
+        <button role="menuitem" type="button" onclick="managePassword()">Set password</button>
+        <button role="menuitem" type="button" onclick="exportCharacter()">Export character</button>
+        <a role="menuitem" id="desktop-app-link" data-desktop-link href="/downloads/RPG-Table-portable.exe" download style="display:none"
+           title="Windows desktop app - separate windows per screen, global hotkeys and a tray icon">Download desktop app</a>
+        <button role="menuitem" type="button" id="char-logout-btn" style="display:none" onclick="indexLogout()">Log out</button>
+        <hr class="cb-menu-sep">
+        <button role="menuitem" type="button" class="danger char-btn-dm-only" onclick="deleteCharacter()">Delete character...</button>
+      </div>
+    </div>
+
   </div>
 
   <!-- No character selected -->
@@ -51,9 +67,9 @@
 
   <div id="char-header" style="display:flex;align-items:center;gap:14px;margin-bottom:4px;min-height:68px">
     <div id="portrait-wrap" style="display:none;flex-shrink:0">
-      <img id="portrait-img" loading="lazy" style="width:68px;height:88px;object-fit:cover;border-radius:5px;border:2px solid var(--ac);cursor:pointer;display:block" onclick="showTabByName('media')" title="Click to manage media" alt="Portrait">
+      <img id="portrait-img" loading="lazy" onclick="showTabByName('media')" title="Click to manage media" alt="Portrait">
     </div>
-    <h1 id="char-title-h1" style="flex:1;font-size:26px;letter-spacing:1px;color:var(--ac);text-transform:uppercase;text-align:left;margin:0"><span id="char-title">Character Sheet</span></h1>
+    <h1 id="char-title-h1"><span id="char-title">Character Sheet</span></h1>
   </div>
 
   <!-- Inline unlock screen -->
@@ -72,21 +88,24 @@
     </div>
   </div>
 
-  <div class="tabs">
-    <div class="tab active" onclick="showTab('main',this)">Main</div>
-    <div class="tab" onclick="showTab('actions',this)">⚔️ Actions</div>
-    <div class="tab" onclick="showTab('spells',this)">Spells</div>
-    <div class="tab" onclick="showTab('notes',this)">Notes</div>
-    <div class="tab" onclick="showTab('inventory',this)">🎒 Items</div>
-    <div class="tab" onclick="showTab('rolls',this)">🎲 Rolls</div>
-    <div class="tab" id="tab-btn-media" onclick="showTab('media',this)">📸 Media</div>
-    <div class="tab" id="tab-btn-treasury" onclick="showTab('treasury',this)">💰 Treasury</div>
-    <div class="tab" id="tab-btn-calendar" onclick="showTab('calendar',this)">📅 Cal</div>
-    <div class="tab" id="tab-btn-handouts" onclick="showTab('handouts',this)">📜 Handouts</div>
+  <!-- Real tabs: keyboard reachable, arrow-key navigable, announced to
+       screen readers. Previously these were <div onclick> with no tabindex,
+       so they could not be reached by keyboard at all. -->
+  <div class="tabs" role="tablist" aria-label="Character sheet sections">
+    <button class="tab active" role="tab" type="button" id="tabbtn-main" aria-controls="tab-main" aria-selected="true" tabindex="0" onclick="showTab('main',this)">Main</button>
+    <button class="tab" role="tab" type="button" id="tabbtn-actions" aria-controls="tab-actions" aria-selected="false" tabindex="-1" onclick="showTab('actions',this)">Actions</button>
+    <button class="tab" role="tab" type="button" id="tabbtn-spells" aria-controls="tab-spells" aria-selected="false" tabindex="-1" onclick="showTab('spells',this)">Spells</button>
+    <button class="tab" role="tab" type="button" id="tabbtn-notes" aria-controls="tab-notes" aria-selected="false" tabindex="-1" onclick="showTab('notes',this)">Notes</button>
+    <button class="tab" role="tab" type="button" id="tabbtn-inventory" aria-controls="tab-inventory" aria-selected="false" tabindex="-1" onclick="showTab('inventory',this)">Items</button>
+    <button class="tab" role="tab" type="button" id="tabbtn-rolls" aria-controls="tab-rolls" aria-selected="false" tabindex="-1" onclick="showTab('rolls',this)">Rolls</button>
+    <button class="tab" id="tab-btn-media" role="tab" type="button" aria-controls="tab-media" aria-selected="false" tabindex="-1" onclick="showTab('media',this)">Media</button>
+    <button class="tab" id="tab-btn-treasury" role="tab" type="button" aria-controls="tab-treasury" aria-selected="false" tabindex="-1" onclick="showTab('treasury',this)">Treasury</button>
+    <button class="tab" id="tab-btn-calendar" role="tab" type="button" aria-controls="tab-calendar" aria-selected="false" tabindex="-1" onclick="showTab('calendar',this)">Calendar</button>
+    <button class="tab" id="tab-btn-handouts" role="tab" type="button" aria-controls="tab-handouts" aria-selected="false" tabindex="-1" onclick="showTab('handouts',this)">Handouts</button>
   </div>
 
   <!-- MAIN -->
-  <div id="tab-main" class="page active">
+  <div id="tab-main" role="tabpanel" aria-labelledby="tabbtn-main" tabindex="0" class="page active">
     <div class="card"><div class="ct">Character Info</div><div class="cb">
       <div class="char-info-grid" style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr 1fr;gap:8px;margin-bottom:8px">
         <div class="field char-info-name"><label class="lbl">Name</label><input type="text" data-key="name"></div>
@@ -211,7 +230,7 @@
   </div>
 
   <!-- ACTIONS -->
-  <div id="tab-actions" class="page">
+  <div id="tab-actions" role="tabpanel" aria-labelledby="tabbtn-actions" tabindex="0" class="page">
     <div class="card"><div class="ct">Actions</div><div class="cb" style="padding:8px 10px">
       <div class="act-toolbar">
         <div class="act-filters" id="act-filters">
@@ -245,7 +264,7 @@
   </div>
 
   <!-- INVENTORY -->
-  <div id="tab-inventory" class="page">
+  <div id="tab-inventory" role="tabpanel" aria-labelledby="tabbtn-inventory" tabindex="0" class="page">
     <!-- Equipment & Items -->
     <div class="card"><div class="ct">Equipment &amp; Items</div><div class="cb" style="padding:8px 10px">
       <div id="items-body"></div>
@@ -271,7 +290,7 @@
   </div>
 
   <!-- SPELLS -->
-  <div id="tab-spells" class="page">
+  <div id="tab-spells" role="tabpanel" aria-labelledby="tabbtn-spells" tabindex="0" class="page">
     <div class="card"><div class="ct">Spellcasting</div><div class="cb">
       <div class="g5">
         <div class="field"><label class="lbl">Ability</label><input type="text" data-key="sp-ability"></div>
@@ -315,7 +334,7 @@
   </div>
 
   <!-- NOTES -->
-  <div id="tab-notes" class="page">
+  <div id="tab-notes" role="tabpanel" aria-labelledby="tabbtn-notes" tabindex="0" class="page">
     <div class="g2">
       <div>
         <div class="card"><div class="ct">Backstory & Personality</div><div class="cb"><textarea data-key="backstory" style="min-height:200px"></textarea></div></div>
@@ -334,7 +353,7 @@
   </div>
 
   <!-- ROLLS -->
-  <div id="tab-rolls" class="page">
+  <div id="tab-rolls" role="tabpanel" aria-labelledby="tabbtn-rolls" tabindex="0" class="page">
     <div class="card">
       <div class="ct">Roll History</div>
       <div class="cb">
@@ -345,7 +364,7 @@
   </div>
 
   <!-- MEDIA -->
-  <div id="tab-media" class="page">
+  <div id="tab-media" role="tabpanel" aria-labelledby="tab-btn-media" tabindex="0" class="page">
 
     <!-- Portrait -->
     <div class="card"><div class="ct">Character Portrait</div><div class="cb">
@@ -378,7 +397,7 @@
   </div>
 
   <!-- HANDOUTS (DM-issued, one body per outcome) -->
-  <div id="tab-handouts" class="page">
+  <div id="tab-handouts" role="tabpanel" aria-labelledby="tab-btn-handouts" tabindex="0" class="page">
     <div class="sec">
       <div class="ct">📜 Handouts</div>
       <div class="cb">
@@ -388,7 +407,7 @@
   </div>
 
   <!-- TREASURY (free loot + shop) -->
-  <div id="tab-treasury" class="page">
+  <div id="tab-treasury" role="tabpanel" aria-labelledby="tab-btn-treasury" tabindex="0" class="page">
 
     <div id="treasury-seg">
       <button class="seg-btn on" data-seg="loot" onclick="setTreasurySeg('loot')">⚔️ Free Loot</button>
@@ -423,7 +442,7 @@
   </div>
 
   <!-- CALENDAR -->
-  <div id="tab-calendar" class="page">
+  <div id="tab-calendar" role="tabpanel" aria-labelledby="tab-btn-calendar" tabindex="0" class="page">
     <div class="cal-wrap">
       <div class="cal-today-bar">
         <span class="cal-today-label">Campaign Date</span>

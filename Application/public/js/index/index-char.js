@@ -1188,10 +1188,12 @@ function goToAIDM() {
 }
 
 // ── Theme ─────────────────────────────────────────────────────────────────────
-function applyTheme(name) {
-  document.body.className = name === 'dark-gold' ? '' : 'theme-' + name;
-  localStorage.setItem('dnd-theme', name);
-  const sel = document.getElementById('theme-sel');
-  if (sel) sel.value = name;
+function applyTheme() {
+  // The sheet is on the single lamplit theme now. The swappable themes are
+  // gone, and the default used to be 'parchment', so a returning player would
+  // otherwise have theme-parchment reapplied from localStorage over the new
+  // design. Kept as a no-op guard rather than deleted, because inline
+  // onclick handlers elsewhere may still call it.
+  document.body.className = '';
 }
-(function(){ applyTheme(localStorage.getItem('dnd-theme') || 'parchment'); })();
+(function(){ applyTheme(); })();

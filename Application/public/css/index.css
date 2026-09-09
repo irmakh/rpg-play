@@ -2,161 +2,135 @@
 *{box-sizing:border-box;margin:0;padding:0}
 
 /* ── Theme variables (Dark Gold = default, unchanged) ── */
-:root{
-  --bg:#1a1a2e;--bg2:#16213e;--bg3:#0f3460;--bg4:#1a4a7a;--bgd:#0a2040;
-  --ac:#c8a04a;--ahi:#e0b860;
-  --a22:#c8a04a22;--a44:#c8a04a44;--a55:#c8a04a55;--a66:#c8a04a66;--a88:#c8a04a88;
-  --tx:#e0d8c8;--txd:#aaa;--exp:#7ec8e3;--sep:#ffffff11;--ov:#000000bb;
-  --ok:#88ff88;--err:#ff8888;--inf:#aaddff;
-}
 
 /* ── Parchment: warm light paper look ── */
-body.theme-parchment{
-  --bg:#f3f3f3;--bg2:#fefefe;--bg3:#fefefe;--bg4:#bea79e;--bgd:#f7f7f7;
-  --ac:#694d42;--ahi:#55646d;
-  --a22:#b5aaa222;--a44:#635e5a44;--a55:#7a3b0e55;--a66:#7a3b0e66;--a88:#7a3b0e88;
-  --tx:#464a4d;--txd:#8d8d8d;--exp:#2563a8;--sep:#2c1a0820;--ov:#00000088;
-  --ok:#1b7695;--err:#aa2222;--inf:#1a5a9a;
-  background:url('/img/parchment/header.jpeg') no-repeat center 0px / 100% auto,url('/img/parchment/bg.jpeg') #f9f9f9 !important;
-}
-body.theme-parchment #char-title-h1{flex:1;font-size:26px;letter-spacing:1px;color:#ffffff!important;text-transform:uppercase;text-align:left;margin:0;text-shadow:1px 2px 5px black;}
-body.theme-parchment .sheet,
-body.theme-parchment .card,
-body.theme-parchment .char-bar{
-  backdrop-filter:blur(4px);
-  -webkit-backdrop-filter:blur(4px);
-  box-shadow:0px -3px 12px 7px #4f4f4f38;
-}
+
+
+
 
 /* ── Midnight: cool GitHub-dark inspired ── */
-body.theme-midnight{
-  --bg:#0d1117;--bg2:#161b22;--bg3:#21262d;--bg4:#30363d;--bgd:#010409;
-  --ac:#58a6ff;--ahi:#79c0ff;
-  --a22:#58a6ff22;--a44:#58a6ff44;--a55:#58a6ff55;--a66:#58a6ff66;--a88:#58a6ff88;
-  --tx:#c9d1d9;--txd:#8b949e;--exp:#56d364;--sep:#30363d;--ov:#000000cc;
-  --ok:#56d364;--err:#f85149;--inf:#58a6ff;
-}
+
 
 /* ── Mobile: dark gold layout optimised for touch screens ── */
-body.theme-mobile{font-size:15px;overflow-x:hidden}
-body.theme-mobile .sheet{max-width:100%;padding:6px;overflow-x:hidden}
+
+
 
 /* ── Char bar ── */
-body.theme-mobile .char-bar{flex-wrap:wrap;gap:5px;padding:6px}
-body.theme-mobile .char-bar select{flex:1 1 100px;max-width:100%;min-width:0}
-body.theme-mobile #theme-sel{flex:0 0 auto;min-width:0}
-body.theme-mobile .char-btn{padding:7px 10px;font-size:12px;white-space:nowrap}
+
+
+
+
 
 /* ── CRITICAL: allow grid tracks to shrink below content width ── */
-body.theme-mobile .g2>*,body.theme-mobile .g3>*,body.theme-mobile .g4>*,
-body.theme-mobile .g5>*,body.theme-mobile .g6>*{min-width:0}
+
 
 /* ── Grid column overrides ── */
-body.theme-mobile .g2{grid-template-columns:1fr}
-body.theme-mobile .g3{grid-template-columns:1fr 1fr 1fr}
-body.theme-mobile .g4{grid-template-columns:1fr 1fr}
-body.theme-mobile .g5{grid-template-columns:1fr 1fr 1fr}
-body.theme-mobile .g6{grid-template-columns:repeat(3,1fr)}
+
+
+
+
+
 
 /* ── Inputs / selects ── */
-body.theme-mobile input[type=text],body.theme-mobile input[type=number],
-body.theme-mobile textarea,body.theme-mobile select{font-size:16px;padding:5px 7px}
+
 
 /* ── Inline grids not covered by .g* classes ── */
-body.theme-mobile .char-info-grid{grid-template-columns:1fr 1fr!important;gap:6px!important}
-body.theme-mobile .char-info-grid>*{min-width:0}
-body.theme-mobile .char-info-name{grid-column:1 / -1}
+
+
+
 /* Ability scores: 2 columns → 3 rows (more space per score) */
-body.theme-mobile .ability-grid{grid-template-columns:repeat(2,1fr)!important;gap:10px!important}
-body.theme-mobile .ability-grid>*{min-width:0}
+
+
 
 /* ── Tabs ── */
-body.theme-mobile .tabs{flex-wrap:wrap;gap:3px;margin:8px 0}
-body.theme-mobile .tab{padding:9px 12px;font-size:13px}
+
+
 
 /* ── Skills & saving throws ── */
-body.theme-mobile .sk-row{gap:5px;padding:3px 0}
-body.theme-mobile .sk-row span{font-size:13px}
-body.theme-mobile .sk-row input[type=checkbox]{width:18px;height:18px;flex-shrink:0}
-body.theme-mobile .sk-row input.exp-chk{width:16px;height:16px;flex-shrink:0}
-body.theme-mobile .sk-row input[type=text]{width:48px;font-size:14px;padding:3px 4px;flex-shrink:0}
+
+
+
+
+
 
 /* ── Combat big inputs ── */
-body.theme-mobile .big{font-size:22px;height:50px}
-body.theme-mobile .circle{width:52px!important;height:52px!important;font-size:20px;line-height:46px}
+
+
 
 /* ── Table: horizontal scroll inside card ── */
-body.theme-mobile .tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;width:100%;max-width:100%}
-body.theme-mobile .tbl-wrap table{min-width:360px;width:max-content}
-body.theme-mobile td,body.theme-mobile th{font-size:13px;padding:5px 3px}
+
+
+
 
 /* ── Mobile spell table: card/compact layout ── */
-body.theme-mobile #spell-tbl,body.theme-mobile #spell-tbl tbody{display:block;width:100%;min-width:unset}
-body.theme-mobile #spell-tbl tr:first-child{display:none}
-body.theme-mobile #spell-tbl tr{display:flex;flex-wrap:wrap;align-items:center;gap:4px;padding:5px 2px;border-bottom:1px solid var(--sep)}
-body.theme-mobile #spell-tbl td{display:flex;align-items:center;padding:2px}
-body.theme-mobile #spell-tbl td:nth-child(1){flex:0 0 auto}
-body.theme-mobile #spell-tbl td:nth-child(2){flex:0 0 36px}
-body.theme-mobile #spell-tbl td:nth-child(3){flex:1;min-width:0}
-body.theme-mobile #spell-tbl td:nth-child(n+4){display:none}
+
+
+
+
+
+
+
+
 /* expanded: base style for all detail cells */
-body.theme-mobile #spell-tbl tr.spell-expanded td:nth-child(n+4){display:flex;align-items:center;gap:3px;background:var(--a22);border-radius:3px;padding:2px 6px;font-size:11px;margin:1px 0}
+
 /* invisible full-width flex break after Name — forces Cast to next line */
-body.theme-mobile #spell-tbl tr.spell-expanded::after{content:'';flex:0 0 100%;order:0;height:0;margin:0;padding:0}
+
 /* line 2: Cast + Range — each 50% so together = 100% → forces wrap after */
-body.theme-mobile #spell-tbl tr.spell-expanded td:nth-child(4){flex:0 0 calc(50% - 2px);order:1}
-body.theme-mobile #spell-tbl tr.spell-expanded td:nth-child(5){flex:0 0 calc(50% - 2px);order:1}
+
+
 /* line 3: Conc + Rit + Sch + V/S/M + Delete — auto width, pack on one line */
-body.theme-mobile #spell-tbl tr.spell-expanded td:nth-child(6){flex:0 0 auto;order:2}
-body.theme-mobile #spell-tbl tr.spell-expanded td:nth-child(7){flex:0 0 auto;order:2}
-body.theme-mobile #spell-tbl tr.spell-expanded td:nth-child(8){flex:0 0 auto;order:2}
-body.theme-mobile #spell-tbl tr.spell-expanded td:nth-child(9){flex:0 0 auto;order:2}
-body.theme-mobile #spell-tbl tr.spell-expanded td:nth-child(11){flex:0 0 auto;order:2;background:none;padding:2px}
+
+
+
+
+
 /* lines 4+5: Notes cell — full width, column direction so Notes and Material stack */
-body.theme-mobile #spell-tbl tr.spell-expanded td:nth-child(10){flex:0 0 100%;order:3;flex-direction:column;align-items:stretch;gap:2px;background:var(--a22)}
+
 /* labels */
-body.theme-mobile #spell-tbl tr.spell-expanded td:nth-child(4)::before{content:"Cast: ";color:var(--txd);font-size:10px;white-space:nowrap}
-body.theme-mobile #spell-tbl tr.spell-expanded td:nth-child(5)::before{content:"Range: ";color:var(--txd);font-size:10px;white-space:nowrap}
-body.theme-mobile #spell-tbl tr.spell-expanded td:nth-child(6)::before{content:"Conc ";color:var(--txd);font-size:10px}
-body.theme-mobile #spell-tbl tr.spell-expanded td:nth-child(7)::before{content:"Rit ";color:var(--txd);font-size:10px}
-body.theme-mobile #spell-tbl tr.spell-expanded td:nth-child(8)::before{content:"Sch: ";color:var(--txd);font-size:10px}
-body.theme-mobile #spell-tbl tr.spell-expanded td:nth-child(10)::before{content:"Notes";color:var(--txd);font-size:10px;font-weight:bold;margin-bottom:1px}
-body.theme-mobile .spell-tog{display:inline-block;cursor:pointer;font-size:10px;color:var(--ac);padding:0 3px;flex-shrink:0;user-select:none}
+
+
+
+
+
+
+
 .spell-tog{display:none}
-body.theme-mobile .spell-tog::before{content:"▶"}
-body.theme-mobile tr.spell-expanded .spell-tog::before{content:"▼"}
+
+
 
 /* ── Spell slots ── */
-body.theme-mobile .slots-wrap{gap:6px}
-body.theme-mobile .slot-g .row input{width:34px;padding:4px 2px;text-align:center}
+
+
 
 /* ── Death saves ── */
-body.theme-mobile .ds{flex-wrap:wrap;gap:8px}
+
 
 /* ── Save/reload bar ── */
-body.theme-mobile .save-btn{padding:11px 28px;font-size:15px}
-body.theme-mobile .reload-btn{padding:11px 20px;font-size:15px}
-body.theme-mobile .btn-bar{position:sticky;top:0;z-index:100;background:var(--bg);border-bottom:1px solid var(--a44);border-top:none;margin:0 0 8px 0;padding:8px 10px}
-body.theme-mobile .sheet{padding-bottom:240px}
+
+
+
+
 
 /* ── Base styles (use theme variables) ── */
 body{font-family:'Segoe UI',sans-serif;background:var(--bg);color:var(--tx);font-size:13px}
 .sheet{max-width:980px;margin:0 auto;padding:16px}
 h1{color:var(--ac);font-size:26px;letter-spacing:1px;margin:0;text-transform:uppercase;text-align:left}
-.tabs{display:flex;flex-wrap:wrap;gap:5px;margin:12px 0}
-.tab{background:var(--bg2);border:1px solid var(--a44);color:var(--a88);padding:6px 11px;border-radius:4px 4px 0 0;cursor:pointer;font-size:12px;font-weight:bold;white-space:nowrap}
-.tab.active{background:var(--ac);color:var(--bg);border-color:var(--ac)}
+.tabs{display:flex;gap:var(--s1);margin:var(--s4) 0 0;border-bottom:1px solid var(--rule);overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+html.lamplit .tab{background:none;border:0;border-bottom:2px solid transparent;color:var(--ash);padding:var(--s2) var(--s3);margin-bottom:-1px;cursor:pointer;font:inherit;font-size:var(--t-sm);font-weight:600;white-space:nowrap;min-height:40px}
+html.lamplit .tab:hover{color:var(--bone)}
+html.lamplit .tab.active{color:var(--bone);border-bottom-color:var(--arc);border-bottom-width:2px}
 .page{display:none}.page.active{display:block}
-.card{background:var(--bg2);border:1px solid var(--a44);border-radius:6px;overflow:hidden;margin-bottom:10px}
-.ct{background:var(--ac);color:var(--bg);font-weight:bold;text-align:center;padding:3px 8px;font-size:11px;letter-spacing:1px;text-transform:uppercase}
-.cb{padding:10px}
+.card{background:var(--slate);border:1px solid var(--rule);border-top-color:var(--rule-hi);border-radius:var(--r-md);overflow:hidden;margin-bottom:var(--s3);box-shadow:inset 0 1px 0 var(--lift), var(--cast)}
+.ct{background:none;color:var(--bone);font-family:var(--display);font-variation-settings:'opsz' 24,'WONK' 1;font-weight:600;text-align:left;padding:var(--s3) var(--s3) var(--s2);font-size:var(--t-md);border-bottom:1px solid var(--rule)}
+.cb{padding:var(--s3)}
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
 .g4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px}
 .g5{display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:6px}
 .g6{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
 .field{margin-bottom:6px}
-label.lbl{display:block;font-size:10px;color:var(--ac);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px}
+label.lbl{display:block;font-size:var(--t-sm);color:var(--ash);margin-bottom:var(--s1)}
 input[type=text],input[type=number],textarea,select{background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px;padding:3px 6px;width:100%;font-size:12px;font-family:inherit}
 input:focus,textarea:focus{outline:none;border-color:var(--ac);background:var(--bg4)}
 input[type=number]{-moz-appearance:textfield}
@@ -191,16 +165,29 @@ td input[type=checkbox]{accent-color:var(--ac)}
 .slot-g .row input{width:42px;text-align:center}
 .slot-g .sub{font-size:9px;color:var(--txd);margin-bottom:2px}
 /* Character selector bar */
-.char-bar{display:flex;gap:8px;align-items:center;margin-bottom:14px;padding:8px 10px;background:var(--bg2);border:1px solid var(--a44);border-radius:6px}
-.char-bar label{font-size:11px;color:var(--ac);white-space:nowrap;text-transform:uppercase;letter-spacing:.5px}
-.char-bar select{background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px;padding:4px 8px;font-size:13px;flex:1;max-width:340px}
-.char-bar select:focus{outline:none;border-color:var(--ac)}
+.char-bar{display:flex;flex-wrap:wrap;gap:var(--s2);align-items:center;margin-bottom:var(--s4);padding:var(--s2) var(--s3);background:var(--slate);border:1px solid var(--rule);border-top-color:var(--rule-hi);border-radius:var(--r-md);box-shadow:inset 0 1px 0 var(--lift)}
+.cb-group{display:flex;gap:var(--s2);align-items:center;flex-wrap:wrap;min-width:0}
+.cb-nav{margin-left:auto}
+.cb-more{position:relative}
+.char-bar label{font-size:var(--t-sm);color:var(--ash);white-space:nowrap}
+.char-bar select{background:var(--sunken);border:1px solid var(--rule-hi);color:var(--bone);border-radius:var(--r-sm);padding:var(--s2) var(--s3);font-size:var(--t-base);min-height:36px;flex:1 1 160px;min-width:0;max-width:320px}
+
 #theme-sel{flex:0 0 auto;max-width:116px;font-size:12px;padding:4px 6px;cursor:pointer}
-.char-btn{background:var(--a22);border:1px solid var(--a66);color:var(--ac);padding:4px 12px;border-radius:3px;cursor:pointer;font-size:12px;white-space:nowrap}
-.char-btn:hover{background:var(--a44)}
+.char-btn{background:transparent;border:1px solid var(--rule-hi);color:var(--bone);padding:var(--s2) var(--s3);border-radius:var(--r-sm);cursor:pointer;font-size:var(--t-sm);font-weight:600;white-space:nowrap;min-height:36px;display:inline-flex;align-items:center}
+.char-btn:hover{background:var(--slate-hi)}
 a.char-btn{display:inline-block;text-decoration:none;line-height:1.5}
-.char-btn.danger{border-color:#ff444466;color:#ff8888;background:#ff444411}
-.char-btn.danger:hover{background:#ff444433}
+.char-btn.danger{border-color:var(--blood);color:var(--blood);background:var(--blood-fill)}
+.char-btn.danger:hover{background:color-mix(in srgb, var(--blood) 18%, transparent)}
+
+/* Overflow menu. Everything rarely touched lives here, including the one
+   destructive action, which used to sit one tap from Export. */
+.cb-menu[hidden]{display:none}
+.cb-menu{position:absolute;top:calc(100% + 6px);right:0;z-index:40;min-width:220px;display:flex;flex-direction:column;padding:var(--s1);background:var(--slate);border:1px solid var(--rule-hi);border-radius:var(--r-md);box-shadow:inset 0 1px 0 var(--lift), var(--cast)}
+.cb-menu [role=menuitem]{display:block;width:100%;text-align:left;background:none;border:0;color:var(--bone);font:inherit;font-size:var(--t-sm);padding:var(--s2) var(--s3);min-height:38px;border-radius:var(--r-sm);cursor:pointer;text-decoration:none;line-height:22px}
+.cb-menu [role=menuitem]:hover{background:var(--slate-hi)}
+.cb-menu .danger{color:var(--blood)}
+.cb-menu .danger:hover{background:var(--blood-fill)}
+.cb-menu-sep{border:0;border-top:1px solid var(--rule);margin:var(--s1) 0}
 /* Password modal */
 /* The box is capped to the viewport and lays out as a column so the title and
    the button row stay put while only the body scrolls — a long description used
@@ -328,7 +315,7 @@ a.char-btn{display:inline-block;text-decoration:none;line-height:1.5}
 .media-card-name{font-size:10px;color:var(--txd);padding:4px 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .media-card-actions{display:flex;gap:4px;padding:4px 6px 6px;flex-wrap:wrap;margin-top:auto}
 .portrait-badge{position:absolute;top:4px;left:4px;background:var(--ac);color:var(--bg);font-size:9px;padding:1px 6px;border-radius:8px;font-weight:bold;letter-spacing:.5px;pointer-events:none}
-body.theme-mobile .media-gallery{grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}
+
 /* ── Shop tab ── */
 .shop-item-row{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--sep);flex-wrap:wrap}
 .shop-item-row:last-child{border-bottom:none}
@@ -400,15 +387,15 @@ body.theme-mobile .media-gallery{grid-template-columns:repeat(auto-fill,minmax(1
   transform:rotateX(-53deg);counter-reset:steps;
 }
 .d20-die.rolling{animation:d20-roll var(--roll-dur,3000ms) linear}
-.d20-die[data-face="1"] {transform:rotateX(-53deg) rotateY(0deg)}
-.d20-die[data-face="2"] {transform:rotateX(-53deg) rotateY(72deg)}
-.d20-die[data-face="3"] {transform:rotateX(-53deg) rotateY(144deg)}
-.d20-die[data-face="4"] {transform:rotateX(-53deg) rotateY(216deg)}
-.d20-die[data-face="5"] {transform:rotateX(-53deg) rotateY(288deg)}
-.d20-die[data-face="6"] {transform:rotateX(11deg) rotateZ(180deg) rotateY(0deg)}
-.d20-die[data-face="7"] {transform:rotateX(11deg) rotateZ(180deg) rotateY(72deg)}
-.d20-die[data-face="8"] {transform:rotateX(11deg) rotateZ(180deg) rotateY(144deg)}
-.d20-die[data-face="9"] {transform:rotateX(11deg) rotateZ(180deg) rotateY(216deg)}
+.d20-die[data-face="1"]{transform:rotateX(-53deg) rotateY(0deg)}
+.d20-die[data-face="2"]{transform:rotateX(-53deg) rotateY(72deg)}
+.d20-die[data-face="3"]{transform:rotateX(-53deg) rotateY(144deg)}
+.d20-die[data-face="4"]{transform:rotateX(-53deg) rotateY(216deg)}
+.d20-die[data-face="5"]{transform:rotateX(-53deg) rotateY(288deg)}
+.d20-die[data-face="6"]{transform:rotateX(11deg) rotateZ(180deg) rotateY(0deg)}
+.d20-die[data-face="7"]{transform:rotateX(11deg) rotateZ(180deg) rotateY(72deg)}
+.d20-die[data-face="8"]{transform:rotateX(11deg) rotateZ(180deg) rotateY(144deg)}
+.d20-die[data-face="9"]{transform:rotateX(11deg) rotateZ(180deg) rotateY(216deg)}
 .d20-die[data-face="10"]{transform:rotateX(11deg) rotateZ(180deg) rotateY(288deg)}
 .d20-die[data-face="11"]{transform:rotateX(11deg) rotateY(-252deg)}
 .d20-die[data-face="12"]{transform:rotateX(11deg) rotateY(-324deg)}
@@ -432,15 +419,15 @@ body.theme-mobile .media-gallery{grid-template-columns:repeat(auto-fill,minmax(1
   color:#fff;text-shadow:1px 1px 3px #000;font-size:40px;text-align:center;
   line-height:77px;width:200px;height:86px;font-family:'Segoe UI',sans-serif;font-weight:bold;
 }
-.d20-face:nth-child(1) {transform:rotateY(0deg) translateZ(33.5px) translateY(-12.9px) rotateX(53deg)}
-.d20-face:nth-child(2) {transform:rotateY(-72deg) translateZ(33.5px) translateY(-12.9px) rotateX(53deg)}
-.d20-face:nth-child(3) {transform:rotateY(-144deg) translateZ(33.5px) translateY(-12.9px) rotateX(53deg)}
-.d20-face:nth-child(4) {transform:rotateY(-216deg) translateZ(33.5px) translateY(-12.9px) rotateX(53deg)}
-.d20-face:nth-child(5) {transform:rotateY(-288deg) translateZ(33.5px) translateY(-12.9px) rotateX(53deg)}
-.d20-face:nth-child(6) {transform:rotateY(360deg) translateZ(75px) translateY(54.18px) rotateZ(180deg) rotateX(-11deg)}
-.d20-face:nth-child(7) {transform:rotateY(288deg) translateZ(75px) translateY(54.18px) rotateZ(180deg) rotateX(-11deg)}
-.d20-face:nth-child(8) {transform:rotateY(216deg) translateZ(75px) translateY(54.18px) rotateZ(180deg) rotateX(-11deg)}
-.d20-face:nth-child(9) {transform:rotateY(144deg) translateZ(75px) translateY(54.18px) rotateZ(180deg) rotateX(-11deg)}
+.d20-face:nth-child(1){transform:rotateY(0deg) translateZ(33.5px) translateY(-12.9px) rotateX(53deg)}
+.d20-face:nth-child(2){transform:rotateY(-72deg) translateZ(33.5px) translateY(-12.9px) rotateX(53deg)}
+.d20-face:nth-child(3){transform:rotateY(-144deg) translateZ(33.5px) translateY(-12.9px) rotateX(53deg)}
+.d20-face:nth-child(4){transform:rotateY(-216deg) translateZ(33.5px) translateY(-12.9px) rotateX(53deg)}
+.d20-face:nth-child(5){transform:rotateY(-288deg) translateZ(33.5px) translateY(-12.9px) rotateX(53deg)}
+.d20-face:nth-child(6){transform:rotateY(360deg) translateZ(75px) translateY(54.18px) rotateZ(180deg) rotateX(-11deg)}
+.d20-face:nth-child(7){transform:rotateY(288deg) translateZ(75px) translateY(54.18px) rotateZ(180deg) rotateX(-11deg)}
+.d20-face:nth-child(8){transform:rotateY(216deg) translateZ(75px) translateY(54.18px) rotateZ(180deg) rotateX(-11deg)}
+.d20-face:nth-child(9){transform:rotateY(144deg) translateZ(75px) translateY(54.18px) rotateZ(180deg) rotateX(-11deg)}
 .d20-face:nth-child(10){transform:rotateY(72deg) translateZ(75px) translateY(54.18px) rotateZ(180deg) rotateX(-11deg)}
 .d20-face:nth-child(11){transform:rotateY(252deg) translateZ(75px) translateY(54.18px) rotateX(-11deg)}
 .d20-face:nth-child(12){transform:rotateY(324deg) translateZ(75px) translateY(54.18px) rotateX(-11deg)}
@@ -533,27 +520,129 @@ body.theme-mobile .media-gallery{grid-template-columns:repeat(auto-fill,minmax(1
 /* Each item shows exactly one state: an invitation to examine, a "waiting for
    the DM" line, or the one body this character earned. The other body is never
    sent to the browser, so there is nothing here to hide. */
-#tab-btn-handouts.has-unread { color: var(--ac); font-weight: bold; }
-.ho-item {
+#tab-btn-handouts.has-unread{ color: var(--ac); font-weight: bold; }
+.ho-item{
   background: var(--bg2); border: 1px solid var(--sep); border-left: 3px solid transparent;
   border-radius: 7px; padding: 12px 14px; margin-bottom: 10px;
 }
-.ho-item.unread { border-left-color: var(--ac); }
-.ho-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; flex-wrap: wrap; }
-.ho-title { font-size: 14px; font-weight: bold; color: var(--ac); }
-.ho-tag {
+.ho-item.unread{ border-left-color: var(--ac); }
+.ho-head{ display: flex; align-items: center; gap: 8px; margin-bottom: 6px; flex-wrap: wrap; }
+.ho-title{ font-size: 14px; font-weight: bold; color: var(--ac); }
+.ho-tag{
   font-size: 10px; color: var(--txd); background: var(--bg3);
   border: 1px solid var(--sep); border-radius: 20px; padding: 1px 8px;
 }
-.ho-new {
+.ho-new{
   font-size: 9px; font-weight: bold; letter-spacing: .5px; text-transform: uppercase;
   color: var(--bg); background: var(--ac); border-radius: 20px; padding: 2px 7px;
 }
-.ho-prompt { font-size: 13px; color: var(--tx); line-height: 1.55; white-space: pre-wrap; }
-.ho-wait { font-size: 12px; color: var(--txd); margin-top: 8px; font-style: italic; }
-.ho-wait .muted { opacity: .7; }
-.ho-body { font-size: 13px; color: var(--tx); line-height: 1.6; white-space: pre-wrap; margin-top: 8px; }
-.ho-img {
+.ho-prompt{ font-size: 13px; color: var(--tx); line-height: 1.55; white-space: pre-wrap; }
+.ho-wait{ font-size: 12px; color: var(--txd); margin-top: 8px; font-style: italic; }
+.ho-wait .muted{ opacity: .7; }
+.ho-body{ font-size: 13px; color: var(--tx); line-height: 1.6; white-space: pre-wrap; margin-top: 8px; }
+.ho-img{
   display: block; max-width: 100%; max-height: 320px; border-radius: 6px;
   border: 1px solid var(--a44); margin-bottom: 4px; cursor: zoom-in;
+}
+
+/* ============================================================================
+   Mobile layout.
+
+   These rules already existed - as `body.theme-mobile`, reachable only by
+   manually choosing "Mobile" from a theme dropdown. So the phone layout was
+   built but almost nobody would ever have seen it: by default the sheet
+   overflowed to 1240px inside a 375px viewport. Same rules, now applied by
+   viewport width instead of by opt-in.
+   ============================================================================ */
+@media (max-width: 760px){
+  body{font-size:15px;overflow-x:hidden}
+  .sheet{max-width:100%;padding:6px;overflow-x:hidden}
+  .char-bar{flex-wrap:wrap;gap:5px;padding:6px}
+  .char-bar select{flex:1 1 100px;max-width:100%;min-width:0}
+  #theme-sel{flex:0 0 auto;min-width:0}
+  .char-btn{padding:7px 10px;font-size:12px;white-space:nowrap}
+  .g2>*, .g3>*, .g4>*, .g5>*, .g6>*{min-width:0}
+  .g2{grid-template-columns:1fr}
+  .g3{grid-template-columns:1fr 1fr 1fr}
+  .g4{grid-template-columns:1fr 1fr}
+  .g5{grid-template-columns:1fr 1fr 1fr}
+  .g6{grid-template-columns:repeat(3,1fr)}
+  input[type=text], input[type=number], textarea, select{font-size:16px;padding:5px 7px}
+  .char-info-grid{grid-template-columns:1fr 1fr!important;gap:6px!important}
+  .char-info-grid>*{min-width:0}
+  .char-info-name{grid-column:1 / -1}
+  .ability-grid{grid-template-columns:repeat(2,1fr)!important;gap:10px!important}
+  .ability-grid>*{min-width:0}
+  .tabs{flex-wrap:nowrap;gap:var(--s1);margin:var(--s3) 0 0}
+  html.lamplit .tab{padding:var(--s2) var(--s3);font-size:var(--t-sm)}
+  .sk-row{gap:5px;padding:3px 0}
+  .sk-row span{font-size:13px}
+  .sk-row input[type=checkbox]{width:18px;height:18px;flex-shrink:0}
+  .sk-row input.exp-chk{width:16px;height:16px;flex-shrink:0}
+  .sk-row input[type=text]{width:48px;font-size:14px;padding:3px 4px;flex-shrink:0}
+  .big{font-size:22px;height:50px}
+  .circle{width:52px!important;height:52px!important;font-size:20px;line-height:46px}
+  .tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;width:100%;max-width:100%}
+  .tbl-wrap table{min-width:360px;width:max-content}
+  td, th{font-size:13px;padding:5px 3px}
+  #spell-tbl, #spell-tbl tbody{display:block;width:100%;min-width:unset}
+  #spell-tbl tr:first-child{display:none}
+  #spell-tbl tr{display:flex;flex-wrap:wrap;align-items:center;gap:4px;padding:5px 2px;border-bottom:1px solid var(--sep)}
+  #spell-tbl td{display:flex;align-items:center;padding:2px}
+  #spell-tbl td:nth-child(1){flex:0 0 auto}
+  #spell-tbl td:nth-child(2){flex:0 0 36px}
+  #spell-tbl td:nth-child(3){flex:1;min-width:0}
+  #spell-tbl td:nth-child(n+4){display:none}
+  #spell-tbl tr.spell-expanded td:nth-child(n+4){display:flex;align-items:center;gap:3px;background:var(--a22);border-radius:3px;padding:2px 6px;font-size:11px;margin:1px 0}
+  #spell-tbl tr.spell-expanded::after{content:'';flex:0 0 100%;order:0;height:0;margin:0;padding:0}
+  #spell-tbl tr.spell-expanded td:nth-child(4){flex:0 0 calc(50% - 2px);order:1}
+  #spell-tbl tr.spell-expanded td:nth-child(5){flex:0 0 calc(50% - 2px);order:1}
+  #spell-tbl tr.spell-expanded td:nth-child(6){flex:0 0 auto;order:2}
+  #spell-tbl tr.spell-expanded td:nth-child(7){flex:0 0 auto;order:2}
+  #spell-tbl tr.spell-expanded td:nth-child(8){flex:0 0 auto;order:2}
+  #spell-tbl tr.spell-expanded td:nth-child(9){flex:0 0 auto;order:2}
+  #spell-tbl tr.spell-expanded td:nth-child(11){flex:0 0 auto;order:2;background:none;padding:2px}
+  #spell-tbl tr.spell-expanded td:nth-child(10){flex:0 0 100%;order:3;flex-direction:column;align-items:stretch;gap:2px;background:var(--a22)}
+  #spell-tbl tr.spell-expanded td:nth-child(4)::before{content:"Cast: ";color:var(--txd);font-size:10px;white-space:nowrap}
+  #spell-tbl tr.spell-expanded td:nth-child(5)::before{content:"Range: ";color:var(--txd);font-size:10px;white-space:nowrap}
+  #spell-tbl tr.spell-expanded td:nth-child(6)::before{content:"Conc ";color:var(--txd);font-size:10px}
+  #spell-tbl tr.spell-expanded td:nth-child(7)::before{content:"Rit ";color:var(--txd);font-size:10px}
+  #spell-tbl tr.spell-expanded td:nth-child(8)::before{content:"Sch: ";color:var(--txd);font-size:10px}
+  #spell-tbl tr.spell-expanded td:nth-child(10)::before{content:"Notes";color:var(--txd);font-size:10px;font-weight:bold;margin-bottom:1px}
+  .spell-tog{display:inline-block;cursor:pointer;font-size:10px;color:var(--ac);padding:0 3px;flex-shrink:0;user-select:none}
+  .spell-tog::before{content:"▶"}
+  tr.spell-expanded .spell-tog::before{content:"▼"}
+  .slots-wrap{gap:6px}
+  .slot-g .row input{width:34px;padding:4px 2px;text-align:center}
+  .ds{flex-wrap:wrap;gap:8px}
+  .save-btn{padding:11px 28px;font-size:15px}
+  .reload-btn{padding:11px 20px;font-size:15px}
+  .btn-bar{position:sticky;top:0;z-index:100;background:var(--bg);border-bottom:1px solid var(--a44);border-top:none;margin:0 0 8px 0;padding:8px 10px}
+  .sheet{padding-bottom:240px}
+  .media-gallery{grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}
+}
+
+
+/* Character name. Was 26px uppercase gold with 1px tracking, which fights
+   proper nouns - "ALIYR GALANODEL" is harder to read than "Aliyr Galanodel"
+   and uppercase strips the shapes a name is recognised by. */
+#char-title-h1{flex:1;margin:0;font-family:var(--display);font-variation-settings:'opsz' 96,'WONK' 1;font-weight:600;font-size:var(--t-2xl);line-height:1.1;letter-spacing:-.01em;color:var(--bone);text-align:left;text-transform:none}
+#portrait-img{width:64px;height:80px;object-fit:cover;border-radius:var(--r-sm);border:1px solid var(--rule-hi);cursor:pointer;display:block}
+@media (max-width:760px){ #char-title-h1{font-size:var(--t-xl)} }
+
+
+/* Toolbar on a phone. Three rows of chrome before any character data is too
+   much, so the zones pack tighter and the nav stops being pushed to its own
+   line by margin-left:auto. Two rows, and the tabs below it stay in one. */
+@media (max-width:760px){
+  .char-bar{gap:var(--s2);padding:var(--s2)}
+  .char-btn{padding:var(--s1) var(--s2);font-size:var(--t-sm)}
+  .cb-sel-label{display:none}          /* the select is self-evident here */
+
+  /* Row 1 is who you are plus the overflow; row 2 is where you can go.
+     A player, who sees neither "+ New" nor the DM panel, gets two rows. */
+  .cb-identity{flex:1 1 auto;min-width:0}
+  .char-bar select{flex:1 1 120px;max-width:none;min-width:0}
+  .cb-more{order:2;margin-left:auto}
+  .cb-nav{order:3;flex:1 1 100%;margin-left:0}
 }

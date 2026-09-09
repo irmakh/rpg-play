@@ -1,10 +1,6 @@
 /* Waiting screen manager — same palette and proportions as handouts.css. */
 *{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --bg:#1a1a2e;--bg2:#16213e;--bg3:#0f3460;--bg4:#1a4a7a;
-  --ac:#c8a04a;--ahi:#e0b860;--a22:#c8a04a22;--a44:#c8a04a44;--a55:#c8a04a55;
-  --tx:#e0d8c8;--txd:#9a9384;--sep:#ffffff11;--ok:#88ff88;--err:#ff8888;--warn:#e0b860;
-}
+:root{--txd:#9a9384}
 html,body{height:100%}
 body{font-family:'Segoe UI',sans-serif;background:var(--bg);color:var(--tx);display:flex;flex-direction:column;overflow:hidden}
 

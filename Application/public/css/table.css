@@ -1,11 +1,4 @@
 *{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --bg:#1a1a2e;--bg2:#16213e;--bg3:#0f3460;--bg4:#1a4a7a;--bgd:#0a2040;
-  --ac:#c8a04a;--ahi:#e0b860;
-  --a22:#c8a04a22;--a44:#c8a04a44;--a55:#c8a04a55;--a66:#c8a04a66;--a88:#c8a04a88;
-  --tx:#e0d8c8;--txd:#aaa;--sep:#ffffff11;--ov:#000000bb;
-  --ok:#88ff88;--err:#ff8888;--inf:#aaddff;
-}
 html,body{height:100%;overflow:hidden;font-family:'Segoe UI',sans-serif;background:var(--bg);color:var(--tx);font-size:13px}
 
 /* ── Layout ── */
