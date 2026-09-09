@@ -129,3 +129,72 @@ if (typeof document !== 'undefined' && document.addEventListener) {
     if (item) toggleCharMenu(false);
   });
 }
+
+
+// ── Persistent vitals ────────────────────────────────────────────────────────
+// Mirrors the real HP/AC/Speed inputs (which stay the single source of truth,
+// inside the Combat card) and writes back through them, so the existing
+// delegated autosave on #char-body persists the change with no new save path.
+function _vitEl(key) { return document.querySelector('[data-key="' + key + '"]'); }
+
+function syncVitals() {
+  const box = document.getElementById('vitals');
+  if (!box) return;
+  const cur = parseInt(_vitEl('hpcur')?.value, 10);
+  const max = parseInt(_vitEl('hpmax')?.value, 10);
+  const tmp = parseInt(_vitEl('hptemp')?.value, 10) || 0;
+  if (isNaN(cur) && isNaN(max)) { box.hidden = true; return; }
+  box.hidden = false;
+
+  const ring = document.getElementById('vitals-ring');
+  const total = (isNaN(cur) ? 0 : cur) + tmp;
+  const pct = max > 0 ? Math.max(0, Math.min(100, Math.round((total / max) * 100))) : 100;
+  ring.style.setProperty('--hp', pct);
+  ring.toggleAttribute('data-hurt', pct <= 50 && total > 0);
+  if (total <= 0) ring.setAttribute('data-state', 'down'); else ring.removeAttribute('data-state');
+
+  document.getElementById('vitals-hp').textContent = isNaN(cur) ? '-' : String(total);
+  document.getElementById('vitals-hpmax').textContent = max > 0 ? 'of ' + max : '';
+  const ac = _vitEl('ac')?.value, sp = _vitEl('speed')?.value;
+  document.getElementById('vitals-ac').textContent = ac || '-';
+  document.getElementById('vitals-speed').textContent = sp || '-';
+}
+
+// sign: -1 damage, +1 healing. Temp HP soaks damage first, as 5e expects.
+function vitalsApply(sign) {
+  const amtEl = document.getElementById('vitals-amt');
+  let amt = Math.abs(parseInt(amtEl.value, 10));
+  if (!amt || isNaN(amt)) { amtEl.focus(); return; }
+  const curEl = _vitEl('hpcur'), tmpEl = _vitEl('hptemp');
+  if (!curEl) return;
+  let cur = parseInt(curEl.value, 10) || 0;
+  const max = parseInt(_vitEl('hpmax')?.value, 10) || 0;
+
+  if (sign < 0) {
+    let tmp = parseInt(tmpEl?.value, 10) || 0;
+    if (tmp > 0) {
+      const soaked = Math.min(tmp, amt);
+      tmp -= soaked; amt -= soaked;
+      tmpEl.value = String(tmp);
+      tmpEl.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    cur = Math.max(0, cur - amt);
+  } else {
+    cur = max > 0 ? Math.min(max, cur + amt) : cur + amt;
+  }
+  curEl.value = String(cur);
+  // bubbles so the delegated autosave listener on #char-body picks it up
+  curEl.dispatchEvent(new Event('input', { bubbles: true }));
+  amtEl.value = '';
+  syncVitals();
+}
+
+if (typeof document !== 'undefined' && document.addEventListener) {
+  document.addEventListener('input', function (e) {
+    if (e.target.matches && e.target.matches('[data-key="hpcur"],[data-key="hpmax"],[data-key="hptemp"],[data-key="ac"],[data-key="speed"]')) syncVitals();
+  });
+  // Enter in the amount box applies damage, the commoner case in play
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && e.target.id === 'vitals-amt') { e.preventDefault(); vitalsApply(-1); }
+  });
+}

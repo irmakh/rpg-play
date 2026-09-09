@@ -88,6 +88,27 @@
     </div>
   </div>
 
+  <!-- Vitals sit outside the tab panels on purpose. HP used to live inside the
+       Main tab's Combat card, so looking up a spell meant you could no longer
+       see your hit points - during combat, the one moment both matter. -->
+  <div id="vitals" class="vitals" hidden>
+    <span class="lt-ring" id="vitals-ring"><span class="lt-ring-face" id="vitals-hp">-</span></span>
+    <div class="vitals-meta">
+      <div class="vitals-max" id="vitals-hpmax"></div>
+      <div class="vitals-lbl">Hit points</div>
+    </div>
+    <div class="vitals-act">
+      <label class="vitals-lbl" for="vitals-amt">Amount</label>
+      <input type="number" id="vitals-amt" min="0" step="1" placeholder="0" inputmode="numeric">
+      <button type="button" class="char-btn danger" onclick="vitalsApply(-1)">Damage</button>
+      <button type="button" class="char-btn" onclick="vitalsApply(1)">Heal</button>
+    </div>
+    <div class="vitals-stats">
+      <div class="vitals-stat"><b id="vitals-ac">-</b><span class="vitals-lbl">AC</span></div>
+      <div class="vitals-stat"><b id="vitals-speed">-</b><span class="vitals-lbl">Speed</span></div>
+    </div>
+  </div>
+
   <!-- Real tabs: keyboard reachable, arrow-key navigable, announced to
        screen readers. Previously these were <div onclick> with no tabindex,
        so they could not be reached by keyboard at all. -->
@@ -127,13 +148,13 @@
       <div>
         <!-- Ability Scores -->
         <div class="card"><div class="ct">Ability Scores</div><div class="cb">
-          <div class="ability-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
-            <div style="text-align:center"><label class="lbl" style="text-align:center">Strength</label><input type="number" id="sc-str" data-key="str" oninput="updMod('str')" style="text-align:center;font-size:18px;font-weight:bold;height:36px"><input type="text" id="mod-str" readonly class="circle" value="-1"></div>
-            <div style="text-align:center"><label class="lbl" style="text-align:center">Dexterity</label><input type="number" id="sc-dex" data-key="dex" oninput="updMod('dex')" style="text-align:center;font-size:18px;font-weight:bold;height:36px"><input type="text" id="mod-dex" readonly class="circle" value="+2"></div>
-            <div style="text-align:center"><label class="lbl" style="text-align:center">Constitution</label><input type="number" id="sc-con" data-key="con" oninput="updMod('con')" style="text-align:center;font-size:18px;font-weight:bold;height:36px"><input type="text" id="mod-con" readonly class="circle" value="+2"></div>
-            <div style="text-align:center"><label class="lbl" style="text-align:center">Intelligence</label><input type="number" id="sc-int" data-key="int" oninput="updMod('int')" style="text-align:center;font-size:18px;font-weight:bold;height:36px"><input type="text" id="mod-int" readonly class="circle" value="+4"></div>
-            <div style="text-align:center"><label class="lbl" style="text-align:center">Wisdom</label><input type="number" id="sc-wis" data-key="wis" oninput="updMod('wis')" style="text-align:center;font-size:18px;font-weight:bold;height:36px"><input type="text" id="mod-wis" readonly class="circle" value="+1"></div>
-            <div style="text-align:center"><label class="lbl" style="text-align:center">Charisma</label><input type="number" id="sc-cha" data-key="cha" oninput="updMod('cha')" style="text-align:center;font-size:18px;font-weight:bold;height:36px"><input type="text" id="mod-cha" readonly class="circle" value="+1"></div>
+          <div class="ability-grid">
+            <div class="abil"><label class="lbl">Strength</label><input type="number" id="sc-str" data-key="str" oninput="updMod('str')"><input type="text" id="mod-str" readonly class="circle" value="-1"></div>
+            <div class="abil"><label class="lbl">Dexterity</label><input type="number" id="sc-dex" data-key="dex" oninput="updMod('dex')"><input type="text" id="mod-dex" readonly class="circle" value="+2"></div>
+            <div class="abil"><label class="lbl">Constitution</label><input type="number" id="sc-con" data-key="con" oninput="updMod('con')"><input type="text" id="mod-con" readonly class="circle" value="+2"></div>
+            <div class="abil"><label class="lbl">Intelligence</label><input type="number" id="sc-int" data-key="int" oninput="updMod('int')"><input type="text" id="mod-int" readonly class="circle" value="+4"></div>
+            <div class="abil"><label class="lbl">Wisdom</label><input type="number" id="sc-wis" data-key="wis" oninput="updMod('wis')"><input type="text" id="mod-wis" readonly class="circle" value="+1"></div>
+            <div class="abil"><label class="lbl">Charisma</label><input type="number" id="sc-cha" data-key="cha" oninput="updMod('cha')"><input type="text" id="mod-cha" readonly class="circle" value="+1"></div>
           </div>
         </div></div>
 

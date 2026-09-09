@@ -110,6 +110,8 @@ function recalcAll() {
     const acEl = document.querySelector('[data-key="ac"]');
     if (acEl && document.activeElement !== acEl) acEl.value = baseAC + flatBonus + manualAcBonus;
   }
+  // vitals mirror AC and Speed, so refresh after they are recalculated
+  if (typeof syncVitals === 'function') syncVitals();
 }
 
 // ── Prepared spell counter ────────────────────────────────────────────────────

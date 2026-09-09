@@ -137,7 +137,39 @@ input[type=number]{-moz-appearance:textfield}
 input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
 textarea{resize:vertical;min-height:60px}
 .big{font-size:20px;font-weight:bold;text-align:center;height:44px}
-.circle{border-radius:50%!important;width:44px!important;height:44px!important;line-height:38px;text-align:center;font-size:16px;font-weight:bold;background:var(--bgd)!important;border:2px solid var(--ac)!important;display:block;margin:4px auto 0}
+/* Ability scores: the MODIFIER is what you use on every roll, the raw score is
+   reference you set once. The old layout had that backwards - a 20px score and
+   a small circle beneath it - so the number in play was the quieter one. The
+   DOM order is unchanged (JS addresses these inputs by id); flex order does
+   the inverting. */
+.ability-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--s3)}
+.abil{display:flex;flex-direction:column;align-items:center;gap:var(--s1)}
+.abil .lbl{order:1;text-align:center;margin:0;font-size:var(--t-sm);color:var(--ash)}
+html.lamplit .abil .circle{
+  order:2;
+  width:60px;height:60px;
+  border-radius:var(--r-full);
+  background:var(--sunken);
+  border:1px solid var(--rule-hi);
+  color:var(--bone);
+  text-align:center;
+  font-size:var(--t-xl);
+  font-weight:700;
+  padding:0;
+  cursor:default;
+}
+html.lamplit .abil input[type=number]{
+  order:3;
+  width:56px;
+  text-align:center;
+  font-size:var(--t-sm);
+  min-height:30px;
+  padding:var(--s1);
+  background:transparent;
+  border:1px solid var(--rule);
+  color:var(--ash);
+}
+html.lamplit .abil input[type=number]:focus{color:var(--bone);border-color:var(--arc)}
 .sk-row{display:flex;align-items:center;gap:6px;padding:2px 0;border-bottom:1px solid var(--sep)}
 .sk-row span{flex:1;font-size:12px}
 .sk-row input[type=checkbox]{width:14px;height:14px;accent-color:var(--ac);flex-shrink:0}
@@ -645,4 +677,38 @@ a.char-btn{display:inline-block;text-decoration:none;line-height:1.5}
   .char-bar select{flex:1 1 120px;max-width:none;min-width:0}
   .cb-more{order:2;margin-left:auto}
   .cb-nav{order:3;flex:1 1 100%;margin-left:0}
+}
+
+
+/* ── Persistent vitals ──────────────────────────────────────────────────────
+   Always on screen, whichever tab is open. The ring carries HP as a
+   proportion so it is readable without reading the number, and colour is
+   spent only when something is wrong: neutral at full, blood below half,
+   the down treatment at zero. */
+.vitals{display:flex;align-items:center;gap:var(--s4);flex-wrap:wrap;
+  margin:var(--s3) 0 0;padding:var(--s3);
+  background:var(--slate);border:1px solid var(--rule);border-top-color:var(--rule-hi);
+  border-radius:var(--r-md);box-shadow:inset 0 1px 0 var(--lift), var(--cast)}
+.vitals[hidden]{display:none}
+
+html.lamplit #vitals-ring{--ring-size:64px}
+html.lamplit #vitals-ring .lt-ring-face{font-size:var(--t-lg);font-weight:700;color:var(--bone);background:var(--sunken)}
+
+.vitals-meta{display:flex;flex-direction:column;gap:2px;margin-left:calc(var(--s4) * -1 + var(--s2))}
+.vitals-max{font-size:var(--t-md);color:var(--ash);font-weight:600}
+.vitals-lbl{font-size:var(--t-sm);color:var(--ash)}
+
+.vitals-act{display:flex;align-items:center;gap:var(--s2);flex-wrap:wrap}
+.vitals-act .vitals-lbl{margin-right:calc(var(--s2) * -1 + 2px)}
+html.lamplit #vitals-amt{width:76px;text-align:center;font-size:var(--t-md);font-weight:700}
+
+.vitals-stats{display:flex;gap:var(--s5);margin-left:auto}
+.vitals-stat{display:flex;flex-direction:column;align-items:center;gap:2px}
+.vitals-stat b{font-size:var(--t-lg);font-weight:700;color:var(--bone);line-height:1}
+
+@media (max-width:760px){
+  .vitals{gap:var(--s3);padding:var(--s2)}
+  .vitals-stats{margin-left:0;gap:var(--s4)}
+  .vitals-act{flex:1 1 100%}
+  html.lamplit #vitals-amt{flex:1 1 60px;width:auto}
 }
