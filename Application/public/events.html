@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" class="lamplit">
+<html lang="en" class="lamplit app-page">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,6 +11,7 @@
 <link rel="stylesheet" href="/css/tokens.css">
 <link rel="stylesheet" href="/css/fonts.css">
 <link rel="stylesheet" href="/css/base.css">
+<link rel="stylesheet" href="/css/app-shell.css">
 <link rel="stylesheet" href="/css/dm.css">
 <link rel="stylesheet" href="/css/notifications.css">
 <link rel="stylesheet" href="/css/calendar.css">
@@ -36,7 +37,7 @@
 </div>
 
 <!-- Main content -->
-<div class="sheet" id="main-content" style="display:none">
+<div class="sheet app-shell" id="main-content" style="display:none">
 
   <div class="hdr">
     <div class="hdr-left">
@@ -50,10 +51,10 @@
     </div>
   </div>
 
-  <div class="cal-wrap">
-
-    <!-- Current campaign date banner -->
-    <div class="cal-today-bar">
+  <!-- The calendar is the index and the day's events are the content, so this
+       is the same sidebar + detail shell the other DM tools use. The campaign
+       date banner stays full width: it is status, not navigation. -->
+  <div class="cal-today-bar">
       <span class="cal-today-label">Campaign Date</span>
       <span class="cal-today-date" id="cal-cur-date-display">—</span>
       <span class="cal-today-year" id="cal-cur-date-year"></span>
@@ -66,8 +67,9 @@
       </div>
     </div>
 
-    <!-- Month / festival navigation -->
-    <div class="cal-nav">
+  <div class="app-body">
+    <aside class="app-side cal-side" style="--side-w:440px">
+      <div class="cal-nav">
       <button class="cal-nav-btn" onclick="calNavPage(-1)">&#8592;</button>
       <div class="cal-nav-title">
         <span class="cal-nav-month" id="cal-page-title">—</span>
@@ -75,17 +77,18 @@
       </div>
       <button class="cal-nav-btn" onclick="calNavPage(1)">&#8594;</button>
     </div>
+      <div class="app-list">
+        <div id="cal-grid-area"></div>
+      </div>
+    </aside>
 
-    <!-- Calendar grid (month) or festival card -->
-    <div id="cal-grid-area"></div>
-
-    <!-- Events for current page -->
-    <div class="cal-events-hdr">
+    <main class="app-main">
+      <div class="cal-events-hdr">
       <span class="cal-events-title" id="cal-events-section-title">Events</span>
       <button class="btn sm" onclick="calOpenAddEvent()">+ Add Event</button>
     </div>
-    <div id="cal-events-list"></div>
-
+      <div id="cal-events-list"></div>
+    </main>
   </div>
 </div>
 

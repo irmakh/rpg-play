@@ -232,3 +232,22 @@
 }
 .cal-toggle-row label { font-size: 12px; color: var(--bone); cursor: pointer; user-select: none; }
 .cal-modal-btns { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+
+
+/* ── Shell layout ───────────────────────────────────────────────────────────
+   The calendar is the index, the day's events are the content. */
+.cal-today-bar{flex-shrink:0;border-bottom:1px solid var(--rule-hi);margin:0;border-radius:0}
+.cal-side{background:var(--slate)}
+.cal-side .cal-nav{flex-shrink:0;margin:0;padding:var(--s2) var(--s3);border-bottom:1px solid var(--rule)}
+.cal-side .app-list{padding:var(--s3)}
+.cal-side #cal-grid-area{width:100%}
+.app-main > .cal-events-hdr{margin-top:0}
+
+@media (max-width:860px){
+  .cal-side{--side-w:auto;max-height:none}
+  /* the bar wraps, but so must the button group inside it, or the row still
+     pushes past the viewport */
+  .cal-today-bar{flex-wrap:wrap;gap:var(--s2);min-width:0}
+  #cal-today-bar-btns{display:flex;flex-wrap:wrap;gap:var(--s1);min-width:0;margin-left:0;flex:1 1 100%;max-width:100%}
+  .cal-today-bar > *{min-width:0}
+}

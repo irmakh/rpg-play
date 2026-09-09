@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" class="lamplit">
+<html lang="en" class="lamplit app-page">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,6 +11,7 @@
 <link rel="stylesheet" href="/css/tokens.css">
 <link rel="stylesheet" href="/css/fonts.css">
 <link rel="stylesheet" href="/css/base.css">
+<link rel="stylesheet" href="/css/app-shell.css">
 <link rel="stylesheet" href="/css/monsters.css">
 <link rel="stylesheet" href="/css/notifications.css">
 <script src="/js/lib/icons.js"></script>
@@ -31,7 +32,7 @@
 </div>
 
 <!-- Main content -->
-<div class="sheet" id="main-content" style="display:none">
+<div class="sheet app-shell" id="main-content" style="display:none">
 
   <div class="hdr">
     <div class="hdr-left">
@@ -40,6 +41,7 @@
       
     </div>
     <div class="hdr-right">
+      <button class="btn" onclick="openImportModal()" title="Import monsters from JSON"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-download"></use></svg> Import</button>
       <button class="btn" data-notif-bell="connect" title="Notifications"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-bell"></use></svg> </button>
       <button class="btn" onclick="loadMonsters()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-refresh"></use></svg> Refresh</button>
       <button class="btn primary" onclick="openAddMonsterModal()">+ Add Monster</button>
@@ -48,35 +50,43 @@
 
   <div id="status-msg"></div>
 
-  <!-- Import card -->
-  <div class="card">
-    <div class="ct">Import Monsters (JSON)</div>
-    <div class="cb">
+  <div class="app-body">
+    <aside class="app-side" style="--side-w:320px">
+      <div class="app-side-top">
+        <input type="text" id="search-input" placeholder="Search by name or type" oninput="renderTable()" aria-label="Search monsters">
+      </div>
+      <div class="app-list" id="monster-table-wrap">
+        <div class="app-empty">Loading</div>
+      </div>
+    </aside>
+
+    <main class="app-main" id="monster-detail" aria-live="polite">
+      <div class="app-empty">Select a monster to see its stat block.</div>
+    </main>
+  </div>
+
+</div>
+
+
+<!-- Import monsters. A paste-JSON form does not belong in a master-detail
+     sidebar, so it moved to a modal off the header, like the other DM tools
+     handle their rare actions. Same ids, so importMonsters() is untouched. -->
+<div class="modal-overlay" id="import-modal" style="display:none">
+  <div class="modal-box" style="max-width:640px;width:96%">
+    <div class="ct">Import monsters</div>
+    <div class="modal-body" style="padding:14px 16px">
       <div class="field">
-        <label class="lbl">Paste monster JSON — single object <code style="font-size:10px;opacity:.7">{...}</code> or array <code style="font-size:10px;opacity:.7">[{...},{...}]</code> or 5etools format <code style="font-size:10px;opacity:.7">{"monster":[...]}</code></label>
-        <textarea id="import-text" style="min-height:120px;font-family:monospace;font-size:11px" placeholder='{"name":"Goblin","cr":"1/4","dex":14,...}'></textarea>
+        <label class="lbl" for="import-text">Paste monster JSON &mdash; a single object, an array, or 5etools format</label>
+        <textarea id="import-text" style="min-height:180px;font-family:ui-monospace,Consolas,monospace;font-size:12px" placeholder='{"name":"Goblin","cr":"1/4","dex":14,...}'></textarea>
       </div>
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-        <button class="btn primary" onclick="importMonsters()">Import</button>
-        <button class="btn" onclick="document.getElementById('import-text').value=''">Clear</button>
-        <span id="import-status" style="font-size:11px;color:var(--verdigris)"></span>
-      </div>
+      <span id="import-status" style="font-size:var(--t-sm);color:var(--verdigris)"></span>
+    </div>
+    <div class="modal-btns">
+      <button class="btn" onclick="document.getElementById('import-text').value=''">Clear</button>
+      <button class="btn" onclick="closeImportModal()">Cancel</button>
+      <button class="btn primary" onclick="importMonsters()">Import</button>
     </div>
   </div>
-
-  <!-- Monster list card -->
-  <div class="card">
-    <div class="ct">Monster List</div>
-    <div class="cb">
-      <div class="search-bar">
-        <input type="text" id="search-input" placeholder="Search by name or type…" oninput="renderTable()">
-      </div>
-      <div id="monster-table-wrap">
-        <div style="text-align:center;color:var(--ash);padding:20px">Loading…</div>
-      </div>
-    </div>
-  </div>
-
 </div>
 
 <!-- Monster info modal -->

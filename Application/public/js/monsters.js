@@ -18,11 +18,8 @@ function escJs(s) {
 }
 
 
-function applyTheme(name) {
-  document.body.className = name === 'dark-gold' ? '' : 'theme-' + name;
-  localStorage.setItem('monsters-theme', name);
-  const sel = document.getElementById('theme-sel');
-  if (sel) sel.value = name;
+function applyTheme() {  /* single lamplit theme now; kept as a no-op guard */
+  document.body.className = '';
 }
 (function(){ applyTheme(localStorage.getItem('monsters-theme') || 'dark-gold'); })();
 
@@ -98,6 +95,11 @@ function getInitBonus(data) {
   return bonus;
 }
 
+let selectedMonsterId = null;
+
+// The sidebar list. Rows are selectable; the stat block renders into the detail
+// pane rather than a modal, so reading one monster and then the next no longer
+// means opening and closing a dialog each time.
 function renderTable() {
   const wrap = document.getElementById('monster-table-wrap');
   const q = (document.getElementById('search-input').value || '').toLowerCase();
@@ -107,40 +109,51 @@ function renderTable() {
     return m.name.toLowerCase().includes(q) || type.includes(q);
   });
   if (filtered.length === 0) {
-    wrap.innerHTML = '<div style="text-align:center;color:var(--ash);padding:20px">' + (monsters.length === 0 ? 'No monsters imported yet.' : 'No monsters match your search.') + '</div>';
+    wrap.innerHTML = '<div class="app-empty">' +
+      (monsters.length === 0 ? 'No monsters imported yet.' : 'No monsters match your search.') + '</div>';
     return;
   }
-  wrap.innerHTML = `<table>
-    <thead><tr>
-      <th>Name</th>
-      <th>CR</th>
-      <th>Type</th>
-      <th>AC</th>
-      <th>HP</th>
-      <th>Speed</th>
-      <th style="text-align:right">Actions</th>
-    </tr></thead>
-    <tbody>` +
-    filtered.map(m => {
-      const d = m.data || {};
-      const type = getTypeStr(d);
-      return `<tr>
-        <td><strong>${esc(m.name)}</strong></td>
-        <td><span class="cr-badge">${esc(m.cr || '?')}</span></td>
-        <td><span class="type-badge">${esc(type)}</span></td>
-        <td>${esc(getAcStr(d))}</td>
-        <td>${esc(getHpStr(d))}</td>
-        <td>${esc(getSpeedStr(d))}</td>
-        <td style="text-align:right;white-space:nowrap">
-          <button class="btn sm" onclick="openInfoModal('${escJs(m.id)}')" title="View stat block">Info</button>
-          <button class="btn sm success" onclick="openInitModal('${escJs(m.id)}')" title="Add to initiative tracker">+ Init</button>
-          <button class="btn sm" onclick="openEditMonsterModal('${escJs(m.id)}')" title="Edit monster JSON">Edit</button>
-          <button class="btn sm" onclick="exportMonster('${escJs(m.id)}','${escJs(m.name)}')" title="Export monster to file">Export</button>
-          <button class="btn sm danger" onclick="deleteMonster('${escJs(m.id)}')" title="Remove monster">✕</button>
-        </td>
-      </tr>`;
-    }).join('') +
-    '</tbody></table>';
+  wrap.innerHTML = filtered.map(m => `
+    <div class="app-row${m.id === selectedMonsterId ? ' selected' : ''}"
+         role="button" tabindex="0" onclick="selectMonster('${escJs(m.id)}')"
+         onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();selectMonster('${escJs(m.id)}')}">
+      <span class="app-row-name">${esc(m.name)}</span>
+      <span class="cr-badge">${esc(m.cr || '?')}</span>
+    </div>`).join('');
+}
+
+// Detail pane: the stat block, with the actions for THIS monster beside it
+// instead of five buttons repeated on every row of a table.
+function selectMonster(monsterId) {
+  const m = monsters.find(x => x.id === monsterId);
+  if (!m) return;
+  selectedMonsterId = monsterId;
+  const d = m.data || {};
+  document.getElementById('monster-detail').innerHTML = `
+    <div class="detail-hdr">
+      <div>
+        <h2 class="detail-title">${esc(m.name)}</h2>
+        <div class="detail-sub">${esc(getTypeStr(d))} &middot; CR ${esc(m.cr || '?')} &middot; AC ${esc(getAcStr(d))} &middot; HP ${esc(getHpStr(d))} &middot; ${esc(getSpeedStr(d))}</div>
+      </div>
+      <div class="detail-actions">
+        <button class="btn success" onclick="openInitModal('${escJs(m.id)}')" title="Add to the initiative tracker">+ Initiative</button>
+        <button class="btn" onclick="openEditMonsterModal('${escJs(m.id)}')" title="Edit this monster's JSON">Edit</button>
+        <button class="btn" onclick="exportMonster('${escJs(m.id)}','${escJs(m.name)}')" title="Export to a file">Export</button>
+        <button class="btn danger" onclick="deleteMonster('${escJs(m.id)}')" title="Remove this monster">Delete</button>
+      </div>
+    </div>
+    <div class="detail-body">${renderMonsterStatBlock(d)}</div>`;
+  renderTable();   // repaint so the selected row is marked
+}
+
+// ── Import modal ──────────────────────────────────────────────────────────────
+function openImportModal() {
+  document.getElementById('import-status').textContent = '';
+  document.getElementById('import-modal').style.display = 'flex';
+  document.getElementById('import-text').focus();
+}
+function closeImportModal() {
+  document.getElementById('import-modal').style.display = 'none';
 }
 
 // ── Info modal ────────────────────────────────────────────────────────────────

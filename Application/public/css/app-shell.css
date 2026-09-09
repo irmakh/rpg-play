@@ -1,0 +1,54 @@
+/* app-shell.css - the full-height DM tool layout.
+
+   Lives in its own file because the pages that need it do not all load
+   dm.css: monsters.html, for instance, loads only monsters.css. Link this
+   alongside the page stylesheet.
+*/
+
+html.app-page, html.app-page body{height:100%;width:100%;margin:0;padding:0;overflow:hidden}
+.sheet.app-shell{display:flex;flex-direction:column;height:100%;width:100%;max-width:none;margin:0;padding:0}
+/* The centred-document pages got their gutter from .sheet's own padding, which
+   the shell removes - so the header supplies its own or the last button sits
+   flush against the viewport edge. */
+.app-shell .hdr{flex-shrink:0;margin-bottom:0;padding:var(--s2) var(--s3);border-bottom:1px solid var(--rule-hi);gap:var(--s2)}
+.app-shell #status-msg:empty{display:none}
+.app-shell #status-msg{flex-shrink:0;padding:0 var(--s3)}
+
+.app-body{display:flex;flex:1;min-height:0;overflow:hidden}
+
+.app-side{
+  width:var(--side-w, 300px); flex:none;
+  display:flex; flex-direction:column; min-height:0;
+  border-right:1px solid var(--rule-hi);
+  background:var(--slate);
+}
+.app-side-top{
+  flex-shrink:0; padding:var(--s2) var(--s3);
+  border-bottom:1px solid var(--rule-hi);
+  display:flex; gap:var(--s2); align-items:center;
+}
+.app-side-top input{flex:1; min-width:0}
+.app-list{flex:1; min-height:0; overflow-y:auto; scrollbar-width:thin; scrollbar-color:var(--rule-hi) transparent}
+
+.app-main{flex:1; min-width:0; overflow-y:auto; padding:var(--s5)}
+.app-empty{height:100%; display:grid; place-items:center; color:var(--ash); text-align:center; padding:var(--s5)}
+
+/* A selectable row in the sidebar. The accent marks the selected one - that is
+   a state, which is what the accent is for. */
+.app-row{
+  padding:var(--s2) var(--s3); border-bottom:1px solid var(--rule);
+  cursor:pointer; display:flex; align-items:center; gap:var(--s2);
+  min-height:44px;
+}
+.app-row:hover{background:var(--slate-hi)}
+.app-row.selected{background:var(--arc-fill); box-shadow:inset 3px 0 0 var(--arc)}
+.app-row-name{font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; min-width:0}
+.app-row-meta{font-size:var(--t-sm); color:var(--ash); flex:none}
+
+@media (max-width:860px){
+  html.app-page, html.app-page body{overflow:auto}
+  .sheet.app-shell{height:auto; min-height:100dvh}
+  .app-body{flex-direction:column; overflow:visible}
+  .app-side{width:auto; border-right:0; border-bottom:1px solid var(--rule-hi); max-height:46vh}
+  .app-main{padding:var(--s3)}
+}

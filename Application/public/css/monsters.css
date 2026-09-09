@@ -4,7 +4,7 @@
 
 body{font-family:'Segoe UI',sans-serif;background:var(--ink);color:var(--bone);font-size:13px;min-height:100vh}
 h1{color:var(--bone);font-size:22px;margin:0}
-.sheet{max-width:1000px;margin:0 auto;padding:16px}
+
 .card{background:var(--slate);border:1px solid var(--rule-hi);border-radius:6px;overflow:hidden;margin-bottom:14px}
 .ct{background:var(--bone);color:var(--ink);font-weight:bold;text-align:center;padding:3px 8px;font-size:11px;}
 .cb{padding:12px}
@@ -50,3 +50,17 @@ tr:hover td{background:var(--wash)}
 .ef-sec{font-size:10px;color:var(--bone);font-weight:bold;margin:12px 0 6px;padding-top:10px;border-top:1px solid var(--rule-hi);display:flex;align-items:center;justify-content:space-between}
 .ef-sec:first-child{border-top:none;margin-top:0;padding-top:0}
 .ef-entry-row{border:1px solid var(--rule-hi);border-radius:4px;padding:8px;margin-bottom:6px}
+
+
+/* Detail pane: the monster's own header and actions, then its stat block. */
+.detail-hdr{display:flex;align-items:flex-start;gap:var(--s4);flex-wrap:wrap;
+  padding-bottom:var(--s3);margin-bottom:var(--s4);border-bottom:1px solid var(--rule)}
+.detail-title{font-family:var(--display);font-variation-settings:'opsz' 48,'WONK' 1;
+  font-weight:600;font-size:var(--t-xl);margin:0;color:var(--bone)}
+.detail-sub{font-size:var(--t-sm);color:var(--ash);margin-top:var(--s1)}
+.detail-actions{display:flex;gap:var(--s2);flex-wrap:wrap;margin-left:auto}
+.detail-body{max-width:70ch}
+@media (max-width:860px){
+  .detail-actions{margin-left:0}
+  .detail-body{max-width:none}
+}
