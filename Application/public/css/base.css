@@ -23,7 +23,7 @@ html.lamplit{
   -webkit-text-size-adjust:100%;
 }
 
-html.lamplit body{
+:where(html.lamplit) body{
   margin:0;
   background:var(--ink);
   color:var(--bone);
@@ -37,12 +37,12 @@ html.lamplit body{
 /* Tabular figures everywhere by default. This app is mostly numbers that sit
    in columns - HP, AC, initiative, damage, prices - and proportional digits
    make them jitter as they change. */
-html.lamplit body{font-variant-numeric:tabular-nums}
+:where(html.lamplit) body{font-variant-numeric:tabular-nums}
 
 /* ── Type ───────────────────────────────────────────────────────────────── */
-html.lamplit h1,
-html.lamplit h2,
-html.lamplit h3{
+:where(html.lamplit) h1,
+:where(html.lamplit) h2,
+:where(html.lamplit) h3{
   font-family:var(--display);
   font-weight:600;
   font-variation-settings:'WONK' 1;
@@ -51,11 +51,11 @@ html.lamplit h3{
   margin:0;
   color:var(--bone);
 }
-html.lamplit h1{font-size:var(--t-2xl); font-variation-settings:'opsz' 96,'WONK' 1}
-html.lamplit h2{font-size:var(--t-xl);  font-variation-settings:'opsz' 48,'WONK' 1}
-html.lamplit h3{font-size:var(--t-lg);  font-variation-settings:'opsz' 24,'WONK' 1}
+:where(html.lamplit) h1{font-size:var(--t-2xl); font-variation-settings:'opsz' 96,'WONK' 1}
+:where(html.lamplit) h2{font-size:var(--t-xl);  font-variation-settings:'opsz' 48,'WONK' 1}
+:where(html.lamplit) h3{font-size:var(--t-lg);  font-variation-settings:'opsz' 24,'WONK' 1}
 
-html.lamplit p{margin:0 0 var(--s3); max-width:68ch}
+:where(html.lamplit) p{margin:0 0 var(--s3); max-width:68ch}
 
 /* Section labels. Sentence case, not tracked-out caps. The rule does the
    separating; the word only names the thing. */
@@ -66,8 +66,8 @@ html.lamplit .lt-label{
   margin:0 0 var(--s2);
 }
 
-html.lamplit a{color:var(--arc); text-underline-offset:2px}
-html.lamplit a:hover{color:var(--arc-hi)}
+:where(html.lamplit) a{color:var(--arc); text-underline-offset:2px}
+:where(html.lamplit) a:hover{color:var(--arc-hi)}
 
 /* ── Surfaces. Depth is a lamp above-left: a lit top edge and a soft
       falloff, not a grey drop shadow under a rounded box. ──────────────── */
@@ -89,7 +89,7 @@ html.lamplit .lt-well{
 html.lamplit .lt-rule{border:0; border-top:1px solid var(--rule); margin:var(--s4) 0}
 
 /* ── Controls ───────────────────────────────────────────────────────────── */
-html.lamplit button,
+:where(html.lamplit) button,
 html.lamplit .lt-btn{
   font:inherit;
   font-weight:600;
@@ -105,7 +105,7 @@ html.lamplit .lt-btn{
   gap:var(--s2);
   transition:background .12s ease, border-color .12s ease;
 }
-html.lamplit button:hover,
+:where(html.lamplit) button:hover,
 html.lamplit .lt-btn:hover{background:var(--slate-hi)}
 
 /* Primary = the thing that acts. Solid --arc always carries --ink text;
@@ -128,12 +128,12 @@ html.lamplit .lt-btn-danger:hover{background:color-mix(in srgb, var(--blood) 18%
 html.lamplit .lt-btn-quiet{background:transparent; border-color:transparent; color:var(--ash)}
 html.lamplit .lt-btn-quiet:hover{background:var(--slate); color:var(--bone)}
 
-html.lamplit button:disabled,
+:where(html.lamplit) button:disabled,
 html.lamplit .lt-btn:disabled{opacity:.5; cursor:default}
 
-html.lamplit input:not([type=checkbox]):not([type=radio]),
-html.lamplit select,
-html.lamplit textarea{
+:where(html.lamplit) input:not([type=checkbox]):not([type=radio]),
+:where(html.lamplit) select,
+:where(html.lamplit) textarea{
   font:inherit;
   color:var(--bone);
   background:var(--sunken);
@@ -144,11 +144,11 @@ html.lamplit textarea{
 }
 /* Checkboxes and radios are sized by the pages that use them; the 36px
    min-height above would otherwise stretch them into ovals. */
-html.lamplit input[type=checkbox],
-html.lamplit input[type=radio]{accent-color:var(--arc);cursor:pointer}
+:where(html.lamplit) input[type=checkbox],
+:where(html.lamplit) input[type=radio]{accent-color:var(--arc);cursor:pointer}
 
-html.lamplit input::placeholder,
-html.lamplit textarea::placeholder{color:var(--ash-dim)}
+:where(html.lamplit) input::placeholder,
+:where(html.lamplit) textarea::placeholder{color:var(--ash-dim)}
 
 /* One visible focus treatment, everywhere, keyboard-first. */
 html.lamplit :focus-visible{

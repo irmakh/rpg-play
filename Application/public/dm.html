@@ -50,78 +50,96 @@
   <div id="status-msg"></div>
 
   <!-- Navigation links -->
-  <div class="nav-links">
-    <a href="treasury.html" class="nav-link">
-      <span class="nav-icon"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-coins"></use></svg> </span>
-      <div>
-        <div>Treasury</div>
-        <span class="nav-label">Loot &amp; Shop Manager</span>
+    <!-- Ten equal-weight destinations in one wrapping flexbox came out ragged
+       (5/3/2, mismatched widths). Grouped by what the DM is doing, on a
+       uniform grid so the cards line up whatever the label length. -->
+  <nav class="nav-groups" aria-label="DM sections">
+    <section class="nav-group">
+      <h2 class="nav-group-label">At the table</h2>
+      <div class="nav-links">
+        <a href="/table.html" class="nav-link">
+          <span class="nav-icon"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-map"></use></svg></span>
+          <div>
+            <div class="nav-title">Tactical Map</div>
+            <span class="nav-label">Run combat on the grid</span>
+          </div>
+        </a>
+        <a href="waiting-screens.html" class="nav-link">
+          <span class="nav-icon"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-pause"></use></svg></span>
+          <div>
+            <div class="nav-title">Waiting Screens</div>
+            <span class="nav-label">Park the table between scenes</span>
+          </div>
+        </a>
+        <a href="music.html" class="nav-link">
+          <span class="nav-icon"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-music"></use></svg></span>
+          <div>
+            <div class="nav-title">Music</div>
+            <span class="nav-label">Play and control the table's music</span>
+          </div>
+        </a>
       </div>
-    </a>
-    <a href="monsters.html" class="nav-link">
-      <span class="nav-icon"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-swords"></use></svg> </span>
-      <div>
-        <div>Monsters</div>
-        <span class="nav-label">Monster Manager</span>
+    </section>
+    <section class="nav-group">
+      <h2 class="nav-group-label">Prepare</h2>
+      <div class="nav-links">
+        <a href="prepare-map.html" class="nav-link">
+          <span class="nav-icon"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-image"></use></svg></span>
+          <div>
+            <div class="nav-title">Map Prep</div>
+            <span class="nav-label">Fog, tokens and hidden items</span>
+          </div>
+        </a>
+        <a href="monsters.html" class="nav-link">
+          <span class="nav-icon"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-swords"></use></svg></span>
+          <div>
+            <div class="nav-title">Monsters</div>
+            <span class="nav-label">Stat blocks and encounters</span>
+          </div>
+        </a>
+        <a href="handouts.html" class="nav-link">
+          <span class="nav-icon"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-document"></use></svg></span>
+          <div>
+            <div class="nav-title">Handouts</div>
+            <span class="nav-label">Share images and ask for checks</span>
+          </div>
+        </a>
+        <a href="events.html" class="nav-link">
+          <span class="nav-icon"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-calendar"></use></svg></span>
+          <div>
+            <div class="nav-title">Events</div>
+            <span class="nav-label">Calendar, travel and results</span>
+          </div>
+        </a>
       </div>
-    </a>
-    <a href="/index.html" class="nav-link">
-      <span class="nav-icon"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-clipboard"></use></svg> </span>
-      <div>
-        <div>Characters</div>
-        <span class="nav-label">Character Sheets</span>
+    </section>
+    <section class="nav-group">
+      <h2 class="nav-group-label">Manage</h2>
+      <div class="nav-links">
+        <a href="/index.html" class="nav-link">
+          <span class="nav-icon"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-clipboard"></use></svg></span>
+          <div>
+            <div class="nav-title">Characters</div>
+            <span class="nav-label">The party&rsquo;s sheets</span>
+          </div>
+        </a>
+        <a href="treasury.html" class="nav-link">
+          <span class="nav-icon"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-coins"></use></svg></span>
+          <div>
+            <div class="nav-title">Treasury</div>
+            <span class="nav-label">Loot, shop and player requests</span>
+          </div>
+        </a>
+        <a href="playlists.html" class="nav-link">
+          <span class="nav-icon"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-book"></use></svg></span>
+          <div>
+            <div class="nav-title">Music Library</div>
+            <span class="nav-label">Upload sounds, edit playlists</span>
+          </div>
+        </a>
       </div>
-    </a>
-    <a href="/table.html" class="nav-link">
-      <span class="nav-icon"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-map"></use></svg> </span>
-      <div>
-        <div>Tactical Map</div>
-        <span class="nav-label">Grid Combat</span>
-      </div>
-    </a>
-    <a href="prepare-map.html" class="nav-link">
-      <span class="nav-icon"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-image"></use></svg> </span>
-      <div>
-        <div>Map Prep</div>
-        <span class="nav-label">Prepare Maps &amp; Fog</span>
-      </div>
-    </a>
-    <a href="handouts.html" class="nav-link">
-      <span class="nav-icon"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-document"></use></svg> </span>
-      <div>
-        <div>Handouts</div>
-        <span class="nav-label">Player Handouts &amp; Checks</span>
-      </div>
-    </a>
-    <a href="waiting-screens.html" class="nav-link">
-      <span class="nav-icon"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-pause"></use></svg> </span>
-      <div>
-        <div>Waiting Screens</div>
-        <span class="nav-label">Park the table between scenes</span>
-      </div>
-    </a>
-    <a href="events.html" class="nav-link">
-      <span class="nav-icon"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-calendar"></use></svg> </span>
-      <div>
-        <div>Events</div>
-        <span class="nav-label">Challenges, Results &amp; Travel</span>
-      </div>
-    </a>
-    <a href="music.html" class="nav-link">
-      <span class="nav-icon"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-music"></use></svg> </span>
-      <div>
-        <div>Music</div>
-        <span class="nav-label">Play &amp; control the table's music</span>
-      </div>
-    </a>
-    <a href="playlists.html" class="nav-link">
-      <span class="nav-icon"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-book"></use></svg> </span>
-      <div>
-        <div>Music Library</div>
-        <span class="nav-label">Upload sounds &amp; edit playlists</span>
-      </div>
-    </a>
-  </div>
+    </section>
+  </nav>
 
   <!-- Initiative Tracker -->
   <div class="card">
