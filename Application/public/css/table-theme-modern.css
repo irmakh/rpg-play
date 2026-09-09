@@ -512,7 +512,7 @@ body[data-theme="modern"] .rp-save-prof .rp-save-val { color: var(--bone) }
   cursor: pointer;
   flex-shrink: 0;
   background: rgba(100,150,255,.13);
-  color: var(--arc);
+  color:var(--bone);
   border: 1px solid rgba(100,150,255,.18);
   user-select: none;
   line-height: 1.6;

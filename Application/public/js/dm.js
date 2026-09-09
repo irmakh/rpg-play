@@ -20,13 +20,14 @@ function escJs(s) {
     .replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-function applyTheme(name) {
-  document.body.className = name === 'dark-gold' ? '' : 'theme-' + name;
-  localStorage.setItem('dm-theme', name);
-  const sel = document.getElementById('theme-sel');
-  if (sel) sel.value = name;
+function applyTheme() {
+  // Single lamplit theme now; the swappable themes and their CSS are gone.
+  // Kept as a no-op so a stale localStorage value cannot reapply a theme
+  // class that no longer has any rules behind it, and so the inline
+  // onchange handlers on any remaining theme selects do not throw.
+  document.body.className = '';
 }
-(function(){ applyTheme(localStorage.getItem('dm-theme') || 'dark-gold'); })();
+(function(){ applyTheme(); })();
 
 function showStatus(msg, isError) {
   const el = document.getElementById('status-msg');

@@ -38,7 +38,7 @@ body.po-sheet-window #side-panel {
   background:
     radial-gradient(1100px 620px at 50% -14%, rgba(96, 108, 178, .20), transparent 62%),
     radial-gradient(700px 500px at 100% 0%, rgba(150, 90, 160, .10), transparent 60%),
-    linear-gradient(180deg, var(--bg2, #131b32), var(--bg, #0b1124));
+    linear-gradient(180deg, var(--slate), var(--ink));
 }
 
 body.po-sheet-window #rp-token-details { max-width: 1080px; margin: 0 auto; padding: 8px 0; }
@@ -215,7 +215,7 @@ body.po-sheet-window .rp-flat-hdr {
   background: transparent;
   border: none;
   text-align: center;
-  color: var(--ac);
+  color: var(--bone);
   font-size: 12px;
   letter-spacing: 2px;
   padding: 4px 6px 8px;

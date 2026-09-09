@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="lamplit">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,6 +9,8 @@
 <meta name="theme-color" content="#1a1a2e">
 <script>if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js');</script>
 <link rel="stylesheet" href="/css/tokens.css">
+<link rel="stylesheet" href="/css/fonts.css">
+<link rel="stylesheet" href="/css/base.css">
 <link rel="stylesheet" href="/css/merchant.css">
 <style>
   .tag-group { margin-bottom: 2px; }
@@ -43,11 +45,7 @@
     <div class="hdr-left">
       <button class="btn" onclick="location.href='/dm.html'" title="Back to DM Panel">← DM</button>
       <h1>🏪 Merchant</h1>
-      <select id="theme-sel" onchange="applyTheme(this.value)" title="Theme">
-        <option value="dark-gold">🌙</option>
-        <option value="parchment">📜</option>
-        <option value="midnight">🌌</option>
-      </select>
+      
     </div>
     <div class="hdr-right">
       <button class="btn" id="shop-status-btn" onclick="toggleShopStatus()" style="min-width:130px">Loading…</button>

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="lamplit">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,6 +9,8 @@
 <meta name="theme-color" content="#1a1a2e">
 <script>if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js');</script>
 <link rel="stylesheet" href="/css/tokens.css">
+<link rel="stylesheet" href="/css/fonts.css">
+<link rel="stylesheet" href="/css/base.css">
 <link rel="stylesheet" href="/css/dm.css">
 <link rel="stylesheet" href="/css/notifications.css">
 <style>
@@ -146,11 +148,7 @@ html,body{height:100%;overflow:hidden;margin:0;padding:0}
       <button class="btn" onclick="location.href='/dm.html'">← DM</button>
       <h1>📚 Music Library</h1>
       <button class="btn" onclick="location.href='/music.html'" title="Open the music player controls">🎵 Player</button>
-      <select id="theme-sel" onchange="applyTheme(this.value)" title="Theme">
-        <option value="dark-gold">🌙</option>
-        <option value="parchment">📜</option>
-        <option value="midnight">🌌</option>
-      </select>
+      
     </div>
     <div class="hdr-right">
       <button class="btn" data-notif-bell="connect" title="Notifications">🔔</button>
@@ -276,6 +274,7 @@ html,body{height:100%;overflow:hidden;margin:0;padding:0}
   </div>
 </div>
 
+<script src="/js/lib/icons.js"></script>
 <script src="/js/lib/realtime.js"></script>
 <script src="/js/lib/notifications.js"></script>
 <script src="/js/lib/modal-guard.js"></script>
