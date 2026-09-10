@@ -807,7 +807,14 @@ function characterToXML(d) {
   p(`    <ac_bonus>${xe(d['ac-bonus'])}</ac_bonus>`);
   p(`    <initiative>${xe(d.init)}</initiative>
     <initiative_bonus>${xe(d['init-bonus'])}</initiative_bonus>`);
+  // speed is the COMPUTED total (base + item bonuses + bonus) and is read-only on
+  // the sheet; speed_base is the editable value that actually needs to survive.
+  // Exporting only the total made applyData()'s "derive base from speed" fallback
+  // treat the total as the base, so speed grew by the bonus on every
+  // export/import cycle (30 base +10 bonus: 40 -> 50 -> 60). Keep BOTH: the
+  // fallback still covers XML written before speed_base existed.
   p(`    <speed>${xe(d.speed)}</speed>`);
+  p(`    <speed_base>${xe(d['speed-base'])}</speed_base>`);
   p(`    <speed_bonus>${xe(d['speed-bonus'])}</speed_bonus>`);
   p(`    <hp_current>${xe(d.hpcur)}</hp_current>`);
   p(`    <hp_max>${xe(d.hpmax)}</hp_max>`);
@@ -869,7 +876,7 @@ function characterToXML(d) {
   p('  </attunement>');
   p('  <items>');
   items.forEach(item => {
-    p(`    <item id="${item.id}" type="${xe(item.itemType)}" armorType="${xe(item.armorType||'')}" acBase="${item.acBase||0}" equipped="${item.equipped}" requiresAttunement="${item.requiresAttunement}" attuned="${item.attuned}" acBonus="${item.acBonus||0}" initBonus="${item.initBonus||0}" speedBonus="${item.speedBonus||0}" spellAtkBonus="${item.spellAtkBonus||0}" spellDcBonus="${item.spellDcBonus||0}" weaponAtk="${xe(item.weaponAtk||'')}" weaponDmg="${xe(item.weaponDmg||'')}" weaponProperties="${xe(JSON.stringify(item.weaponProperties||[]))}" bonuses="${xe(JSON.stringify(item.bonuses||[]))}">`);
+    p(`    <item id="${item.id}" type="${xe(item.itemType)}" value="${xe(item.value||'')}" armorType="${xe(item.armorType||'')}" acBase="${item.acBase||0}" equipped="${item.equipped}" requiresAttunement="${item.requiresAttunement}" attuned="${item.attuned}" acBonus="${item.acBonus||0}" initBonus="${item.initBonus||0}" speedBonus="${item.speedBonus||0}" spellAtkBonus="${item.spellAtkBonus||0}" spellDcBonus="${item.spellDcBonus||0}" weaponAtk="${xe(item.weaponAtk||'')}" weaponDmg="${xe(item.weaponDmg||'')}" weaponProperties="${xe(JSON.stringify(item.weaponProperties||[]))}" bonuses="${xe(JSON.stringify(item.bonuses||[]))}">`);
     p(`      <name>${xe(item.name)}</name><notes>${xe(item.notes)}</notes>`);
     p(`    </item>`);
   });
@@ -1034,6 +1041,9 @@ function xmlToCharacterData(xmlText) {
   d.ac=get('combat > ac'); d['ac-bonus']=get('combat > ac_bonus')||'0';
   d.init=get('combat > initiative'); d['init-bonus']=get('combat > initiative_bonus')||'0';
   d.speed=get('combat > speed'); d['speed-bonus']=get('combat > speed_bonus')||'0';
+  // Only set when the file carries it. Left absent for older XML so applyData()'s
+  // derive-from-speed fallback still runs for those.
+  { const sb=get('combat > speed_base'); if (sb) d['speed-base']=sb; }
   d.hpcur=get('combat > hp_current'); d.hpmax=get('combat > hp_max'); d.hptemp=get('combat > hp_temp');
   d.hd=get('combat > hit_dice'); d.hdspent=get('combat > hit_dice_spent');
   d.pp=get('combat > passive_perception'); d._inspire=get('combat > inspiration')==='true';
@@ -1102,7 +1112,11 @@ function xmlToCharacterData(xmlText) {
       id: parseInt(el.getAttribute('id')) || 0,
       name: el.querySelector('name')?.textContent?.trim() || '',
       itemType: el.getAttribute('type') || 'item',
-      armorType: el.getAttribute('armorType') || 'light',
+      value: el.getAttribute('value') || '',
+      // Preserve an empty armorType instead of defaulting it: a non-armour item
+      // was coming back as 'light'. Only fall back when the attribute is absent
+      // altogether, i.e. XML written before this was exported.
+      armorType: el.getAttribute('armorType') ?? 'light',
       acBase: parseInt(el.getAttribute('acBase')) || 10,
       equipped: el.getAttribute('equipped') === 'true',
       requiresAttunement: el.getAttribute('requiresAttunement') === 'true',
@@ -1112,7 +1126,9 @@ function xmlToCharacterData(xmlText) {
       speedBonus: parseInt(el.getAttribute('speedBonus')) || 0,
       spellAtkBonus: parseInt(el.getAttribute('spellAtkBonus')) || 0,
       spellDcBonus: parseInt(el.getAttribute('spellDcBonus')) || 0,
-      weaponAtk: el.getAttribute('weaponAtk') || '',
+      // Numeric, matching what the item modal stores — it came back as a string,
+      // so a round-tripped item no longer compared equal to the original.
+      weaponAtk: parseInt(el.getAttribute('weaponAtk')) || 0,
       weaponDmg: el.getAttribute('weaponDmg') || '',
       weaponProperties: (() => { try { return JSON.parse(el.getAttribute('weaponProperties') || '[]'); } catch { return []; } })(),
       bonuses: (() => { try { return JSON.parse(el.getAttribute('bonuses') || '[]'); } catch { return []; } })(),

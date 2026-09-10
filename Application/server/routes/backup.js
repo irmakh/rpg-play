@@ -1,6 +1,7 @@
 import express from 'express';
 import zlib from 'zlib';
 import { Readable } from 'stream';
+import { campaignDir } from '../../db/campaign-store.js';
 
 // ── Minimal streaming tar (ustar) writer ──────────────────────────────────────
 // Builds a 512-byte POSIX header for one regular file. No deps.
@@ -29,6 +30,7 @@ export default function register(app, ctx) {
     IMAGE_MIME, extToMime,
     mediaDb,
     broadcast,
+    currentCampaignId, currentCampaign,
     path, fs, __dirname,
   } = ctx;
 
@@ -133,15 +135,18 @@ export default function register(app, ctx) {
   // copyFileSync snapshots (journal_mode=DELETE + synchronous better-sqlite3 mean
   // a sync copy captures a consistent point-in-time file), then streams the temp
   // copies through gzip so memory stays flat regardless of DB size.
+  //
+  // The four files live in the REQUESTING CAMPAIGN's directory
+  // (data/campaigns/<id>/), resolved per request. They used to be read from
+  // __dirname — the pre-multi-tenant location — which meant every campaign
+  // downloaded the same stale copy of the original single-tenant database, with
+  // none of the tables added since the migration. Never reintroduce a fixed path
+  // here: there is no such thing as "the" database any more.
+  //
   // NOTE: image/audio bytes live on disk under public/uploads/ (the DBs only hold
   // FILE: references) — those are NOT included here. See memory note for the
   // future "include uploads/" extension.
-  const DB_FILES = [
-    { name: 'localdb.db', rel: 'localdb.db' },
-    { name: 'media.db',   rel: 'media.db' },
-    { name: 'stories.db', rel: 'stories.db' },
-    { name: 'aiDM.db',    rel: 'aiDM/aiDM.db' },
-  ];
+  const DB_FILE_NAMES = ['localdb.db', 'media.db', 'stories.db', 'aiDM.db'];
 
   let _dbBackupRunning = false;
 
@@ -158,21 +163,28 @@ export default function register(app, ctx) {
     };
 
     try {
+      // 0. Resolve THIS campaign's data directory.
+      const campaignId = currentCampaignId();
+      if (!campaignId) { cleanup(); return res.status(409).json({ error: 'No campaign selected' }); }
+      const srcDir = campaignDir(campaignId);
+
       // 1. Snapshot each existing DB file synchronously (consistent, blocks the loop).
-      for (const f of DB_FILES) {
-        const src = path.join(__dirname, f.rel);
+      for (const name of DB_FILE_NAMES) {
+        const src = path.join(srcDir, name);
         if (!fs.existsSync(src)) continue;
-        const tmp = path.join(__dirname, `.dbbk-${stamp}-${f.name}`);
+        const tmp = path.join(srcDir, `.dbbk-${stamp}-${name}`);
         fs.copyFileSync(src, tmp);
         const st = fs.statSync(tmp);
-        temps.push({ name: f.name, path: tmp, size: st.size, mtime: st.mtimeMs });
+        temps.push({ name, path: tmp, size: st.size, mtime: st.mtimeMs });
       }
       if (temps.length === 0) { cleanup(); return res.status(404).json({ error: 'No database files found' }); }
 
-      // 2. Stream the temp snapshots into a gzipped tar.
+      // 2. Stream the temp snapshots into a gzipped tar. The campaign is named in
+      //    the filename so two campaigns' backups cannot be mistaken for each other.
       const date = new Date().toISOString().split('T')[0];
+      const slug = String((currentCampaign() || {}).slug || campaignId).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 40) || 'campaign';
       res.setHeader('Content-Type', 'application/gzip');
-      res.setHeader('Content-Disposition', `attachment; filename="dnd-db-backup-${date}.tar.gz"`);
+      res.setHeader('Content-Disposition', `attachment; filename="dnd-db-backup-${slug}-${date}.tar.gz"`);
 
       async function* tarball() {
         for (const t of temps) {

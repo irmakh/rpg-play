@@ -54,8 +54,51 @@ export default function register(app, ctx) {
       const toInsert = [];
       for (const m of list) {
         if (!m || !m.name) continue;
-        const crVal = (m.cr && typeof m.cr === 'object') ? m.cr.cr : (m.cr || '?');
-        toInsert.push({ id: genId(), name: String(m.name).trim(), cr: String(crVal), dataJson: JSON.stringify(m), createdAt: new Date().toISOString() });
+
+        // Two shapes arrive here:
+        //  · a RAW stat block (a 5etools entry pasted or dropped in) — the whole
+        //    object IS the stat block; and
+        //  · a ROW exported by GET /api/monsters/:id/export, which WRAPS the stat
+        //    block as {id, name, cr, dataJson, portraitB64, createdAt}.
+        // Storing a wrapper as if it were a stat block used to produce a monster
+        // with a name and CR but no actions, its real stat block stranded inside a
+        // nested dataJson string. A `dataJson` string is what tells them apart —
+        // no 5etools stat block has that key.
+        const isExportedRow = typeof m.dataJson === 'string';
+        let data = m;
+        if (isExportedRow) {
+          try { data = JSON.parse(m.dataJson || '{}'); } catch { data = {}; }
+          if (!data.name) data.name = m.name;
+        }
+
+        const crSource = isExportedRow ? (m.cr ?? data.cr) : m.cr;
+        const crVal = (crSource && typeof crSource === 'object') ? crSource.cr : (crSource || '?');
+
+        const newId = genId();
+
+        // Restore the portrait an export carried. It is written under the NEW id
+        // rather than reusing the exported path, so the imported copy owns its own
+        // file — deleting either monster then cannot take the other's portrait
+        // with it. A portrait that fails to process must not fail the import.
+        if (isExportedRow && m.portraitB64 && data.portrait) {
+          try {
+            const buf = Buffer.from(m.portraitB64, 'base64');
+            const urls = await processImageSizes(extToMime(data.portrait), buf, 'monsters', newId);
+            data.portrait = urls.original;
+            data.portraitThumb = urls.thumb;
+            data.portraitMedium = urls.medium;
+          } catch {
+            delete data.portrait; delete data.portraitThumb; delete data.portraitMedium;
+          }
+        }
+
+        toInsert.push({
+          id: newId,
+          name: String(m.name).trim(),
+          cr: String(crVal),
+          dataJson: JSON.stringify(data),
+          createdAt: new Date().toISOString(),
+        });
       }
       if (toInsert.length === 0) return res.status(400).json({ error: 'No valid monsters found' });
       for (const m of toInsert) ldb.createMonster(m.id, m);

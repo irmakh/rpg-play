@@ -99,3 +99,70 @@ describe('characterToXML — custom actions block', () => {
     expect(xml).toContain('<![CDATA[Deal <fire> damage]]>');
   });
 });
+
+// ── Regression: fields that used to be dropped by the exporter ────────────────
+describe('characterToXML — speed_base survives export', () => {
+  it('writes speed_base alongside the computed speed and the bonus', () => {
+    const characterToXML = load();
+    const xml = characterToXML({ speed: '40 ft', 'speed-base': '30', 'speed-bonus': '10' });
+    expect(xml).toContain('<speed>40 ft</speed>');
+    expect(xml).toContain('<speed_base>30</speed_base>');
+    expect(xml).toContain('<speed_bonus>10</speed_bonus>');
+  });
+
+  /**
+   * <speed> is the COMPUTED total. Exporting only that made applyData()'s
+   * "derive base from speed" fallback treat the total as the base, so speed grew
+   * by the bonus on every export/import cycle (30+10: 40 -> 50 -> 60 -> 70).
+   * The base must be written as its own element, not folded into the total.
+   */
+  it('does not conflate the base with the computed total', () => {
+    const characterToXML = load();
+    const xml = characterToXML({ speed: '40 ft', 'speed-base': '30', 'speed-bonus': '10' });
+    expect(xml).not.toContain('<speed_base>40');
+  });
+
+  it('still emits speed_base when the character has no bonus', () => {
+    const characterToXML = load();
+    const xml = characterToXML({ speed: '30 ft', 'speed-base': '30', 'speed-bonus': '0' });
+    expect(xml).toContain('<speed_base>30</speed_base>');
+  });
+
+  it('emits an empty speed_base rather than omitting it when unset', () => {
+    const characterToXML = load();
+    expect(characterToXML({ speed: '30 ft' })).toContain('<speed_base></speed_base>');
+  });
+});
+
+describe('characterToXML — item value survives export', () => {
+  const item = {
+    id: 1, name: 'Flame Tongue', itemType: 'weapon', value: '500 gp',
+    weaponAtk: 1, weaponDmg: '1d8 slashing, 2d6 fire', weaponProperties: ['Versatile'],
+    armorType: '', acBase: 10, equipped: true, requiresAttunement: true, attuned: true,
+    acBonus: 0, initBonus: 0, speedBonus: 0, spellAtkBonus: 0, spellDcBonus: 0,
+    bonuses: [], notes: 'hums faintly',
+  };
+
+  it('writes the item value attribute', () => {
+    const xml = load({ items: [item] })({});
+    expect(xml).toContain('value="500 gp"');
+  });
+
+  it('escapes a value containing markup characters', () => {
+    const xml = load({ items: [{ ...item, value: '5 "gp" & <rare>' }] })({});
+    expect(xml).toContain('value="5 &quot;gp&quot; &amp; &lt;rare&gt;"');
+  });
+
+  it('emits an empty value attribute when the item has none', () => {
+    const { value, ...noValue } = item;
+    expect(load({ items: [noValue] })({})).toContain('value=""');
+  });
+
+  it('preserves an empty armorType instead of defaulting it on export', () => {
+    expect(load({ items: [item] })({})).toContain('armorType=""');
+  });
+
+  it('keeps a multi-type damage string intact', () => {
+    expect(load({ items: [item] })({})).toContain('weaponDmg="1d8 slashing, 2d6 fire"');
+  });
+});

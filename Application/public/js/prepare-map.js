@@ -936,7 +936,9 @@ async function deleteMap() {
       headers: { 'X-Master-Password': masterPw }
     });
     currentMapId = null;
-    prepState = { name: '', cellSize: 50, offsetX: 0, offsetY: 0, mapWidth: 0, mapHeight: 0, fogRegions: [], hiddenItems: [] };
+    // preparedTokens must be present: code paths iterate it without guarding, so
+    // a reset without the key leaves the next map edit throwing on undefined.
+    prepState = { name: '', cellSize: 50, offsetX: 0, offsetY: 0, mapWidth: 0, mapHeight: 0, fogRegions: [], hiddenItems: [], preparedTokens: [] };
     await loadMaps();
     document.getElementById('editor-placeholder').style.display = '';
     document.getElementById('pm-toolbar').style.display = 'none';
@@ -1000,6 +1002,9 @@ async function exportMap() {
     mapHeight: prepState.mapHeight,
     fogRegions: prepState.fogRegions,
     hiddenItems: prepState.hiddenItems,
+    // Placed tokens are part of a prepared map just as much as fog is; leaving
+    // them out meant exporting and re-importing a map silently dropped every one.
+    preparedTokens: prepState.preparedTokens || [],
     image: imageDataUrl
   };
   const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
@@ -1054,7 +1059,10 @@ async function handleImportFile(input) {
         offsetX: data.offsetX || 0,
         offsetY: data.offsetY || 0,
         fogRegions: data.fogRegions || [],
-        hiddenItems: data.hiddenItems || []
+        hiddenItems: data.hiddenItems || [],
+        // Absent from files exported before tokens were included — an older
+        // .map.json simply imports with none, exactly as it does today.
+        preparedTokens: data.preparedTokens || []
       })
     });
 

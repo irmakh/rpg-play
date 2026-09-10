@@ -1,3 +1,8 @@
+// Pure row-shape helper, exported at module level by localdb.js (it closes over
+// no database), used so an imported loot row lands in treasury_items with exactly
+// the shape the original loot->treasury migration produced.
+import { lootRowToTreasury } from '../../db/localdb.js';
+
 function lootObjFromRecord(r) {
   return { id: r.id, name: r.name || '', description: r.description || '', visible: !!r.visible, descVisible: !!r.descVisible, tag: r.tag || '', createdAt: r.createdAt || '' };
 }
@@ -42,12 +47,27 @@ export default function register(app, ctx) {
         const name = lines[0].trim();
         if (!name) continue;
         const description = lines.slice(1).join('\n').trim();
-        const newId = genId();
-        const fields = { name, description, visible: false, tag: tagStr, createdAt: new Date(Date.now() + count++).toISOString() };
-        newItems.push({ id: newId, fields });
+        newItems.push({
+          id: genId(),
+          fields: {
+            name, description, visible: false, tag: tagStr,
+            createdAt: new Date(Date.now() + count++).toISOString(),
+          },
+        });
       }
       if (newItems.length === 0) return res.status(400).json({ error: 'No valid items found' });
-      for (const { id, fields } of newItems) ldb.createLootItem(id, fields);
+
+      // Imported rows go into treasury_items, NOT the retired loot_items table.
+      // loot_items is only read by migrateTreasury(), which runs once and only
+      // while treasury_items is still empty — so in any campaign that has ever
+      // held treasury data, anything written to loot_items is stranded: absent
+      // from the Treasury screen and from every backup (BACKUP_PARTS has no
+      // 'loot'). lootRowToTreasury gives these rows exactly the shape the
+      // original migration produced, so an import lands where the live UI reads.
+      ldb.bulkCreateTreasuryItems(newItems.map(({ id, fields }) => ({
+        id, fields: lootRowToTreasury(fields),
+      })));
+      broadcast('treasury', { action: 'imported' });
       broadcast('loot', { action: 'imported' });
       res.json({ ok: true, count: newItems.length });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }

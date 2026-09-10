@@ -23,6 +23,8 @@ import registerTreasury    from '../../server/routes/treasury.js';
 import registerSound       from '../../server/routes/sound.js';
 import registerChat        from '../../server/routes/chat.js';
 import registerNotifs      from '../../server/routes/notifications.js';
+import registerMonsters    from '../../server/routes/monsters.js';
+import registerLoot        from '../../server/routes/loot.js';
 import makeNotify          from '../../server/notify.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -190,6 +192,8 @@ export function makeApp() {
     path,
     fs,
     __dirname: path.resolve(__dirname, '../..'),
+    readUploadAsBase64: () => null,
+    extToMime: (p) => (String(p).endsWith('.png') ? 'image/png' : 'image/jpeg'),
     currentCampaignId: () => activeCampaignId,
     parkedCampaigns,
   };
@@ -207,6 +211,8 @@ export function makeApp() {
   registerSound(app, ctx);
   registerChat(app, ctx);
   registerNotifs(app, ctx);
+  registerMonsters(app, ctx);
+  registerLoot(app, ctx);
 
   return { app, ldb, ldbFor, masterPw: TEST_MASTER_PW, hashPassword, broadcasts, deletedFiles, parkedCampaigns };
 }

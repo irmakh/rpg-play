@@ -65,6 +65,15 @@ export function makeLdb() {
       id TEXT PRIMARY KEY, isOpen INTEGER DEFAULT 1,
       activeTag TEXT DEFAULT '', activeTags TEXT DEFAULT '[]'
     );
+    CREATE TABLE IF NOT EXISTS monsters (
+      id TEXT PRIMARY KEY, name TEXT DEFAULT '', cr TEXT DEFAULT '?',
+      dataJson TEXT DEFAULT '{}', createdAt TEXT DEFAULT (datetime('now'))
+    );
+    CREATE TABLE IF NOT EXISTS loot_items (
+      id TEXT PRIMARY KEY, name TEXT DEFAULT '', description TEXT DEFAULT '',
+      visible INTEGER DEFAULT 0, descVisible INTEGER DEFAULT 0,
+      tag TEXT DEFAULT '', createdAt TEXT DEFAULT (datetime('now'))
+    );
     CREATE TABLE IF NOT EXISTS treasury_items (
       id TEXT PRIMARY KEY, name TEXT DEFAULT '', tag TEXT DEFAULT '',
       mode TEXT DEFAULT 'hidden', description TEXT DEFAULT '', descVisible INTEGER DEFAULT 0,
@@ -333,6 +342,36 @@ export function makeLdb() {
     db.prepare('UPDATE shop_config SET isOpen = ?, activeTag = ?, activeTags = ? WHERE id = ?')
       .run(isOpen ? 1 : 0, uniq[0] || '', JSON.stringify(uniq), SHOP_CONFIG_ID);
   }
+  // ── Monsters ────────────────────────────────────────────────────────────────
+  function listMonsters() {
+    return db.prepare('SELECT * FROM monsters ORDER BY name').all();
+  }
+  function getMonster(id) {
+    return db.prepare('SELECT * FROM monsters WHERE id = ?').get(id) || null;
+  }
+  function createMonster(id, f) {
+    db.prepare('INSERT INTO monsters (id, name, cr, dataJson, createdAt) VALUES (?, ?, ?, ?, ?)')
+      .run(id, f.name || '', f.cr || '?', f.dataJson || '{}', f.createdAt || new Date().toISOString());
+  }
+  function updateMonster(id, f) {
+    if (!f || Object.keys(f).length === 0) return;
+    const sets = Object.keys(f).map(k => `"${k}" = ?`).join(', ');
+    db.prepare(`UPDATE monsters SET ${sets} WHERE id = ?`).run(...Object.values(f), id);
+  }
+  function deleteMonster(id) {
+    db.prepare('DELETE FROM monsters WHERE id = ?').run(id);
+  }
+
+  // The retired loot_items table. Present so a test can assert that nothing
+  // writes to it any more — imported loot belongs in treasury_items.
+  function listLootItems() {
+    return db.prepare('SELECT * FROM loot_items ORDER BY createdAt').all();
+  }
+  function createLootItem(id, f) {
+    db.prepare('INSERT INTO loot_items (id, name, description, visible, descVisible, tag, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?)')
+      .run(id, f.name || '', f.description || '', f.visible ? 1 : 0, f.descVisible ? 1 : 0, f.tag || '', f.createdAt || new Date().toISOString());
+  }
+
   function listTreasuryItems() {
     return db.prepare('SELECT * FROM treasury_items ORDER BY createdAt').all().map(_treasuryRow);
   }
@@ -658,6 +697,9 @@ export function makeLdb() {
     createTableToken, updateTableToken, deleteTableToken, clearTableTokens,
     // calendar
     listCalendarEvents, getCalendarEvent, createCalendarEvent, updateCalendarEvent, deleteCalendarEvent,
+    // monsters + the retired loot table (kept so import routes can be tested)
+    listMonsters, getMonster, createMonster, updateMonster, deleteMonster,
+    listLootItems, createLootItem,
     // treasury
     getShopConfig, setShopConfig,
     listTreasuryItems, getTreasuryItem, getTreasuryItemsByIds,

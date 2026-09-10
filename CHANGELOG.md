@@ -21,6 +21,60 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [217] — 2026-09-10 — Backup, export and import repairs
+
+An audit of every backup/export/import path found six ways data was being lost or
+misreported. All six are fixed. No file format changed: everything exported before
+this release still imports, and the new fields are additive.
+
+**The raw database backup was the wrong database entirely**
+- `/api/admin/db-backup` read the SQLite files from the application folder — the
+  location they lived in *before* campaigns became multi-tenant. Every campaign
+  therefore downloaded the same untouched copy of the original single-tenant
+  database, byte-identical no matter which campaign you were in, and weeks stale.
+- Measured against the live data at the time: 23 tables instead of 29 (missing
+  handouts, handout recipients, treasury requests, notifications, notification
+  recipients and waiting screens outright) and 32 treasury rows instead of 34.
+- It now reads the requesting campaign's own directory, and the download is named
+  after the campaign so two campaigns' backups cannot be confused.
+
+**A monster exported from the app could not be imported back**
+- Export wraps the stored row; import assumed every entry was a raw stat block, so
+  re-importing an export stored the wrapper *as* the stat block. The monster came
+  back with its name and CR but no actions, no HP, no AC — the real stat block
+  stranded inside a nested field nothing reads.
+- Import now recognises both shapes. Portraits survive too (they were dropped
+  before), written under the new monster's own id so deleting either copy cannot
+  take the other's image with it.
+
+**Imported loot vanished**
+- `/api/loot/import` wrote to the retired `loot_items` table, which is only read by
+  the one-time migration that folds it into the treasury — and that migration only
+  runs while the treasury is still empty. In any campaign that had ever held
+  treasury data, imported loot was invisible on the Treasury screen and absent from
+  every backup. It now imports into the treasury directly.
+
+**Character XML**
+- Speed grew on every export/import round trip. The export wrote only the computed
+  total, so re-importing treated that total as the base and added the bonus again:
+  a 30 ft character with a +10 bonus went 40 → 50 → 60 → 70 across three cycles.
+  The base is now exported in its own right; older files still fall back to the
+  previous behaviour.
+- An item's **value** was dropped entirely on export. A non-armour item also came
+  back marked as light armour, and a weapon's magic bonus came back as text rather
+  than a number.
+
+**Prepared maps**
+- Exporting a map and importing it discarded every placed token. Tokens now travel
+  with the map, hidden ones included. A map file exported before this release
+  imports exactly as it does today.
+
+**Also**
+- Test suite 925 → 960 across 33 files. The new import tests were checked against
+  the old code first: 9 of the 26 fail there, so they genuinely pin the bugs.
+
+---
+
 ## [216] — 2026-09-10 — Multiple damage types on one attack
 
 **A weapon can now deal several typed damages, rolled together with one click**
