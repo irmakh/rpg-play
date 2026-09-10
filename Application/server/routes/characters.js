@@ -25,7 +25,10 @@ export default function register(app, ctx) {
       const SKILL_KEYS  = Array.from({ length: 18 }, (_, i) => `sk-${i}`);
       const SAVE_KEYS   = ['save-str','save-dex','save-con','save-int','save-wis','save-cha'];
       const ABILITY_KEYS = ['str','dex','con','int','wis','cha'];
-      const STAT_KEYS   = ['init','init-bonus','sp-atk','ac','prof-bonus','pb','proficiency','passive-perception','pp','sp-dc'];
+      // hpcur/hpmax/hptemp and speed are here for the table's tokenless "My sheet"
+      // view, which has no token to read live HP / speed off and would otherwise
+      // render those stats blank.
+      const STAT_KEYS   = ['init','init-bonus','sp-atk','ac','prof-bonus','pb','proficiency','passive-perception','pp','sp-dc','speed','hpcur','hpmax','hptemp'];
       const META_KEYS   = ['race','race-name','class','class-name','class-1','subclass','subclass-1','level','total-level','char-level'];
       const SLOT_KEYS   = Array.from({ length: 9 }, (_, i) => [`slot-${i+1}-total`,`slot-${i+1}-used`]).flat();
       const qroll = {};

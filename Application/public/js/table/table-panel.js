@@ -350,15 +350,51 @@ function clickEquipItem(itemId) {
   _syncEquip(itemId, it.equipped);
 }
 
+/**
+ * Persist a wear/unwear toggle and adopt the stats the server recomputed.
+ *
+ * The optimistic toggle above only moves the tick. Everything the item feeds -
+ * AC, speed, initiative, and (via recalcDerived) saves, skills and passive
+ * perception - is the server's answer, so the sheet is refetched on success
+ * rather than guessed at. A failure has to be visible: this used to swallow
+ * every error, which left the tick showing a change the server had refused.
+ */
 async function _syncEquip(itemId, equipped) {
   if (!_sideCharId) return;
+  const charId = _sideCharId;
+  let ok = false;
   try {
-    await fetch(`/api/characters/${_sideCharId}/equip`, {
+    const r = await fetch(`/api/characters/${charId}/equip`, {
       method: 'PATCH',
       headers: authHeaders(),
       body: JSON.stringify({ itemId, equipped })
     });
-  } catch {}
+    ok = r.ok;
+    if (!ok && typeof showToast === 'function') {
+      showToast(r.status === 401 ? 'Not allowed to change this sheet.' : 'Could not save that item.', true);
+    }
+  } catch {
+    if (typeof showToast === 'function') showToast('Connection error.', true);
+  }
+  // The panel may have moved on to another character while this was in flight.
+  if (_sideCharId !== charId) return;
+  // Either way the sheet is now out of step with the server - on success the
+  // derived stats changed, on failure the tick is a lie. Refetching settles both.
+  _reloadSideSheet();
+}
+
+/**
+ * Repaint whatever the right panel is showing, from the server.
+ *
+ * Two different things can be up: a token's sheet (keyed by token id) or the
+ * player's own tokenless sheet (keyed by SIDE_SELF, which is not a token id and
+ * so cannot be found in `tokens` - the reason the plain loadSideQroll() reset
+ * does not work for it).
+ */
+function _reloadSideSheet() {
+  if (_sideQrollTokenId === SIDE_SELF) { loadOwnCharacterSheet(); return; }
+  _sideQrollTokenId = null;
+  loadSideQroll();
 }
 
 // ── Actions sections (Actions / Bonus / Reactions / Other) ────────────────────
@@ -589,6 +625,7 @@ function _showOwnSheetChrome() {
 
   const nameEl = document.getElementById('hp-panel-name');
   if (nameEl) nameEl.textContent = qrollCharName || '';
+  _fillOwnSheetStats();
   // No token portrait to show; fall back to the placeholder crest.
   const img = document.getElementById('rp-portrait-img');
   const ph  = document.getElementById('rp-portrait-ph');
@@ -601,6 +638,37 @@ function _showOwnSheetChrome() {
   const sp = document.getElementById('side-panel');
   if (sp) { sp.style.display = ''; sp.classList.add('rp-open'); }
   if (typeof updateZoomFloat === 'function') updateZoomFloat();
+}
+
+/**
+ * Fill the HP / AC / Speed row from the character, with no token to read.
+ *
+ * _refreshHpPanel() does this from a token; here the same three readouts come
+ * off the sheet itself (hpcur/hpmax/hptemp/ac/speed, all returned by qroll), so
+ * wearing a item that changes AC or speed shows up in the same place a token
+ * user would see it.
+ */
+function _fillOwnSheetStats() {
+  const d = qrollData || {};
+  const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+
+  const max = parseInt(d.hpmax) || 0;
+  const cur = parseInt(d.hpcur) || 0;
+  const temp = parseInt(d.hptemp) || 0;
+  set('hp-cur-display', cur);
+  set('hp-max-display', max);
+  const curEl = document.getElementById('hp-cur-display');
+  if (curEl) curEl.style.color = typeof hpBarColor === 'function'
+    ? hpBarColor(max > 0 ? Math.max(0, Math.min(1, cur / max)) : 0)
+    : 'var(--verdigris)';
+  const tempWrap = document.getElementById('hp-temp-display-wrap');
+  if (tempWrap) tempWrap.style.display = temp > 0 ? '' : 'none';
+  set('hp-temp-display', temp);
+
+  set('hp-ac-display', (d.ac !== undefined && d.ac !== '') ? d.ac : '—');
+  // recalcDerived() stores speed as "35 ft"; the unit is already in the markup.
+  const spd = String(d.speed ?? '').replace(/[^0-9]/g, '');
+  set('rp-speed-val', spd || 30);
 }
 
 function _sideSubtitleFor(d) {
@@ -640,6 +708,15 @@ async function loadSideQroll() {
       _sideViewInitId = null; // entry no longer exists
     }
   }
+  // The player asked for their own sheet, and nothing has been deliberately
+  // picked since. Only a real choice - a token click (selectedTokenId) or an
+  // initiative row (_sideViewInitId), both resolved above - replaces it. The
+  // active-turn fallback below must NOT: loadOwnCharacterSheet() clears
+  // selectedTokenId, so during combat every SSE tick that calls this (initiative
+  // events, active-token HP changes, character updates) would otherwise slam the
+  // sheet shut a moment after the button was pressed.
+  if (!targetId && _sideQrollTokenId === SIDE_SELF) return;
+
   if (!targetId) {
     targetId = getActiveTurnTokenId() || null;
   }
@@ -654,10 +731,6 @@ async function loadSideQroll() {
     if (mine) targetId = mine.id;
     else return void loadOwnCharacterSheet();
   }
-
-  // Nothing to switch to, and the player is deliberately looking at their own
-  // sheet — leave it up rather than blanking the panel underneath them.
-  if (!targetId && _sideQrollTokenId === SIDE_SELF) return;
 
   if (targetId === _sideQrollTokenId) return; // already rendered (data unchanged)
   // Only reset section/tab state when switching to a genuinely different token
@@ -940,9 +1013,6 @@ document.addEventListener('keydown', e => {
     oCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height); setTool('move'); return;
   }
   if (e.key === 'Escape' && currentTool === 'multi') { multiSelectState = null; oCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height); return; }
-  if (document.getElementById('dm-tools-modal')?.style.display === 'flex') {
-    if (e.key === 'Escape') { closeDMToolsModal(); return; }
-  }
   if (document.getElementById('dice-roller-modal').style.display === 'flex') {
     if (e.key === 'Escape') { closeDiceRollerModal(); return; }
   }
@@ -964,7 +1034,6 @@ document.addEventListener('keydown', e => {
     selectedTokenId = null;
     renderTokens();
     _sideQrollTokenId = null;
-    renderSidePanel();
     if (!initData.currentId) loadSideQroll();
     return;
   }

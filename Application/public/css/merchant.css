@@ -6,7 +6,6 @@ body{font-family:'Segoe UI',sans-serif;background:var(--ink);color:var(--bone);f
 h1{color:var(--bone);font-size:22px;margin:0}
 .sheet{max-width:900px;margin:0 auto;padding:16px}
 .card{background:var(--slate);border:1px solid var(--rule-hi);border-radius:6px;overflow:hidden;margin-bottom:14px}
-.ct{background:var(--bone);color:var(--ink);font-weight:bold;text-align:center;padding:3px 8px;font-size:11px;}
 .cb{padding:12px}
 input[type=text],input[type=number],textarea,select{background:var(--slate-hi);border:1px solid var(--rule-hi);color:var(--bone);border-radius:3px;padding:4px 7px;font-size:12px;font-family:inherit;width:100%}
 input:focus,textarea:focus,select:focus{outline:none;border-color:var(--arc);background:var(--slate-hi)}
@@ -35,7 +34,7 @@ td{padding:5px 6px;border-bottom:1px solid var(--rule);vertical-align:middle;fon
 #gate-err{color:var(--blood);font-size:11px;min-height:16px;margin-bottom:10px}
 /* Modal */
 .modal-overlay{position:fixed;inset:0;background:var(--scrim);display:flex;align-items:center;justify-content:center;z-index:200}
-.modal-box{background:var(--slate);border:1px solid var(--bone);border-radius:6px;overflow:hidden;min-width:340px;max-width:480px;width:95%}
+.modal-box{overflow:hidden;min-width:340px;max-width:480px;width:95%}
 .modal-body{padding:14px 16px 6px;max-height:80vh;overflow-y:auto}
 .modal-btns{display:flex;gap:8px;justify-content:flex-end;padding:10px 16px}
 #armor-fields{display:none}

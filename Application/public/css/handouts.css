@@ -102,3 +102,42 @@ table.recips tr:last-child td{border-bottom:none}
   body.detail-open .detail-pane{display:block}
   .back-btn{display:inline-block}
 }
+
+/* ── Dialogs ──────────────────────────────────────────────────────────────────
+   These replace prompt() / confirm() / alert(). The desktop client is Electron,
+   which does not implement prompt() at all - it returns undefined, so the two
+   prompts on this page died silently there and the buttons appeared to do
+   nothing. Same shell and proportions as the table screen's hand-out modal. */
+.dlg-back{
+  position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:2400;
+  display:flex;align-items:center;justify-content:center;padding:16px;
+}
+.dlg-box{
+  background:var(--slate);border:1px solid var(--rule-hi);border-radius:8px;
+  width:min(420px,100%);max-height:min(560px,calc(100vh - 32px));
+  display:flex;flex-direction:column;
+}
+.dlg-hdr{flex:0 0 auto}
+.dlg-body{flex:1 1 auto;overflow-y:auto;padding:12px 14px;min-height:0;font-size:13px;line-height:1.5}
+.dlg-ft{flex:0 0 auto;display:flex;gap:6px;justify-content:flex-end;padding:10px 14px;border-top:1px solid var(--rule-hi)}
+.dlg-input{
+  width:100%;background:var(--slate-hi);border:1px solid var(--rule-hi);color:var(--bone);
+  border-radius:4px;padding:7px 9px;font:inherit;font-size:13px;
+}
+.dlg-input:focus{outline:none;border-color:var(--arc)}
+.dlg-lbl{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--bone);margin-bottom:5px}
+.dlg-err{font-size:11px;color:var(--blood);min-height:15px;margin-top:7px}
+
+/* Character picker */
+.dlg-chars{max-height:230px;overflow-y:auto;border:1px solid var(--rule);border-radius:5px}
+.dlg-char{
+  display:flex;align-items:center;gap:8px;padding:8px 10px;
+  border-bottom:1px solid var(--rule);font-size:13px;cursor:pointer;
+}
+.dlg-char:last-child{border-bottom:none}
+.dlg-char:hover{background:var(--wash)}
+.dlg-char input{cursor:pointer;width:16px;height:16px;accent-color:var(--arc);flex:0 0 auto}
+.dlg-char.has{opacity:.55;cursor:default}
+.dlg-char.has:hover{background:transparent}
+.dlg-char-has{margin-left:auto;font-size:9px;color:var(--ash);font-style:italic}
+.dlg-bulk{margin-left:auto;display:flex;gap:4px}

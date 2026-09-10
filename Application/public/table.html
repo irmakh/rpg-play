@@ -32,7 +32,6 @@
     <button class="btn" id="btn-handouts" onclick="openHandoutModal()" title="Hand out a handout to one or more characters"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-document"></use></svg> </button>
     <button class="btn" id="btn-waiting" onclick="openWaitingPicker()" title="Park the table on a waiting screen — players stop seeing the map"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-pause"></use></svg> </button>
   </div>
-  <button class="btn" onclick="openDMToolsModal()" title="Map Tools &amp; HP Overview"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-map"></use></svg> </button>
   <button class="btn" onclick="logout()" style="margin-left:4px" title="Logout">
     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;display:inline-block"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
   </button>
@@ -65,8 +64,9 @@
     <button type="button" class="dm-seg active" data-mode="ask" onclick="setDiceMode('ask')" title="Ask each roll: pick Normal/Adv/Dis in a popup">Ask</button>
   </div>
   <button class="dice-anim-switch on" id="btn-dice-anim" role="switch" aria-checked="true" onclick="toggleDiceAnim()" title="Dice animation on/off"><span class="das-knob"></span></button>
-  <button class="btn tool-btn" id="btn-leftpanel-toggle" onclick="toggleLeftPanel()" title="Toggle left panel" style="margin-left:4px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-left"></use></svg> </button>
-  <button class="btn tool-btn" id="btn-sidepanel-toggle" onclick="toggleSidePanel()" title="Toggle right panel" style="margin-left:2px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-right"></use></svg> </button>
+  <!-- Both panels start open, so the chevron starts pointing the way it folds. -->
+  <button class="btn tool-btn" id="btn-leftpanel-toggle" onclick="toggleLeftPanel()" title="Hide left panel" aria-expanded="true" style="margin-left:4px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-left"></use></svg> </button>
+  <button class="btn tool-btn" id="btn-sidepanel-toggle" onclick="toggleSidePanel()" title="Hide right panel" aria-expanded="true" style="margin-left:2px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-right"></use></svg> </button>
   <button class="btn tool-btn" id="btn-pop-left" onclick="togglePopout('left-panel')" title="Pop out / dock the left panel in its own window" style="margin-left:6px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-popout"></use></svg> <svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-left"></use></svg> </button>
   <button class="btn tool-btn" id="btn-pop-right" onclick="togglePopout('side-panel')" title="Pop out / dock the right panel in its own window" style="margin-left:2px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-right"></use></svg> <svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-popout"></use></svg> </button>
   <button class="btn tool-btn" id="btn-pop-chat" onclick="togglePopout('chat-bar')" title="Pop out / dock the chat in its own window" style="margin-left:2px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-popout"></use></svg> <svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chat"></use></svg> </button>
@@ -405,65 +405,10 @@
   </div>
 </div>
 
-<!-- DM Tools Modal (replaces settings modal — accessible to all users) -->
-<div id="dm-tools-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:2000;align-items:center;justify-content:center">
-  <div style="background:var(--slate);border:1px solid var(--bone);border-radius:8px;width:420px;max-width:96vw;max-height:88vh;display:flex;flex-direction:column">
-    <div class="modal-drag-handle" style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--rule-hi);flex-shrink:0">
-      <span style="font-weight:bold;font-size:14px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-map"></use></svg> Map &amp; Tokens</span>
-      <button class="btn sm" onclick="closeDMToolsModal()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg> </button>
-    </div>
-    <div style="overflow-y:auto;flex:1;padding:12px 16px">
-
-      <!-- Active turn / movement (all users) -->
-      <div style="margin-bottom:10px">
-        <div style="font-size:10px;color:var(--bone);margin-bottom:3px">Active Turn</div>
-        <div id="active-token-info" style="font-size:12px;color:var(--bone);font-weight:bold;margin-bottom:8px">None</div>
-        <div style="display:flex;align-items:baseline;gap:8px">
-          <div>
-            <div style="font-size:10px;color:var(--bone);margin-bottom:2px">Movement</div>
-            <div id="movement-display" style="font-size:18px;font-weight:bold;color:var(--bone)">— ft</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- HP Overview (all users) -->
-      <div style="border-top:1px solid var(--rule-hi);padding-top:10px;margin-bottom:10px">
-        <div style="font-size:10px;color:var(--bone);margin-bottom:6px">Hit Points — All Tokens</div>
-        <div id="hp-tracker-list"></div>
-      </div>
-
-      <!-- Fog Regions (DM only) -->
-      <div id="fog-panel" style="display:none;border-top:1px solid var(--rule-hi);padding-top:10px;margin-bottom:10px">
-        <div style="font-size:10px;color:var(--bone);margin-bottom:4px">Fog Regions</div>
-        <div id="fog-region-list"></div>
-      </div>
-
-      <!-- Hidden Items (DM only) -->
-      <div id="items-panel" style="display:none;border-top:1px solid var(--rule-hi);padding-top:10px;margin-bottom:10px">
-        <div style="font-size:10px;color:var(--bone);margin-bottom:4px">Hidden Items</div>
-        <div id="items-list"></div>
-      </div>
-
-      <!-- Map Settings (DM only) -->
-      <div class="dm-controls" style="display:none;border-top:1px solid var(--rule-hi);padding-top:10px">
-        <div style="font-size:10px;color:var(--bone);margin-bottom:8px">Map Settings</div>
-        <div style="display:flex;gap:6px;align-items:center;margin-bottom:10px">
-          <select id="prep-map-sel" style="flex:1;background:var(--slate-hi);border:1px solid var(--rule-hi);color:var(--bone);border-radius:3px;padding:5px 8px;font-size:12px">
-            <option value="">— Select Map —</option>
-          </select>
-          <button class="btn primary" onclick="loadPrepMapToTable()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-folder"></use></svg> Load</button>
-        </div>
-        <button class="btn danger" style="width:100%" onclick="clearAllTokens()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-trash"></use></svg> Clear All Tokens</button>
-      </div>
-
-    </div>
-  </div>
-</div>
-
 <!-- Player initiative roll modal -->
 <div id="init-roll-modal" style="position:fixed;inset:0;background:var(--scrim);display:none;align-items:center;justify-content:center;z-index:2500">
   <div style="background:var(--slate);border:1px solid var(--rule-hi);border-radius:8px;padding:16px 20px;min-width:220px;max-width:280px" onclick="event.stopPropagation()">
-    <div style="font-weight:bold;font-size:13px;margin-bottom:12px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg> Roll Initiative</div>
+    <div class="lt-modal-title" style="margin-bottom:var(--s3)"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg> Roll Initiative</div>
     <div style="margin-bottom:8px">
       <div style="font-size:10px;color:var(--ash);margin-bottom:3px">Name</div>
       <input id="init-roll-name" type="text" style="width:100%;background:var(--slate-hi);border:1px solid var(--rule-hi);color:var(--bone);border-radius:4px;padding:5px 7px;font-size:12px;box-sizing:border-box" placeholder="Your name">
@@ -483,7 +428,7 @@
 <!-- Monster group initiative modal (DM only) -->
 <div id="group-init-modal" style="position:fixed;inset:0;background:var(--scrim);display:none;align-items:center;justify-content:center;z-index:2500" onclick="closeMonsterGroupInitModal()">
   <div style="background:var(--slate);border:1px solid var(--rule-hi);border-radius:8px;padding:16px 20px;min-width:240px;max-width:300px" onclick="event.stopPropagation()">
-    <div style="font-weight:bold;font-size:13px;margin-bottom:6px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg> Roll Monster Initiative</div>
+    <div class="lt-modal-title" style="margin-bottom:var(--s2)"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg> Roll Monster Initiative</div>
     <div id="group-init-desc" style="font-size:11px;color:var(--ash);margin-bottom:10px"></div>
     <div id="group-init-mode-row" style="margin-bottom:8px">
       <div style="font-size:10px;color:var(--ash);margin-bottom:4px">Mode</div>
@@ -510,7 +455,7 @@
 <!-- Group ability check / saving throw modal -->
 <div id="group-check-modal" style="position:fixed;inset:0;background:var(--scrim);display:none;align-items:center;justify-content:center;z-index:2500" onclick="closeGroupCheckModal()">
   <div style="background:var(--slate);border:1px solid var(--rule-hi);border-radius:8px;padding:16px 20px;min-width:260px;max-width:320px" onclick="event.stopPropagation()">
-    <div id="group-check-title" style="font-weight:bold;font-size:13px;margin-bottom:6px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg> Group Ability Check</div>
+    <div id="group-check-title" class="lt-modal-title" style="margin-bottom:var(--s2)"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg> Group Ability Check</div>
     <div id="group-check-desc" style="font-size:11px;color:var(--ash);margin-bottom:10px"></div>
     <div style="margin-bottom:8px">
       <div style="font-size:10px;color:var(--ash);margin-bottom:4px">Ability</div>
@@ -593,6 +538,12 @@
         style="background:var(--slate-hi);border:1px solid var(--rule-hi);color:var(--bone);border-radius:3px;padding:3px 6px;font-size:12px;flex:1">
     </div>
     <div class="modal-btns">
+      <!-- Wiping the map is the opposite of this modal's job, so it sits apart on
+           the left, away from the button the DM actually reaches for. It lived in
+           the retired Map & Tokens modal; this is the DM's token surface now. -->
+      <div class="dm-controls" style="display:none;display:contents">
+        <button class="btn danger" style="margin-right:auto" onclick="clearAllTokens()" title="Remove every token from the map and clear initiative"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-trash"></use></svg> Clear All</button>
+      </div>
       <button class="btn" onclick="closeAddTokenModal()">Cancel</button>
       <button class="btn primary" onclick="submitAddToken()">Add to Map</button>
     </div>
@@ -601,9 +552,9 @@
 
 <!-- Dice Roller Modal -->
 <div id="dice-roller-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:2000;align-items:center;justify-content:center">
-  <div style="background:var(--slate);border:1px solid var(--bone);border-radius:8px;width:380px;max-height:90vh;display:flex;flex-direction:column">
-    <div class="modal-drag-handle" style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--rule-hi)">
-      <span style="font-weight:bold;font-size:14px">Dice Roller</span>
+  <div style="background:var(--slate);border:1px solid var(--rule-hi);border-radius:8px;width:380px;max-height:90vh;display:flex;flex-direction:column">
+    <div class="ct ct-row modal-drag-handle">
+      <span>Dice Roller</span>
       <button class="btn sm" onclick="closeDiceRollerModal()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg> </button>
     </div>
     <div style="overflow-y:auto;padding:12px 16px">
@@ -641,9 +592,9 @@
 
 <!-- Monster Info Modal (DM) -->
 <div id="monster-info-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:2100;align-items:center;justify-content:center;padding:16px">
-  <div style="background:var(--slate);border:1px solid var(--bone);border-radius:6px;max-width:680px;width:100%;max-height:90vh;display:flex;flex-direction:column">
-    <div class="modal-drag-handle" style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--rule-hi)">
-      <span id="monster-info-table-title" style="font-size:15px;font-weight:bold;color:var(--bone)"></span>
+  <div style="background:var(--slate);border:1px solid var(--rule-hi);border-radius:6px;max-width:680px;width:100%;max-height:90vh;display:flex;flex-direction:column">
+    <div class="ct ct-row modal-drag-handle">
+      <span id="monster-info-table-title"></span>
       <button class="btn sm" onclick="closeMonsterInfoTableModal()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg> </button>
     </div>
     <div id="monster-info-table-body" style="overflow-y:auto;padding:16px;flex:1;font-size:13px"></div>
@@ -679,7 +630,7 @@
 
 <!-- Confirm modal -->
 <div id="confirm-modal" style="display:none;position:fixed;inset:0;background:var(--scrim);align-items:center;justify-content:center;z-index:2800">
-  <div style="background:var(--slate);border:1px solid var(--bone);border-radius:6px;padding:20px 24px;min-width:260px;max-width:90vw;text-align:center">
+  <div style="background:var(--slate);border:1px solid var(--rule-hi);border-radius:6px;padding:20px 24px;min-width:260px;max-width:90vw;text-align:center">
     <div id="confirm-msg" style="font-size:13px;margin-bottom:16px;color:var(--bone)"></div>
     <div style="display:flex;gap:8px;justify-content:center">
       <button class="btn danger" id="confirm-ok">Confirm</button>
@@ -698,9 +649,9 @@
      showing the server withholds the map and other players' tokens from
      players, so this is not just a cover over the canvas. -->
 <div id="waiting-picker-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:2000;align-items:center;justify-content:center">
-  <div style="background:var(--slate);border:1px solid var(--bone);border-radius:8px;width:620px;max-width:96vw;max-height:88vh;display:flex;flex-direction:column;overflow:hidden">
-    <div class="modal-drag-handle" style="display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid var(--rule-hi)">
-      <span style="font-weight:bold;font-size:14px;flex:1"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-pause"></use></svg> Waiting screen</span>
+  <div style="background:var(--slate);border:1px solid var(--rule-hi);border-radius:8px;width:620px;max-width:96vw;max-height:88vh;display:flex;flex-direction:column;overflow:hidden">
+    <div class="ct ct-row modal-drag-handle">
+      <span style="flex:1"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-pause"></use></svg> Waiting screen</span>
       <a class="btn sm" href="/waiting-screens.html" style="text-decoration:none" title="Create and edit waiting screens">Manage <svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-arrow-right"></use></svg> </a>
       <button class="btn sm" onclick="closeWaitingPicker()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg> </button>
     </div>
@@ -718,8 +669,8 @@
 
 <div id="music-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:2000;align-items:center;justify-content:center">
   <div style="background:var(--slate);border:1px solid var(--rule-hi);border-radius:var(--r-md);width:400px;max-width:96vw;height:auto;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:inset 0 1px 0 var(--lift), var(--cast)">
-    <div class="modal-drag-handle" style="display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid var(--rule-hi)">
-      <span style="font-weight:bold;font-size:14px;flex:1"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-music"></use></svg> Music Player</span>
+    <div class="ct ct-row modal-drag-handle">
+      <span style="flex:1"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-music"></use></svg> Music Player</span>
       <button class="btn sm" onclick="openMusicPopup()" title="Open the player in its own window"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-external"></use></svg> </button>
       <button class="btn sm" onclick="closeMusicModal()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg> </button>
     </div>

@@ -595,8 +595,6 @@ function _putHp(fields) {
   if (tok) {
     patchToken(selectedTokenId, fields);
     _refreshHpPanel({ ...tok, ...fields });
-    renderHpTable();
-    renderSidePanel();
   }
   // Network — queued (capture id now; selectedTokenId may change before queue runs)
   const id = selectedTokenId;
@@ -648,7 +646,6 @@ async function saveTokenAssignment() {
     if (!res.ok) { showToast('Failed to assign token.', true); return; }
     patchToken(tok.id, { assignedCharId: newAssignedCharId });
     _refreshHpPanel({ ...tok, assignedCharId: newAssignedCharId });
-    renderHpTable();
     renderTokens();
   } catch { showToast('Connection error.', true); }
 }
@@ -692,106 +689,17 @@ document.getElementById('hp-amount')?.addEventListener('keydown', e => {
   if (e.key === 'Enter') applyHpChange('dmg');
 });
 
-// ── HP tracker ────────────────────────────────────────────────────────────────
-function renderHpTable() {
-  const list = document.getElementById('hp-tracker-list');
-  if (!list) return;
-  const visible = tokens.filter(t => {
-    if (t.visible === false && !isDM()) return false;
-    if (!isDM()) {
-      // Show only player tokens (character/NPC tokens or assigned monsters)
-      if (!isPlayerToken(t)) return false;
-    }
-    return true;
-  });
-  if (visible.length === 0) {
-    list.innerHTML = '<div style="font-size:11px;color:var(--ash)">No tokens on map.</div>';
-    return;
-  }
-  const activeTokId = getActiveTurnTokenId();
-  list.innerHTML = visible.map(tok => {
-    const cur = tok.hpCurrent || 0;
-    const max = tok.hpMax || 0;
-    const temp = tok.hpTemp || 0;
-    const hpPct = max > 0 ? Math.max(0, Math.min(1, cur / max)) : 0;
-    const col = hpBarColor(hpPct);
-    const isMonster = tok.type === 'monster';
-    const showNums = !isMonster || isDM() || isMyToken(tok);
-    const isCur = tok.id === activeTokId;
-    const canOpenPanel = isDM() || isMyToken(tok);
-    const ownerId = tok.assignedCharId || (!isMonster ? tok.linkedId : '');
-    const ownerChar = ownerId ? _charList.find(c => c.id === ownerId) : null;
-    const controllerHtml = ownerChar && ownerChar.name !== tokDisplayName(tok)
-      ? `<div style="font-size:9px;color:var(--bone);margin-top:1px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-swords"></use></svg> ${esc(ownerChar.name)}</div>`
-      : '';
-    const isBulk = isDM() && bulkTokenIds.has(tok.id);
-    const rowStyle = `display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid var(--rule)${isCur ? ';background:var(--wash);margin:0 -10px;padding-left:10px;padding-right:10px' : ''}${canOpenPanel ? ';cursor:pointer' : ''}${isBulk ? ';border-left:3px solid #00e5ff;padding-left:5px' : ''}`;
-    const hpNumStr = showNums
-      ? `<span style="font-weight:bold;color:${col}">${cur}</span><span style="color:var(--ash)">/${max}</span>${temp > 0 ? `<span style="color:var(--arc);font-size:10px"> +${temp}</span>` : ''}`
-      : '';
-    const clickAttr = canOpenPanel ? `onclick="hpTrackerRowClick('${escJs(tok.id)}', event)"` : '';
-    const activeConds = parseConditions(tok.conditions);
-    const condsHtml = activeConds.length > 0
-      ? `<div style="display:flex;flex-wrap:wrap;gap:2px;margin-top:2px" onclick="event.stopPropagation()">
-          ${activeConds.map(c => `<a href="https://5e.tools/conditionsdiseases.html#${encodeURIComponent(c.toLowerCase())}_xphb" target="_blank" rel="noopener"
-              style="font-size:9px;font-weight:bold;background:rgba(255,140,0,.2);border:1px solid rgba(255,140,0,.6);color:#ffa500;border-radius:2px;padding:0 3px;line-height:13px;text-decoration:none;white-space:nowrap"
-              title="${esc(c)}">${esc(COND_ABBREV[c] || c.slice(0,3).toUpperCase())}</a>`).join('')}
-        </div>`
-      : '';
-    return `<div style="${rowStyle}" ${clickAttr}>
-      <div style="flex:1;min-width:0">
-        <div style="font-size:11px;word-break:break-word${isCur ? ';color:var(--bone);font-weight:bold' : ''}">${isCur ? '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-play"></use></svg> ' : ''}${esc(tokDisplayName(tok))}</div>
-        ${controllerHtml}
-        ${condsHtml}
-        <div style="display:flex;align-items:center;gap:3px;margin-top:2px">
-          <div style="flex:1;background:var(--slate-hi);border-radius:2px;overflow:hidden;height:4px">
-            <div style="width:${hpPct*100}%;height:100%;background:${col};transition:width .3s"></div>
-          </div>
-          ${temp > 0 ? `<div style="width:${Math.min(30,temp/max*100)}%;max-width:20%;height:4px;background:var(--arc);border-radius:2px;flex-shrink:0"></div>` : ''}
-        </div>
-      </div>
-      <div style="font-size:11px;min-width:44px;text-align:right;flex-shrink:0;line-height:1.3">${hpNumStr}</div>
-    </div>`;
-  }).join('');
-}
-
 // ── Bulk selection (DM only) ──────────────────────────────────────────────────
-function hpTrackerRowClick(id, event) {
-  const tok = tokens.find(t => t.id === id);
-  if (!tok) return;
-  if (event.shiftKey && isDM()) {
-    if (bulkTokenIds.has(id)) {
-      bulkTokenIds.delete(id);
-    } else {
-      bulkTokenIds.add(id);
-    }
-    closeHpPanel();
-    renderTokens();
-    renderBulkPanel();
-    renderHpTable();
-  } else {
-    if (bulkTokenIds.size > 0) {
-      bulkTokenIds.clear();
-      renderBulkPanel();
-    }
-    selectToken(id);
-    panToToken(id);
-    openHpPanel(tok);
-  }
-}
-
 function clearBulkSelection() {
   bulkTokenIds.clear();
   renderBulkPanel();
   renderTokens();
-  renderHpTable();
 }
 
 function bulkDeselectToken(id) {
   bulkTokenIds.delete(id);
   renderBulkPanel();
   renderTokens();
-  renderHpTable();
 }
 
 function updateLeftPanelVisibility() {
@@ -867,7 +775,6 @@ function applyBulkHpChange(mode) {
       try { await fetch(`/api/table/tokens/${tid}`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(f) }); } catch {}
     });
   }
-  renderHpTable();
   renderTokens();
   const selTok = tokens.find(t => t.id === selectedTokenId);
   if (selTok && bulkTokenIds.has(selectedTokenId)) _refreshHpPanel(selTok);
@@ -889,7 +796,6 @@ function bulkSetVisibility(visible) {
     });
   }
   renderTokens();
-  renderHpTable();
   renderBulkPanel();
   const selTok = tokens.find(t => t.id === selectedTokenId);
   if (selTok && bulkTokenIds.has(selectedTokenId)) _refreshHpPanel(selTok);
@@ -914,7 +820,6 @@ function bulkToggleCondition(name) {
   }
   renderTokens();
   renderBulkPanel();
-  renderHpTable();
   const selTok = tokens.find(t => t.id === selectedTokenId);
   if (selTok && bulkTokenIds.has(selectedTokenId)) _refreshHpPanel(selTok);
 }

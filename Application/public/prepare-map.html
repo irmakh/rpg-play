@@ -248,9 +248,9 @@
 
 <!-- Token config modal -->
 <div id="pm-tok-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:3000;align-items:center;justify-content:center">
-  <div style="background:var(--slate);border:1px solid var(--bone);border-radius:8px;width:310px;max-width:96vw;max-height:92vh;display:flex;flex-direction:column;overflow:hidden">
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--rule-hi);flex-shrink:0">
-      <span id="pm-tok-modal-title" style="font-weight:bold;font-size:13px">Add Prepared Token</span>
+  <div style="background:var(--slate);border:1px solid var(--rule-hi);border-radius:8px;width:310px;max-width:96vw;max-height:92vh;display:flex;flex-direction:column;overflow:hidden">
+    <div class="ct ct-row" style="flex-shrink:0">
+      <span id="pm-tok-modal-title">Add Prepared Token</span>
       <button class="btn sm" onclick="closePmTokModal()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg> </button>
     </div>
     <div style="padding:12px;overflow-y:auto;flex:1">
@@ -340,9 +340,9 @@
 
 <!-- Bulk recolor popup -->
 <div id="pm-recolor-popup" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:3500;align-items:center;justify-content:center" onclick="if(event.target===this)closeRecolorPopup()">
-  <div style="background:var(--slate);border:1px solid var(--bone);border-radius:8px;width:240px;max-width:92vw;padding:14px">
+  <div style="background:var(--slate);border:1px solid var(--rule-hi);border-radius:8px;width:240px;max-width:92vw;padding:14px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-      <span style="font-weight:bold;font-size:13px">Recolor <span id="pm-recolor-count">0</span> token(s)</span>
+      <span class="lt-modal-title" style="margin:0">Recolor <span id="pm-recolor-count">0</span> token(s)</span>
       <button class="btn sm" onclick="closeRecolorPopup()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg> </button>
     </div>
     <div id="pm-recolor-swatches" style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center"></div>
@@ -352,7 +352,7 @@
 <!-- Load-to-table confirmation modal -->
 <div id="load-confirm-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:4000;align-items:center;justify-content:center">
   <div style="background:var(--slate);border:1px solid var(--blood);border-radius:8px;width:360px;max-width:96vw;padding:22px 24px">
-    <div style="font-size:15px;font-weight:bold;color:var(--blood);margin-bottom:12px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-shield"></use></svg> Load Map to Table</div>
+    <div class="lt-modal-title" style="color:var(--blood);margin-bottom:var(--s3)"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-shield"></use></svg> Load Map to Table</div>
     <div style="font-size:12px;color:var(--bone);line-height:1.6;margin-bottom:8px">All existing tokens on the table will be <strong>permanently deleted</strong> — including any tokens added directly on the table screen.</div>
     <div style="font-size:12px;color:var(--bone);line-height:1.6;margin-bottom:6px">Initiative will also be cleared.</div>
     <div id="load-confirm-tok-note" style="font-size:11px;color:var(--ash);margin-bottom:18px;min-height:16px"></div>

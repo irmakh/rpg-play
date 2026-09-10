@@ -105,7 +105,8 @@ function clearDetail() {
 }
 
 async function selectHandout(id) {
-  if (_dirty && !confirm('Discard unsaved changes?')) return;
+  if (_dirty && !await hoConfirm('Discard unsaved changes?',
+      { okLabel: 'Discard', danger: true, title: 'Unsaved changes' })) return;
   _selId = id; _dirty = false;
   document.body.classList.add('detail-open');
   const h = _handouts.find(x => x.id === id);
@@ -257,13 +258,16 @@ function currentForm() {
 }
 
 async function newHandout() {
-  if (_dirty && !confirm('Discard unsaved changes?')) return;
-  const title = prompt('Handout title:');
-  if (!title || !title.trim()) return;
-  const res = await fetch('/api/handouts', {
-    method: 'POST', headers: H(), body: JSON.stringify({ title: title.trim(), checkSkill: -1 }),
+  if (_dirty && !await hoConfirm('Discard unsaved changes?',
+      { okLabel: 'Discard', danger: true, title: 'Unsaved changes' })) return;
+  const title = await hoPrompt('New handout', {
+    label: 'Title', placeholder: 'A torn letter, a map fragment…', okLabel: 'Create',
   });
-  if (!res.ok) { alert('Could not create the handout.'); return; }
+  if (!title) return;
+  const res = await fetch('/api/handouts', {
+    method: 'POST', headers: H(), body: JSON.stringify({ title, checkSkill: -1 }),
+  });
+  if (!res.ok) { await hoAlert('Could not create the handout.'); return; }
   const created = await res.json();
   await loadAll();
   selectHandout(created.id);
@@ -287,9 +291,10 @@ async function saveHandout() {
 async function deleteHandout() {
   if (!_selId) return;
   const h = _handouts.find(x => x.id === _selId);
-  if (!confirm(`Delete “${h ? h.title : 'this handout'}”? This cannot be undone.`)) return;
+  if (!await hoConfirm(`Delete “${h ? h.title : 'this handout'}”? This cannot be undone.`,
+      { okLabel: 'Delete', danger: true, title: 'Delete handout' })) return;
   const res = await fetch(`/api/handouts/${encodeURIComponent(_selId)}`, { method: 'DELETE', headers: H() });
-  if (!res.ok) { alert('Delete failed.'); return; }
+  if (!res.ok) { await hoAlert('Delete failed.'); return; }
   _dirty = false;
   clearDetail();
   loadAll();
@@ -348,35 +353,68 @@ async function clearImage(kind) {
 
 async function handOut() {
   if (!_selId) return;
-  if (_dirty && !confirm('You have unsaved changes. Hand out the saved version anyway?')) return;
-  if (!_chars.length) { alert('No player characters in this campaign.'); return; }
+  if (_dirty && !await hoConfirm('You have unsaved changes. Hand out the saved version anyway?',
+      { okLabel: 'Hand out saved version', title: 'Unsaved changes' })) return;
+  if (!_chars.length) { await hoAlert('No player characters in this campaign.', 'Nobody to hand it to'); return; }
 
   const picked = await pickCharacters();
   if (!picked) return;
   const res = await fetch(`/api/handouts/${encodeURIComponent(_selId)}/hand-out`, {
     method: 'POST', headers: H(), body: JSON.stringify({ charIds: picked }),
   });
-  if (!res.ok) { alert('Could not hand it out.'); return; }
+  if (!res.ok) { await hoAlert('Could not hand it out.'); return; }
   const updated = await res.json();
   _handouts = _handouts.map(h => h.id === updated.id ? updated : h);
   renderList(); renderDetail(updated);
 }
 
-/** Minimal picker: a prompt listing the party, blank means everyone. */
+/**
+ * Pick the recipients: a tick list of the party, with All / None.
+ *
+ * Resolves an array of character ids, or null if cancelled. Characters who
+ * already hold this handout are shown ticked-out rather than hidden, so the DM
+ * can see the whole party and who is already covered.
+ */
 function pickCharacters() {
-  const list = _chars.map((c, i) => `${i + 1}. ${c.name}`).join('\n');
-  const answer = prompt(
-    `Hand out to which characters?\n\n${list}\n\n`
-    + 'Enter numbers separated by commas, or leave blank for everyone.', '');
-  if (answer === null) return Promise.resolve(null);
-  const trimmed = answer.trim();
-  if (!trimmed) return Promise.resolve(_chars.map(c => c.id));
-  const ids = trimmed.split(',')
-    .map(s => parseInt(s.trim()))
-    .filter(n => Number.isInteger(n) && n >= 1 && n <= _chars.length)
-    .map(n => _chars[n - 1].id);
-  if (!ids.length) { alert('No valid selection.'); return Promise.resolve(null); }
-  return Promise.resolve([...new Set(ids)]);
+  const held = new Set(((_handouts.find(h => h.id === _selId) || {}).recipients || []).map(r => r.charId));
+  const rows = _chars.map(c => {
+    const has = held.has(c.id);
+    return `<label class="dlg-char${has ? ' has' : ''}">`
+      + `<input type="checkbox" value="${esc(c.id)}"${has ? ' disabled' : ''}>`
+      + `<span>${esc(c.name)}</span>`
+      + (has ? '<span class="dlg-char-has">already has it</span>' : '')
+      + `</label>`;
+  }).join('');
+
+  return _dlg({
+    cancelValue: null,
+    html: `<div class="dlg-hdr">Hand out to</div>`
+      + `<div class="dlg-body">`
+      +   `<div class="dlg-lbl">Characters`
+      +     `<span class="dlg-bulk">`
+      +       `<button class="btn sm dlg-all" type="button">All</button>`
+      +       `<button class="btn sm dlg-none" type="button">None</button>`
+      +     `</span>`
+      +   `</div>`
+      +   `<div class="dlg-chars">${rows}</div>`
+      +   `<div class="dlg-err"></div>`
+      + `</div>`
+      + `<div class="dlg-ft">`
+      +   `<button class="btn dlg-no">Cancel</button>`
+      +   `<button class="btn primary dlg-go">Hand Out</button>`
+      + `</div>`,
+    wire: (box, done) => {
+      const boxes = () => [...box.querySelectorAll('.dlg-chars input:not(:disabled)')];
+      box.querySelector('.dlg-all').addEventListener('click', () => boxes().forEach(b => { b.checked = true; }));
+      box.querySelector('.dlg-none').addEventListener('click', () => boxes().forEach(b => { b.checked = false; }));
+      box.querySelector('.dlg-no').addEventListener('click', () => done(null));
+      box.querySelector('.dlg-go').addEventListener('click', () => {
+        const ids = boxes().filter(b => b.checked).map(b => b.value);
+        if (!ids.length) { box.querySelector('.dlg-err').textContent = 'Tick at least one character.'; return; }
+        done(ids);
+      });
+    },
+  });
 }
 
 async function tag(charId, outcome) {
@@ -403,7 +441,9 @@ async function applySuggested() {
 }
 
 async function recallOne(charId) {
-  if (!_selId || !confirm(`Take this handout back from ${charName(charId)}?`)) return;
+  if (!_selId) return;
+  if (!await hoConfirm(`Take this handout back from ${charName(charId)}?`,
+      { okLabel: 'Take it back', danger: true, title: 'Recall handout' })) return;
   const res = await fetch(`/api/handouts/${encodeURIComponent(_selId)}/recall`, {
     method: 'POST', headers: H(), body: JSON.stringify({ charId }),
   });
@@ -414,7 +454,9 @@ async function recallOne(charId) {
 }
 
 async function recallAll() {
-  if (!_selId || !confirm('Take this handout back from everyone?')) return;
+  if (!_selId) return;
+  if (!await hoConfirm('Take this handout back from everyone?',
+      { okLabel: 'Take it back', danger: true, title: 'Recall from everyone' })) return;
   const res = await fetch(`/api/handouts/${encodeURIComponent(_selId)}/recall`, {
     method: 'POST', headers: H(), body: JSON.stringify({}),
   });
@@ -422,6 +464,124 @@ async function recallAll() {
   const updated = await res.json();
   _handouts = _handouts.map(h => h.id === updated.id ? updated : h);
   renderList(); renderDetail(updated);
+}
+
+// ── Dialogs ───────────────────────────────────────────────────────────────────
+// In-page replacements for confirm() / prompt() / alert().
+//
+// The desktop client is Electron, which does NOT implement prompt(): it returns
+// undefined rather than a string or null, so `answer === null` was false and the
+// very next `answer.trim()` threw. "New Handout" and "Hand Out" therefore did
+// nothing at all there, with the error only visible in a console nobody opens.
+// confirm() and alert() do work in Electron, but they are replaced too so the
+// page has one look and one behaviour everywhere.
+
+let _dlgClose = null;   // resolver for the dialog currently on screen
+
+/**
+ * Put a dialog on screen and resolve with whatever it passes back.
+ *
+ * `html` is the box's content; `wire(box, done)` attaches its handlers and gets
+ * the real element, so nothing has to go looking for it in the document. Escape
+ * and a backdrop click both resolve with `cancelValue`, so a dialog can never be
+ * left stuck open with no way out.
+ */
+function _dlg({ html, wire, cancelValue = null }) {
+  return new Promise(resolve => {
+    if (_dlgClose) _dlgClose();          // never stack two dialogs
+
+    const back = document.createElement('div');
+    back.className = 'dlg-back';
+    const box = document.createElement('div');
+    box.className = 'dlg-box';
+    box.innerHTML = html;
+    back.appendChild(box);
+
+    function close() {
+      document.removeEventListener('keydown', onKey, true);
+      back.remove();
+      _dlgClose = null;
+    }
+    function done(value) {
+      if (_dlgClose !== close) return;   // already closed
+      close();
+      resolve(value);
+    }
+    function onKey(e) {
+      if (e.key === 'Escape') { e.preventDefault(); done(cancelValue); }
+    }
+
+    back.addEventListener('mousedown', e => { if (e.target === back) done(cancelValue); });
+    document.addEventListener('keydown', onKey, true);
+    document.body.appendChild(back);
+    _dlgClose = close;
+
+    if (wire) wire(box, done);
+    // Give the first field (or the confirming button) the keyboard.
+    const focusMe = box.querySelector('.dlg-input, .dlg-go');
+    if (focusMe) { focusMe.focus(); if (focusMe.select) focusMe.select(); }
+  });
+}
+
+/** Replaces confirm(). Resolves true / false. */
+function hoConfirm(message, { okLabel = 'OK', danger = false, title = 'Confirm' } = {}) {
+  return _dlg({
+    cancelValue: false,
+    html: `<div class="dlg-hdr">${esc(title)}</div>`
+      + `<div class="dlg-body">${esc(message)}</div>`
+      + `<div class="dlg-ft">`
+      +   `<button class="btn dlg-no">Cancel</button>`
+      +   `<button class="btn ${danger ? 'danger' : 'primary'} dlg-go">${esc(okLabel)}</button>`
+      + `</div>`,
+    wire: (box, done) => {
+      box.querySelector('.dlg-go').addEventListener('click', () => done(true));
+      box.querySelector('.dlg-no').addEventListener('click', () => done(false));
+    },
+  });
+}
+
+/** Replaces alert(). Resolves once dismissed. */
+function hoAlert(message, title = 'Something went wrong') {
+  return _dlg({
+    cancelValue: true,
+    html: `<div class="dlg-hdr">${esc(title)}</div>`
+      + `<div class="dlg-body">${esc(message)}</div>`
+      + `<div class="dlg-ft"><button class="btn primary dlg-go">OK</button></div>`,
+    wire: (box, done) => {
+      box.querySelector('.dlg-go').addEventListener('click', () => done(true));
+    },
+  });
+}
+
+/** Replaces prompt(). Resolves the trimmed string, or null if cancelled. */
+function hoPrompt(title, { label = '', value = '', placeholder = '', okLabel = 'Create', required = true } = {}) {
+  return _dlg({
+    cancelValue: null,
+    html: `<div class="dlg-hdr">${esc(title)}</div>`
+      + `<div class="dlg-body">`
+      +   (label ? `<label class="dlg-lbl" for="dlg-text">${esc(label)}</label>` : '')
+      +   `<input id="dlg-text" class="dlg-input" type="text" value="${esc(value)}" placeholder="${esc(placeholder)}">`
+      +   `<div class="dlg-err"></div>`
+      + `</div>`
+      + `<div class="dlg-ft">`
+      +   `<button class="btn dlg-no">Cancel</button>`
+      +   `<button class="btn primary dlg-go">${esc(okLabel)}</button>`
+      + `</div>`,
+    wire: (box, done) => {
+      const input = box.querySelector('.dlg-input');
+      const err   = box.querySelector('.dlg-err');
+      const submit = () => {
+        const v = (input.value || '').trim();
+        if (required && !v) { err.textContent = 'Enter a value first.'; input.focus(); return; }
+        done(v);
+      };
+      box.querySelector('.dlg-go').addEventListener('click', submit);
+      box.querySelector('.dlg-no').addEventListener('click', () => done(null));
+      input.addEventListener('keydown', e => {
+        if (e.key === 'Enter') { e.preventDefault(); submit(); }
+      });
+    },
+  });
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────

@@ -122,7 +122,6 @@ html.lamplit .tab:hover{color:var(--bone)}
 html.lamplit .tab.active{color:var(--bone);border-bottom-color:var(--arc);border-bottom-width:2px}
 .page{display:none}.page.active{display:block}
 .card{background:var(--slate);border:1px solid var(--rule);border-top-color:var(--rule-hi);border-radius:var(--r-md);overflow:hidden;margin-bottom:var(--s3);box-shadow:inset 0 1px 0 var(--lift), var(--cast)}
-.ct{background:none;color:var(--bone);font-family:var(--display);font-variation-settings:'opsz' 24,'WONK' 1;font-weight:600;text-align:left;padding:var(--s3) var(--s3) var(--s2);font-size:var(--t-md);border-bottom:1px solid var(--rule)}
 .cb{padding:var(--s3)}
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
@@ -225,7 +224,7 @@ a.char-btn{display:inline-block;text-decoration:none;line-height:1.5}
    the button row stay put while only the body scrolls — a long description used
    to stretch the box past the screen and carry the buttons off with it. */
 .modal-overlay{position:fixed;inset:0;background:var(--scrim);display:flex;align-items:center;justify-content:center;z-index:1000;padding:16px;overflow-y:auto}
-.modal-box{background:var(--slate);border:1px solid var(--bone);border-radius:6px;overflow:hidden;min-width:min(300px,100%);max-width:380px;width:90%;
+.modal-box{overflow:hidden;min-width:min(300px,100%);max-width:380px;width:90%;
            max-height:calc(100vh - 32px);display:flex;flex-direction:column}
 .modal-box>.ct{flex:0 0 auto}
 .modal-body{padding:14px 16px 6px;overflow-y:auto;overscroll-behavior:contain;flex:1 1 auto;min-height:0}

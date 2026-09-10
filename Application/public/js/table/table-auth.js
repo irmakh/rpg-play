@@ -62,24 +62,40 @@ function cancelDMUnlock() {}
 function submitDMPassword() {}
 function exitDM() { logout(); }
 
-function openSettingsModal() { openDMToolsModal(); }
-function closeSettingsModal() { closeDMToolsModal(); }
+/**
+ * Point a panel toggle at what pressing it will do.
+ *
+ * The chevron always points the way the panel will move: the left panel's
+ * button shows ◀ while the panel is open (press to fold it away) and ▶ once it
+ * is hidden (press to bring it back); the right panel is the mirror. Both
+ * buttons kept swapping their stroke chevron for a bare "◀" text character and
+ * the solid #i-play triangle, which sat differently in the toolbar and did not
+ * take currentColor - a leftover from the emoji-to-icon pass.
+ */
+function _setPanelToggleIcon(btn, { open, side }) {
+  if (!btn) return;
+  // Point the chevron the way the panel will move when pressed.
+  const name = (side === 'left') === open ? 'chevron-left' : 'chevron-right';
+  btn.innerHTML = typeof icon === 'function'
+    ? icon(name)
+    : `<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-${name}"></use></svg>`;
+  btn.title = `${open ? 'Hide' : 'Show'} ${side} panel`;
+  btn.setAttribute('aria-expanded', String(open));
+}
 
 function toggleLeftPanel() {
   const panel = document.getElementById('left-panel');
-  const btn = document.getElementById('btn-leftpanel-toggle');
   if (!panel) return;
-  const hidden = panel.style.display === 'none';
-  panel.style.display = hidden ? '' : 'none';
-  if (btn) btn.innerHTML = hidden ? '◀' : '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-play"></use></svg>';
+  const open = panel.style.display === 'none';   // was hidden, so this opens it
+  panel.style.display = open ? '' : 'none';
+  _setPanelToggleIcon(document.getElementById('btn-leftpanel-toggle'), { open, side: 'left' });
 }
 function toggleSidePanel() {
   const panel = document.getElementById('side-panel');
-  const btn = document.getElementById('btn-sidepanel-toggle');
   if (!panel) return;
-  const hidden = panel.style.display === 'none';
-  panel.style.display = hidden ? '' : 'none';
-  if (btn) btn.innerHTML = hidden ? '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-play"></use></svg>' : '◀';
+  const open = panel.style.display === 'none';
+  panel.style.display = open ? '' : 'none';
+  _setPanelToggleIcon(document.getElementById('btn-sidepanel-toggle'), { open, side: 'right' });
   if (typeof updateZoomFloat === 'function') updateZoomFloat();
 }
 
@@ -94,9 +110,6 @@ function applyDMControls() {
     if (userBadge) userBadge.style.display = 'none';
     dmControls.forEach(el => el.style.display = 'contents');
     updateInitiativeButton();
-    loadPrepMaps();
-    renderFogPanel();
-    renderItemsPanel();
   } else {
     if (dmBadge) dmBadge.style.display = 'none';
     if (dmUnlock) dmUnlock.style.display = 'none';
@@ -106,7 +119,6 @@ function applyDMControls() {
       userBadge.style.display = '';
     }
     dmControls.forEach(el => el.style.display = 'none');
-    renderFogPanel();
   }
   // A player can always reach their own sheet, token on the map or not.
   const mySheetBtn = document.getElementById('btn-my-sheet');

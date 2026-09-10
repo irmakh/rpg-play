@@ -10,7 +10,7 @@ function startSSE() {
           fetchAll(); break;
         case 'token-added':
           if (!tokens.find(t => t.id === d.token.id)) tokens.push(d.token);
-          renderTokens(); renderHpTable(); break;
+          renderTokens(); break;
         case 'token-moved': {
           // Record the pre-move position for Undo so any client can revert a move
           // another player just made. Skip our own echo (local pos already == new).
@@ -19,14 +19,14 @@ function startSSE() {
             recordTokenMove(d.id, prev.x || 0, prev.y || 0, prev.movedFt || 0);
           }
           patchToken(d.id, { x: d.x, y: d.y, movedFt: d.movedFt });
-          renderTokens(); renderSidePanel(); renderHpTable(); break;
+          renderTokens(); break;
         }
         case 'token-updated': {
           const prevU = tokens.find(t => t.id === d.token.id);
           if (prevU && (prevU.x !== d.token.x || prevU.y !== d.token.y)) {
             recordTokenMove(d.token.id, prevU.x || 0, prevU.y || 0, prevU.movedFt || 0);
           }
-          replaceToken(d.token); renderTokens(); renderSidePanel(); renderHpTable();
+          replaceToken(d.token); renderTokens();
           // Initiative HP bars read token HP first — keep them live on any token change.
           renderInitiativeTracker();
           if (selectedTokenId === d.token.id) updateHpPanel(d.token);
@@ -41,16 +41,16 @@ function startSSE() {
           if (dragState?.tokenId === d.id) {
             dragState = null; oCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
           }
-          if (selectedTokenId === d.id) { selectedTokenId = null; closeHpPanel(); renderSidePanel(); }
+          if (selectedTokenId === d.id) { selectedTokenId = null; closeHpPanel(); }
           tokens = tokens.filter(t => t.id !== d.id);
           if (lastTokenMove?.tokenId === d.id) { lastTokenMove = null; }
           updateUndoButton();
-          renderTokens(); renderHpTable(); break;
+          renderTokens(); break;
         case 'tokens-cleared':
           if (_dragPendingTimer) { clearTimeout(_dragPendingTimer); _dragPendingTimer = null; }
           dragState = null; oCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
-          selectedTokenId = null; closeHpPanel(); renderSidePanel();
-          tokens = []; lastTokenMove = null; updateUndoButton(); renderTokens(); renderHpTable(); break;
+          selectedTokenId = null; closeHpPanel();
+          tokens = []; lastTokenMove = null; updateUndoButton(); renderTokens(); break;
         case 'fog-updated':
           applyFogRegions(d.fogRegions); break;
         case 'items-updated':
@@ -82,8 +82,6 @@ function startSSE() {
       renderInitiativeTracker();
       updateInitiativeButton();
       renderTokens();
-      renderSidePanel();
-      renderHpTable();
       loadSideQroll();
       // Ping the newly active token's map position
       const activeTokId = getActiveTurnTokenId();
@@ -94,11 +92,18 @@ function startSSE() {
       if (d.action !== 'updated') return;
       // Reload side panel data if the changed character is linked to the token
       // currently shown in the panel (selected/viewed) or the active-turn token.
-      const sideTok   = _sideQrollTokenId ? tokens.find(t => t.id === _sideQrollTokenId) : null;
-      const activeTok = tokens.find(t => t.id === getActiveTurnTokenId());
-      if (sideTok?.linkedId === d.id || activeTok?.linkedId === d.id) {
-        _sideQrollTokenId = null;
-        loadSideQroll();
+      // The tokenless "my sheet" view is keyed by SIDE_SELF, not a token id, so
+      // it is invisible to the token lookup below and used to sit stale forever
+      // - wearing an item changed AC on the server and nothing on screen.
+      if (_sideQrollTokenId === SIDE_SELF) {
+        if (d.id === _sideCharId) loadOwnCharacterSheet();
+      } else {
+        const sideTok   = _sideQrollTokenId ? tokens.find(t => t.id === _sideQrollTokenId) : null;
+        const activeTok = tokens.find(t => t.id === getActiveTurnTokenId());
+        if (sideTok?.linkedId === d.id || activeTok?.linkedId === d.id) {
+          _sideQrollTokenId = null;
+          loadSideQroll();
+        }
       }
       // If the changed character is in initiative, re-fetch its HP/AC so the
       // tracker reflects sheet edits live (AC comes from this cache, not the token).
@@ -258,8 +263,6 @@ async function fetchAll() {
     renderItems();
     renderDrawings();
     renderTokens();
-    renderSidePanel();
-    renderHpTable();
   } catch (err) { console.error(err); }
 }
 

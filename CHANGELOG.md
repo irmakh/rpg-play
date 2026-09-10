@@ -21,6 +21,103 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [215] — 2026-09-10 — One modal style everywhere, DM logout, stacked map layers
+
+**Modal chrome is now defined once, in `base.css`**
+- `.ct` — the modal title — had drifted into three different looks: the display-font
+  header on dm/index, a near-white `--bone` bar with dark centred 11px system-font text
+  on loot/merchant/monsters/treasury, and a `--slate-hi` bar that still carried `--ink`
+  text on the table screen, which was dark navy on dark navy and barely legible.
+- Modal borders had drifted the same way: a 1px `--bone` hairline (near-white) ringing
+  a dark panel on six stylesheets and seven inline styles, against `--rule-hi`
+  elsewhere. `--rule-hi` is the token that means "the edge of something raised", so
+  that is what a modal gets. The map context menu had its own hardcoded blue
+  `rgba(140,158,255,.4)` border; it uses the token now too. One inline border pointed
+  at `--bdr`, which is not a defined token at all — that declaration was being dropped
+  entirely by the browser.
+- Page stylesheets now set only a modal's *size*; colour and type come from `base.css`.
+  Ad-hoc header classes (`.modal-hdr`, `.dlg-hdr`, `.ho-mo-hdr`, `.cal-modal-title`)
+  are styled alongside `.ct`, so a dialog written on any page starts out matching.
+  `.ct-row` adds the flex row for headers carrying a close button; `.lt-modal-title` is
+  for a title inside an already-padded box, which must not grow its own bar.
+
+**DM panel — Logout**
+- The DM panel had no way out; the button now sits beside Refresh and clears every key
+  a session is rebuilt from (`rpgSession`, `dmMasterPw`, `tableMasterPw` — the
+  auto-auth block reads the first and falls back to the second, so leaving either
+  behind would have unlocked the gate again on the next load), then returns to the
+  campaign picker.
+
+**Table — overlapping fog regions and hidden items**
+- Clicking the map as DM stopped at the *first* fog region it hit and never looked at
+  hidden items once one matched, so anything underneath was unreachable. Overlap is the
+  normal case — a chest inside a fogged room, nested regions, a door on a region
+  boundary — and on a real map three layers on one cell is common.
+- Every layer under the cursor is now listed, each with its own reveal/hide switch,
+  ordered by what is painted on top (the items canvas sits above the fog canvas, and
+  within each, later entries draw over earlier ones). A single layer keeps exactly the
+  menu it had; only a genuine stack gets the count heading and dividers, and a tall
+  stack scrolls rather than running off the screen.
+
+## [214] — 2026-09-10 — My sheet fixes, Map & Tokens retired, handout dialogs
+
+Seven fixes reported after the lamplit redesign went live.
+
+*(There is no 213. It was bumped mid-session and never deployed anywhere; the work
+went out as 214 instead, so no user ever ran a 213.)*
+
+**Table — "My sheet"**
+- The button was crushed into the icon rail's fixed 38px square, so its label wrapped
+  to two lines and the button stood 49px tall against its 32px neighbours. The rail
+  now uses `min-width`, so labelled buttons (My sheet, Move, Undo, Multi) size to
+  their text.
+- Opening the sheet during combat used to close it again a moment later: it clears the
+  selected token, and every real-time tick (initiative, active-token HP, character
+  updates) then fell through to the active-turn token and took the panel over. A
+  deliberately opened own-sheet is now only replaced by a deliberate pick — a token
+  click or an initiative row.
+- The sheet showed no HP, AC or Speed at all — the stats row was hidden wholesale
+  because it is normally filled from a token. It is now filled from the character
+  instead (`qroll` returns `hpcur`/`hpmax`/`hptemp`/`speed`); only the parts that
+  genuinely need a token — conditions, damage/heal — stay hidden.
+- Wearing or removing an item did not update anything. The save fired and its result
+  was thrown away, so AC, speed, initiative and the item-derived saves/skills kept
+  their old values, and the real-time refresh could not see the tokenless sheet at
+  all. The sheet is now refetched after each change, and a save that fails says so
+  instead of leaving the tick showing a change the server refused.
+
+**Table — Map & Tokens modal removed**
+- The toolbar's map button and its modal are gone. Fog regions and hidden items are
+  reachable by clicking them on the map, loading a prepared map lives on the
+  prepare-map screen and the console, and the active turn and party HP are in the
+  initiative tracker.
+- **Clear All Tokens** moved into the Add Token modal, set apart on the left.
+- The movement-remaining readout went with the modal; the movement limit itself still
+  applies when dragging a token.
+
+**Table — DM can see the players' screen**
+- While the table is parked, the DM's banner has a new **See their screen** button
+  beside "Bring them back", which drops the waiting screen over their own map so they
+  can check the image and caption, and switches back with **Back to map**. It is local
+  to that browser: nothing is sent to the server, so what the players are looking at
+  does not change while the DM checks it, and "Bring them back" stays reachable
+  throughout.
+
+**Table — panel toggle icons**
+- The two top-bar panel toggles swapped their stroke chevron for a bare `◀` text
+  character and the solid play triangle when pressed — a leftover from the
+  emoji-to-icon pass, which sat differently in the toolbar and ignored `currentColor`.
+  Both now stay in the chevron family and point the way the panel will move, and carry
+  `aria-expanded` plus a title saying what pressing them does.
+
+**Handouts — real dialogs instead of browser ones**
+- "New Handout" and "Hand Out" did nothing on the desktop client. Electron does not
+  implement `prompt()` — it returns `undefined`, which the code then called `.trim()`
+  on, throwing before anything happened.
+- Every browser dialog on the page is now an in-page modal matching the table screen,
+  and the character picker is a tick list with All / None instead of typing numbers
+  into a prompt. Characters who already hold the handout are shown, marked.
+
 ## [212] — 2026-09-10 — The lamplit redesign
 
 A full visual and interaction pass over the whole app, developed on `redesign/lamplit`

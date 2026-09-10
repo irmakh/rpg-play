@@ -263,6 +263,95 @@ html.lamplit .lt-ring-notches{
   pointer-events:none;
 }
 
+/* ── Modal chrome ────────────────────────────────────────────────────────────
+   ONE definition of what a dialog looks like, for every page.
+
+   `.ct` (the modal title bar) had drifted into five different looks: the
+   display-font header below, a near-white --bone bar with dark centred 11px
+   text on loot/merchant/monsters/treasury, and a --slate-hi bar that still
+   carried --ink text on the table screen - dark navy on dark navy, which was
+   barely legible. The container border had drifted the same way: a 1px
+   --bone hairline (near-white, #E6EDF7) ringing a dark panel on six pages,
+   against --rule-hi everywhere else. --rule-hi is the token that means "the
+   edge of something raised", so that is what a modal gets.
+
+   The ad-hoc header classes are listed alongside .ct rather than restyled
+   one by one, so a dialog written on any page starts out matching.
+
+   These live in base.css because every page links it, and they beat a plain
+   page-level `.ct` on specificity (0,2,1 vs 0,1,0). Page stylesheets should
+   only set a modal's SIZE from here on, never its colour or type. */
+html.lamplit .modal-box,
+html.lamplit .lt-modal-box{
+  background:var(--slate);
+  border:1px solid var(--rule-hi);
+  border-radius:var(--r-md);
+}
+
+/* The type treatment: what a modal title reads like, wherever it sits. */
+html.lamplit .ct,
+html.lamplit .modal-hdr,
+html.lamplit .dlg-hdr,
+html.lamplit .ho-mo-hdr,
+html.lamplit .cal-modal-title,
+html.lamplit .lt-modal-title,
+html.lamplit .lt-modal-hdr{
+  background:none;
+  color:var(--bone);
+  font-family:var(--display);
+  font-variation-settings:'opsz' 24,'WONK' 1;
+  font-weight:600;
+  font-size:var(--t-md);
+  line-height:1.2;
+  text-align:left;
+}
+
+/* The bar treatment, kept separate because not every title is a bar:
+   .cal-modal-title is a heading INSIDE an already-padded box, so it takes the
+   type above but must not grow its own padding and rule. */
+html.lamplit .ct,
+html.lamplit .modal-hdr,
+html.lamplit .dlg-hdr,
+html.lamplit .ho-mo-hdr,
+html.lamplit .lt-modal-hdr{
+  padding:var(--s3) var(--s3) var(--s2);
+  border-bottom:1px solid var(--rule);
+}
+html.lamplit .cal-modal-title,
+html.lamplit .lt-modal-title{margin:0 0 var(--s4)}
+
+/* A title bar that also carries controls - a close button, a "Manage" link.
+   Add alongside .ct; on its own .ct stays a plain title, which is what the
+   character sheet's and DM screen's modals want. */
+html.lamplit .ct.ct-row{
+  display:flex;
+  align-items:center;
+  gap:var(--s2);
+  justify-content:space-between;
+}
+
+/* Headers that carry a close button (or any trailing control) lay their
+   contents out in a row; the ones that are just a title are unaffected. */
+html.lamplit .modal-hdr,
+html.lamplit .dlg-hdr,
+html.lamplit .ho-mo-hdr{
+  display:flex;
+  align-items:center;
+  gap:var(--s2);
+}
+html.lamplit .modal-hdr,
+html.lamplit .ho-mo-hdr{justify-content:space-between}
+/* The heading inside such a header is the header - it must not re-declare
+   its own size, or it fights the rule above. */
+html.lamplit .modal-hdr h3,
+html.lamplit .ho-mo-hdr .ho-mo-title,
+html.lamplit .ct .lt-modal-title{
+  font:inherit;
+  color:inherit;
+  letter-spacing:inherit;
+  margin:0;
+}
+
 /* ── Motion: one orchestrated moment, and only when it answers an action. ── */
 @media (prefers-reduced-motion: reduce){
   html.lamplit *,

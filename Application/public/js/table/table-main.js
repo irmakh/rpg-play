@@ -1,13 +1,3 @@
-// ── DM Tools Modal ────────────────────────────────────────────────────────────
-function openDMToolsModal() {
-  const m = document.getElementById('dm-tools-modal');
-  if (m) { m.style.display = 'flex'; renderHpTable(); }
-}
-function closeDMToolsModal() {
-  const m = document.getElementById('dm-tools-modal');
-  if (m) m.style.display = 'none';
-}
-
 // ── Theme ─────────────────────────────────────────────────────────────────────
 // The classic HUD has been retired — the modern HUD is the only theme now.
 function initTheme() {
@@ -32,26 +22,6 @@ function _updateDiceAnimBtn(on) {
   if (!btn) return;
   btn.classList.toggle('on', on);
   btn.setAttribute('aria-checked', on ? 'true' : 'false');
-}
-
-// ── Side panel ────────────────────────────────────────────────────────────────
-function renderSidePanel() {
-  const activeTokId = getActiveTurnTokenId();
-  const activeTok = tokens.find(t => t.id === activeTokId);
-  const movEl = document.getElementById('movement-display');
-  const infoEl = document.getElementById('active-token-info');
-  if (!initData.currentId) {
-    if (movEl) movEl.textContent = '∞ (free)';
-    const selTok = selectedTokenId ? tokens.find(t => t.id === selectedTokenId) : null;
-    if (infoEl) infoEl.innerHTML = selTok ? `<strong>${esc(tokDisplayName(selTok))}</strong>` : 'No initiative';
-  } else if (activeTok) {
-    const remaining = (activeTok.speed || 30) - (activeTok.movedFt || 0);
-    if (movEl) movEl.textContent = `${remaining} / ${activeTok.speed || 30} ft`;
-    if (infoEl) infoEl.innerHTML = `<strong>${esc(tokDisplayName(activeTok))}</strong>`;
-  } else {
-    if (movEl) movEl.textContent = '— ft';
-    if (infoEl) infoEl.textContent = 'None';
-  }
 }
 
 // ── Zoom float position sync (call after panel resize or open/close) ──────────
@@ -166,7 +136,6 @@ function initModalBackdrops() {
     ['init-roll-modal',    closeInitRollModal],
   ];
   const PLAIN = [
-    ['dm-tools-modal',     closeDMToolsModal],
     ['monster-info-modal', closeMonsterInfoTableModal],
   ];
   for (const [id, fn] of GUARDED) {
@@ -187,7 +156,6 @@ function initDraggableModals() {
     const handle = box && (getHandle ? getHandle(box) : box.querySelector('.modal-drag-handle'));
     if (box && handle) makeDraggable(box, handle);
   }
-  setup('dm-tools-modal',     m => m.firstElementChild,            null);
   setup('dice-roller-modal',  m => m.firstElementChild,            null);
   setup('monster-info-modal', m => m.firstElementChild,            null);
   setup('music-modal',        m => m.firstElementChild,            null);
@@ -247,10 +215,8 @@ window.addEventListener('load', async () => {
   renderFog();
   renderItems();
   renderTokens();
-  renderHpTable();
   renderInitiativeTracker();
   updateInitiativeButton();
-  renderSidePanel();
   loadSideQroll();
 
   fetchDrawings();

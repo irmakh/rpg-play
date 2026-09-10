@@ -416,6 +416,21 @@ document.addEventListener('keydown', e => {
   }
 });
 
+/**
+ * Sign out of the DM panel.
+ *
+ * Clears every key a session is reconstructed from — the auto-auth block below
+ * reads rpgSession first and falls back to dmMasterPw, so leaving either behind
+ * would unlock the gate again on the next load — then goes to the campaign
+ * picker. Mirrors logout() on the table screen (js/table/table-auth.js).
+ */
+function logout() {
+  sessionStorage.removeItem('rpgSession');
+  sessionStorage.removeItem('dmMasterPw');
+  sessionStorage.removeItem('tableMasterPw');
+  location.replace('/');
+}
+
 // ── Auto-auth from stored session password ────────────────────────────────────
 (async function() {
   // Prefer the unified rpgSession (set by login.html)

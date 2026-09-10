@@ -177,24 +177,6 @@ function renderFog() {
 function applyFogRegions(regions) {
   fogRegions = Array.isArray(regions) ? regions : [];
   renderFog();
-  renderFogPanel();
-}
-
-function renderFogPanel() {
-  const panel = document.getElementById('fog-panel');
-  const list  = document.getElementById('fog-region-list');
-  if (!panel || !list) return;
-  const show = isDM() && fogRegions.length > 0;
-  panel.style.display = show ? '' : 'none';
-  if (!show) return;
-  list.innerHTML = fogRegions.map(r => `
-    <div style="display:flex;align-items:center;gap:6px;padding:3px 0;border-bottom:1px solid var(--rule);cursor:default"
-         onmouseenter="highlightMapRegion('${escJs(r.id)}')" onmouseleave="clearMapHighlight()">
-      <span style="flex:1;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:${r.visible ? 'var(--verdigris)' : 'var(--ash)'}">${esc(r.label || 'Region')}</span>
-      ${!r.visible
-        ? `<button class="btn sm" onclick="revealFogRegion('${escJs(r.id)}')">Reveal</button>`
-        : `<button class="btn sm" onclick="hideFogRegion('${escJs(r.id)}')" style="font-size:10px">Hide</button>`}
-    </div>`).join('');
 }
 
 async function revealFogRegion(regionId) {
@@ -254,34 +236,8 @@ function renderItems() {
 function applyHiddenItems(items) {
   hiddenItems = Array.isArray(items) ? items : [];
   renderItems();
-  renderItemsPanel();
 }
 
-function renderItemsPanel() {
-  const panel = document.getElementById('items-panel');
-  const list  = document.getElementById('items-list');
-  if (!panel || !list) return;
-  const show = isDM() && hiddenItems.length > 0;
-  panel.style.display = show ? '' : 'none';
-  if (!show) return;
-  list.innerHTML = hiddenItems.map(item => `
-    <div style="border:1px solid var(--rule-hi);border-radius:4px;margin-bottom:4px;overflow:hidden"
-         onmouseenter="highlightMapItem('${escJs(item.id)}')" onmouseleave="clearMapHighlight()">
-      <div style="display:flex;align-items:center;gap:6px;padding:4px 5px;cursor:pointer;user-select:none"
-           onclick="const b=this.parentElement.querySelector('.item-body');if(b){const open=b.style.display==='block';b.style.display=open?'none':'block';this.querySelector('span').textContent=open?'<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-play"></use></svg>':'<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-down"></use></svg>'}">
-        <span style="font-size:10px;color:var(--ash)"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-play"></use></svg></span>
-        <span style="font-size:13px">${ITEM_ICONS[item.type] || '?'}</span>
-        <span style="flex:1;font-size:11px;font-weight:bold;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:${item.visible ? 'var(--verdigris)' : 'var(--ash)'}">${esc(item.label || 'Item')}</span>
-        ${!item.visible
-          ? `<button class="btn sm" onclick="event.stopPropagation();revealItem('${escJs(item.id)}')">Reveal</button>`
-          : `<button class="btn sm" onclick="event.stopPropagation();hideItem('${escJs(item.id)}')" style="font-size:10px">Hide</button>`}
-      </div>
-      <div class="item-body" style="padding:4px 5px 5px;border-top:1px solid var(--rule)">
-        ${item.description ? `<div style="font-size:10px;color:var(--ash);white-space:pre-wrap">${esc(item.description)}</div>` : '<div style="font-size:10px;color:var(--rule-hi);font-style:italic">No description.</div>'}
-      </div>
-    </div>`).join('');
-  list.querySelectorAll('.item-body').forEach(b => { b.style.display = 'none'; });
-}
 
 async function revealItem(itemId) {
   try {
@@ -297,54 +253,6 @@ async function hideItem(itemId) {
   } catch { showToast('Connection error.', true); }
 }
 
-// ── Panel hover highlights ─────────────────────────────────────────────────────
-function _canHighlight() { return !dragState && !placementState && !rulerState; }
-
-function _drawHighlight(px, py, pw, ph, color) {
-  oCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
-  // fill
-  oCtx.fillStyle = color.replace(/[\d.]+\)$/, '0.35)');
-  oCtx.fillRect(px, py, pw, ph);
-  // outer glow stroke
-  oCtx.save();
-  oCtx.shadowColor = color;
-  oCtx.shadowBlur = 12;
-  oCtx.strokeStyle = color;
-  oCtx.lineWidth = 3;
-  oCtx.setLineDash([7, 4]);
-  oCtx.strokeRect(px + 1.5, py + 1.5, pw - 3, ph - 3);
-  oCtx.setLineDash([]);
-  oCtx.restore();
-  // crisp inner stroke (no glow)
-  oCtx.strokeStyle = color.replace(/[\d.]+\)$/, '0.6)');
-  oCtx.lineWidth = 1;
-  oCtx.strokeRect(px + 3, py + 3, pw - 6, ph - 6);
-}
-
-function highlightMapRegion(id) {
-  if (!_canHighlight()) return;
-  const r = fogRegions.find(x => x.id === id);
-  if (!r) return;
-  const cs = tableState.cellSize || 50;
-  const ox = tableState.offsetX || 0, oy = tableState.offsetY || 0;
-  _drawHighlight(ox + r.x * cs, oy + r.y * cs, r.w * cs, r.h * cs, 'rgba(140,158,255,1)');
-}
-
-function highlightMapItem(id) {
-  if (!_canHighlight()) return;
-  const item = hiddenItems.find(x => x.id === id);
-  if (!item) return;
-  const cs = tableState.cellSize || 50;
-  const ox = tableState.offsetX || 0, oy = tableState.offsetY || 0;
-  const color = item.visible ? 'rgba(0,220,100,1)' : 'rgba(220,60,60,1)';
-  _drawHighlight(ox + item.x * cs, oy + item.y * cs, (item.w || 1) * cs, (item.h || 1) * cs, color);
-}
-
-function clearMapHighlight() {
-  if (!_canHighlight()) return;
-  oCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
-}
-
 // ── Map context menu (click fog region / hidden item to reveal/hide) ──────────
 let _mapCtxMenu = null;
 
@@ -355,7 +263,11 @@ function _dismissMapCtxMenu() {
 function _showMapCtxMenu(cx, cy, html) {
   _dismissMapCtxMenu();
   const div = document.createElement('div');
-  div.style.cssText = 'position:fixed;z-index:9999;background:var(--slate);border:1px solid rgba(140,158,255,.4);border-radius:6px;padding:8px 10px;font-size:12px;color:var(--bone);box-shadow:0 4px 18px rgba(0,0,0,.75);min-width:155px;max-width:220px';
+  // Position is per-click, so it stays inline; everything else is in table.css
+  // (.mctx) so the menu uses the same border token as the rest of the app -
+  // this used to hardcode a blue rgba(140,158,255,.4) hairline of its own.
+  div.className = 'mctx';
+  div.style.cssText = 'position:fixed;z-index:9999';
   div.innerHTML = html;
   document.body.appendChild(div);
   _mapCtxMenu = div;
@@ -366,68 +278,87 @@ function _showMapCtxMenu(cx, cy, html) {
   setTimeout(() => document.addEventListener('pointerdown', dismiss, true), 10);
 }
 
+/** One fog region in the map menu: what it is, who can see it, and the switch. */
+function _mctxFogBody(r) {
+  return `<div class="mctx-kind">Fog Region</div>`
+    + `<div class="mctx-name">${esc(r.label || 'Region')}</div>`
+    + `<div class="mctx-state" style="color:${r.visible ? 'var(--verdigris)' : 'var(--ash)'}">`
+    +   (r.visible
+        ? '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-eye"></use></svg> Revealed to players'
+        : '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-eye-off"></use></svg> Hidden from players')
+    + `</div>`
+    + (r.visible
+      ? `<button class="btn sm mctx-go" onclick="_dismissMapCtxMenu();hideFogRegion('${escJs(r.id)}')"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-eye-off"></use></svg> Hide Region</button>`
+      : `<button class="btn sm mctx-go mctx-reveal" onclick="_dismissMapCtxMenu();revealFogRegion('${escJs(r.id)}')"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-eye"></use></svg> Reveal Region</button>`);
+}
+
+/** One hidden item in the map menu. */
+function _mctxItemBody(item) {
+  const ico = ITEM_ICONS[item.type] || '?';
+  return `<div class="mctx-kind">${ico} Hidden Item</div>`
+    + `<div class="mctx-name">${esc(item.label || 'Item')}</div>`
+    + (item.description ? `<div class="mctx-desc">${esc(item.description)}</div>` : '')
+    + `<div class="mctx-state" style="color:${item.visible ? 'var(--verdigris)' : 'var(--blood)'}">`
+    +   (item.visible
+        ? '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-eye"></use></svg> Revealed to players'
+        : '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-eye-off"></use></svg> Hidden from players')
+    + `</div>`
+    + (item.visible
+      ? `<button class="btn sm mctx-go" onclick="_dismissMapCtxMenu();hideItem('${escJs(item.id)}')"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-eye-off"></use></svg> Hide Item</button>`
+      : `<button class="btn sm mctx-go mctx-reveal" onclick="_dismissMapCtxMenu();revealItem('${escJs(item.id)}')"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-eye"></use></svg> Reveal Item</button>`);
+}
+
+/**
+ * Everything the DM can act on at one map cell, topmost first.
+ *
+ * Fog regions and hidden items overlap freely - a trapped chest inside a fogged
+ * room is the normal case, and regions are often nested. This used to return on
+ * the FIRST fog region it hit and never looked at items at all once one matched,
+ * so anything underneath was simply unreachable from the map. Every layer under
+ * the cursor is collected instead, and the menu lists them all.
+ *
+ * Order follows what is painted on top: the items canvas sits above the fog
+ * canvas (z-index 7 vs 5), and within each, later entries are drawn over
+ * earlier ones - so both lists are walked back to front.
+ */
+function _mapLayersAt(gx, gy) {
+  const layers = [];
+  for (let i = hiddenItems.length - 1; i >= 0; i--) {
+    const it = hiddenItems[i];
+    const iw = it.w || 1, ih = it.h || 1;
+    if (gx >= it.x && gx < it.x + iw && gy >= it.y && gy < it.y + ih) {
+      layers.push({ kind: 'item', body: () => _mctxItemBody(it) });
+    }
+  }
+  for (let i = fogRegions.length - 1; i >= 0; i--) {
+    const r = fogRegions[i];
+    if (gx >= r.x && gx < r.x + r.w && gy >= r.y && gy < r.y + r.h) {
+      layers.push({ kind: 'fog', body: () => _mctxFogBody(r) });
+    }
+  }
+  return layers;
+}
+
 canvasArea.addEventListener('click', e => {
   if (!isDM() || currentTool !== 'move') return;
   if (e.target.closest('.token')) return; // token click — handled separately
   const pos = getCanvasPos(e);
   const grid = canvasToGrid(pos.x, pos.y);
-  const gx = grid.x, gy = grid.y;
 
-  for (const r of fogRegions) {
-    if (gx >= r.x && gx < r.x + r.w && gy >= r.y && gy < r.y + r.h) {
-      _showMapCtxMenu(e.clientX, e.clientY,
-        `<div style="font-size:9px;color:rgba(140,158,255,.6);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Fog Region</div>`
-        + `<div style="font-weight:bold;margin-bottom:3px">${esc(r.label || 'Region')}</div>`
-        + `<div style="font-size:10px;margin-bottom:7px;color:${r.visible ? 'var(--verdigris)' : 'var(--ash)'}">${r.visible ? '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-eye"></use></svg> Revealed to players' : '🌫 Hidden from players'}</div>`
-        + (r.visible
-          ? `<button class="btn sm" onclick="_dismissMapCtxMenu();hideFogRegion('${escJs(r.id)}')" style="width:100%;font-size:11px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-eye-off"></use></svg> Hide Region</button>`
-          : `<button class="btn sm" onclick="_dismissMapCtxMenu();revealFogRegion('${escJs(r.id)}')" style="width:100%;font-size:11px;background:var(--verdigris);color:#000;border-color:var(--verdigris)"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-eye"></use></svg> Reveal Region</button>`)
-      );
-      return;
-    }
-  }
+  const layers = _mapLayersAt(grid.x, grid.y);
+  if (!layers.length) { _dismissMapCtxMenu(); return; }
 
-  for (const item of hiddenItems) {
-    const iw = item.w || 1, ih = item.h || 1;
-    if (gx >= item.x && gx < item.x + iw && gy >= item.y && gy < item.y + ih) {
-      const icon = ITEM_ICONS[item.type] || '?';
-      _showMapCtxMenu(e.clientX, e.clientY,
-        `<div style="font-size:9px;color:rgba(140,158,255,.6);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">${icon} Hidden Item</div>`
-        + `<div style="font-weight:bold;margin-bottom:3px">${esc(item.label || 'Item')}</div>`
-        + (item.description ? `<div style="font-size:10px;color:var(--ash);margin-bottom:5px;max-height:54px;overflow-y:auto;white-space:pre-wrap;word-break:break-word">${esc(item.description)}</div>` : '')
-        + `<div style="font-size:10px;margin-bottom:7px;color:${item.visible ? 'var(--verdigris)' : 'var(--blood)'}">${item.visible ? '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-eye"></use></svg> Revealed to players' : '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-circle"></use></svg> Hidden from players'}</div>`
-        + (item.visible
-          ? `<button class="btn sm" onclick="_dismissMapCtxMenu();hideItem('${escJs(item.id)}')" style="width:100%;font-size:11px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-eye-off"></use></svg> Hide Item</button>`
-          : `<button class="btn sm" onclick="_dismissMapCtxMenu();revealItem('${escJs(item.id)}')" style="width:100%;font-size:11px;background:var(--verdigris);color:#000;border-color:var(--verdigris)"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-eye"></use></svg> Reveal Item</button>`)
-      );
-      return;
-    }
-  }
+  // One layer keeps the plain single-subject menu it has always had; only a
+  // genuine stack gets the count and the dividers.
+  const html = layers.length === 1
+    ? layers[0].body()
+    : `<div class="mctx-count">${layers.length} layers here</div>`
+      + `<div class="mctx-stack">`
+      + layers.map(l => `<div class="mctx-layer">${l.body()}</div>`).join('')
+      + `</div>`;
 
-  _dismissMapCtxMenu();
+  _showMapCtxMenu(e.clientX, e.clientY, html);
 });
-
-// ── Prepared map selector ─────────────────────────────────────────────────────
-async function loadPrepMaps() {
-  try {
-    const res = await fetch('/api/prepared-maps');
-    if (!res.ok) return;
-    const maps = await res.json();
-    const sel = document.getElementById('prep-map-sel');
-    if (!sel) return;
-    sel.innerHTML = '<option value="">— Map —</option>'
-      + maps.map(m => `<option value="${esc(m.id)}">${esc(m.name)}</option>`).join('');
-  } catch {}
-}
-
-async function loadPrepMapToTable() {
-  const sel = document.getElementById('prep-map-sel');
-  if (!sel || !sel.value) { showToast('Select a map first.', true); return; }
-  try {
-    const res = await fetch(`/api/prepared-maps/${sel.value}/load-to-table`, { method: 'POST', headers: { 'X-Master-Password': masterPw } });
-    if (!res.ok) showToast('Failed to load map.', true);
-  } catch { showToast('Connection error.', true); }
-}
 
 // ── Token rendering ───────────────────────────────────────────────────────────
 function renderTokens() {
@@ -525,7 +456,6 @@ function selectToken(id) {
   _sideViewInitId = null; // clicking a token on the map clears initiative-row preview
   _sideQrollTokenId = null;
   renderTokens();
-  renderSidePanel();
   loadSideQroll();
 }
 
@@ -578,7 +508,6 @@ async function deleteSelectedToken() {
   // UI cleanup — immediate
   const id = selectedTokenId;
   selectedTokenId = null;
-  renderSidePanel();
   // Network — queued
   _tokQ.run(async () => {
     try {
@@ -618,7 +547,6 @@ function _selectTokenClick(tok, e) {
     closeHpPanel();
     renderTokens();
     renderBulkPanel();
-    renderHpTable();
   } else {
     // Normal click: clear bulk, single select
     if (bulkTokenIds.size > 0) {
@@ -672,7 +600,7 @@ function finishDrag(e) {
   const dist = Math.round(Math.sqrt(dx * dx + dy * dy) * 5); // Euclidean, like the ruler
   const optimisticMovedFt = freeMove ? origMovedFt : origMovedFt + dist;
   patchToken(tokenId, { x: grid.x, y: grid.y, movedFt: optimisticMovedFt });
-  renderGrid(); renderTokens(); renderSidePanel(); renderHpTable();
+  renderGrid(); renderTokens();
 
   // Network — queued
   _tokQ.run(async () => {
@@ -683,7 +611,7 @@ function finishDrag(e) {
       });
     } catch {
       patchToken(tokenId, { x: origX, y: origY, movedFt: origMovedFt });
-      renderGrid(); renderTokens(); renderSidePanel();
+      renderGrid(); renderTokens();
       showToast('Network error.', true);
     }
   });
@@ -721,7 +649,7 @@ function undoLastMove() {
   // itself isn't recorded (no undo-the-undo loop).
   _suppressUndoCapture = true;
   patchToken(tokenId, { x, y, movedFt });
-  renderGrid(); renderTokens(); renderSidePanel(); renderHpTable();
+  renderGrid(); renderTokens();
   _tokQ.run(async () => {
     try {
       await fetch(`/api/table/tokens/${tokenId}`, {
@@ -1302,7 +1230,6 @@ overlayCanvas.addEventListener('mouseup', e => {
         closeHpPanel();
         renderTokens();
         renderBulkPanel();
-        renderHpTable();
       }
     }
   } else if (currentTool === 'draw') {

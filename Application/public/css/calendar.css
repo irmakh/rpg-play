@@ -204,7 +204,7 @@
   max-height: 90vh;
   overflow-y: auto;
 }
-.cal-modal-title { font-size: 14px; font-weight: bold; color: var(--bone); margin-bottom: 16px; }
+
 .cal-form-row { margin-bottom: 11px; }
 .cal-form-row label { display: block; font-size: 10px; color: var(--bone);   margin-bottom: 4px; }
 .cal-form-row input,

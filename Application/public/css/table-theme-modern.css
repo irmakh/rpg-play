@@ -381,13 +381,6 @@ body[data-theme="modern"] .rp-num-input:focus { border-color: var(--arc); backgr
 body[data-theme="modern"] #hp-cur-display { font-size: 26px !important; line-height: 1 }
 body[data-theme="modern"] #hp-max-display { font-size: 16px !important }
 
-/* ── DM Tools modal ── */
-body[data-theme="modern"] #dm-tools-modal > div {
-  background: var(--slate);
-  border-color: var(--rule-hi);
-}
-body[data-theme="modern"] #dm-tools-modal .btn { border-radius: 6px }
-
 /* ── Right panel auto-hide: collapsed by default, expands when rp-open ── */
 body[data-theme="modern"] #side-panel {
   width: 0;
@@ -570,7 +563,6 @@ body[data-theme="modern"] #zoom-float button:hover {
 }
 
 /* ── Modal box backgrounds ── */
-body[data-theme="modern"] #dm-tools-modal > div,
 body[data-theme="modern"] #dice-roller-modal > div,
 body[data-theme="modern"] #music-modal > div,
 body[data-theme="modern"] #monster-info-modal > div,

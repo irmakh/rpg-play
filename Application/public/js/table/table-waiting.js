@@ -13,6 +13,7 @@
 // server/routes/table.js); this module is only the presentation of that.
 
 let _waitingActive = null;   // the active screen record, or null
+let _dmPreview = false;      // DM is looking at the players' screen instead of the map
 
 function isWaitingScreenActive() { return !!_waitingActive; }
 
@@ -34,6 +35,11 @@ async function initWaitingScreen() {
 function applyWaitingScreen(ws, opts = {}) {
   const was = _waitingActive;
   _waitingActive = ws || null;
+
+  // Nothing is being shown, so there is nothing to preview. Without this the
+  // flag would survive to the next time the table is parked and drop the DM
+  // straight onto the image instead of their map.
+  if (!_waitingActive) _dmPreview = false;
 
   if (_waitingActive) _renderWaitingOverlay(_waitingActive);
   else _removeWaitingOverlay();
@@ -60,7 +66,9 @@ function applyWaitingScreen(ws, opts = {}) {
 // playing and its track name, seek bar and volume slider reachable — which is
 // what players most want during a break.
 function _renderWaitingOverlay(ws) {
-  if (isDM()) { _removeWaitingOverlay(); return; }   // the DM keeps working
+  // The DM keeps working on the map — unless they have asked to look at what the
+  // players are looking at, which is the same overlay over their own map.
+  if (isDM() && !_dmPreview) { _removeWaitingOverlay(); return; }
 
   const wrap = document.getElementById('table-wrap');
   if (!wrap) return;
@@ -87,7 +95,11 @@ function _renderWaitingOverlay(ws) {
     cap.style.display = text ? '' : 'none';
   }
 
-  _openCharacterPanel();
+  // A DM previewing has no character of their own, and forcing the panel open
+  // would grab whichever token happens to be first (isMyToken is true for all of
+  // them when you are the DM) and yank the sheet away from whatever they were
+  // looking at. They are checking the image, not standing in for a player.
+  if (!isDM()) _openCharacterPanel();
 }
 
 /**
@@ -157,6 +169,7 @@ function _renderDmBanner() {
   if (bar) {
     const label = bar.querySelector('.wdb-name');
     if (label) label.textContent = _waitingActive.name || 'Waiting screen';
+    _syncPreviewButton(bar);
     return;
   }
   const wrap = document.getElementById('table-wrap');
@@ -167,8 +180,40 @@ function _renderDmBanner() {
     '<span class="wdb-dot"></span>' +
     '<span>Players are on <b class="wdb-name">' + esc(_waitingActive.name || 'Waiting screen') + '</b>' +
     ' — they cannot see the map</span>' +
+    '<button class="btn sm wdb-preview" onclick="toggleWaitingPreview()"></button>' +
     '<button class="btn sm" onclick="closeWaitingScreen()">Bring them back</button>';
   wrap.appendChild(el);
+  _syncPreviewButton(el);
+}
+
+/** Label the preview button for what pressing it will show. */
+function _syncPreviewButton(bar) {
+  const btn = bar.querySelector('.wdb-preview');
+  if (!btn) return;
+  const ico = n => (typeof icon === 'function' ? icon(n)
+    : `<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-${n}"></use></svg>`);
+  btn.innerHTML = _dmPreview ? ico('map') + ' Back to map' : ico('eye') + ' See their screen';
+  btn.title = _dmPreview
+    ? 'Return to the map — the players stay on the waiting screen'
+    : 'Show the waiting screen over your own map, exactly as the players see it';
+  btn.setAttribute('aria-pressed', String(_dmPreview));
+}
+
+/**
+ * Look at the players' screen, and back.
+ *
+ * Purely local to this DM's browser: nothing is sent to the server and no
+ * broadcast goes out, so what the players are looking at does not change while
+ * the DM checks it. "Bring them back" stays reachable throughout — the banner
+ * sits above the overlay (z-index 65 vs 60 in table.css).
+ */
+function toggleWaitingPreview() {
+  if (!isDM() || !_waitingActive) return;
+  _dmPreview = !_dmPreview;
+  if (_dmPreview) _renderWaitingOverlay(_waitingActive);
+  else _removeWaitingOverlay();
+  const bar = document.getElementById('waiting-dm-banner');
+  if (bar) _syncPreviewButton(bar);
 }
 
 // ── DM controls ───────────────────────────────────────────────────────────────

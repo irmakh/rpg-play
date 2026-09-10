@@ -127,8 +127,7 @@ input:focus,select:focus{outline:none;border-color:var(--arc)}
 
 /* ── Modal ── */
 .modal-overlay{position:fixed;inset:0;background:var(--scrim);display:flex;align-items:center;justify-content:center;z-index:200}
-.modal-box{background:var(--slate);border:1px solid var(--rule-hi);border-radius:6px;overflow:hidden;max-width:96vw}
-.ct{background:var(--slate-hi);color:var(--ink);font-weight:bold;text-align:center;padding:4px 8px;font-size:11px;}
+.modal-box{overflow:hidden;max-width:96vw}
 .modal-btns{display:flex;gap:8px;justify-content:flex-end;padding:10px 16px}
 
 /* ── Initiative tracker ── */
@@ -578,11 +577,7 @@ input[type=number]{-moz-appearance:textfield;appearance:textfield}
   width: min(420px, 100%); max-height: min(560px, calc(100vh - 32px));
   display: flex; flex-direction: column;
 }
-.ho-mo-hdr {
-  flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between;
-  padding: 10px 14px; border-bottom: 1px solid var(--rule-hi);
-}
-.ho-mo-title { font-weight: bold; font-size: 14px; }
+.ho-mo-hdr { flex: 0 0 auto; }
 .ho-mo-body { flex: 1 1 auto; overflow-y: auto; padding: 12px 14px; min-height: 0; }
 .ho-mo-ft {
   flex: 0 0 auto; display: flex; gap: 6px; padding: 10px 14px; border-top: 1px solid var(--rule-hi);
@@ -685,9 +680,12 @@ input[type=number]{-moz-appearance:textfield;appearance:textfield}
    the map. The header blocks below are all driven by a token, so they are
    hidden rather than left showing the last token's numbers. openHpPanel()
    removes this class when a real token is selected. */
-.rp-selfsheet .rp-stats-row,
 .rp-selfsheet #hp-conditions-row,
 .rp-selfsheet #hp-edit-area{display:none!important}
+/* The stats row itself DOES belong on the tokenless sheet - HP/AC/Speed all come
+   off the character, and _showOwnSheetChrome() fills them from qroll. Only the
+   things that genuinely need a token are hidden: conditions live on the token,
+   and damage/heal would have nothing to write to. */
 
 
 /* ── Toolbar density ────────────────────────────────────────────────────────
@@ -706,13 +704,16 @@ html.lamplit #toolbar select{
 }
 html.lamplit #toolbar{row-gap:var(--s1)}
 
-/* The vertical tool rail is icon-only, so it keeps square targets. */
-html.lamplit .tool-btn{min-height:38px;width:38px;padding:0;justify-content:center}
+/* The tool rail is mostly icon-only, so it keeps square targets. A few buttons
+   in it carry a label (My sheet, Move, Undo, Multi) - min-width, not width, or
+   the label wraps inside the square and the button grows to two lines tall
+   while its neighbours stay one. nowrap keeps a two-word label on one line. */
+html.lamplit .tool-btn{min-height:38px;min-width:38px;padding:0;justify-content:center;white-space:nowrap}
 
 @media (max-width:760px){
   html.lamplit #toolbar button,
   html.lamplit #toolbar .btn{min-height:40px;padding:var(--s2)}
-  html.lamplit .tool-btn{min-height:44px;width:44px}
+  html.lamplit .tool-btn{min-height:44px;min-width:44px}
 }
 
 
@@ -724,3 +725,36 @@ html.lamplit .rp-ability-mod{color:var(--arc);font-weight:700}
 html.lamplit .rp-save-val{color:var(--arc);font-weight:700}
 html.lamplit .rp-sec-val{color:var(--arc);font-weight:700}
 html.lamplit .qroll-val{color:var(--arc);font-weight:700}
+
+/* ── Map context menu (click a fog region / hidden item as DM) ────────────────
+   Several layers can sit on the same cell - a chest inside a fogged room, or
+   nested regions - so the menu lists every one under the cursor rather than
+   only the topmost, each with its own reveal/hide switch. */
+.mctx{
+  background:var(--slate);
+  border:1px solid var(--rule-hi);
+  border-radius:var(--r-md);
+  padding:8px 10px;
+  font-size:12px;
+  color:var(--bone);
+  box-shadow:var(--cast);
+  min-width:165px;
+  max-width:240px;
+}
+.mctx-kind{font-size:9px;color:var(--ash);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
+.mctx-name{font-weight:bold;margin-bottom:3px;word-break:break-word}
+.mctx-desc{font-size:10px;color:var(--ash);margin-bottom:5px;max-height:54px;overflow-y:auto;white-space:pre-wrap;word-break:break-word}
+.mctx-state{font-size:10px;margin-bottom:7px}
+.mctx-go{width:100%;font-size:11px;justify-content:center}
+.mctx-reveal{background:var(--verdigris);color:var(--ink);border-color:var(--verdigris)}
+.mctx-reveal:hover{background:var(--verdigris);color:var(--ink)}
+
+/* Stacked layers. A tall stack scrolls rather than running off the screen -
+   the menu is positioned from the click, so it cannot grow downwards freely. */
+.mctx-count{
+  font-size:9px;color:var(--arc);text-transform:uppercase;letter-spacing:1px;
+  font-weight:bold;margin-bottom:6px;
+}
+.mctx-stack{max-height:min(420px,60vh);overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--rule-hi) transparent}
+.mctx-layer{padding-bottom:9px;margin-bottom:9px;border-bottom:1px solid var(--rule)}
+.mctx-layer:last-child{padding-bottom:0;margin-bottom:0;border-bottom:none}
