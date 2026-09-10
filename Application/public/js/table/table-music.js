@@ -277,20 +277,58 @@ function musicSendControl(body) {
 }
 
 // ── Modal — the real controls, loaded from /music.html ────────────────────────
+// The modal used to be a fixed 600px box, so with nothing playing it was mostly
+// empty space below the track list. The iframe is same-origin, so we measure the
+// embedded document and size the frame to it, then keep watching: the height
+// changes when a playlist is picked and the track list appears.
+let _musicFrameObserver = null;
+
+function _fitMusicFrame() {
+  const frame = document.getElementById('music-frame');
+  if (!frame) return;
+  let doc;
+  try { doc = frame.contentDocument; } catch { return; }   // cross-origin: leave it alone
+  if (!doc || !doc.body) return;
+  // Measure the BODY only. documentElement.scrollHeight is never smaller than
+  // the iframe's own viewport, so including it means the frame can grow but can
+  // never shrink back - it just re-reports whatever height it already has.
+  // body is height:auto under body.embed, so it is the real content height.
+  const h = doc.body.scrollHeight;
+  if (!h) return;
+  // cap so a long track list scrolls inside the frame instead of pushing the
+  // modal past the viewport
+  frame.style.height = Math.min(h, Math.round(window.innerHeight * 0.8)) + 'px';
+}
+
+function _watchMusicFrame() {
+  const frame = document.getElementById('music-frame');
+  if (!frame || !frame.contentDocument || !frame.contentDocument.body) return;
+  _fitMusicFrame();
+  if (_musicFrameObserver) _musicFrameObserver.disconnect();
+  if (typeof ResizeObserver === 'function') {
+    _musicFrameObserver = new ResizeObserver(_fitMusicFrame);
+    _musicFrameObserver.observe(frame.contentDocument.body);
+  }
+}
+
 function openMusicModal() {
   const modal = document.getElementById('music-modal');
   if (!modal) return;
   const frame = document.getElementById('music-frame');
   if (frame && !_musicModalLoaded) {
+    frame.addEventListener('load', _watchMusicFrame);
     frame.src = '/music.html?embed=1';
     _musicModalLoaded = true;
   }
   modal.style.display = 'flex';
+  // already loaded from a previous open: re-measure, the content may have moved on
+  if (_musicModalLoaded) setTimeout(_watchMusicFrame, 0);
 }
 
 function closeMusicModal() {
   const modal = document.getElementById('music-modal');
   if (modal) modal.style.display = 'none';
+  if (_musicFrameObserver) { _musicFrameObserver.disconnect(); _musicFrameObserver = null; }
 }
 
 // ── Pop-out player ────────────────────────────────────────────────────────────

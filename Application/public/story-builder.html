@@ -1,27 +1,31 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="lamplit">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Story Editor</title>
 <link rel="manifest" href="/manifest.json">
-<meta name="theme-color" content="#1a1a2e">
+<meta name="theme-color" content="#080C15">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <script>if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js');</script>
+<link rel="stylesheet" href="/css/tokens.css">
+<link rel="stylesheet" href="/css/fonts.css">
+<link rel="stylesheet" href="/css/base.css">
 <link rel="stylesheet" href="/css/dm.css">
 <link rel="stylesheet" href="/css/stories.css">
+<script src="/js/lib/icons.js"></script>
 </head>
 <body>
 
 <!-- Stories password gate -->
 <div class="gate" id="stories-gate" style="display:none">
   <div class="gate-box">
-    <div style="font-size:36px;margin-bottom:10px">📖</div>
+    <div style="font-size:36px;margin-bottom:10px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-book"></use></svg> </div>
     <h2>Stories</h2>
     <p>Enter your password to continue.</p>
     <input type="password" id="gate-pw" placeholder="Password…" autocomplete="off"
            onkeydown="if(event.key==='Enter')storiesGateSubmit()">
-    <div id="gate-err" style="color:var(--err);font-size:12px;min-height:16px;margin-top:6px"></div>
+    <div id="gate-err" style="color:var(--blood);font-size:12px;min-height:16px;margin-top:6px"></div>
     <button class="btn primary" style="width:100%;margin-top:8px" onclick="storiesGateSubmit()">Enter</button>
   </div>
 </div>
@@ -60,11 +64,11 @@ async function storiesGateSubmit() {
 
   <!-- Header -->
   <div class="stories-hdr">
-    <a href="/stories.html" class="btn" style="padding:4px 10px;font-size:11px">← Stories</a>
+    <a href="/stories.html" class="btn" style="padding:4px 10px;font-size:11px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-arrow-left"></use></svg> Stories</a>
     <h1 id="page-title">Story Editor</h1>
     <div class="hdr-right">
       <span id="save-status" class="status-msg"></span>
-      <a id="view-link" href="#" class="btn sm" style="display:none">👁 View</a>
+      <a id="view-link" href="#" class="btn sm" style="display:none"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-eye"></use></svg> View</a>
     </div>
   </div>
 
@@ -96,7 +100,7 @@ async function storiesGateSubmit() {
   <!-- Footer -->
   <div class="builder-foot">
     <button class="btn primary" onclick="addPanel()">+ Add Panel</button>
-    <span id="panel-count" style="font-size:11px;color:var(--txd)"></span>
+    <span id="panel-count" style="font-size:11px;color:var(--ash)"></span>
   </div>
 
 </div>
@@ -106,7 +110,7 @@ async function storiesGateSubmit() {
   <div class="modal-box" style="max-width:340px;width:96%">
     <div class="ct">Delete Panel</div>
     <div class="modal-body">
-      <p style="font-size:13px;color:var(--tx)">Delete this panel and its image? This cannot be undone.</p>
+      <p style="font-size:13px;color:var(--bone)">Delete this panel and its image? This cannot be undone.</p>
     </div>
     <div class="modal-btns">
       <button class="btn" onclick="closeDelPanel()">Cancel</button>
@@ -221,7 +225,7 @@ async function saveMetadata() {
     const d = await r.json();
     document.getElementById('page-title').textContent = d.story_name || 'Story Editor';
     document.title = (d.story_name || 'Story') + ' — Editor';
-    showStatus('Saved ✓');
+    showStatus('Saved <svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-check"></use></svg> ');
     setTimeout(() => showStatus(''), 2000);
   } else {
     showStatus('Save failed.', true);
@@ -245,7 +249,7 @@ function renderPanels() {
       ? `<img class="panel-img" src="${esc(s.image_path)}?v=${Date.now()}" alt=""
               onclick="triggerUpload('${escJs(s.id)}')" title="Click to replace image">`
       : `<div class="panel-img-empty" onclick="triggerUpload('${escJs(s.id)}')">
-           <span style="font-size:24px">🖼</span>
+           <span style="font-size:24px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-image"></use></svg> </span>
            <span>Upload image</span>
          </div>`;
     return `<div class="panel-card" id="pc-${escAttr(s.id)}">
@@ -254,7 +258,7 @@ function renderPanels() {
         ${imgHtml}
         <input type="file" accept="image/*" id="fi-${escAttr(s.id)}" style="display:none"
                onchange="uploadImage('${escJs(s.id)}', this)">
-        ${s.image_path ? `<button class="panel-img-clear" onclick="clearImage('${escJs(s.id)}')" title="Remove image">✕ Remove</button>` : ''}
+        ${s.image_path ? `<button class="panel-img-clear" onclick="clearImage('${escJs(s.id)}')" title="Remove image"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg> Remove</button>` : ''}
       </div>
       <div class="panel-caption-wrap">
         <textarea class="panel-caption" rows="4"
@@ -264,9 +268,9 @@ function renderPanels() {
         >${esc(s.caption)}</textarea>
       </div>
       <div class="panel-controls">
-        <button class="panel-btn" onclick="movePanel('${escJs(s.id)}', -1)" ${isFirst ? 'disabled' : ''} title="Move up">▲</button>
-        <button class="panel-btn" onclick="movePanel('${escJs(s.id)}', 1)" ${isLast ? 'disabled' : ''} title="Move down">▼</button>
-        <button class="panel-btn del" onclick="openDelPanel('${escJs(s.id)}')" title="Delete panel">✕</button>
+        <button class="panel-btn" onclick="movePanel('${escJs(s.id)}', -1)" ${isFirst ? 'disabled' : ''} title="Move up"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-up"></use></svg> </button>
+        <button class="panel-btn" onclick="movePanel('${escJs(s.id)}', 1)" ${isLast ? 'disabled' : ''} title="Move down"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-down"></use></svg> </button>
+        <button class="panel-btn del" onclick="openDelPanel('${escJs(s.id)}')" title="Delete panel"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg> </button>
       </div>
     </div>`;
   }).join('');
@@ -411,7 +415,7 @@ function fileToDataUrl(file) {
 function showStatus(msg, isErr) {
   const el = document.getElementById('save-status');
   el.textContent = msg;
-  el.style.color = isErr ? 'var(--err)' : 'var(--txd)';
+  el.style.color = isErr ? 'var(--blood)' : 'var(--ash)';
 }
 
 function esc(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }

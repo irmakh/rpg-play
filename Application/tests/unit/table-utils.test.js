@@ -193,61 +193,65 @@ describe('tokDisplayName', () => {
   });
 });
 
-// ── tokenRingColor ────────────────────────────────────────────────────────────
-describe('tokenRingColor', () => {
+// ── tokenRingColor / hpBarColor ───────────────────────────────────────────────
+// These draw to a canvas, so they must return LITERAL hex - ctx.fillStyle
+// cannot take a var(). That means they hand-mirror tokens.css, and the thing
+// worth protecting is not any particular colour but that the mirror stays in
+// sync. Pinning the hex here broke on the last palette change and told us
+// nothing; reading the tokens catches real drift on every future one.
+const TOKENS_CSS = readFileSync(
+  resolve(__dirname, '../../public/css/tokens.css'), 'utf-8'
+);
+
+function token(name) {
+  const m = new RegExp('--' + name + ':\s*(#[0-9A-Fa-f]{6})').exec(TOKENS_CSS);
+  if (!m) throw new Error('token --' + name + ' not found in tokens.css');
+  return m[1].toUpperCase();
+}
+
+describe('tokenRingColor mirrors the design tokens', () => {
   const { tokenRingColor } = load();
 
-  it('returns gold for character', () => {
-    expect(tokenRingColor('character')).toBe('#c8a04a');
+  it('a character is NEUTRAL - the ring carries state, not the token', () => {
+    expect(tokenRingColor('character').toUpperCase()).toBe(token('bone'));
   });
 
-  it('returns red for monster', () => {
-    expect(tokenRingColor('monster')).toBe('#ff4444');
+  it('a monster carries the damage colour', () => {
+    expect(tokenRingColor('monster').toUpperCase()).toBe(token('blood'));
   });
 
-  it('returns blue for npc', () => {
-    expect(tokenRingColor('npc')).toBe('#7ec8e3');
+  it('an npc carries the accent', () => {
+    expect(tokenRingColor('npc').toUpperCase()).toBe(token('arc'));
   });
 
-  it('returns grey for unknown type', () => {
-    expect(tokenRingColor('custom')).toBe('#888888');
-  });
-
-  it('returns grey for undefined', () => {
-    expect(tokenRingColor(undefined)).toBe('#888888');
+  it('an unknown type falls back to the dim ink', () => {
+    expect(tokenRingColor('custom').toUpperCase()).toBe(token('ash-dim'));
+    expect(tokenRingColor(undefined).toUpperCase()).toBe(token('ash-dim'));
   });
 });
 
-// ── hpBarColor ────────────────────────────────────────────────────────────────
-describe('hpBarColor', () => {
+describe('hpBarColor mirrors the design tokens, and steps at the right points', () => {
   const { hpBarColor } = load();
 
-  it('returns green at full HP (1.0)', () => {
-    expect(hpBarColor(1.0)).toBe('#44cc44');
+  it('healthy at and above half', () => {
+    expect(hpBarColor(1.0).toUpperCase()).toBe(token('verdigris'));
+    expect(hpBarColor(0.5).toUpperCase()).toBe(token('verdigris'));
   });
 
-  it('returns green at exactly 0.5', () => {
-    expect(hpBarColor(0.5)).toBe('#44cc44');
+  it('hurt below half, down to a quarter', () => {
+    expect(hpBarColor(0.49).toUpperCase()).toBe(token('blood-deep'));
+    expect(hpBarColor(0.25).toUpperCase()).toBe(token('blood-deep'));
   });
 
-  it('returns yellow just below 0.5 (0.49)', () => {
-    expect(hpBarColor(0.49)).toBe('#ffcc00');
+  it('critical below a quarter, and never past it', () => {
+    expect(hpBarColor(0.24).toUpperCase()).toBe(token('blood'));
+    expect(hpBarColor(0).toUpperCase()).toBe(token('blood'));
+    expect(hpBarColor(-0.1).toUpperCase()).toBe(token('blood'));
   });
 
-  it('returns yellow at exactly 0.25', () => {
-    expect(hpBarColor(0.25)).toBe('#ffcc00');
-  });
-
-  it('returns red just below 0.25 (0.24)', () => {
-    expect(hpBarColor(0.24)).toBe('#ff4444');
-  });
-
-  it('returns red at 0 HP', () => {
-    expect(hpBarColor(0)).toBe('#ff4444');
-  });
-
-  it('returns red at negative value', () => {
-    expect(hpBarColor(-0.1)).toBe('#ff4444');
+  it('the three steps are distinct colours', () => {
+    const set = new Set([hpBarColor(1), hpBarColor(0.3), hpBarColor(0.1)]);
+    expect(set.size).toBe(3);
   });
 });
 

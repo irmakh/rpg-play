@@ -85,10 +85,10 @@ function renderList() {
     const waiting = (h.recipients || []).filter(r => r.outcome === 'rolled').length;
     return `
       <button class="ho-card${_selId === h.id ? ' active' : ''}" onclick="selectHandout('${escJs(h.id)}')">
-        <div class="ho-thumb">${thumb ? `<img src="${esc(thumb)}" alt="">` : '📜'}</div>
+        <div class="ho-thumb">${thumb ? `<img src="${esc(thumb)}" alt="">` : '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-document"></use></svg>'}</div>
         <div class="ho-meta">
           <div class="ho-name">${esc(h.title)}</div>
-          <div class="ho-sub">${check} · ${h.handedOut} handed out${out ? ` · ${out} resolved` : ''}${waiting ? ` · <span style="color:var(--warn)">${waiting} awaiting you</span>` : ''}</div>
+          <div class="ho-sub">${check} · ${h.handedOut} handed out${out ? ` · ${out} resolved` : ''}${waiting ? ` · <span style="color:var(--blood)">${waiting} awaiting you</span>` : ''}</div>
         </div>
       </button>`;
   }).join('');
@@ -100,7 +100,7 @@ function clearDetail() {
   _selId = null; _dirty = false;
   document.body.classList.remove('detail-open');
   document.getElementById('detail').innerHTML =
-    '<div class="detail-empty"><div class="big">📜</div><div>Select a handout, or create one.</div></div>';
+    '<div class="detail-empty"><div class="big"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-document"></use></svg></div><div>Select a handout, or create one.</div></div>';
   renderList();
 }
 
@@ -117,7 +117,7 @@ function imgSlot(kind, urlMedium, urlFull) {
   return `
     <div class="img-slot" onclick="pickImage('${kind}')">
       ${has ? `<img src="${esc(urlMedium || urlFull)}" alt="">
-               <button class="btn danger sm img-clear" onclick="event.stopPropagation();clearImage('${kind}')">✕</button>`
+               <button class="btn danger sm img-clear" onclick="event.stopPropagation();clearImage('${kind}')"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg></button>`
             : '<div class="ph">Click to add an image</div>'}
     </div>`;
 }
@@ -128,7 +128,7 @@ function renderDetail(h) {
     .join('');
 
   document.getElementById('detail').innerHTML = `
-    <button class="btn ghost sm back-btn" style="margin-bottom:12px" onclick="clearDetail()">← All handouts</button>
+    <button class="btn ghost sm back-btn" style="margin-bottom:12px" onclick="clearDetail()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-arrow-left"></use></svg> All handouts</button>
 
     <div class="sect">
       <div class="sect-hdr">
@@ -174,7 +174,7 @@ function renderDetail(h) {
 
     <div class="two-col">
       <div class="sect">
-        <div class="sect-hdr">✅ On success</div>
+        <div class="sect-hdr"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-check"></use></svg> On success</div>
         <div class="field">
           <label>What they read</label>
           <textarea id="f-success" maxlength="20000" oninput="markDirty()">${esc(h.successText || '')}</textarea>
@@ -182,7 +182,7 @@ function renderDetail(h) {
         ${imgSlot('success', h.successImageMedium, h.successImageUrl)}
       </div>
       <div class="sect">
-        <div class="sect-hdr">❌ On failure</div>
+        <div class="sect-hdr"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg> On failure</div>
         <div class="field">
           <label>What they read instead</label>
           <textarea id="f-fail" maxlength="20000" oninput="markDirty()">${esc(h.failText || '')}</textarea>
@@ -219,12 +219,12 @@ function renderRecipients(h) {
               : '<span class="muted">—</span>'}</td>
         <td><span class="pill ${esc(r.outcome)}">${esc(r.outcome)}</span>${
               r.suggested && r.outcome === 'rolled'
-                ? `<span class="suggest">suggests ${r.suggested === 'success' ? '✅' : '❌'}</span>` : ''}</td>
+                ? `<span class="suggest">suggests ${r.suggested === 'success' ? '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-check"></use></svg>' : '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg>'}</span>` : ''}</td>
         <td style="text-align:right;white-space:nowrap">
           <button class="btn ok sm" onclick="tag('${escJs(r.charId)}','success')">Success</button>
           <button class="btn danger sm" onclick="tag('${escJs(r.charId)}','fail')">Fail</button>
-          ${rolled ? `<button class="btn ghost sm" onclick="tag('${escJs(r.charId)}','pending')" title="Clear the roll so they can try again">↺</button>` : ''}
-          <button class="btn ghost sm" onclick="recallOne('${escJs(r.charId)}')" title="Take it back">✕</button>
+          ${rolled ? `<button class="btn ghost sm" onclick="tag('${escJs(r.charId)}','pending')" title="Clear the roll so they can try again"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-refresh"></use></svg></button>` : ''}
+          <button class="btn ghost sm" onclick="recallOne('${escJs(r.charId)}')" title="Take it back"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg></button>
         </td>
       </tr>`;
   }).join('');

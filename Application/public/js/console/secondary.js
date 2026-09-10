@@ -145,10 +145,10 @@ function sTokDisplayName(tok) {
 }
 
 function sHpColor(pct) {
-  if (pct > 0.6) return '#88ff88';
+  if (pct > 0.6) return 'var(--verdigris)';
   if (pct > 0.3) return '#ffcc44';
   if (pct > 0)   return '#ff8844';
-  return '#ff4444';
+  return 'var(--blood)';
 }
 
 function sParseConditions(str) { try { return JSON.parse(str || '[]'); } catch { return []; } }
@@ -175,8 +175,8 @@ function sRenderInitiative() {
   const dmToggle  = document.getElementById('s-dm-init-toggle');
   const running   = !!sInitData.currentId;
 
-  if (toggleBtn) toggleBtn.textContent = running ? '⏹ End' : '▶ Start';
-  if (dmToggle)  dmToggle.textContent  = running ? '⏹ End Initiative' : '▶ Start Initiative';
+  if (toggleBtn) toggleBtn.innerHTML = running ? '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-stop"></use></svg> End' : '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-play"></use></svg> Start';
+  if (dmToggle)  dmToggle.innerHTML = running ? '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-stop"></use></svg> End Initiative' : '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-play"></use></svg> Start Initiative';
 
   if (sInitData.currentId) {
     const cur = sInitData.entries.find(e => e.id === sInitData.currentId);
@@ -198,9 +198,9 @@ function sRenderInitiative() {
   list.innerHTML = sorted.map(e => {
     const isCur = e.id === sInitData.currentId;
     const name  = (sIsDM() || !e.monsterId) ? esc(e.name) : esc(e.name.trim().split(' ').pop());
-    const del   = sIsDM() ? `<button class="s-del-btn" onclick="sRemoveInitEntry('${escJs(e.id)}')">✕</button>` : '';
+    const del   = sIsDM() ? `<button class="s-del-btn" onclick="sRemoveInitEntry('${escJs(e.id)}')"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg></button>` : '';
     return `<div class="s-init-row${isCur ? ' s-init-cur' : ''}">
-      <span class="s-init-marker">${isCur ? '▶' : ''}</span>
+      <span class="s-init-marker">${isCur ? '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-play"></use></svg>' : ''}</span>
       <span class="s-init-name">${name}</span>
       <span class="s-init-roll">${e.roll}</span>
       ${del}
@@ -259,7 +259,7 @@ function sRenderHpPanel(tok) {
     const visBtn = document.getElementById('s-vis-toggle-btn');
     if (visBtn) {
       const nowHidden = tok.visible === false;
-      visBtn.textContent = nowHidden ? '👁 Show Token' : '🚫 Hide Token';
+      visBtn.innerHTML = nowHidden ? '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-eye"></use></svg> Show Token' : '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-eye-off"></use></svg> Hide Token';
       visBtn.className = 's-btn' + (nowHidden ? ' s-btn-success' : '');
     }
     const assignSel = document.getElementById('s-assign-sel');
@@ -290,7 +290,7 @@ function sRenderHpPanel(tok) {
   const initBtn = document.getElementById('s-roll-init-btn');
   if (initBtn) {
     const hasEntry = !!sInitData.entries.find(e => e.id === tok.initiativeId);
-    initBtn.textContent = hasEntry ? '🎲 Reroll Initiative' : '🎲 Roll Initiative';
+    initBtn.innerHTML = hasEntry ? '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg> Reroll Initiative' : '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg> Roll Initiative';
   }
 
   sRenderCharStats(tok);
@@ -381,7 +381,7 @@ function sToggleStatsSection(name) {
   if (!el) return;
   const hidden = el.style.display === 'none';
   el.style.display = hidden ? '' : 'none';
-  if (arrow) arrow.textContent = hidden ? '▼' : '▶';
+  if (arrow) arrow.innerHTML = hidden ? '▼' : '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-play"></use></svg>';
 }
 
 function sQrollRoll(label, modifier) {
@@ -463,7 +463,7 @@ function sRenderCharStats(tok) {
     const wNoteJs = escJs(r[3] || '');
     const dmgRow = wDmg
       ? `<div class="s-qroll-row" onclick="sRollDamageStr('${escJs(wName)} Dmg','${escJs(wDmg)}')" style="padding-left:20px;background:rgba(0,0,0,.2)">
-          <span class="s-qroll-label" style="color:var(--txd);font-size:11px">↳ Damage</span>
+          <span class="s-qroll-label" style="color:var(--ash);font-size:11px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-right"></use></svg> Damage</span>
           <span class="s-qroll-val" style="color:#ff9966">${esc(wDmg)}</span>
         </div>` : '';
     return `<div class="s-qroll-row" onclick="sQrollRoll('${escJs(wName)} Atk','${escJs(wAtk)}')">
@@ -482,7 +482,7 @@ function sRenderCharStats(tok) {
   container.innerHTML = `
     <div class="s-stats-header">
       <span>${esc(sQrollCharName)}</span>
-      <button class="s-btn" onclick="sQrollRoll('Initiative','${initStr}')" style="flex:none;padding:5px 10px;font-size:11px;min-height:32px">🎲 Init ${esc(initStr)}</button>
+      <button class="s-btn" onclick="sQrollRoll('Initiative','${initStr}')" style="flex:none;padding:5px 10px;font-size:11px;min-height:32px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg> Init ${esc(initStr)}</button>
     </div>
     <div class="s-roll-mode-row">
       <span class="s-label" style="padding-right:6px">Roll:</span>
@@ -491,15 +491,15 @@ function sRenderCharStats(tok) {
       <button id="s-roll-mode-dis"  class="s-roll-mode-btn" onclick="sSetRollMode('dis')">Dis</button>
     </div>
     <div class="s-qroll-section">
-      <div class="s-qroll-hdr" onclick="sToggleStatsSection('skills')">Skills <span id="s-stats-skills-arrow">▶</span></div>
+      <div class="s-qroll-hdr" onclick="sToggleStatsSection('skills')">Skills <span id="s-stats-skills-arrow"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-play"></use></svg></span></div>
       <div id="s-stats-skills" class="s-qroll-rows" style="display:none">${skillRows}</div>
     </div>
     <div class="s-qroll-section">
-      <div class="s-qroll-hdr" onclick="sToggleStatsSection('saves')">Saves <span id="s-stats-saves-arrow">▶</span></div>
+      <div class="s-qroll-hdr" onclick="sToggleStatsSection('saves')">Saves <span id="s-stats-saves-arrow"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-play"></use></svg></span></div>
       <div id="s-stats-saves" class="s-qroll-rows" style="display:none">${saveRows}</div>
     </div>
     <div class="s-qroll-section">
-      <div class="s-qroll-hdr" onclick="sToggleStatsSection('attacks')">Attacks <span id="s-stats-attacks-arrow">▶</span></div>
+      <div class="s-qroll-hdr" onclick="sToggleStatsSection('attacks')">Attacks <span id="s-stats-attacks-arrow"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-play"></use></svg></span></div>
       <div id="s-stats-attacks" class="s-qroll-rows" style="display:none">${atkRows}</div>
     </div>`;
   sSetRollMode(sRollMode);
@@ -604,7 +604,7 @@ function sRenderMonsterStats(tok) {
       const bStr  = (bonus >= 0 ? '+' : '') + bonus;
       const dmgRow = dmgStr
         ? `<div class="s-qroll-row" onclick="sMonsterRollDamage('${section}',${idx})" style="padding-left:20px;background:rgba(0,0,0,.2)">
-            <span class="s-qroll-label" style="color:var(--txd);font-size:11px">↳ Damage</span>
+            <span class="s-qroll-label" style="color:var(--ash);font-size:11px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-right"></use></svg> Damage</span>
             <span class="s-qroll-val" style="color:#ff9966">${esc(dmgStr)}</span>
           </div>`
         : '';
@@ -615,7 +615,7 @@ function sRenderMonsterStats(tok) {
         </div>${useBtn}</div>${dmgRow}`;
     }
     return `<div style="display:flex;align-items:center;gap:2px;padding:3px 4px">
-      <span style="flex:1;font-size:12px;color:var(--ac);font-weight:bold;font-style:italic">${esc(item.name || '')}</span>
+      <span style="flex:1;font-size:12px;color:var(--bone);font-weight:bold;font-style:italic">${esc(item.name || '')}</span>
       ${useBtn}</div>`;
   }
 
@@ -623,7 +623,7 @@ function sRenderMonsterStats(tok) {
     if (!items || !items.length) return '';
     return `<div class="s-qroll-section">
       <div class="s-qroll-hdr" onclick="sToggleStatsSection('mon-${section}')">
-        ${title} <span id="s-stats-mon-${section}-arrow">▶</span>
+        ${title} <span id="s-stats-mon-${section}-arrow"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-play"></use></svg></span>
       </div>
       <div id="s-stats-mon-${section}" class="s-qroll-rows" style="display:none">
         ${items.map((item, idx) => rActionItem(item, section, idx)).join('')}
@@ -634,8 +634,8 @@ function sRenderMonsterStats(tok) {
   container.style.display = '';
   container.innerHTML = `
     <div class="s-stats-header">
-      <span style="color:#ff9999">${esc(displayName)}<span style="color:var(--txd);font-weight:normal;font-size:11px"> CR ${esc(String(cr))}</span></span>
-      <button class="s-btn" onclick="sQrollRoll('Initiative','${initStr}')" style="flex:none;padding:5px 10px;font-size:11px;min-height:32px">🎲 Init ${initStr}</button>
+      <span style="color:var(--blood)">${esc(displayName)}<span style="color:var(--ash);font-weight:normal;font-size:11px"> CR ${esc(String(cr))}</span></span>
+      <button class="s-btn" onclick="sQrollRoll('Initiative','${initStr}')" style="flex:none;padding:5px 10px;font-size:11px;min-height:32px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg> Init ${initStr}</button>
     </div>
     <div class="s-roll-mode-row">
       <span class="s-label" style="padding-right:6px">Roll:</span>
@@ -682,7 +682,7 @@ function sRenderMonsterStatBlock(data, tok) {
   const condImmStr = [].concat(data.conditionImmune || []).map(i => typeof i === 'string' ? i : [].concat(i.conditionImmune || []).join('/')).join(', ');
   const sensesStr  = [...(data.senses || [])].join(', ') + (data.passive ? ((data.senses || []).length ? ', ' : '') + 'Passive Perception ' + data.passive : '');
   const langStr    = (data.languages || []).join(', ') || '—';
-  const HR         = '<hr style="border:none;border-top:1px solid var(--a44);margin:6px 0">';
+  const HR         = '<hr style="border:none;border-top:1px solid var(--rule-hi);margin:6px 0">';
 
   function rEntries(entries) {
     return (entries || []).map(e => {
@@ -695,13 +695,13 @@ function sRenderMonsterStatBlock(data, tok) {
 
   function rTextSection(items, title) {
     if (!items || !items.length) return '';
-    return HR + '<div style="font-size:10px;color:var(--ac);text-transform:uppercase;font-weight:bold;letter-spacing:.5px;margin-bottom:3px">' + title + '</div>' +
-      items.map(item => '<div style="margin:4px 0"><span style="color:var(--ac);font-weight:bold;font-style:italic">' + _sParseEntry(item.name || '') + '</span> ' + rEntries(item.entries) + '</div>').join('');
+    return HR + '<div style="font-size:10px;color:var(--bone);text-transform:uppercase;font-weight:bold;letter-spacing:.5px;margin-bottom:3px">' + title + '</div>' +
+      items.map(item => '<div style="margin:4px 0"><span style="color:var(--bone);font-weight:bold;font-style:italic">' + _sParseEntry(item.name || '') + '</span> ' + rEntries(item.entries) + '</div>').join('');
   }
 
   function rActionSection(items, title, section) {
     if (!items || !items.length) return '';
-    return HR + '<div style="font-size:10px;color:var(--ac);text-transform:uppercase;font-weight:bold;letter-spacing:.5px;margin-bottom:3px">' + title + '</div>' +
+    return HR + '<div style="font-size:10px;color:var(--bone);text-transform:uppercase;font-weight:bold;letter-spacing:.5px;margin-bottom:3px">' + title + '</div>' +
       items.map((item, idx) => {
         const entryText = [].concat(item.entries || []).join(' ');
         const atkMatch  = entryText.match(/\{@hit\s([+-]?\d+)\}/i);
@@ -718,7 +718,7 @@ function sRenderMonsterStatBlock(data, tok) {
         rollBtns += `<button class="s-btn" onclick="sMonsterUseAction('${section}',${idx})" style="padding:2px 7px;min-height:26px;font-size:10px;flex:none;background:rgba(100,150,255,.15);color:#aaf">Use</button>`;
         return `<div style="margin:5px 0">
           <div style="display:flex;align-items:center;gap:3px;flex-wrap:wrap;margin-bottom:2px">
-            <span style="color:var(--ac);font-weight:bold;font-style:italic;flex:1;min-width:0">${_sParseEntry(item.name || '')}</span>
+            <span style="color:var(--bone);font-weight:bold;font-style:italic;flex:1;min-width:0">${_sParseEntry(item.name || '')}</span>
             <div style="display:flex;gap:3px;flex-shrink:0">${rollBtns}</div>
           </div>
           ${rEntries(item.entries)}
@@ -728,46 +728,46 @@ function sRenderMonsterStatBlock(data, tok) {
 
   let html = '';
   if (data.portraitMedium || data.portrait) {
-    html += `<div style="text-align:center;margin-bottom:8px"><img src="${esc(data.portraitMedium || data.portrait)}" style="max-width:120px;max-height:120px;border-radius:6px;object-fit:cover;border:1px solid var(--a44)" onerror="this.style.display='none'"></div>`;
+    html += `<div style="text-align:center;margin-bottom:8px"><img src="${esc(data.portraitMedium || data.portrait)}" style="max-width:120px;max-height:120px;border-radius:6px;object-fit:cover;border:1px solid var(--rule-hi)" onerror="this.style.display='none'"></div>`;
   }
-  html += `<div style="font-size:15px;font-weight:bold;color:#ff9999">${esc(tok?.label ? tok.label + ' (' + (data.name || '') + ')' : (data.name || 'Monster'))}</div>`;
-  if (size || typeStr || align) html += `<div style="font-size:11px;font-style:italic;color:var(--txd);margin-bottom:4px">${esc([size, typeStr, align].filter(Boolean).join(', '))}${data.source ? ' <span style="font-size:10px;opacity:.6">(' + esc(data.source) + ')</span>' : ''}</div>`;
+  html += `<div style="font-size:15px;font-weight:bold;color:var(--blood)">${esc(tok?.label ? tok.label + ' (' + (data.name || '') + ')' : (data.name || 'Monster'))}</div>`;
+  if (size || typeStr || align) html += `<div style="font-size:11px;font-style:italic;color:var(--ash);margin-bottom:4px">${esc([size, typeStr, align].filter(Boolean).join(', '))}${data.source ? ' <span style="font-size:10px;opacity:.6">(' + esc(data.source) + ')</span>' : ''}</div>`;
   html += HR;
-  html += `<div style="margin:2px 0"><span style="color:var(--ac);font-weight:bold">AC</span> ${esc(String(acStr))}</div>`;
-  html += `<div style="margin:2px 0"><span style="color:var(--ac);font-weight:bold">HP</span> ${esc(String(hpStr))}</div>`;
-  html += `<div style="margin:2px 0"><span style="color:var(--ac);font-weight:bold">Speed</span> ${esc(speedStr)}</div>`;
-  html += `<div style="margin:2px 0"><span style="color:var(--ac);font-weight:bold">Challenge</span> ${esc(String(cr))}</div>`;
+  html += `<div style="margin:2px 0"><span style="color:var(--bone);font-weight:bold">AC</span> ${esc(String(acStr))}</div>`;
+  html += `<div style="margin:2px 0"><span style="color:var(--bone);font-weight:bold">HP</span> ${esc(String(hpStr))}</div>`;
+  html += `<div style="margin:2px 0"><span style="color:var(--bone);font-weight:bold">Speed</span> ${esc(speedStr)}</div>`;
+  html += `<div style="margin:2px 0"><span style="color:var(--bone);font-weight:bold">Challenge</span> ${esc(String(cr))}</div>`;
   html += HR + '<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:2px;text-align:center;margin:4px 0">';
   for (let i = 0; i < 6; i++) {
     const sc = scores[i], val = data[sc] || 10, m = Math.floor((val - 10) / 2), ms = (m >= 0 ? '+' : '') + m;
-    html += `<div onclick="sQrollRoll('${snames[i]} Check','${ms}')" style="background:var(--bg3);border-radius:3px;padding:3px 1px;cursor:pointer">
-      <div style="font-size:8px;color:var(--ac);font-weight:bold">${snames[i]}</div>
+    html += `<div onclick="sQrollRoll('${snames[i]} Check','${ms}')" style="background:var(--slate-hi);border-radius:3px;padding:3px 1px;cursor:pointer">
+      <div style="font-size:8px;color:var(--bone);font-weight:bold">${snames[i]}</div>
       <div style="font-size:12px;font-weight:bold">${val}</div>
-      <div style="font-size:9px;color:var(--txd)">${ms}</div>
+      <div style="font-size:9px;color:var(--ash)">${ms}</div>
     </div>`;
   }
   html += '</div>' + HR;
-  html += '<div style="font-size:10px;color:var(--ac);text-transform:uppercase;font-weight:bold;letter-spacing:.5px;margin-bottom:2px">Saves</div>';
+  html += '<div style="font-size:10px;color:var(--bone);text-transform:uppercase;font-weight:bold;letter-spacing:.5px;margin-bottom:2px">Saves</div>';
   html += scores.map((sc, i) => {
     const profVal = data.save && data.save[sc];
     const rawMod  = Math.floor(((data[sc] || 10) - 10) / 2);
     const val     = profVal || (rawMod >= 0 ? '+' + rawMod : '' + rawMod);
     return `<div class="s-qroll-row" onclick="sQrollRoll('${snames[i]} Save','${val}')" style="${profVal ? '' : 'opacity:.7'}">
-      <span>${snames[i]}${profVal ? ' ★' : ''}</span><span class="s-qroll-val">${val}</span>
+      <span>${snames[i]}${profVal ? ' <svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-star"></use></svg>' : ''}</span><span class="s-qroll-val">${val}</span>
     </div>`;
   }).join('');
   if (data.skill && Object.keys(data.skill).length) {
-    html += '<div style="font-size:10px;color:var(--ac);text-transform:uppercase;font-weight:bold;letter-spacing:.5px;margin:4px 0 2px">Skills</div>';
+    html += '<div style="font-size:10px;color:var(--bone);text-transform:uppercase;font-weight:bold;letter-spacing:.5px;margin:4px 0 2px">Skills</div>';
     html += Object.entries(data.skill).map(([key, val]) => {
       const label = key.charAt(0).toUpperCase() + key.slice(1);
       return `<div class="s-qroll-row" onclick="sQrollRoll('${escJs(label)}','${escJs(val)}')"><span>${label}</span><span class="s-qroll-val">${val}</span></div>`;
     }).join('');
   }
-  if (immuneStr)  html += `<div style="margin:2px 0"><span style="color:var(--ac);font-weight:bold">Immune</span> ${esc(immuneStr)}</div>`;
-  if (resistStr)  html += `<div style="margin:2px 0"><span style="color:var(--ac);font-weight:bold">Resist</span> ${esc(resistStr)}</div>`;
-  if (condImmStr) html += `<div style="margin:2px 0"><span style="color:var(--ac);font-weight:bold">Cond. Immune</span> ${esc(condImmStr)}</div>`;
-  if (sensesStr)  html += `<div style="margin:2px 0"><span style="color:var(--ac);font-weight:bold">Senses</span> ${esc(sensesStr)}</div>`;
-  html += `<div style="margin:2px 0"><span style="color:var(--ac);font-weight:bold">Languages</span> ${esc(langStr)}</div>`;
+  if (immuneStr)  html += `<div style="margin:2px 0"><span style="color:var(--bone);font-weight:bold">Immune</span> ${esc(immuneStr)}</div>`;
+  if (resistStr)  html += `<div style="margin:2px 0"><span style="color:var(--bone);font-weight:bold">Resist</span> ${esc(resistStr)}</div>`;
+  if (condImmStr) html += `<div style="margin:2px 0"><span style="color:var(--bone);font-weight:bold">Cond. Immune</span> ${esc(condImmStr)}</div>`;
+  if (sensesStr)  html += `<div style="margin:2px 0"><span style="color:var(--bone);font-weight:bold">Senses</span> ${esc(sensesStr)}</div>`;
+  html += `<div style="margin:2px 0"><span style="color:var(--bone);font-weight:bold">Languages</span> ${esc(langStr)}</div>`;
   html += rTextSection(data.trait, 'Traits');
   html += rActionSection(data.action,    'Actions',           'action');
   html += rActionSection(data.bonus,     'Bonus Actions',     'bonus');
@@ -871,10 +871,10 @@ function sRenderDmHpList() {
     const isSel  = sSelectedToken?.id === tok.id;
     return `<div class="s-hp-row${isCur ? ' s-hp-cur' : ''}${isSel ? ' s-hp-selected' : ''}${canSel ? ' clickable' : ''}" ${canSel ? `onclick="sSelectToken('${escJs(tok.id)}')"` : ''}>
       <div style="flex:1;min-width:0">
-        <div class="s-hp-row-name">${isCur ? '▶ ' : ''}${esc(sTokDisplayName(tok))}</div>
+        <div class="s-hp-row-name">${isCur ? '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-play"></use></svg> ' : ''}${esc(sTokDisplayName(tok))}</div>
         <div class="s-hp-bar-mini"><div style="width:${pct*100}%;height:100%;background:${col};border-radius:2px"></div></div>
       </div>
-      <div class="s-hp-row-nums">${cur}<span style="color:var(--txd);font-weight:normal">/${max}</span></div>
+      <div class="s-hp-row-nums">${cur}<span style="color:var(--ash);font-weight:normal">/${max}</span></div>
     </div>`;
   }).join('');
 }
@@ -910,7 +910,7 @@ function sRenderFogSection() {
   if (!list) return;
   list.innerHTML = sFogRegions.map(r => `
     <div class="s-fog-row">
-      <span class="s-fog-name" style="color:${r.visible ? 'var(--ok)' : 'var(--txd)'}">${esc(r.label || 'Region')}</span>
+      <span class="s-fog-name" style="color:${r.visible ? 'var(--verdigris)' : 'var(--ash)'}">${esc(r.label || 'Region')}</span>
       ${!r.visible
         ? `<button class="s-btn s-btn-success" onclick="sRevealFog('${escJs(r.id)}')" style="flex:none;padding:5px 10px;min-height:34px;font-size:12px">Reveal</button>`
         : `<button class="s-btn"               onclick="sHideFog('${escJs(r.id)}')"   style="flex:none;padding:5px 10px;min-height:34px;font-size:12px">Hide</button>`}
@@ -925,7 +925,7 @@ async function sHideFog(id) {
 }
 
 // ── Hidden Items (DM tab) ─────────────────────────────────────────────────────
-const S_ITEM_ICONS = { trap: '⚠', chest: '◈', door: '▭', note: '✎', other: '◉' };
+const S_ITEM_ICONS = { trap: '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-shield"></use></svg>', chest: '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-circle"></use></svg>', door: '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-square"></use></svg>', note: '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-pencil"></use></svg>', other: '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-circle"></use></svg>' };
 
 function sRenderItemsSection() {
   const section = document.getElementById('s-items-section');
@@ -939,15 +939,15 @@ function sRenderItemsSection() {
     <div class="s-item-row">
       <div class="s-item-header" onclick="sToggleItemBody('${escJs(item.id)}')">
         <span class="s-item-icon">${S_ITEM_ICONS[item.type] || '?'}</span>
-        <span class="s-item-name" style="color:${item.visible ? 'var(--ok)' : 'var(--txd)'}">${esc(item.label || 'Item')}</span>
+        <span class="s-item-name" style="color:${item.visible ? 'var(--verdigris)' : 'var(--ash)'}">${esc(item.label || 'Item')}</span>
         ${!item.visible
           ? `<button class="s-btn s-btn-success" onclick="event.stopPropagation();sRevealItem('${escJs(item.id)}')" style="flex:none;padding:4px 8px;min-height:30px;font-size:11px">Reveal</button>`
           : `<button class="s-btn"               onclick="event.stopPropagation();sHideItem('${escJs(item.id)}')"   style="flex:none;padding:4px 8px;min-height:30px;font-size:11px">Hide</button>`}
       </div>
       <div id="s-item-body-${item.id}" class="s-item-body" style="display:none">
         ${item.description
-          ? `<div style="font-size:11px;color:var(--txd);white-space:pre-wrap">${esc(item.description)}</div>`
-          : '<div style="font-size:11px;color:var(--a55);font-style:italic">No description.</div>'}
+          ? `<div style="font-size:11px;color:var(--ash);white-space:pre-wrap">${esc(item.description)}</div>`
+          : '<div style="font-size:11px;color:var(--rule-hi);font-style:italic">No description.</div>'}
       </div>
     </div>`).join('');
 }
@@ -1282,10 +1282,10 @@ function sMusicRenderTracks(activeIdx) {
   const el = document.getElementById('s-music-track-list');
   if (!el) return;
   const tracks = _sMusicCurrentPl?.sounds || [];
-  if (!tracks.length) { el.innerHTML = '<div style="color:var(--txd);font-size:11px;text-align:center;padding:8px">No tracks</div>'; return; }
+  if (!tracks.length) { el.innerHTML = '<div style="color:var(--ash);font-size:11px;text-align:center;padding:8px">No tracks</div>'; return; }
   el.innerHTML = tracks.map((t, i) => `
-    <div onclick="sMusicPlayTrack(${i})" style="padding:7px 8px;border-radius:3px;cursor:pointer;font-size:12px;display:flex;align-items:center;gap:6px;background:${i === activeIdx ? 'var(--a44)' : 'transparent'}">
-      <span style="color:${i === activeIdx ? 'var(--ac)' : 'var(--txd)'};font-size:11px;flex-shrink:0">${i === activeIdx ? '▶' : (i + 1) + '.'}</span>
+    <div onclick="sMusicPlayTrack(${i})" style="padding:7px 8px;border-radius:3px;cursor:pointer;font-size:12px;display:flex;align-items:center;gap:6px;background:${i === activeIdx ? 'var(--rule-hi)' : 'transparent'}">
+      <span style="color:${i === activeIdx ? 'var(--bone)' : 'var(--ash)'};font-size:11px;flex-shrink:0">${i === activeIdx ? '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-play"></use></svg>' : (i + 1) + '.'}</span>
       <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${sEscHtml(t.name)}</span>
     </div>`).join('');
 }
@@ -1322,7 +1322,7 @@ function sMusicSendControl(body) {
 
 function sMusicUpdateBtn(playing) {
   const btn = document.getElementById('s-music-play-btn');
-  if (btn) btn.textContent = playing ? '⏸ Pause' : '▶ Play';
+  if (btn) btn.innerHTML = playing ? '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-pause"></use></svg> Pause' : '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-play"></use></svg> Play';
 }
 
 function sMusicUpdateNowPlaying(name, state) {

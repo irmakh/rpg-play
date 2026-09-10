@@ -44,7 +44,7 @@ function renderMedia() {
   if (!gallery) return;
   if (mediaList.length === 0) {
     gallery.className = '';
-    gallery.innerHTML = '<div style="color:var(--txd);font-size:11px;padding:4px 0">No media yet — upload images or videos above.</div>';
+    gallery.innerHTML = '<div style="color:var(--ash);font-size:11px;padding:4px 0">No media yet — upload images or videos above.</div>';
     return;
   }
   gallery.className = 'media-gallery';
@@ -63,7 +63,7 @@ function renderMedia() {
       <div class="media-card-name">${esc(m.name)}</div>
       <div class="media-card-actions">
         ${setPortBtn}
-        <button class="del-btn" style="font-size:11px;padding:2px 8px" onclick="deleteMedia('${escJs(m.id)}')">✕</button>
+        <button class="del-btn" style="font-size:11px;padding:2px 8px" onclick="deleteMedia('${escJs(m.id)}')"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg></button>
       </div>
     </div>`;
   }).join('');
@@ -88,7 +88,7 @@ async function uploadMedia(input, isPortrait) {
     const el = document.getElementById(statusId);
     if (!el) return;
     el.textContent = msg;
-    el.style.color = ok === true ? 'var(--ok)' : ok === false ? 'var(--err)' : 'var(--inf)';
+    el.style.color = ok === true ? 'var(--verdigris)' : ok === false ? 'var(--blood)' : 'var(--arc)';
   };
   setUploadStatus('Reading file…', null);
 

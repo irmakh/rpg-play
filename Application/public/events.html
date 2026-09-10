@@ -1,13 +1,17 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="lamplit app-page">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Calendar — DM</title>
 <script>(function(){try{var s=JSON.parse(sessionStorage.getItem('rpgSession')||'null');if(!s||s.role!=='dm'){location.replace('/login.html?next='+encodeURIComponent(location.pathname));}}catch(e){location.replace('/login.html');}})();</script>
 <link rel="manifest" href="/manifest.json">
-<meta name="theme-color" content="#1a1a2e">
+<meta name="theme-color" content="#080C15">
 <script>if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js');</script>
+<link rel="stylesheet" href="/css/tokens.css">
+<link rel="stylesheet" href="/css/fonts.css">
+<link rel="stylesheet" href="/css/base.css">
+<link rel="stylesheet" href="/css/app-shell.css">
 <link rel="stylesheet" href="/css/dm.css">
 <link rel="stylesheet" href="/css/notifications.css">
 <link rel="stylesheet" href="/css/calendar.css">
@@ -15,13 +19,14 @@
 <style>
   #cal-today-bar-btns { display:flex; gap:6px; align-items:center; flex-shrink:0; }
 </style>
+<script src="/js/lib/icons.js"></script>
 </head>
 <body>
 
 <!-- Password gate -->
 <div class="gate" id="gate">
   <div class="gate-box">
-    <div style="font-size:36px;margin-bottom:10px">📅</div>
+    <div style="font-size:36px;margin-bottom:10px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-calendar"></use></svg> </div>
     <h2>DM Calendar</h2>
     <p>Enter master password to access the campaign calendar.</p>
     <input type="password" id="gate-pw" placeholder="Master password…" autocomplete="off"
@@ -32,42 +37,39 @@
 </div>
 
 <!-- Main content -->
-<div class="sheet" id="main-content" style="display:none">
+<div class="sheet app-shell" id="main-content" style="display:none">
 
   <div class="hdr">
     <div class="hdr-left">
-      <button class="btn" onclick="location.href='/dm.html'">← DM</button>
-      <h1>📅 DM Calendar</h1>
-      <select id="theme-sel" onchange="applyTheme(this.value)" title="Theme">
-        <option value="dark-gold">🌙</option>
-        <option value="parchment">📜</option>
-        <option value="midnight">🌌</option>
-      </select>
+      <button class="btn" onclick="location.href='/dm.html'"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-arrow-left"></use></svg> DM</button>
+      <h1><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-calendar"></use></svg> DM Calendar</h1>
+      
     </div>
     <div class="hdr-right">
-      <button class="btn" data-notif-bell="connect" title="Notifications">🔔</button>
-      <span id="save-status" style="font-size:11px;color:var(--txd)"></span>
+      <button class="btn" data-notif-bell="connect" title="Notifications"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-bell"></use></svg> </button>
+      <span id="save-status" style="font-size:11px;color:var(--ash)"></span>
     </div>
   </div>
 
-  <div class="cal-wrap">
-
-    <!-- Current campaign date banner -->
-    <div class="cal-today-bar">
+  <!-- The calendar is the index and the day's events are the content, so this
+       is the same sidebar + detail shell the other DM tools use. The campaign
+       date banner stays full width: it is status, not navigation. -->
+  <div class="cal-today-bar">
       <span class="cal-today-label">Campaign Date</span>
       <span class="cal-today-date" id="cal-cur-date-display">—</span>
       <span class="cal-today-year" id="cal-cur-date-year"></span>
       <div id="cal-today-bar-btns">
-        <button class="btn sm" onclick="calPrevDay()" title="Previous day">◀ Day</button>
-        <button class="btn sm" onclick="calNextDay()" title="Next day">Day ▶</button>
+        <button class="btn sm" onclick="calPrevDay()" title="Previous day"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-left"></use></svg> Day</button>
+        <button class="btn sm" onclick="calNextDay()" title="Next day">Day <svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-right"></use></svg> </button>
         <button class="btn sm" onclick="calGoToToday()" title="Navigate to current date">Go to Today</button>
         <button class="btn sm" onclick="calOpenJumpModal()" title="Jump to specific date">Set Date…</button>
         <button class="btn sm" onclick="weatherOpenModal()" title="Roll daily weather">🌦 Weather</button>
       </div>
     </div>
 
-    <!-- Month / festival navigation -->
-    <div class="cal-nav">
+  <div class="app-body">
+    <aside class="app-side cal-side" style="--side-w:440px">
+      <div class="cal-nav">
       <button class="cal-nav-btn" onclick="calNavPage(-1)">&#8592;</button>
       <div class="cal-nav-title">
         <span class="cal-nav-month" id="cal-page-title">—</span>
@@ -75,17 +77,18 @@
       </div>
       <button class="cal-nav-btn" onclick="calNavPage(1)">&#8594;</button>
     </div>
+      <div class="app-list">
+        <div id="cal-grid-area"></div>
+      </div>
+    </aside>
 
-    <!-- Calendar grid (month) or festival card -->
-    <div id="cal-grid-area"></div>
-
-    <!-- Events for current page -->
-    <div class="cal-events-hdr">
+    <main class="app-main">
+      <div class="cal-events-hdr">
       <span class="cal-events-title" id="cal-events-section-title">Events</span>
       <button class="btn sm" onclick="calOpenAddEvent()">+ Add Event</button>
     </div>
-    <div id="cal-events-list"></div>
-
+      <div id="cal-events-list"></div>
+    </main>
   </div>
 </div>
 
@@ -284,7 +287,7 @@
         <input type="number" id="weather-l2-min" min="1" max="20" value="18" onchange="weatherOnThresholds()">
       </div>
     </div>
-    <div style="font-size:11px;color:var(--txd);margin:-2px 0 8px" id="weather-range-help">Normal 1–14 · Level 1 15–17 · Level 2 18–20</div>
+    <div style="font-size:11px;color:var(--ash);margin:-2px 0 8px" id="weather-range-help">Normal 1–14 · Level 1 15–17 · Level 2 18–20</div>
 
     <!-- Roll date selector -->
     <div class="cal-form-inline" style="align-items:flex-end">
@@ -320,9 +323,9 @@
       </div>
     </div>
     <div class="cal-form-row" style="margin:4px 0 8px">
-      <label>Weather for: <b id="weather-target-date" style="color:var(--ac)">—</b>
-        <a href="#" onclick="weatherUseCurrentDate();return false" style="font-size:11px;margin-left:8px">↺ campaign date</a>
-        <button class="btn sm" id="weather-roll-btn" onclick="weatherRoll()" style="margin-left:10px">🎲 Roll dice</button></label>
+      <label>Weather for: <b id="weather-target-date" style="color:var(--bone)">—</b>
+        <a href="#" onclick="weatherUseCurrentDate();return false" style="font-size:11px;margin-left:8px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-refresh"></use></svg> campaign date</a>
+        <button class="btn sm" id="weather-roll-btn" onclick="weatherRoll()" style="margin-left:10px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg> Roll dice</button></label>
     </div>
 
     <!-- Editable result form -->
@@ -361,7 +364,7 @@
       </div>
     </div>
     <div class="cal-modal-btns" style="margin-top:6px">
-      <button class="btn primary sm" id="weather-save-btn" onclick="weatherSave()">💾 Save for this date</button>
+      <button class="btn primary sm" id="weather-save-btn" onclick="weatherSave()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-save"></use></svg> Save for this date</button>
     </div>
 
     <!-- History -->

@@ -1,39 +1,43 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="lamplit">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Tactical Map</title>
 <link rel="manifest" href="/console/manifest-d20.json">
-<meta name="theme-color" content="#1a1a2e">
+<meta name="theme-color" content="#080C15">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <script>if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js');</script>
 <style>
-#pwa-gate{position:fixed;inset:0;background:#1a1a2e;z-index:9999;display:flex;align-items:center;justify-content:center;font-family:'Segoe UI',sans-serif;padding:16px}
-.pwag-box{background:#16213e;border:1px solid #c8a04a55;border-radius:10px;padding:24px 20px;width:100%;max-width:340px}
+#pwa-gate{position:fixed;inset:0;background:var(--ink);z-index:9999;display:flex;align-items:center;justify-content:center;font-family:var(--ui);padding:16px}
+.pwag-box{background:var(--slate);border:1px solid var(--arc)55;border-radius:10px;padding:24px 20px;width:100%;max-width:340px}
 .pwag-logo{text-align:center;margin-bottom:16px}
-.pwag-logo h2{color:#c8a04a;font-size:18px;font-weight:bold;letter-spacing:1px}
+.pwag-logo h2{color:var(--arc);font-size:18px;font-weight:bold;}
 .pwag-logo p{color:#aaa;font-size:11px;margin-top:3px}
-.pwag-tabs{display:flex;border:1px solid #c8a04a55;border-radius:5px;overflow:hidden;margin-bottom:16px}
-.pwag-tab{flex:1;padding:7px;background:transparent;border:none;color:#aaa;font-size:12px;font-weight:bold;cursor:pointer;letter-spacing:.5px;text-transform:uppercase}
-.pwag-tab.active{background:#c8a04a;color:#1a1a2e}
+.pwag-tabs{display:flex;border:1px solid var(--arc)55;border-radius:5px;overflow:hidden;margin-bottom:16px}
+.pwag-tab{flex:1;padding:7px;background:transparent;border:none;color:#aaa;font-size:12px;font-weight:bold;cursor:pointer;}
+.pwag-tab.active{background:var(--arc);color:var(--ink)}
 .pwag-pane{display:none}.pwag-pane.active{display:block}
-.pwag-lbl{display:block;font-size:10px;color:#c8a04a;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.pwag-lbl{display:block;font-size:10px;color:var(--arc);margin-bottom:4px}
 .pwag-field{margin-bottom:12px}
-.pwag-inp{width:100%;background:#0f3460;border:1px solid #c8a04a55;color:#e0d8c8;border-radius:4px;padding:8px 10px;font-size:13px;font-family:inherit}
-.pwag-inp:focus{outline:none;border-color:#c8a04a}
-.pwag-btn{width:100%;padding:10px;background:#c8a04a;border:none;color:#1a1a2e;border-radius:4px;font-size:13px;font-weight:bold;cursor:pointer;letter-spacing:.5px;margin-top:2px}
-.pwag-btn:hover{background:#e0b860}
+.pwag-inp{width:100%;background:var(--slate-hi);border:1px solid var(--arc)55;color:#e0d8c8;border-radius:4px;padding:8px 10px;font-size:13px;font-family:inherit}
+.pwag-inp:focus{outline:none;border-color:var(--arc)}
+.pwag-btn{width:100%;padding:10px;background:var(--arc);border:none;color:var(--ink);border-radius:4px;font-size:13px;font-weight:bold;cursor:pointer;margin-top:2px}
+.pwag-btn:hover{background:var(--arc-hi)}
 .pwag-btn:disabled{opacity:.5;cursor:not-allowed}
-.pwag-btn.ghost{background:transparent;border:1px solid #c8a04a55;color:#aaa;margin-top:7px}
-.pwag-btn.ghost:hover{background:#c8a04a22;color:#e0d8c8}
-.pwag-err{color:#ff8888;font-size:11px;min-height:14px;margin-bottom:8px;text-align:center}
-.pwag-step-title{font-size:13px;color:#c8a04a;font-weight:bold;margin-bottom:3px}
+.pwag-btn.ghost{background:transparent;border:1px solid var(--arc)55;color:#aaa;margin-top:7px}
+.pwag-btn.ghost:hover{background:var(--arc)22;color:#e0d8c8}
+.pwag-err{color:var(--blood);font-size:11px;min-height:14px;margin-bottom:8px;text-align:center}
+.pwag-step-title{font-size:13px;color:var(--arc);font-weight:bold;margin-bottom:3px}
 .pwag-step-sub{font-size:11px;color:#aaa;margin-bottom:14px}
 </style>
+<link rel="stylesheet" href="/css/tokens.css">
+<link rel="stylesheet" href="/css/fonts.css">
+<link rel="stylesheet" href="/css/base.css">
 <link rel="stylesheet" href="/css/table.css">
 <link rel="stylesheet" href="/css/console/table-console.css">
+<script src="/js/lib/icons.js"></script>
 </head>
 <body class="console-mode">
 
@@ -41,7 +45,7 @@
 <div id="pwa-gate" style="display:none">
   <div class="pwag-box">
     <div class="pwag-logo">
-      <h2>🗺 d20</h2>
+      <h2><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-map"></use></svg> d20</h2>
       <p>Login to continue</p>
     </div>
     <div class="pwag-tabs">
@@ -214,47 +218,47 @@ async function pwagLoginDM(){
 </script>
 
 <div id="toolbar">
-  <a href="/dm.html" class="btn" style="text-decoration:none">← DM</a>
-  <span id="dm-badge" style="display:none;background:var(--ac);color:var(--bg);padding:2px 8px;border-radius:3px;font-size:11px;font-weight:bold">DM</span>
-  <span id="user-badge" style="display:none;background:var(--a44);border:1px solid var(--a66);color:var(--ac);padding:2px 8px;border-radius:3px;font-size:11px;font-weight:bold"></span>
-  <button class="btn" id="btn-dm-unlock" style="display:none" onclick="unlockDM()">🔑 DM</button>
+  <a href="/dm.html" class="btn" style="text-decoration:none"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-arrow-left"></use></svg> DM</a>
+  <span id="dm-badge" style="display:none;background:var(--bone);color:var(--ink);padding:2px 8px;border-radius:3px;font-size:11px;font-weight:bold">DM</span>
+  <span id="user-badge" style="display:none;background:var(--rule-hi);border:1px solid var(--rule-hi);color:var(--bone);padding:2px 8px;border-radius:3px;font-size:11px;font-weight:bold"></span>
+  <button class="btn" id="btn-dm-unlock" style="display:none" onclick="unlockDM()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-key"></use></svg> DM</button>
 
   <div class="dm-controls" style="display:none;display:contents">
     <button class="btn primary" id="btn-add-token" onclick="openAddTokenModal()">+ Token</button>
     <button class="btn danger" onclick="clearAllTokens()">Clear</button>
   </div>
-  <button class="btn" onclick="logout()" style="margin-left:4px" title="Logout">🚪</button>
+  <button class="btn" onclick="logout()" style="margin-left:4px" title="Logout"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-exit"></use></svg> </button>
 
   <div style="flex:1"></div>
 
-  <button class="btn tool-btn active" id="btn-tool-select" onclick="setTool('select')" title="Select">🖱</button>
-  <button class="btn tool-btn" id="btn-tool-move" onclick="setTool('move')" title="Move">✥ Move</button>
-  <button class="btn tool-btn" id="btn-tool-pan" onclick="setTool('pan')" title="Pan map">✋</button>
-  <button class="btn tool-btn" id="btn-tool-ruler" onclick="setTool('ruler')" title="Ruler">📏</button>
-  <button class="btn tool-btn" id="btn-tool-ping" onclick="setTool('ping')" title="Ping">📍</button>
-  <button class="btn tool-btn" id="btn-tool-draw" onclick="setTool('draw')" title="Draw shapes">✏️</button>
+  <button class="btn tool-btn active" id="btn-tool-select" onclick="setTool('select')" title="Select"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-cursor"></use></svg> </button>
+  <button class="btn tool-btn" id="btn-tool-move" onclick="setTool('move')" title="Move"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-move"></use></svg> Move</button>
+  <button class="btn tool-btn" id="btn-tool-pan" onclick="setTool('pan')" title="Pan map"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-hand"></use></svg> </button>
+  <button class="btn tool-btn" id="btn-tool-ruler" onclick="setTool('ruler')" title="Ruler"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-ruler"></use></svg> </button>
+  <button class="btn tool-btn" id="btn-tool-ping" onclick="setTool('ping')" title="Ping"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-pin"></use></svg> </button>
+  <button class="btn tool-btn" id="btn-tool-draw" onclick="setTool('draw')" title="Draw shapes"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-pencil"></use></svg> </button>
 
-  <div style="display:flex;align-items:center;gap:4px;margin-left:8px;padding-left:8px;border-left:1px solid var(--a44)">
-    <span style="font-size:10px;color:var(--txd)">Zoom</span>
-    <button id="btn-zoom-out" style="background:none;border:1px solid var(--a55);color:var(--ac);border-radius:3px;width:20px;height:20px;cursor:pointer;font-size:13px;line-height:1;padding:0">−</button>
+  <div style="display:flex;align-items:center;gap:4px;margin-left:8px;padding-left:8px;border-left:1px solid var(--rule-hi)">
+    <span style="font-size:10px;color:var(--ash)">Zoom</span>
+    <button id="btn-zoom-out" style="background:none;border:1px solid var(--rule-hi);color:var(--bone);border-radius:3px;width:20px;height:20px;cursor:pointer;font-size:13px;line-height:1;padding:0">−</button>
     <input type="range" id="slider-zoom" min="50" max="200" value="100" style="width:70px;vertical-align:middle;cursor:pointer">
-    <button id="btn-zoom-in" style="background:none;border:1px solid var(--a55);color:var(--ac);border-radius:3px;width:20px;height:20px;cursor:pointer;font-size:13px;line-height:1;padding:0">+</button>
-    <span id="zoom-val" style="font-size:11px;color:var(--ac);min-width:34px">100%</span>
+    <button id="btn-zoom-in" style="background:none;border:1px solid var(--rule-hi);color:var(--bone);border-radius:3px;width:20px;height:20px;cursor:pointer;font-size:13px;line-height:1;padding:0">+</button>
+    <span id="zoom-val" style="font-size:11px;color:var(--bone);min-width:34px">100%</span>
   </div>
-  <button class="btn tool-btn" onclick="openDiceRollerModal()" title="Dice Roller" style="margin-left:4px">🎲</button>
+  <button class="btn tool-btn" onclick="openDiceRollerModal()" title="Dice Roller" style="margin-left:4px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg> </button>
 
   <!-- D-pad: move selected token — shown only when user can move it -->
-  <div id="console-arrow-btns" style="display:none;flex-direction:column;align-items:center;gap:2px;margin-left:8px;padding-left:8px;border-left:1px solid var(--a44)">
-    <button class="btn" onclick="moveSelectedToken('ArrowUp')"    title="Move Up"    style="width:36px;height:32px;padding:0;font-size:13px;line-height:1">▲</button>
+  <div id="console-arrow-btns" style="display:none;flex-direction:column;align-items:center;gap:2px;margin-left:8px;padding-left:8px;border-left:1px solid var(--rule-hi)">
+    <button class="btn" onclick="moveSelectedToken('ArrowUp')"    title="Move Up"    style="width:36px;height:32px;padding:0;font-size:13px;line-height:1"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-up"></use></svg> </button>
     <div style="display:flex;gap:2px">
-      <button class="btn" onclick="moveSelectedToken('ArrowLeft')"  title="Move Left"  style="width:36px;height:32px;padding:0;font-size:13px;line-height:1">◀</button>
-      <button class="btn" onclick="moveSelectedToken('ArrowRight')" title="Move Right" style="width:36px;height:32px;padding:0;font-size:13px;line-height:1">▶</button>
+      <button class="btn" onclick="moveSelectedToken('ArrowLeft')"  title="Move Left"  style="width:36px;height:32px;padding:0;font-size:13px;line-height:1"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-left"></use></svg> </button>
+      <button class="btn" onclick="moveSelectedToken('ArrowRight')" title="Move Right" style="width:36px;height:32px;padding:0;font-size:13px;line-height:1"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-right"></use></svg> </button>
     </div>
-    <button class="btn" onclick="moveSelectedToken('ArrowDown')"  title="Move Down"  style="width:36px;height:32px;padding:0;font-size:13px;line-height:1">▼</button>
+    <button class="btn" onclick="moveSelectedToken('ArrowDown')"  title="Move Down"  style="width:36px;height:32px;padding:0;font-size:13px;line-height:1"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-down"></use></svg> </button>
   </div>
 
   <!-- Console: secondary screen button + connection dot -->
-  <div style="display:flex;align-items:center;gap:5px;margin-left:8px;padding-left:8px;border-left:1px solid var(--a44)">
+  <div style="display:flex;align-items:center;gap:5px;margin-left:8px;padding-left:8px;border-left:1px solid var(--rule-hi)">
     <div id="console-secondary-dot" title="Secondary screen connection"></div>
     <button class="btn tool-btn" onclick="consoleOpenSecondary()" title="Open secondary screen">📱</button>
   </div>
@@ -267,12 +271,12 @@ async function pwagLoginDM(){
   <button class="btn sm draw-shape-btn" id="draw-shape-rect" onclick="setDrawShape('rect')">▭ Rect</button>
   <button class="btn sm draw-shape-btn" id="draw-shape-line" onclick="setDrawShape('line')">╱ Line</button>
   <span class="draw-tb-label" style="margin-left:10px">Color:</span>
-  <input type="color" id="draw-color" value="#ff4444" oninput="setDrawColor(this.value)" title="Stroke color">
+  <input type="color" id="draw-color" value="var(--blood)" oninput="setDrawColor(this.value)" title="Stroke color">
   <span class="draw-tb-label" style="margin-left:10px">Size:</span>
   <button class="btn sm draw-thick-btn active" id="draw-thick-2" onclick="setDrawThickness(2)" title="Thin">—</button>
   <button class="btn sm draw-thick-btn" id="draw-thick-4" onclick="setDrawThickness(4)" title="Medium">━</button>
   <button class="btn sm draw-thick-btn" id="draw-thick-6" onclick="setDrawThickness(6)" title="Thick">▬</button>
-  <button class="btn sm danger" onclick="clearDrawings()" style="margin-left:10px" title="Clear all drawings">🗑 Clear all</button>
+  <button class="btn sm danger" onclick="clearDrawings()" style="margin-left:10px" title="Clear all drawings"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-trash"></use></svg> Clear all</button>
   <span class="draw-tb-label" style="margin-left:auto;opacity:.6">ESC to exit</span>
 </div>
 
@@ -282,22 +286,22 @@ async function pwagLoginDM(){
   <div id="left-panel">
     <div class="lp-section">
       <div class="lp-section-hdr" onclick="initTogglePanel()">
-        <span>⚔️ Initiative <span id="init-badge" class="chat-new-badge" style="display:none">!</span></span>
-        <span id="init-chevron">▲</span>
+        <span><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-swords"></use></svg> Initiative <span id="init-badge" class="chat-new-badge" style="display:none">!</span></span>
+        <span id="init-chevron"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-up"></use></svg> </span>
       </div>
       <div class="lp-body" id="init-body-wrap">
         <div class="init-panel-btns">
-          <button class="dice-btn" onclick="rollMyInitiative()">🎲 Roll Init</button>
-          <button class="dice-btn" id="btn-init-prev" onclick="dmPrevTurn()">⏮ Prev</button>
-          <button class="dice-btn" id="btn-init-next" onclick="initSkipTurn()">⏭ Next</button>
+          <button class="dice-btn" onclick="rollMyInitiative()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg> Roll Init</button>
+          <button class="dice-btn" id="btn-init-prev" onclick="dmPrevTurn()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-prev"></use></svg> Prev</button>
+          <button class="dice-btn" id="btn-init-next" onclick="initSkipTurn()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-next"></use></svg> Next</button>
         </div>
         <div id="init-tracker-list"><div class="init-empty-msg">No combatants yet.</div></div>
       </div>
     </div>
     <div class="lp-section">
       <div class="lp-section-hdr" onclick="chatToggle()">
-        <span>💬 Chat <span id="chat-badge" class="chat-new-badge" style="display:none">0</span></span>
-        <span id="chat-chevron">▲</span>
+        <span><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chat"></use></svg> Chat <span id="chat-badge" class="chat-new-badge" style="display:none">0</span></span>
+        <span id="chat-chevron"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-up"></use></svg> </span>
       </div>
       <div class="lp-body" id="chat-body-wrap">
         <div class="chat-log" id="chat-log"></div>
@@ -313,24 +317,24 @@ async function pwagLoginDM(){
       <div class="lp-section-hdr lp-token-hdr">
         <span id="hp-panel-name" style="font-weight:bold;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1"></span>
         <div style="display:flex;gap:3px;flex-shrink:0;margin-left:6px">
-          <button id="hp-edit-label-btn" class="btn sm" onclick="openEditLabel()" style="display:none" title="Edit identifier">✏</button>
-          <button id="hp-del-btn" class="btn sm danger" onclick="deleteSelectedToken()" style="display:none" title="Delete token">🗑</button>
-          <button class="btn sm" onclick="closeHpPanel()">✕</button>
+          <button id="hp-edit-label-btn" class="btn sm" onclick="openEditLabel()" style="display:none" title="Edit identifier"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-pencil"></use></svg> </button>
+          <button id="hp-del-btn" class="btn sm danger" onclick="deleteSelectedToken()" style="display:none" title="Delete token"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-trash"></use></svg> </button>
+          <button class="btn sm" onclick="closeHpPanel()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg> </button>
         </div>
       </div>
       <div class="lp-body open" id="hp-body-wrap">
         <div style="font-size:12px;padding:6px 10px 2px;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">
-          <span>HP: <strong id="hp-cur-display" style="color:var(--ok)">0</strong>
-            <span style="color:var(--txd)"> / <span id="hp-max-display">0</span></span>
-            <span id="hp-temp-display-wrap" style="display:none"> <span style="color:#aaddff;font-size:11px">(+<span id="hp-temp-display">0</span> temp)</span></span>
+          <span>HP: <strong id="hp-cur-display" style="color:var(--verdigris)">0</strong>
+            <span style="color:var(--ash)"> / <span id="hp-max-display">0</span></span>
+            <span id="hp-temp-display-wrap" style="display:none"> <span style="color:var(--arc);font-size:11px">(+<span id="hp-temp-display">0</span> temp)</span></span>
           </span>
-          <span style="color:var(--txd)">AC: <strong id="hp-ac-display" style="color:var(--tx)">—</strong></span>
+          <span style="color:var(--ash)">AC: <strong id="hp-ac-display" style="color:var(--bone)">—</strong></span>
         </div>
         <div id="hp-edit-area">
         <div style="display:flex;gap:4px;padding:4px 8px;align-items:center">
-          <input type="number" id="hp-amount" value="1" min="1" style="width:52px;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px;padding:3px 5px;font-size:12px">
-          <button class="btn danger sm" onclick="applyHpChange('dmg')">⚔ Damage</button>
-          <button class="btn success sm" onclick="applyHpChange('heal')">💚 Heal</button>
+          <input type="number" id="hp-amount" value="1" min="1" style="width:52px;background:var(--slate-hi);border:1px solid var(--rule-hi);color:var(--bone);border-radius:3px;padding:3px 5px;font-size:12px">
+          <button class="btn danger sm" onclick="applyHpChange('dmg')"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-swords"></use></svg> Damage</button>
+          <button class="btn success sm" onclick="applyHpChange('heal')"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-heart"></use></svg> Heal</button>
         </div>
         <div style="display:flex;gap:4px;padding:0 8px 6px;flex-wrap:wrap">
           <button class="btn danger sm" onclick="quickDmg(1)">-1</button>
@@ -340,35 +344,35 @@ async function pwagLoginDM(){
           <button class="btn success sm" onclick="quickHeal(5)">+5</button>
           <button class="btn success sm" onclick="quickHeal(10)">+10</button>
         </div>
-        <div style="display:flex;gap:4px;align-items:center;border-top:1px solid var(--a44);padding:6px 8px">
-          <span style="font-size:11px;color:var(--txd);white-space:nowrap">Temp HP:</span>
-          <input type="number" id="hp-temp-input" value="0" min="0" style="width:52px;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px;padding:3px 5px;font-size:12px">
+        <div style="display:flex;gap:4px;align-items:center;border-top:1px solid var(--rule-hi);padding:6px 8px">
+          <span style="font-size:11px;color:var(--ash);white-space:nowrap">Temp HP:</span>
+          <input type="number" id="hp-temp-input" value="0" min="0" style="width:52px;background:var(--slate-hi);border:1px solid var(--rule-hi);color:var(--bone);border-radius:3px;padding:3px 5px;font-size:12px">
           <button class="btn sm" onclick="applyTempHp()">Set</button>
         </div>
         </div>
-        <div id="hp-conditions-row" style="border-top:1px solid var(--a44);padding:6px 8px 4px">
-          <div style="font-size:10px;color:var(--txd);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Conditions</div>
+        <div id="hp-conditions-row" style="border-top:1px solid var(--rule-hi);padding:6px 8px 4px">
+          <div style="font-size:10px;color:var(--ash);margin-bottom:4px">Conditions</div>
           <div id="hp-conditions-grid" style="display:flex;flex-wrap:wrap;gap:3px"></div>
         </div>
-        <div id="hp-vis-row" style="display:none;border-top:1px solid var(--a44);padding:6px 8px">
+        <div id="hp-vis-row" style="display:none;border-top:1px solid var(--rule-hi);padding:6px 8px">
           <button id="hp-vis-btn" class="btn sm" onclick="toggleTokenVisibility()" style="width:100%;font-size:12px"></button>
         </div>
-        <div id="hp-init-row" style="display:none;border-top:1px solid var(--a44);padding:6px 8px">
-          <button id="hp-init-btn" class="btn sm" onclick="rollTokenInitiative()" style="width:100%;font-size:12px">🎲 Roll Initiative</button>
-          <button class="btn sm" onclick="openEditLabel()" style="width:100%;font-size:12px;margin-top:4px">✏ Edit Identifier</button>
+        <div id="hp-init-row" style="display:none;border-top:1px solid var(--rule-hi);padding:6px 8px">
+          <button id="hp-init-btn" class="btn sm" onclick="rollTokenInitiative()" style="width:100%;font-size:12px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg> Roll Initiative</button>
+          <button class="btn sm" onclick="openEditLabel()" style="width:100%;font-size:12px;margin-top:4px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-pencil"></use></svg> Edit Identifier</button>
         </div>
-        <div id="hp-label-row" style="display:none;border-top:1px solid var(--a44);padding:6px 8px">
-          <div style="font-size:10px;color:var(--txd);margin-bottom:4px">Identifier (shown to players)</div>
+        <div id="hp-label-row" style="display:none;border-top:1px solid var(--rule-hi);padding:6px 8px">
+          <div style="font-size:10px;color:var(--ash);margin-bottom:4px">Identifier (shown to players)</div>
           <div style="display:flex;gap:4px">
-            <input id="hp-label-input" type="text" style="flex:1;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px;padding:3px 6px;font-size:12px" placeholder="e.g. A3" onkeydown="if(event.key==='Enter')saveEditLabel();else if(event.key==='Escape')cancelEditLabel();">
+            <input id="hp-label-input" type="text" style="flex:1;background:var(--slate-hi);border:1px solid var(--rule-hi);color:var(--bone);border-radius:3px;padding:3px 6px;font-size:12px" placeholder="e.g. A3" onkeydown="if(event.key==='Enter')saveEditLabel();else if(event.key==='Escape')cancelEditLabel();">
             <button class="btn sm success" onclick="saveEditLabel()">Save</button>
-            <button class="btn sm" onclick="cancelEditLabel()">✕</button>
+            <button class="btn sm" onclick="cancelEditLabel()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg> </button>
           </div>
         </div>
-        <div id="hp-assign-row" style="display:none;border-top:1px solid var(--a44);padding:6px 8px">
-          <div style="font-size:10px;color:var(--txd);margin-bottom:4px">Assign to character</div>
+        <div id="hp-assign-row" style="display:none;border-top:1px solid var(--rule-hi);padding:6px 8px">
+          <div style="font-size:10px;color:var(--ash);margin-bottom:4px">Assign to character</div>
           <div style="display:flex;gap:4px">
-            <select id="hp-assign-sel" style="flex:1;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px;padding:3px 6px;font-size:12px"></select>
+            <select id="hp-assign-sel" style="flex:1;background:var(--slate-hi);border:1px solid var(--rule-hi);color:var(--bone);border-radius:3px;padding:3px 6px;font-size:12px"></select>
             <button class="btn sm success" onclick="saveTokenAssignment()">Assign</button>
             <button id="hp-unassign-btn" class="btn sm" onclick="unassignToken()" style="display:none">Unassign</button>
           </div>
@@ -388,26 +392,26 @@ async function pwagLoginDM(){
       <div id="token-label-layer" style="position:absolute;top:0;left:0;pointer-events:none;z-index:11"></div>
       <canvas id="drawing-canvas" style="position:absolute;top:0;left:0;pointer-events:none;z-index:15"></canvas>
       <canvas id="overlay-canvas" style="position:absolute;top:0;left:0;z-index:20"></canvas>
-      <div id="placement-hint" style="display:none;position:absolute;top:16px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.8);color:var(--ac);padding:8px 18px;border-radius:6px;font-size:13px;font-weight:bold;pointer-events:none;z-index:30;white-space:nowrap;border:1px solid var(--a66)">Click on map to place token &nbsp;·&nbsp; Esc to cancel</div>
+      <div id="placement-hint" style="display:none;position:absolute;top:16px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.8);color:var(--bone);padding:8px 18px;border-radius:6px;font-size:13px;font-weight:bold;pointer-events:none;z-index:30;white-space:nowrap;border:1px solid var(--rule-hi)">Click on map to place token &nbsp;·&nbsp; Esc to cancel</div>
     </div>
   </div>
 
   <div id="side-panel">
-    <div style="font-size:10px;color:var(--ac);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Movement</div>
+    <div style="font-size:10px;color:var(--bone);margin-bottom:4px">Movement</div>
     <div id="movement-display" style="font-size:14px;font-weight:bold;margin-bottom:10px">— ft</div>
-    <div style="font-size:10px;color:var(--ac);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Active</div>
-    <div id="active-token-info" style="font-size:11px;color:var(--txd);margin-bottom:10px">None</div>
-    <div style="font-size:10px;color:var(--ac);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;margin-top:10px">Hit Points</div>
+    <div style="font-size:10px;color:var(--bone);margin-bottom:4px">Active</div>
+    <div id="active-token-info" style="font-size:11px;color:var(--ash);margin-bottom:10px">None</div>
+    <div style="font-size:10px;color:var(--bone);margin-bottom:4px;margin-top:10px">Hit Points</div>
     <div id="hp-tracker-list" style="margin-bottom:10px"></div>
-    <div id="side-qroll-wrap" style="border-top:1px solid var(--a44);padding-top:8px">
+    <div id="side-qroll-wrap" style="border-top:1px solid var(--rule-hi);padding-top:8px">
       <div id="side-qroll-content"></div>
     </div>
-    <div id="fog-panel" style="display:none;border-top:1px solid var(--a44);padding-top:8px;margin-top:8px">
-      <div style="font-size:10px;color:var(--ac);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Fog Regions</div>
+    <div id="fog-panel" style="display:none;border-top:1px solid var(--rule-hi);padding-top:8px;margin-top:8px">
+      <div style="font-size:10px;color:var(--bone);margin-bottom:4px">Fog Regions</div>
       <div id="fog-region-list"></div>
     </div>
-    <div id="items-panel" style="display:none;border-top:1px solid var(--a44);padding-top:8px;margin-top:8px">
-      <div style="font-size:10px;color:var(--ac);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Hidden Items</div>
+    <div id="items-panel" style="display:none;border-top:1px solid var(--rule-hi);padding-top:8px;margin-top:8px">
+      <div style="font-size:10px;color:var(--bone);margin-bottom:4px">Hidden Items</div>
       <div id="items-list"></div>
     </div>
   </div>
@@ -415,7 +419,7 @@ async function pwagLoginDM(){
 </div><!-- /#table-wrap -->
 
 <!-- Advantage modal -->
-<div id="adv-modal" style="position:fixed;inset:0;background:var(--ov);display:none;align-items:center;justify-content:center;z-index:2500" onclick="advClose()">
+<div id="adv-modal" style="position:fixed;inset:0;background:var(--scrim);display:none;align-items:center;justify-content:center;z-index:2500" onclick="advClose()">
   <div class="adv-box" onclick="event.stopPropagation()">
     <div class="adv-label" id="adv-label">Roll</div>
     <div class="adv-btns">
@@ -426,7 +430,7 @@ async function pwagLoginDM(){
     <div style="margin-top:10px;text-align:center">
       <button class="btn" onclick="advClose()" style="font-size:11px;padding:3px 12px">Cancel</button>
     </div>
-    <div style="font-size:10px;color:var(--txd);margin-top:8px;text-align:center">A / N / D · Esc to cancel</div>
+    <div style="font-size:10px;color:var(--ash);margin-top:8px;text-align:center">A / N / D · Esc to cancel</div>
   </div>
 </div>
 
@@ -434,7 +438,7 @@ async function pwagLoginDM(){
 <div id="add-token-modal" class="modal-overlay" style="display:none">
   <div class="modal-box" style="width:460px;max-width:96vw">
     <div class="ct">Add Token to Map</div>
-    <div style="display:flex;gap:0;border-bottom:1px solid var(--a44)">
+    <div style="display:flex;gap:0;border-bottom:1px solid var(--rule-hi)">
       <button class="tab-btn active" id="tabBtn-chars" onclick="switchTokenTab('chars')">Characters</button>
       <button class="tab-btn" id="tabBtn-monsters" onclick="switchTokenTab('monsters')">Monsters</button>
       <button class="tab-btn" id="tabBtn-custom" onclick="switchTokenTab('custom')">Custom</button>
@@ -449,9 +453,9 @@ async function pwagLoginDM(){
         <div class="field"><label class="lbl">Color</label><input type="color" id="custom-tok-color" value="#888888"></div>
       </div>
     </div>
-    <div style="padding:8px 8px 0;border-top:1px solid var(--a44);display:flex;align-items:center;gap:8px">
-      <label class="lbl" style="font-size:11px;color:var(--txd);white-space:nowrap">Token Size:</label>
-      <select id="tok-size-sel" style="background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px;padding:3px 6px;font-size:12px">
+    <div style="padding:8px 8px 0;border-top:1px solid var(--rule-hi);display:flex;align-items:center;gap:8px">
+      <label class="lbl" style="font-size:11px;color:var(--ash);white-space:nowrap">Token Size:</label>
+      <select id="tok-size-sel" style="background:var(--slate-hi);border:1px solid var(--rule-hi);color:var(--bone);border-radius:3px;padding:3px 6px;font-size:12px">
         <option value="1">Medium (1×1)</option>
         <option value="2">Large (2×2)</option>
         <option value="3">Huge (3×3)</option>
@@ -459,9 +463,9 @@ async function pwagLoginDM(){
       </select>
     </div>
     <div id="tok-identifier-row" style="display:none;padding:4px 8px 0;align-items:center;gap:8px">
-      <label class="lbl" style="font-size:11px;color:var(--txd);white-space:nowrap">Identifier:</label>
+      <label class="lbl" style="font-size:11px;color:var(--ash);white-space:nowrap">Identifier:</label>
       <input type="text" id="tok-identifier" maxlength="12" placeholder="A, B, #1 … (auto if blank)"
-        style="background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px;padding:3px 6px;font-size:12px;flex:1">
+        style="background:var(--slate-hi);border:1px solid var(--rule-hi);color:var(--bone);border-radius:3px;padding:3px 6px;font-size:12px;flex:1">
     </div>
     <div class="modal-btns">
       <button class="btn" onclick="closeAddTokenModal()">Cancel</button>
@@ -472,15 +476,15 @@ async function pwagLoginDM(){
 
 <!-- Dice Roller Modal -->
 <div id="dice-roller-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:2000;align-items:center;justify-content:center">
-  <div style="background:var(--bg2);border:1px solid var(--ac);border-radius:8px;width:380px;max-height:90vh;display:flex;flex-direction:column">
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--a44)">
+  <div style="background:var(--slate);border:1px solid var(--bone);border-radius:8px;width:380px;max-height:90vh;display:flex;flex-direction:column">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--rule-hi)">
       <span style="font-weight:bold;font-size:14px">Dice Roller</span>
-      <button class="btn sm" onclick="closeDiceRollerModal()">✕</button>
+      <button class="btn sm" onclick="closeDiceRollerModal()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg> </button>
     </div>
     <div style="overflow-y:auto;padding:12px 16px">
       <table style="width:100%;border-collapse:collapse;font-size:13px">
         <thead>
-          <tr style="color:var(--txd);font-size:11px">
+          <tr style="color:var(--ash);font-size:11px">
             <th style="text-align:left;padding:3px 6px;font-weight:normal"></th>
             <th style="padding:3px 4px;text-align:center;font-weight:normal">1</th>
             <th style="padding:3px 4px;text-align:center;font-weight:normal">2</th>
@@ -492,13 +496,13 @@ async function pwagLoginDM(){
         </thead>
         <tbody id="dice-roller-tbody"></tbody>
       </table>
-      <div style="border-top:1px solid var(--a44);margin-top:10px;padding-top:10px">
-        <div style="color:var(--ac);font-weight:bold;font-size:13px;margin-bottom:8px">Adv. Roller</div>
+      <div style="border-top:1px solid var(--rule-hi);margin-top:10px;padding-top:10px">
+        <div style="color:var(--bone);font-weight:bold;font-size:13px;margin-bottom:8px">Adv. Roller</div>
         <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
-          <span style="font-size:11px;color:var(--txd);white-space:nowrap">Mod:</span>
-          <input type="number" id="dice-roller-mod" value="0" style="width:52px;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px;padding:3px 5px;font-size:12px">
-          <span style="font-size:11px;color:var(--txd);white-space:nowrap">Label:</span>
-          <input type="text" id="dice-roller-label" placeholder="d20 roll" style="flex:1;background:var(--bg3);border:1px solid var(--a55);color:var(--tx);border-radius:3px;padding:3px 5px;font-size:12px">
+          <span style="font-size:11px;color:var(--ash);white-space:nowrap">Mod:</span>
+          <input type="number" id="dice-roller-mod" value="0" style="width:52px;background:var(--slate-hi);border:1px solid var(--rule-hi);color:var(--bone);border-radius:3px;padding:3px 5px;font-size:12px">
+          <span style="font-size:11px;color:var(--ash);white-space:nowrap">Label:</span>
+          <input type="text" id="dice-roller-label" placeholder="d20 roll" style="flex:1;background:var(--slate-hi);border:1px solid var(--rule-hi);color:var(--bone);border-radius:3px;padding:3px 5px;font-size:12px">
         </div>
         <div style="display:flex;gap:6px">
           <button class="btn sm success" onclick="diceRollerD20('adv')" style="flex:1">Advantage</button>
@@ -512,10 +516,10 @@ async function pwagLoginDM(){
 
 <!-- Monster Info Modal (DM) -->
 <div id="monster-info-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:2100;align-items:center;justify-content:center;padding:16px">
-  <div style="background:var(--bg2);border:1px solid var(--ac);border-radius:6px;max-width:680px;width:100%;max-height:90vh;display:flex;flex-direction:column">
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--a44)">
-      <span id="monster-info-table-title" style="font-size:15px;font-weight:bold;color:var(--ac)"></span>
-      <button class="btn sm" onclick="closeMonsterInfoTableModal()">✕</button>
+  <div style="background:var(--slate);border:1px solid var(--bone);border-radius:6px;max-width:680px;width:100%;max-height:90vh;display:flex;flex-direction:column">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--rule-hi)">
+      <span id="monster-info-table-title" style="font-size:15px;font-weight:bold;color:var(--bone)"></span>
+      <button class="btn sm" onclick="closeMonsterInfoTableModal()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg> </button>
     </div>
     <div id="monster-info-table-body" style="overflow-y:auto;padding:16px;flex:1;font-size:13px"></div>
   </div>
@@ -531,12 +535,12 @@ async function pwagLoginDM(){
 </div>
 
 <!-- Toast notification -->
-<div id="toast" style="display:none;position:fixed;top:18px;left:50%;transform:translateX(-50%);background:var(--bg2);border:1px solid var(--a66);color:var(--tx);padding:8px 20px;border-radius:6px;font-size:13px;z-index:3000;pointer-events:none;box-shadow:0 2px 12px #0008;white-space:nowrap"></div>
+<div id="toast" style="display:none;position:fixed;top:18px;left:50%;transform:translateX(-50%);background:var(--slate);border:1px solid var(--rule-hi);color:var(--bone);padding:8px 20px;border-radius:6px;font-size:13px;z-index:3000;pointer-events:none;box-shadow:0 2px 12px #0008;white-space:nowrap"></div>
 
 <!-- Confirm modal -->
-<div id="confirm-modal" style="display:none;position:fixed;inset:0;background:var(--ov);align-items:center;justify-content:center;z-index:2800">
-  <div style="background:var(--bg2);border:1px solid var(--ac);border-radius:6px;padding:20px 24px;min-width:260px;max-width:90vw;text-align:center">
-    <div id="confirm-msg" style="font-size:13px;margin-bottom:16px;color:var(--tx)"></div>
+<div id="confirm-modal" style="display:none;position:fixed;inset:0;background:var(--scrim);align-items:center;justify-content:center;z-index:2800">
+  <div style="background:var(--slate);border:1px solid var(--bone);border-radius:6px;padding:20px 24px;min-width:260px;max-width:90vw;text-align:center">
+    <div id="confirm-msg" style="font-size:13px;margin-bottom:16px;color:var(--bone)"></div>
     <div style="display:flex;gap:8px;justify-content:center">
       <button class="btn danger" id="confirm-ok">Confirm</button>
       <button class="btn" id="confirm-cancel">Cancel</button>

@@ -82,8 +82,8 @@ function showHandoutCard(h) {
   card.id = 'handout-card';
   card.innerHTML = `
     <div class="ho-card-hdr" id="handout-card-drag">
-      <span class="ho-card-title">📜 ${esc(h.title)}</span>
-      <button class="ho-card-x" onclick="closeHandoutCard()" title="Close">✕</button>
+      <span class="ho-card-title"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-document"></use></svg> ${esc(h.title)}</span>
+      <button class="ho-card-x" onclick="closeHandoutCard()" title="Close"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg></button>
     </div>
     <div class="ho-card-body" id="handout-card-body">${_tblHandoutBody(h)}</div>`;
   document.body.appendChild(card);
@@ -98,7 +98,7 @@ function _tblHandoutBody(h) {
   if (h.canRoll) {
     return `
       <div class="ho-card-prompt">${esc(h.promptText || 'Something here rewards a closer look.')}</div>
-      <button class="btn primary" style="margin-top:10px" onclick="tblRollHandout('${escJs(h.id)}',this)">🔍 Examine</button>`;
+      <button class="btn primary" style="margin-top:10px" onclick="tblRollHandout('${escJs(h.id)}',this)"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-search"></use></svg> Examine</button>`;
   }
   if (h.awaitingDm) {
     return `
@@ -269,8 +269,8 @@ function renderSideHandoutsPane(charId) {
     + (isDM() ? '<button class="btn sm primary" onclick="openHandoutModal()">＋ Hand out…</button>' : '')
     + '<span style="flex:1"></span>'
     + (given.length
-        ? '<button class="btn sm" title="Expand all" onclick="setAllSideHandouts(true)">⌄</button>'
-          + '<button class="btn sm" title="Collapse all" onclick="setAllSideHandouts(false)">⌃</button>'
+        ? '<button class="btn sm" title="Expand all" onclick="setAllSideHandouts(true)"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-down"></use></svg></button>'
+          + '<button class="btn sm" title="Collapse all" onclick="setAllSideHandouts(false)"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-up"></use></svg></button>'
         : '')
     + '</div>';
 
@@ -289,7 +289,7 @@ function renderSideHandoutsPane(charId) {
           + '</div>').join('')
       : '<div class="ho-rp-none">Every handout is already with this character.</div>';
     html += '<div class="ho-rp-none" style="margin-top:6px">'
-          + '<a href="/handouts.html" style="color:var(--ac)">Manage handouts →</a></div></div>';
+          + '<a href="/handouts.html" style="color:var(--bone)">Manage handouts <svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-arrow-right"></use></svg></a></div></div>';
   }
   return html;
 }
@@ -502,7 +502,7 @@ function renderHandoutModal() {
           + '<span class="ho-mo-pick-sub">' + check + (recs.length ? ' · with ' + recs.length : '') + '</span>'
           + '</button>';
       }).join('')
-    : '<div class="ho-rp-none">No handouts yet. <a href="/handouts.html" style="color:var(--ac)">Create one →</a></div>';
+    : '<div class="ho-rp-none">No handouts yet. <a href="/handouts.html" style="color:var(--bone)">Create one <svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-arrow-right"></use></svg></a></div>';
 
   const recById = new Map((picked ? picked.recipients || [] : []).map(r => [r.charId, r]));
   const anySuggested = [...recById.values()].some(r => r.outcome === 'rolled' && r.suggested);
@@ -529,8 +529,8 @@ function renderHandoutModal() {
   modal.innerHTML =
       '<div class="ho-mo-box">'
     +   '<div class="ho-mo-hdr">'
-    +     '<span class="ho-mo-title">📜 Handouts</span>'
-    +     '<button class="btn sm" onclick="closeHandoutModal()">✕</button>'
+    +     '<span class="ho-mo-title"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-document"></use></svg> Handouts</span>'
+    +     '<button class="btn sm" onclick="closeHandoutModal()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg></button>'
     +   '</div>'
     +   '<div class="ho-mo-body">'
     +     '<div class="ho-mo-lbl">Handout</div>'

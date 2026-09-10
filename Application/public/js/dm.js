@@ -20,13 +20,14 @@ function escJs(s) {
     .replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-function applyTheme(name) {
-  document.body.className = name === 'dark-gold' ? '' : 'theme-' + name;
-  localStorage.setItem('dm-theme', name);
-  const sel = document.getElementById('theme-sel');
-  if (sel) sel.value = name;
+function applyTheme() {
+  // Single lamplit theme now; the swappable themes and their CSS are gone.
+  // Kept as a no-op so a stale localStorage value cannot reapply a theme
+  // class that no longer has any rules behind it, and so the inline
+  // onchange handlers on any remaining theme selects do not throw.
+  document.body.className = '';
 }
-(function(){ applyTheme(localStorage.getItem('dm-theme') || 'dark-gold'); })();
+(function(){ applyTheme(); })();
 
 function showStatus(msg, isError) {
   const el = document.getElementById('status-msg');
@@ -81,13 +82,13 @@ function renderInitiative() {
   list.innerHTML = sorted.map(e => {
     const isCur = e.id === initData.currentId;
     const nameEl = e.monsterId
-      ? `<span class="init-row-name" style="cursor:pointer;text-decoration:underline dotted;color:var(--ahi)" onclick="showMonsterInfo('${escJs(e.monsterId)}')" title="View monster details">${esc(e.name)}</span>`
+      ? `<span class="init-row-name" style="cursor:pointer;text-decoration:underline dotted;color:var(--arc-hi)" onclick="showMonsterInfo('${escJs(e.monsterId)}')" title="View monster details">${esc(e.name)}</span>`
       : `<span class="init-row-name">${esc(e.name)}</span>`;
     return `<div class="init-row${isCur ? ' init-cur' : ''}">
       <span class="init-cur-marker">${isCur ? '▶' : ''}</span>
       ${nameEl}
       <span class="init-row-roll">${e.roll}</span>
-      <button class="edit-btn" onclick="openEditModal('${escJs(e.id)}')" title="Edit">✎</button>
+      <button class="edit-btn" onclick="openEditModal('${escJs(e.id)}')" title="Edit"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-pencil"></use></svg></button>
       <button class="del-btn" onclick="deleteEntry('${escJs(e.id)}')" title="Remove">✕</button>
     </div>`;
   }).join('');
@@ -154,10 +155,10 @@ async function runSelectiveBackup() {
   _backupInFlight = false;
   btn.disabled = false;
   if (failed.length) {
-    statusEl.style.color = 'var(--err)';
+    statusEl.style.color = 'var(--blood)';
     statusEl.textContent = 'Failed: ' + failed.join(', ');
   } else {
-    statusEl.style.color = 'var(--ok)';
+    statusEl.style.color = 'var(--verdigris)';
     statusEl.textContent = `${parts.length} file${parts.length !== 1 ? 's' : ''} downloaded successfully.`;
   }
 }
@@ -169,16 +170,16 @@ async function downloadRawDbBackup() {
   const btn = document.getElementById('dbbk-dl-btn');
   const statusEl = document.getElementById('dbbk-status');
   btn.disabled = true;
-  statusEl.style.color = 'var(--txd)';
+  statusEl.style.color = 'var(--ash)';
   statusEl.textContent = 'Preparing database snapshot…';
   try {
     const res = await fetch('/api/admin/db-backup', { headers: { 'x-master-password': masterPw } });
-    if (res.status === 401) { statusEl.style.color = 'var(--err)'; statusEl.textContent = 'Unauthorized.'; return; }
-    if (res.status === 409) { statusEl.style.color = 'var(--err)'; statusEl.textContent = 'A backup is already running — please wait.'; return; }
+    if (res.status === 401) { statusEl.style.color = 'var(--blood)'; statusEl.textContent = 'Unauthorized.'; return; }
+    if (res.status === 409) { statusEl.style.color = 'var(--blood)'; statusEl.textContent = 'A backup is already running — please wait.'; return; }
     if (!res.ok) {
       let msg = 'Backup failed.';
       try { msg = (await res.json()).error || msg; } catch {}
-      statusEl.style.color = 'var(--err)'; statusEl.textContent = msg; return;
+      statusEl.style.color = 'var(--blood)'; statusEl.textContent = msg; return;
     }
     const blob = await res.blob();
     const date = new Date().toISOString().split('T')[0];
@@ -190,11 +191,11 @@ async function downloadRawDbBackup() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    statusEl.style.color = 'var(--ok)';
+    statusEl.style.color = 'var(--verdigris)';
     statusEl.textContent = `Downloaded (${(blob.size / 1048576).toFixed(1)} MB).`;
   } catch (err) {
     console.error(err);
-    statusEl.style.color = 'var(--err)';
+    statusEl.style.color = 'var(--blood)';
     statusEl.textContent = 'Error: ' + err.message;
   } finally {
     _dbBackupInFlight = false;
@@ -453,7 +454,7 @@ function handleMediaFile(file) {
     const previewEl   = document.getElementById('media-preview-el');
     previewWrap.style.display = 'block';
     if (mimeType.startsWith('image/')) {
-      previewEl.innerHTML = `<img src="${pendingMediaDataUrl}" style="max-width:100%;max-height:180px;border-radius:4px;object-fit:contain;border:1px solid var(--a44);display:block">`;
+      previewEl.innerHTML = `<img src="${pendingMediaDataUrl}" style="max-width:100%;max-height:180px;border-radius:4px;object-fit:contain;border:1px solid var(--rule-hi);display:block">`;
     } else if (mimeType.startsWith('video/')) {
       previewEl.innerHTML = `<video src="${pendingMediaDataUrl}" controls style="max-width:100%;max-height:180px;border-radius:4px;display:block"></video>`;
     } else {
@@ -501,13 +502,13 @@ async function shareMedia() {
     document.getElementById('media-caption').value = '';
     setTimeout(() => setMediaStatus(''), 3000);
   } catch { setMediaStatus('Network error.', true); }
-  finally { btn.disabled = false; btn.textContent = '📤 Share to Chat'; }
+  finally { btn.disabled = false; btn.innerHTML = '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-upload"></use></svg> Share to Chat'; }
 }
 
 function setMediaStatus(msg, isErr) {
   const el = document.getElementById('media-status');
   el.textContent = msg;
-  el.style.color = isErr ? 'var(--err)' : 'var(--ok)';
+  el.style.color = isErr ? 'var(--blood)' : 'var(--verdigris)';
 }
 
 // ── Chat ──────────────────────────────────────────────────────────────────────
@@ -590,8 +591,8 @@ function appendChatEntry(e) {
   const time = dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   const div = document.createElement('div');
   if (e.id) div.dataset.entryId = e.id;
-  const delBtn = e.id ? `<button onclick="deleteChatMsg('${escJs(e.id)}')" style="background:none;border:none;cursor:pointer;color:var(--txd);font-size:11px;padding:0 0 0 4px;opacity:.6;line-height:1;flex-shrink:0" title="Delete message">✕</button>` : '';
-  const timeCol = `<span style="display:flex;align-items:center"><span style="color:var(--txd);font-size:10px">${time}</span>${delBtn}</span>`;
+  const delBtn = e.id ? `<button onclick="deleteChatMsg('${escJs(e.id)}')" style="background:none;border:none;cursor:pointer;color:var(--ash);font-size:11px;padding:0 0 0 4px;opacity:.6;line-height:1;flex-shrink:0" title="Delete message">✕</button>` : '';
+  const timeCol = `<span style="display:flex;align-items:center"><span style="color:var(--ash);font-size:10px">${time}</span>${delBtn}</span>`;
 
   if (e.type === 'text') {
     div.className = 'chat-entry chat-text';
@@ -619,10 +620,10 @@ function appendChatEntry(e) {
     } else {
       mediaEl = `<audio class="chat-media-audio" src="${url}" controls></audio>`;
     }
-    const cap = e.caption ? `<div style="font-size:11px;color:var(--txd);margin-top:4px">${esc(e.caption)}</div>` : '';
+    const cap = e.caption ? `<div style="font-size:11px;color:var(--ash);margin-top:4px">${esc(e.caption)}</div>` : '';
     div.className = 'chat-entry';
     div.innerHTML = `<div style="display:flex;justify-content:space-between;margin-bottom:4px">
-      <span class="ce-sender">${esc(e.sender)} <span style="font-size:10px;color:var(--txd);font-weight:normal">shared media</span></span>
+      <span class="ce-sender">${esc(e.sender)} <span style="font-size:10px;color:var(--ash);font-weight:normal">shared media</span></span>
       ${timeCol}
     </div>${mediaEl}${cap}`;
     log.appendChild(div);
@@ -633,20 +634,20 @@ function appendChatEntry(e) {
   const isNat1  = e.dice && e.dice.match(/d20$/) && e.results.length === 1 && e.results[0] === 1;
   const cls = isNat20 ? ' nat20' : isNat1 ? ' nat1' : '';
   const modStr   = e.modifier ? (e.modifier > 0 ? `+${e.modifier}` : `${e.modifier}`) : '';
-  const multiStr = e.results && e.results.length > 1 ? ` <span style="color:var(--txd)">[${e.results.join(', ')}]</span>` : '';
-  const labelStr = e.label ? ` <span style="color:var(--txd)">— ${esc(e.label)}</span>` : '';
-  const natStr   = isNat20 ? '<span style="color:var(--ok);font-size:10px;font-weight:bold"> ✨ NAT 20!</span>'
-                 : isNat1  ? '<span style="color:var(--err);font-size:10px;font-weight:bold"> 💀 NAT 1</span>' : '';
+  const multiStr = e.results && e.results.length > 1 ? ` <span style="color:var(--ash)">[${e.results.join(', ')}]</span>` : '';
+  const labelStr = e.label ? ` <span style="color:var(--ash)">— ${esc(e.label)}</span>` : '';
+  const natStr   = isNat20 ? '<span style="color:var(--verdigris);font-size:10px;font-weight:bold"> ✨ NAT 20!</span>'
+                 : isNat1  ? '<span style="color:var(--blood);font-size:10px;font-weight:bold"> 💀 NAT 1</span>' : '';
   const descStr = e.description
-    ? `<div style="font-size:10px;color:var(--txd);margin-top:3px;font-style:italic;line-height:1.4;white-space:pre-wrap">${esc(e.description)}</div>`
+    ? `<div style="font-size:10px;color:var(--ash);margin-top:3px;font-style:italic;line-height:1.4;white-space:pre-wrap">${esc(e.description)}</div>`
     : '';
   div.className = `chat-entry${cls}`;
   div.innerHTML = `<div style="display:flex;justify-content:space-between;margin-bottom:2px">
     <span class="ce-sender">${esc(e.sender)}</span>
     ${timeCol}
   </div>
-  <span style="color:var(--txd)">${esc(e.dice || '')}${modStr}${labelStr}</span>${multiStr}
-  <div class="ce-total" style="color:${isNat20 ? 'var(--ok)' : isNat1 ? 'var(--err)' : 'var(--tx)'}">${e.total}${natStr}</div>${descStr}`;
+  <span style="color:var(--ash)">${esc(e.dice || '')}${modStr}${labelStr}</span>${multiStr}
+  <div class="ce-total" style="color:${isNat20 ? 'var(--verdigris)' : isNat1 ? 'var(--blood)' : 'var(--bone)'}">${e.total}${natStr}</div>${descStr}`;
   log.appendChild(div);
 }
 
@@ -696,11 +697,11 @@ function renderDmMonsters() {
     return m.name.toLowerCase().includes(q) || t.toLowerCase().includes(q);
   });
   if (dmMonsters.length === 0) {
-    wrap.innerHTML = '<div style="text-align:center;color:var(--txd);font-size:12px;padding:10px 0">No monsters imported yet. Use the <a href="monsters.html" style="color:var(--ac)">Monsters</a> page to import.</div>';
+    wrap.innerHTML = '<div style="text-align:center;color:var(--ash);font-size:12px;padding:10px 0">No monsters imported yet. Use the <a href="monsters.html" style="color:var(--bone)">Monsters</a> page to import.</div>';
     return;
   }
   if (filtered.length === 0) {
-    wrap.innerHTML = '<div style="text-align:center;color:var(--txd);font-size:12px;padding:10px 0">No monsters match your search.</div>';
+    wrap.innerHTML = '<div style="text-align:center;color:var(--ash);font-size:12px;padding:10px 0">No monsters match your search.</div>';
     return;
   }
   const rows = filtered.map(m => {
@@ -712,7 +713,7 @@ function renderDmMonsters() {
     return `<tr>
       <td><strong>${esc(m.name)}</strong></td>
       <td><span class="cr-badge">${esc(m.cr || '?')}</span></td>
-      <td style="color:var(--txd);font-style:italic;font-size:11px">${esc(typeStr)}</td>
+      <td style="color:var(--ash);font-style:italic;font-size:11px">${esc(typeStr)}</td>
       <td>${esc(String(acVal))}</td>
       <td>${esc(String(hpVal))}</td>
       <td>${esc(spd)}</td>

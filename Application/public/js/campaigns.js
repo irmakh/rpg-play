@@ -121,7 +121,7 @@ function renderDetail() {
   const chars = c.characters || [];
 
   document.getElementById('detail').innerHTML = `
-    <button class="btn btn-sm btn-ghost back-btn" style="margin-bottom:14px" onclick="closeDetail()">← All campaigns</button>
+    <button class="btn btn-sm btn-ghost back-btn" style="margin-bottom:14px" onclick="closeDetail()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-arrow-left"></use></svg> All campaigns</button>
 
     <div class="detail-head">
       <div class="detail-cover">${c.coverMedium || c.coverUrl
@@ -170,8 +170,8 @@ function renderDetail() {
         </div>
 
         <div id="char-setup-step" style="display:none">
-          <div style="font-size:13px;color:var(--ac);font-weight:bold;margin-bottom:4px" id="setup-char-name"></div>
-          <div style="font-size:11px;color:var(--txd);margin-bottom:14px">This character has no password yet.<br>Set one to continue.</div>
+          <div style="font-size:13px;color:var(--bone);font-weight:bold;margin-bottom:4px" id="setup-char-name"></div>
+          <div style="font-size:11px;color:var(--ash);margin-bottom:14px">This character has no password yet.<br>Set one to continue.</div>
           <div class="field">
             <label>New Password</label>
             <input type="password" id="setup-pw1" autocomplete="new-password"
@@ -201,7 +201,7 @@ function renderDetail() {
     </div>
 
     <div class="row" style="max-width:520px">
-      <button class="btn btn-sm btn-ghost" onclick="openManage()">⚙ Campaign settings</button>
+      <button class="btn btn-sm btn-ghost" onclick="openManage()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-gear"></use></svg> Campaign settings</button>
     </div>
   `;
 }
@@ -471,7 +471,7 @@ async function deleteCampaign() {
     _sel = null;
     document.body.classList.remove('detail-open');
     document.getElementById('detail').innerHTML =
-      '<div class="detail-empty"><div class="big">🗺️</div><div>Select a campaign to see its details and log in.</div></div>';
+      '<div class="detail-empty"><div class="big"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-map"></use></svg></div><div>Select a campaign to see its details and log in.</div></div>';
     await loadCampaigns();
   } catch { errEl.textContent = 'Connection error.'; }
   finally { btn.disabled = false; }

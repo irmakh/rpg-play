@@ -18,11 +18,8 @@ function escJs(s) {
 }
 
 
-function applyTheme(name) {
-  document.body.className = name === 'dark-gold' ? '' : 'theme-' + name;
-  localStorage.setItem('monsters-theme', name);
-  const sel = document.getElementById('theme-sel');
-  if (sel) sel.value = name;
+function applyTheme() {  /* single lamplit theme now; kept as a no-op guard */
+  document.body.className = '';
 }
 (function(){ applyTheme(localStorage.getItem('monsters-theme') || 'dark-gold'); })();
 
@@ -98,6 +95,11 @@ function getInitBonus(data) {
   return bonus;
 }
 
+let selectedMonsterId = null;
+
+// The sidebar list. Rows are selectable; the stat block renders into the detail
+// pane rather than a modal, so reading one monster and then the next no longer
+// means opening and closing a dialog each time.
 function renderTable() {
   const wrap = document.getElementById('monster-table-wrap');
   const q = (document.getElementById('search-input').value || '').toLowerCase();
@@ -107,40 +109,51 @@ function renderTable() {
     return m.name.toLowerCase().includes(q) || type.includes(q);
   });
   if (filtered.length === 0) {
-    wrap.innerHTML = '<div style="text-align:center;color:var(--txd);padding:20px">' + (monsters.length === 0 ? 'No monsters imported yet.' : 'No monsters match your search.') + '</div>';
+    wrap.innerHTML = '<div class="app-empty">' +
+      (monsters.length === 0 ? 'No monsters imported yet.' : 'No monsters match your search.') + '</div>';
     return;
   }
-  wrap.innerHTML = `<table>
-    <thead><tr>
-      <th>Name</th>
-      <th>CR</th>
-      <th>Type</th>
-      <th>AC</th>
-      <th>HP</th>
-      <th>Speed</th>
-      <th style="text-align:right">Actions</th>
-    </tr></thead>
-    <tbody>` +
-    filtered.map(m => {
-      const d = m.data || {};
-      const type = getTypeStr(d);
-      return `<tr>
-        <td><strong>${esc(m.name)}</strong></td>
-        <td><span class="cr-badge">${esc(m.cr || '?')}</span></td>
-        <td><span class="type-badge">${esc(type)}</span></td>
-        <td>${esc(getAcStr(d))}</td>
-        <td>${esc(getHpStr(d))}</td>
-        <td>${esc(getSpeedStr(d))}</td>
-        <td style="text-align:right;white-space:nowrap">
-          <button class="btn sm" onclick="openInfoModal('${escJs(m.id)}')" title="View stat block">Info</button>
-          <button class="btn sm success" onclick="openInitModal('${escJs(m.id)}')" title="Add to initiative tracker">+ Init</button>
-          <button class="btn sm" onclick="openEditMonsterModal('${escJs(m.id)}')" title="Edit monster JSON">Edit</button>
-          <button class="btn sm" onclick="exportMonster('${escJs(m.id)}','${escJs(m.name)}')" title="Export monster to file">Export</button>
-          <button class="btn sm danger" onclick="deleteMonster('${escJs(m.id)}')" title="Remove monster">✕</button>
-        </td>
-      </tr>`;
-    }).join('') +
-    '</tbody></table>';
+  wrap.innerHTML = filtered.map(m => `
+    <div class="app-row${m.id === selectedMonsterId ? ' selected' : ''}"
+         role="button" tabindex="0" onclick="selectMonster('${escJs(m.id)}')"
+         onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();selectMonster('${escJs(m.id)}')}">
+      <span class="app-row-name">${esc(m.name)}</span>
+      <span class="cr-badge">${esc(m.cr || '?')}</span>
+    </div>`).join('');
+}
+
+// Detail pane: the stat block, with the actions for THIS monster beside it
+// instead of five buttons repeated on every row of a table.
+function selectMonster(monsterId) {
+  const m = monsters.find(x => x.id === monsterId);
+  if (!m) return;
+  selectedMonsterId = monsterId;
+  const d = m.data || {};
+  document.getElementById('monster-detail').innerHTML = `
+    <div class="detail-hdr">
+      <div>
+        <h2 class="detail-title">${esc(m.name)}</h2>
+        <div class="detail-sub">${esc(getTypeStr(d))} &middot; CR ${esc(m.cr || '?')} &middot; AC ${esc(getAcStr(d))} &middot; HP ${esc(getHpStr(d))} &middot; ${esc(getSpeedStr(d))}</div>
+      </div>
+      <div class="detail-actions">
+        <button class="btn success" onclick="openInitModal('${escJs(m.id)}')" title="Add to the initiative tracker">+ Initiative</button>
+        <button class="btn" onclick="openEditMonsterModal('${escJs(m.id)}')" title="Edit this monster's JSON">Edit</button>
+        <button class="btn" onclick="exportMonster('${escJs(m.id)}','${escJs(m.name)}')" title="Export to a file">Export</button>
+        <button class="btn danger" onclick="deleteMonster('${escJs(m.id)}')" title="Remove this monster">Delete</button>
+      </div>
+    </div>
+    <div class="detail-body">${renderMonsterStatBlock(d)}</div>`;
+  renderTable();   // repaint so the selected row is marked
+}
+
+// ── Import modal ──────────────────────────────────────────────────────────────
+function openImportModal() {
+  document.getElementById('import-status').textContent = '';
+  document.getElementById('import-modal').style.display = 'flex';
+  document.getElementById('import-text').focus();
+}
+function closeImportModal() {
+  document.getElementById('import-modal').style.display = 'none';
 }
 
 // ── Info modal ────────────────────────────────────────────────────────────────
@@ -236,7 +249,7 @@ async function exportMonster(id, name) {
     a.click();
   } catch (err) {
     const statusEl = document.getElementById('import-status');
-    if (statusEl) { statusEl.style.color = 'var(--err)'; statusEl.textContent = 'Export failed: ' + err.message; }
+    if (statusEl) { statusEl.style.color = 'var(--blood)'; statusEl.textContent = 'Export failed: ' + err.message; }
   }
 }
 
@@ -244,9 +257,9 @@ async function exportMonster(id, name) {
 async function importMonsters() {
   const raw = document.getElementById('import-text').value.trim();
   const statusEl = document.getElementById('import-status');
-  if (!raw) { statusEl.style.color = 'var(--err)'; statusEl.textContent = 'Paste JSON first.'; return; }
+  if (!raw) { statusEl.style.color = 'var(--blood)'; statusEl.textContent = 'Paste JSON first.'; return; }
   let parsed;
-  try { parsed = JSON.parse(raw); } catch(e) { statusEl.style.color = 'var(--err)'; statusEl.textContent = 'Invalid JSON: ' + e.message; return; }
+  try { parsed = JSON.parse(raw); } catch(e) { statusEl.style.color = 'var(--blood)'; statusEl.textContent = 'Invalid JSON: ' + e.message; return; }
   // Normalise: support single object, array, or 5etools {monster:[...]} format
   let list;
   if (Array.isArray(parsed)) {
@@ -256,9 +269,9 @@ async function importMonsters() {
   } else if (parsed && typeof parsed === 'object' && parsed.name) {
     list = [parsed];
   } else {
-    statusEl.style.color = 'var(--err)'; statusEl.textContent = 'Expected a monster object, array, or {monster:[...]} wrapper.'; return;
+    statusEl.style.color = 'var(--blood)'; statusEl.textContent = 'Expected a monster object, array, or {monster:[...]} wrapper.'; return;
   }
-  statusEl.style.color = 'var(--txd)'; statusEl.textContent = 'Importing…';
+  statusEl.style.color = 'var(--ash)'; statusEl.textContent = 'Importing…';
   try {
     const res = await fetch('/api/monsters/import', {
       method: 'POST',
@@ -267,11 +280,11 @@ async function importMonsters() {
     });
     if (res.status === 401) { location.href = '/dm.html'; return; }
     const data = await res.json();
-    if (!res.ok) { statusEl.style.color = 'var(--err)'; statusEl.textContent = data.error || 'Import failed.'; return; }
-    statusEl.style.color = 'var(--ok)'; statusEl.textContent = `✓ Imported ${data.count} monster${data.count !== 1 ? 's' : ''}.`;
+    if (!res.ok) { statusEl.style.color = 'var(--blood)'; statusEl.textContent = data.error || 'Import failed.'; return; }
+    statusEl.style.color = 'var(--verdigris)'; statusEl.textContent = `<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-check"></use></svg> Imported ${data.count} monster${data.count !== 1 ? 's' : ''}.`;
     document.getElementById('import-text').value = '';
     await loadMonsters();
-  } catch { statusEl.style.color = 'var(--err)'; statusEl.textContent = 'Network error.'; }
+  } catch { statusEl.style.color = 'var(--blood)'; statusEl.textContent = 'Network error.'; }
 }
 
 // ── Edit monster (form) ───────────────────────────────────────────────────────
@@ -300,7 +313,7 @@ function efAppendRow(container, item) {
   div.className = 'ef-entry-row';
   div.innerHTML = `<div style="display:flex;gap:6px;margin-bottom:4px;align-items:center">
     <input type="text" placeholder="Name" data-field="name" style="flex:1">
-    <button type="button" class="btn sm danger" onclick="this.closest('.ef-entry-row').remove()">✕</button>
+    <button type="button" class="btn sm danger" onclick="this.closest('.ef-entry-row').remove()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg></button>
   </div>
   <textarea placeholder="Description" data-field="entries" style="min-height:56px;resize:vertical;width:100%"></textarea>`;
   div.querySelector('[data-field=name]').value = item.name || '';

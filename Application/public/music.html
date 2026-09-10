@@ -5,27 +5,36 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Music</title>
 <link rel="manifest" href="/manifest.json">
-<meta name="theme-color" content="#1a1a2e">
+<meta name="theme-color" content="#080C15">
+<link rel="stylesheet" href="/css/tokens.css">
+<link rel="stylesheet" href="/css/fonts.css">
 <style>
-:root{
-  --bg:#1a1614; --bg2:#221e19; --bg3:#2b251e;
-  --ac:#c8a04a; --tx:#e8dcc8; --txd:#8a7a60; --err:#ff8888;
-  --a22:rgba(200,160,74,.13); --a44:rgba(200,160,74,.27); --a55:rgba(200,160,74,.4);
-}
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{height:100%}
 body{
-  background:var(--bg2); color:var(--tx);
-  font-family:system-ui,-apple-system,sans-serif; font-size:12px;
+  background:var(--slate); color:var(--bone);
+  font-family:var(--ui); font-size:12px;
   display:flex; flex-direction:column; overflow:hidden;
 }
 /* Embedded in the table modal the page is framed by the modal chrome, so it
    drops its own background and border and lets the modal supply them. */
-body.embed{background:transparent}
+/* Embedded in the table modal. It used to be transparent and let the modal
+   supply the background, which relied on the UA canvas behind it being dark -
+   it is not. Painting the surface explicitly is the same colour as the modal
+   box and does not depend on canvas behaviour. */
+body.embed{background:var(--slate)}
+/* Embedded in the table modal the page is measured by its parent and the
+   iframe is sized to fit, so here it must take its NATURAL height rather than
+   stretching to fill whatever box it is given - otherwise the track list
+   spreads to fill the frame and the modal is mostly empty space. */
+body.embed, html:has(body.embed){height:auto}
+body.embed #body{flex:none; overflow:visible}
+body.embed #tracks-wrap{flex:none}
+body.embed #tracks{flex:none; max-height:46vh; overflow-y:auto}
 
 #hdr{
   flex-shrink:0; display:flex; align-items:center; gap:8px;
-  padding:8px 12px; background:var(--a22); border-bottom:1px solid var(--a44);
+  padding:8px 12px; background:var(--wash); border-bottom:1px solid var(--rule);
 }
 #hdr h1{font-size:13px; font-weight:bold; flex:1; white-space:nowrap}
 body.embed #hdr{display:none}
@@ -41,51 +50,51 @@ body.embed #hdr{display:none}
 #body{flex:1; min-height:0; display:flex; flex-direction:column; padding:10px 12px; gap:9px; overflow:hidden}
 
 .row{display:flex; align-items:center; gap:7px}
-.lbl{font-size:10px; color:var(--ac); text-transform:uppercase; letter-spacing:.5px}
+.lbl{font-size:var(--t-sm); color:var(--ash)}
 
 /* Now playing */
 #np{display:flex; align-items:center; gap:7px; min-height:18px}
-#np-state{font-size:10px; color:var(--txd); white-space:nowrap; flex-shrink:0}
-#np-icon{color:var(--ac); flex-shrink:0}
+#np-state{font-size:10px; color:var(--ash); white-space:nowrap; flex-shrink:0}
+#np-icon{color:var(--bone); flex-shrink:0}
 #np-name{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
 
 /* Seek + volume */
 #pos,#dur{font-size:10px; white-space:nowrap; min-width:30px; font-variant-numeric:tabular-nums}
-#pos{color:var(--ac); text-align:right}
-#dur{color:var(--txd)}
-input[type=range]{cursor:pointer; accent-color:var(--ac); min-width:0}
+#pos{color:var(--bone); text-align:right}
+#dur{color:var(--ash)}
+input[type=range]{cursor:pointer; accent-color:var(--bone); min-width:0}
 #seek{flex:1}
 #vol{width:80px; flex:1; max-width:120px}
-#vol-pct{font-size:10px; color:var(--ac); min-width:30px; text-align:right}
+#vol-pct{font-size:10px; color:var(--bone); min-width:30px; text-align:right}
 body.readonly #seek{pointer-events:none; cursor:default; opacity:.75}
 
 select,.btn{
-  background:var(--bg3); border:1px solid var(--a55); color:var(--tx);
+  background:var(--slate-hi); border:1px solid var(--rule-hi); color:var(--bone);
   border-radius:3px; padding:5px 8px; font-size:12px; font-family:inherit;
 }
 select{width:100%}
 .btn{cursor:pointer; white-space:nowrap}
-.btn:hover{background:var(--a22)}
+.btn:hover{background:var(--wash)}
 .btn:disabled{opacity:.45; cursor:default}
-.btn.primary{background:var(--a44); border-color:var(--ac); color:var(--ac); font-weight:bold}
-.btn.danger{color:var(--err); border-color:rgba(255,136,136,.4)}
+.btn.primary{background:var(--rule); border-color:var(--bone); color:var(--bone); font-weight:bold}
+.btn.danger{color:var(--blood); border-color:rgba(255,136,136,.4)}
 .btn.sm{padding:3px 7px; font-size:11px}
-.btn.lnk{background:none; border:none; color:var(--ac); text-decoration:none; padding:3px 4px; font-size:11px}
+.btn.lnk{background:none; border:none; color:var(--bone); text-decoration:none; padding:3px 4px; font-size:11px}
 .btn.lnk:hover{text-decoration:underline; background:none}
 
 #transport{display:flex; justify-content:center; gap:8px}
 #loops{display:flex; justify-content:center; gap:6px}
 
 /* Track list */
-#tracks-wrap{flex:1; min-height:0; display:flex; flex-direction:column; border-top:1px solid var(--a44); padding-top:8px}
-#tracks{flex:1; min-height:0; overflow-y:auto; scrollbar-width:thin; scrollbar-color:var(--a44) transparent; margin-top:5px}
+#tracks-wrap{flex:1; min-height:0; display:flex; flex-direction:column; border-top:1px solid var(--rule); padding-top:8px}
+#tracks{flex:1; min-height:0; overflow-y:auto; scrollbar-width:thin; scrollbar-color:var(--rule) transparent; margin-top:5px}
 .trk{display:flex; align-items:center; gap:6px; padding:5px 8px; border-radius:3px; cursor:pointer; font-size:12px}
-.trk:hover{background:var(--a22)}
-.trk.active{background:var(--a44)}
-.trk-idx{font-size:11px; color:var(--txd); flex-shrink:0; min-width:14px}
-.trk.active .trk-idx{color:var(--ac)}
+.trk:hover{background:var(--wash)}
+.trk.active{background:var(--rule)}
+.trk-idx{font-size:11px; color:var(--ash); flex-shrink:0; min-width:14px}
+.trk.active .trk-idx{color:var(--bone)}
 .trk-name{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
-.empty{font-size:11px; color:var(--txd); text-align:center; padding:10px}
+.empty{font-size:11px; color:var(--ash); text-align:center; padding:10px}
 
 /* Anything DM-only is hidden up front and removed from the DOM entirely for
    players, so a compact player window is exactly as tall as the three rows it
@@ -97,7 +106,7 @@ body.dm #loops{display:flex}
 body.dm #tracks-wrap{display:flex}
 body.dm #lnk-playlists{display:inline-block}
 
-#owner-note{font-size:10px; color:var(--txd); text-align:center; min-height:12px}
+#owner-note{font-size:10px; color:var(--ash); text-align:center; min-height:12px}
 </style>
 </head>
 <body>
@@ -105,10 +114,10 @@ body.dm #lnk-playlists{display:inline-block}
 <audio id="audio" style="display:none" preload="none"></audio>
 
 <div id="hdr">
-  <a class="btn lnk" id="lnk-back" href="/dm.html" style="display:none" title="Back to the DM panel">←</a>
-  <span style="color:var(--ac)">🎵</span>
+  <a class="btn lnk" id="lnk-back" href="/dm.html" style="display:none" title="Back to the DM panel"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-arrow-left"></use></svg> </a>
+  <span style="color:var(--bone)"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-music"></use></svg> </span>
   <h1 id="hdr-title">Music</h1>
-  <a class="btn lnk dm-only" id="lnk-playlists" href="/playlists.html" target="_blank" rel="noopener" title="Upload sounds and edit playlists">⚙ Library</a>
+  <a class="btn lnk dm-only" id="lnk-playlists" href="/playlists.html" target="_blank" rel="noopener" title="Upload sounds and edit playlists"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-gear"></use></svg> Library</a>
 </div>
 
 <div id="body">
@@ -123,7 +132,7 @@ body.dm #lnk-playlists{display:inline-block}
   <!-- Everyone: what is playing right now -->
   <div id="np">
     <span id="np-state">Loading…</span>
-    <span id="np-icon">🎵</span>
+    <span id="np-icon"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-music"></use></svg> </span>
     <span id="np-name">—</span>
   </div>
 
@@ -137,22 +146,22 @@ body.dm #lnk-playlists{display:inline-block}
 
   <!-- DM: transport -->
   <div class="dm-only" id="transport">
-    <button class="btn" onclick="sendControl({action:'prev'})" title="Previous track">⏮</button>
-    <button class="btn primary" id="play-btn" onclick="togglePlay()" style="min-width:76px">▶ Play</button>
-    <button class="btn" onclick="sendControl({action:'next'})" title="Next track">⏭</button>
-    <button class="btn danger" onclick="sendControl({action:'stop'})" title="Stop for everyone">⏹</button>
+    <button class="btn" onclick="sendControl({action:'prev'})" title="Previous track"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-prev"></use></svg> </button>
+    <button class="btn primary" id="play-btn" onclick="togglePlay()" style="min-width:76px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-play"></use></svg> Play</button>
+    <button class="btn" onclick="sendControl({action:'next'})" title="Next track"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-next"></use></svg> </button>
+    <button class="btn danger" onclick="sendControl({action:'stop'})" title="Stop for everyone"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-stop"></use></svg> </button>
   </div>
 
   <!-- DM: loop mode -->
   <div class="dm-only" id="loops">
     <button class="btn sm" id="loop-none" onclick="setLoopMode('none')">No Loop</button>
-    <button class="btn sm" id="loop-track" onclick="setLoopMode('track')">🔂 Track</button>
-    <button class="btn sm" id="loop-playlist" onclick="setLoopMode('playlist')">🔁 Playlist</button>
+    <button class="btn sm" id="loop-track" onclick="setLoopMode('track')"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-refresh"></use></svg> Track</button>
+    <button class="btn sm" id="loop-playlist" onclick="setLoopMode('playlist')"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-refresh"></use></svg> Playlist</button>
   </div>
 
   <!-- Everyone: this machine's own volume (never broadcast to other players) -->
   <div class="row">
-    <span style="font-size:10px;color:var(--txd);flex-shrink:0">Vol</span>
+    <span style="font-size:10px;color:var(--ash);flex-shrink:0">Vol</span>
     <input type="range" id="vol" min="0" max="100" value="100"
            oninput="onVolInput(this.value)" onchange="onVolInput(this.value)">
     <span id="vol-pct">100%</span>
@@ -168,6 +177,7 @@ body.dm #lnk-playlists{display:inline-block}
 
 </div>
 
+<script src="/js/lib/icons.js"></script>
 <script src="/js/lib/esc.js"></script>
 <script src="/js/lib/realtime.js"></script>
 <script src="/js/lib/music-sync.js"></script>
@@ -242,14 +252,14 @@ function renderNowPlaying() {
   if (!stName) {
     stateEl.textContent = 'Nothing playing';
     nameEl.textContent  = '—';
-    iconEl.textContent  = '🎵';
+    iconEl.innerHTML  = '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-music"></use></svg> ';
   } else {
     stateEl.textContent = stPlaying ? 'Now playing:' : 'Paused:';
     nameEl.textContent  = stName;
-    iconEl.textContent  = stPlaying ? '🎵' : '⏸';
+    iconEl.innerHTML  = stPlaying ? '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-music"></use></svg> ' : '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-pause"></use></svg> ';
   }
   const btn = $('play-btn');
-  if (btn) btn.textContent = stPlaying ? '⏸ Pause' : '▶ Play';
+  if (btn) btn.innerHTML = stPlaying ? '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-pause"></use></svg> Pause' : '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-play"></use></svg> Play';
 }
 
 function renderDuration() {
@@ -287,7 +297,7 @@ function renderTracks() {
   const activeIdx = (currentPl && currentPl.id === stPlaylist) ? stTrackIdx : -1;
   el.innerHTML = tracks.map((t, i) => `
     <div class="trk${i === activeIdx ? ' active' : ''}" onclick="playTrack(${i})" title="${esc(t.name)}">
-      <span class="trk-idx">${i === activeIdx ? (stPlaying ? '▶' : '⏸') : (i + 1) + '.'}</span>
+      <span class="trk-idx">${i === activeIdx ? (stPlaying ? '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-play"></use></svg> ' : '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-pause"></use></svg> ') : (i + 1) + '.'}</span>
       <span class="trk-name">${esc(t.name)}</span>
     </div>`).join('');
 }

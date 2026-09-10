@@ -9,7 +9,7 @@ function lightboxOpen(src, mimeType) {
   lb.onclick = () => lb.remove();
 
   const closeBtn = document.createElement('button');
-  closeBtn.textContent = '✕';
+  closeBtn.innerHTML = '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg>';
   closeBtn.style.cssText = 'position:absolute;top:14px;right:18px;background:none;border:none;color:#fff;font-size:22px;cursor:pointer;line-height:1;padding:4px;opacity:.8';
   closeBtn.onmouseenter = () => { closeBtn.style.opacity = '1'; };
   closeBtn.onmouseleave = () => { closeBtn.style.opacity = '.8'; };

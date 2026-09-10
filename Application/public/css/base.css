@@ -1,0 +1,275 @@
+/* ============================================================================
+   base.css - the primitives every redesigned page is built from.
+
+   SCOPING: everything here is under html.lamplit. Pages opt in by putting
+   class="lamplit" on the <html> element, so redesigned and not-yet-redesigned
+   pages can coexist during the migration without fighting each other.
+
+   It is on <html> and not <body> on purpose: applyTheme() assigns
+   document.body.className wholesale, so a marker class on <body> would be
+   wiped the moment a theme was applied.
+
+   Load order: tokens.css, fonts.css, base.css, then the page stylesheet.
+   ============================================================================ */
+
+/* ── Reset ──────────────────────────────────────────────────────────────── */
+html.lamplit *,
+html.lamplit *::before,
+html.lamplit *::after{box-sizing:border-box}
+
+html.lamplit{
+  background:var(--ink);
+  color-scheme:dark;
+  -webkit-text-size-adjust:100%;
+}
+
+:where(html.lamplit) body{
+  margin:0;
+  background:var(--ink);
+  color:var(--bone);
+  font-family:var(--ui);
+  font-size:var(--t-base);
+  line-height:1.5;
+  font-synthesis-weight:none;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* Tabular figures everywhere by default. This app is mostly numbers that sit
+   in columns - HP, AC, initiative, damage, prices - and proportional digits
+   make them jitter as they change. */
+:where(html.lamplit) body{font-variant-numeric:tabular-nums}
+
+/* ── Type ───────────────────────────────────────────────────────────────── */
+:where(html.lamplit) h1,
+:where(html.lamplit) h2,
+:where(html.lamplit) h3{
+  font-family:var(--display);
+  font-weight:600;
+  font-variation-settings:'WONK' 1;
+  line-height:1.15;
+  letter-spacing:-.01em;
+  margin:0;
+  color:var(--bone);
+}
+:where(html.lamplit) h1{font-size:var(--t-2xl); font-variation-settings:'opsz' 96,'WONK' 1}
+:where(html.lamplit) h2{font-size:var(--t-xl);  font-variation-settings:'opsz' 48,'WONK' 1}
+:where(html.lamplit) h3{font-size:var(--t-lg);  font-variation-settings:'opsz' 24,'WONK' 1}
+
+:where(html.lamplit) p{margin:0 0 var(--s3); max-width:68ch}
+
+/* Section labels. Sentence case, not tracked-out caps. The rule does the
+   separating; the word only names the thing. */
+html.lamplit .lt-label{
+  font-size:var(--t-sm);
+  color:var(--ash);
+  font-weight:600;
+  margin:0 0 var(--s2);
+}
+
+:where(html.lamplit) a{color:var(--arc); text-underline-offset:2px}
+:where(html.lamplit) a:hover{color:var(--arc-hi)}
+
+/* ── Surfaces. Depth is a lamp above-left: a lit top edge and a soft
+      falloff, not a grey drop shadow under a rounded box. ──────────────── */
+html.lamplit .lt-panel{
+  background:linear-gradient(color-mix(in srgb, var(--slate) 88%, var(--bone) 3%), color-mix(in srgb, var(--slate) 84%, var(--ink)));
+  border:1px solid var(--rule);
+  border-top-color:var(--rule-hi);
+  border-radius:var(--r-md);
+  box-shadow:inset 0 1px 0 var(--lift), var(--cast);
+}
+html.lamplit .lt-well{
+  background:var(--sunken);
+  border:1px solid var(--rule);
+  border-radius:var(--r-md);
+}
+
+/* Hairlines, not boxes: prefer a rule between things over a border around
+   each of them. */
+html.lamplit .lt-rule{border:0; border-top:1px solid var(--rule); margin:var(--s4) 0}
+
+/* ── Controls ───────────────────────────────────────────────────────────── */
+:where(html.lamplit) button,
+html.lamplit .lt-btn{
+  font:inherit;
+  font-weight:600;
+  color:var(--bone);
+  background:var(--slate);
+  border:1px solid var(--rule-hi);
+  border-radius:var(--r-sm);
+  padding:var(--s2) var(--s3);
+  min-height:36px;
+  cursor:pointer;
+  display:inline-flex;
+  align-items:center;
+  gap:var(--s2);
+  transition:background .12s ease, border-color .12s ease;
+}
+:where(html.lamplit) button:hover,
+html.lamplit .lt-btn:hover{background:var(--slate-hi)}
+
+/* Primary = the thing that acts. Solid --arc always carries --ink text;
+   bone on arc is about 2:1 and unreadable. */
+html.lamplit .lt-btn-primary{
+  background:var(--arc);
+  border-color:var(--arc);
+  color:var(--ink);
+}
+html.lamplit .lt-btn-primary:hover{background:var(--arc-hi); border-color:var(--arc-hi)}
+
+/* Destructive is a wash with red text, never a solid red block. */
+html.lamplit .lt-btn-danger{
+  background:var(--blood-fill);
+  border-color:var(--blood);
+  color:var(--blood);
+}
+html.lamplit .lt-btn-danger:hover{background:color-mix(in srgb, var(--blood) 18%, transparent)}
+
+html.lamplit .lt-btn-quiet{background:transparent; border-color:transparent; color:var(--ash)}
+html.lamplit .lt-btn-quiet:hover{background:var(--slate); color:var(--bone)}
+
+:where(html.lamplit) button:disabled,
+html.lamplit .lt-btn:disabled{opacity:.5; cursor:default}
+
+:where(html.lamplit) input:not([type=checkbox]):not([type=radio]),
+:where(html.lamplit) select,
+:where(html.lamplit) textarea{
+  font:inherit;
+  color:var(--bone);
+  background:var(--sunken);
+  border:1px solid var(--rule-hi);
+  border-radius:var(--r-sm);
+  padding:var(--s2) var(--s3);
+  min-height:36px;
+}
+/* Checkboxes and radios are sized by the pages that use them; the 36px
+   min-height above would otherwise stretch them into ovals. */
+:where(html.lamplit) input[type=checkbox],
+:where(html.lamplit) input[type=radio]{accent-color:var(--arc);cursor:pointer}
+
+:where(html.lamplit) input::placeholder,
+:where(html.lamplit) textarea::placeholder{color:var(--ash-dim)}
+
+/* One visible focus treatment, everywhere, keyboard-first. */
+html.lamplit :focus-visible{
+  outline:2px solid var(--arc);
+  outline-offset:2px;
+  border-radius:var(--r-sm);
+}
+
+/* ── Icons. These replace 647 emoji: real strokes that inherit currentColor,
+      so an icon in a disabled button actually looks disabled. ──────────── */
+html.lamplit .lt-icon{
+  width:1.15em; height:1.15em;
+  flex:none;
+  stroke:currentColor;
+  fill:none;
+  stroke-width:1.75;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+
+/* ============================================================================
+   THE STATE RING - the one bold thing.
+
+   Anything that can act wears a ring: a character, a monster token, an
+   initiative row. The ring encodes live state so "who is up and how hurt are
+   they" is readable across a room, and everything else on the page can stay
+   quiet.
+
+     --hp     0-100, drives the arc
+     [data-state="active"]  it is this thing's turn
+     [data-state="down"]    at 0 hp
+
+   Usage:
+     <span class="lt-ring" style="--hp:70"><img src="..." alt=""></span>
+   ============================================================================ */
+html.lamplit .lt-ring{
+  /* thickness scales with the ring so a 32px initiative ring and a 56px
+     portrait ring are equally readable */
+  --ring-w:max(2.5px, calc(var(--ring-size, 44px) * .075));
+  position:relative;
+  display:inline-grid;
+  place-items:center;
+  width:var(--ring-size, 44px);
+  height:var(--ring-size, 44px);
+  border-radius:var(--r-full);
+  flex:none;
+}
+
+/* the arc: a conic sweep masked into an annulus */
+html.lamplit .lt-ring::before{
+  content:'';
+  position:absolute;
+  inset:0;
+  border-radius:var(--r-full);
+  background:conic-gradient(
+    var(--ring-color, var(--ash)) calc(var(--hp, 100) * 1%),
+    var(--ring-track) 0);
+  -webkit-mask:radial-gradient(farthest-side, #0000 calc(100% - var(--ring-w)), #000 calc(100% - var(--ring-w)));
+          mask:radial-gradient(farthest-side, #0000 calc(100% - var(--ring-w)), #000 calc(100% - var(--ring-w)));
+}
+
+html.lamplit .lt-ring > img,
+html.lamplit .lt-ring > .lt-ring-face{
+  width:calc(100% - (var(--ring-w) * 2) - 3px);
+  height:calc(100% - (var(--ring-w) * 2) - 3px);
+  border-radius:var(--r-full);
+  object-fit:cover;
+  background:var(--slate);
+  display:grid;
+  place-items:center;
+  font-size:var(--t-sm);
+  color:var(--ash);
+}
+
+/* Colour is earned. A character at full health is in the DEFAULT state, not a
+   notable one, so a healthy ring is neutral - it does not glow green. Red is
+   spent only when something is actually wrong, which is what makes it carry
+   across a room. The track stays visible at all times so the arc reads as a
+   proportion rather than as a coloured circle. */
+html.lamplit .lt-ring{
+  --ring-color:var(--ash);
+  --ring-track:#E8E1D426;
+}
+html.lamplit .lt-ring[data-hurt]{--ring-color:var(--blood-deep)}
+/* Down is the most urgent state on the screen, so it differs in FORM and not
+   only in how much red is showing: the face itself goes to blood, which
+   nothing else on the page ever does. Side by side with a merely-hurt ring it
+   is unmistakable at a glance. */
+html.lamplit .lt-ring[data-state="down"]{
+  --ring-color:var(--blood);
+  --ring-track:var(--blood);
+  --hp:100;
+}
+html.lamplit .lt-ring[data-state="down"] > img{filter:grayscale(1) brightness(.5)}
+html.lamplit .lt-ring[data-state="down"] > .lt-ring-face,
+html.lamplit .lt-ring[data-state="down"] > img{
+  background:var(--blood-fill);
+  color:var(--blood);
+  box-shadow:inset 0 0 0 1px var(--blood);
+}
+
+/* Active: it is your turn. This is the ONE place --arc is allowed to glow. */
+html.lamplit .lt-ring[data-state="active"]{
+  box-shadow:0 0 0 2px var(--ink), 0 0 0 4px var(--arc), 0 0 16px -2px var(--arc-line);
+}
+
+/* Conditions ride the edge as notches rather than a row of pills, so the
+   token stays the same size however many it has. */
+html.lamplit .lt-ring-notches{
+  position:absolute; inset:calc(var(--ring-w) * -2);
+  border-radius:var(--r-full);
+  pointer-events:none;
+}
+
+/* ── Motion: one orchestrated moment, and only when it answers an action. ── */
+@media (prefers-reduced-motion: reduce){
+  html.lamplit *,
+  html.lamplit *::before,
+  html.lamplit *::after{
+    animation-duration:.01ms !important;
+    animation-iteration-count:1 !important;
+    transition-duration:.01ms !important;
+  }
+}

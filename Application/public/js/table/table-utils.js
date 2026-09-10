@@ -11,8 +11,8 @@ function showToast(msg, isErr) {
   const el = document.getElementById('toast');
   if (!el) return;
   el.textContent = msg;
-  el.style.borderColor = isErr ? 'var(--err)' : 'var(--a66)';
-  el.style.color = isErr ? 'var(--err)' : 'var(--tx)';
+  el.style.borderColor = isErr ? 'var(--blood)' : 'var(--rule-hi)';
+  el.style.color = isErr ? 'var(--blood)' : 'var(--bone)';
   el.style.display = '';
   clearTimeout(_toastTimer);
   _toastTimer = setTimeout(() => { el.style.display = 'none'; }, 3000);
@@ -57,16 +57,20 @@ function tokDisplayName(tok) {
   }
   return tok.name;
 }
+// Token and HP colours are drawn to a canvas, so they must be literals - a CSS
+// var() cannot reach ctx.fillStyle. These mirror the design tokens by hand.
+// A character is deliberately NEUTRAL: the ring carries state (whose turn it
+// is, how hurt they are), so the token itself does not need to shout.
 function tokenRingColor(type) {
-  if (type === 'character') return '#c8a04a';
-  if (type === 'monster') return '#ff4444';
-  if (type === 'npc') return '#7ec8e3';
-  return '#888888';
+  if (type === 'character') return '#E6EDF7';   // --bone
+  if (type === 'monster')   return '#E4666B';   // --blood
+  if (type === 'npc')       return '#E0A93F';   // --arc
+  return '#637189';                             // --ash-dim
 }
 function hpBarColor(pct) {
-  if (pct >= 0.5) return '#44cc44';
-  if (pct >= 0.25) return '#ffcc00';
-  return '#ff4444';
+  if (pct >= 0.5)  return '#3DD68C';            // --verdigris
+  if (pct >= 0.25) return '#C2434A';            // --blood-deep
+  return '#E4666B';                             // --blood
 }
 function getActiveTurnTokenId() {
   if (!initData.currentId) return null;

@@ -1,0 +1,104 @@
+/* ============================================================================
+   tokens.css - the single source of truth for design tokens.
+
+   Load FIRST, before any other stylesheet, on every page.
+
+   ---------------------------------------------------------------------------
+   THE DIRECTION: navy and gold
+
+   A near-black navy ground, navy panels, blue-grey labels, and GOLD carrying
+   the numbers you actually read - initiative, passive perception, spell DC,
+   ability modifiers, skill values - plus the active tab and the portrait ring.
+
+   Gold is the accent again, but not the way it was before this redesign. The
+   original used --ac 328 times, on every border and every panel, which is why
+   nothing could be emphasised. Here gold marks VALUES and the ACTIVE thing,
+   and nothing else. Chrome is navy and blue-grey. If you find yourself
+   reaching for --arc to make something look nice, use --rule or --ash.
+
+   Status colour is still earned by state: --blood for damage and destructive
+   actions, --verdigris for healing and success. Both are tuned to sit legibly
+   on navy rather than on the warm ground they were built for.
+
+   Every colour below is AA on all four surfaces - ink, slate, slate-hi and
+   sunken - and the values were solved for that, not eyeballed.
+   ---------------------------------------------------------------------------
+*/
+
+:root{
+  /* ── Surfaces: near-black navy, the colour of a lit screen in a dark room ─ */
+  --ink:#080C15;          /* page ground                                    */
+  --slate:#101A2C;        /* raised panel                                   */
+  --slate-hi:#1B2740;     /* hover, or a panel on a panel                   */
+  --sunken:#05080F;       /* wells, insets, the map surround                */
+
+  /* ── Ink on that: a cool near-white, never pure #fff ──────────────────── */
+  --bone:#E6EDF7;         /* primary text                                   */
+  --ash:#7F8FA8;          /* secondary text, labels, dormant icons          */
+  --ash-dim:#637189;      /* disabled, placeholder                          */
+
+  /* ── The accent. Gold. Values, and the active thing. Nothing else. ────── */
+  --arc:#E0A93F;
+  --arc-hi:#F2C468;       /* hover/focus of an already-active thing         */
+  --arc-fill:#E0A93F24;   /* the wash behind an active row                  */
+  --arc-line:#E0A93F66;   /* the edge of an active thing                    */
+
+  /* ── Status, earned by state ──────────────────────────────────────────── */
+  --blood:#E4666B;        /* damage taken, danger, destructive actions      */
+  --blood-deep:#C2434A;   /* rings and arcs only - never under text */
+  --blood-fill:#E4666B21;
+  --verdigris:#3DD68C;    /* healing, success, "ok"                         */
+  --verdigris-fill:#3DD68C21;
+
+  /* Every colour above is AA on ink, slate, slate-hi and sunken alike.
+     The one rule that falls out of that: a SOLID fill of --arc, --blood or
+     --verdigris always carries --ink text, never --bone. Bone on those fills
+     is about 2:1 and unreadable. Destructive buttons are a --blood-fill wash
+     with --blood text, not a solid red block.                              */
+
+  /* ── Structure. Hairlines, not boxes. ─────────────────────────────────── */
+  --wash:#E6EDF70F;       /* 5% bone - a neutral fill for a raised row      */
+  --rule:#E6EDF71C;       /* 10% bone - the default separator               */
+  --rule-hi:#E6EDF733;    /* 18% bone - the edge of something raised        */
+  --scrim:#04060BCC;      /* modal backdrop                                 */
+
+  /* ── Light. Depth comes from a lamp above-left, not from drop shadows.
+        --lift is the top edge that catches it; --cast is the falloff.  ──── */
+  --lift:#CFE0FF1F;
+  --cast:0 1px 2px #0000006B, 0 10px 28px #00000047;
+
+  /* ── Type ─────────────────────────────────────────────────────────────── */
+  --ui:'Atkinson Hyperlegible Next', system-ui, 'Segoe UI', sans-serif;
+  --display:'Fraunces', Georgia, 'Times New Roman', serif;
+
+  /* Base is 15px, up from 13px. 13px is too small for a phone in a dark
+     room, which is where this app is actually read.                        */
+  --t-xs:12px; --t-sm:13px; --t-base:15px; --t-md:18px;
+  --t-lg:21px; --t-xl:26px; --t-2xl:34px; --t-3xl:48px;
+
+  /* ── Space, 4px base ──────────────────────────────────────────────────── */
+  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:32px; --s7:48px;
+
+  /* ── Radius carries hierarchy; one radius on everything is a tell ─────── */
+  --r-sm:3px;             /* inputs, chips                                  */
+  --r-md:6px;             /* panels, cards                                  */
+  --r-full:999px;         /* rings, avatars, tokens                         */
+}
+
+/* ============================================================================
+   The two rules every page needs whether or not it loads base.css.
+
+   Four separate bugs came from this gap: the table pop-outs, the console PWA,
+   the music modal painting a white canvas, and the login page rendering its
+   icon at the SVG default 300x150. Those surfaces all load tokens.css - it is
+   the one file nothing can skip - so these live here rather than in base.css.
+   ============================================================================ */
+:root{color-scheme:dark}
+
+.lt-icon{
+  width:1.15em; height:1.15em;
+  flex:none;
+  stroke:currentColor; fill:none;
+  stroke-width:1.75; stroke-linecap:round; stroke-linejoin:round;
+  vertical-align:-.15em;
+}

@@ -1,23 +1,27 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="lamplit">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Waiting Screens — DM</title>
 <script>(function(){try{var s=JSON.parse(sessionStorage.getItem('rpgSession')||'null');if(!s||s.role!=='dm'){location.replace('/login.html?next='+encodeURIComponent(location.pathname));}}catch(e){location.replace('/login.html');}})();</script>
 <link rel="manifest" href="/manifest.json">
-<meta name="theme-color" content="#1a1a2e">
+<meta name="theme-color" content="#080C15">
+<link rel="stylesheet" href="/css/tokens.css">
+<link rel="stylesheet" href="/css/fonts.css">
+<link rel="stylesheet" href="/css/base.css">
 <link rel="stylesheet" href="/css/waiting-screens.css">
 <link rel="stylesheet" href="/css/notifications.css">
 <script>if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js');</script>
+<script src="/js/lib/icons.js"></script>
 </head>
 <body>
 
 <div class="top">
-  <a href="/dm.html" class="btn ghost sm" style="text-decoration:none">← Back</a>
-  <h1>⏸ Waiting Screens</h1>
-  <span id="campaign-badge" style="display:none;background:var(--bg3);border:1px solid var(--a44);color:var(--txd);padding:2px 8px;border-radius:3px;font-size:11px;cursor:pointer"></span>
-  <button class="btn sm" data-notif-bell title="Notifications">🔔</button>
+  <a href="/dm.html" class="btn ghost sm" style="text-decoration:none"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-arrow-left"></use></svg> Back</a>
+  <h1><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-pause"></use></svg> Waiting Screens</h1>
+  <span id="campaign-badge" style="display:none;background:var(--slate-hi);border:1px solid var(--rule-hi);color:var(--ash);padding:2px 8px;border-radius:3px;font-size:11px;cursor:pointer"></span>
+  <button class="btn sm" data-notif-bell title="Notifications"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-bell"></use></svg> </button>
   <span class="spacer"></span>
   <button class="btn sm" onclick="newScreen()">+ New Screen</button>
 </div>
@@ -25,7 +29,7 @@
 <div class="banner" id="active-banner" style="display:none">
   <span class="dot"></span>
   <span>The table is parked on <b id="active-name"></b> — players cannot see the map.</span>
-  <button class="btn sm" onclick="stopShowing()">▶ Bring players back</button>
+  <button class="btn sm" onclick="stopShowing()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-right"></use></svg> Bring players back</button>
 </div>
 
 <div class="hint">

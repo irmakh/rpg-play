@@ -204,10 +204,10 @@ function renderShopStatusBtn() {
   const btn = $('shop-status-btn');
   if (shopIsOpen) {
     btn.textContent = `🟢 Shop Open (${openTagsLabel()})`;
-    btn.style.color = 'var(--ok)';
+    btn.style.color = 'var(--verdigris)';
   } else {
     btn.textContent = '🔴 Shop Closed';
-    btn.style.color = 'var(--err)';
+    btn.style.color = 'var(--blood)';
   }
   const tagBtn = $('open-tags-btn');
   if (tagBtn) tagBtn.textContent = shopActiveTags.length ? `🏷 ${shopActiveTags.length} ▾` : '🏷 Tags ▾';
@@ -352,10 +352,10 @@ function renderList() {
     const rows = g.map(i => {
       const thumb = i.imageThumb
         ? `<img class="it-thumb" src="${esc(i.imageThumb)}" alt="">`
-        : `<span class="it-thumb ph">◻</span>`;
+        : `<span class="it-thumb ph"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-square"></use></svg></span>`;
       return `<div class="it-row${i.id === currentId ? ' sel' : ''}${selected.has(i.id) ? ' checked' : ''}"
                    onclick="selectItem('${escJs(i.id)}')">
-        <input type="checkbox" ${selected.has(i.id) ? 'checked' : ''} style="accent-color:var(--ac)"
+        <input type="checkbox" ${selected.has(i.id) ? 'checked' : ''} style="accent-color:var(--bone)"
                onclick="event.stopPropagation();toggleSelect('${escJs(i.id)}')">
         <span class="mode-dot ${i.mode}" title="${MODE_LABEL[i.mode]}"></span>
         ${thumb}
@@ -706,7 +706,7 @@ function closeImportModal() { $('import-modal').style.display = 'none'; }
 async function runImport() {
   const text = $('import-text').value.trim();
   const statusEl = $('import-status');
-  if (!text) { statusEl.textContent = 'Paste some items first.'; statusEl.style.color = 'var(--err)'; return; }
+  if (!text) { statusEl.textContent = 'Paste some items first.'; statusEl.style.color = 'var(--blood)'; return; }
   try {
     const res = await api('/api/treasury/import', {
       method: 'POST',
@@ -714,11 +714,11 @@ async function runImport() {
     });
     if (res.status === 401) { handleUnauth(); return; }
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) { statusEl.textContent = data.error || 'Import failed.'; statusEl.style.color = 'var(--err)'; return; }
+    if (!res.ok) { statusEl.textContent = data.error || 'Import failed.'; statusEl.style.color = 'var(--blood)'; return; }
     closeImportModal();
     showStatus(`Imported ${data.count} item${data.count !== 1 ? 's' : ''}.`, false);
     await loadItems();
-  } catch { statusEl.textContent = 'Network error.'; statusEl.style.color = 'var(--err)'; }
+  } catch { statusEl.textContent = 'Network error.'; statusEl.style.color = 'var(--blood)'; }
 }
 
 // ── Free-loot requests ───────────────────────────────────────────────────────
@@ -765,8 +765,8 @@ function whenText(raw) {
 }
 
 function decideBtns(r) {
-  return `<button class="btn sm primary" onclick="approveRequest('${escJs(r.id)}')" title="Give it to this character">✓ Approve</button>
-          <button class="btn sm danger" onclick="declineRequest('${escJs(r.id)}')" title="Turn this one down">✕</button>`;
+  return `<button class="btn sm primary" onclick="approveRequest('${escJs(r.id)}')" title="Give it to this character"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-check"></use></svg> Approve</button>
+          <button class="btn sm danger" onclick="declineRequest('${escJs(r.id)}')" title="Turn this one down"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg></button>`;
 }
 
 function renderRequests() {
@@ -786,7 +786,7 @@ function renderRequests() {
     const first = rows[0];
     const thumb = first.itemThumb
       ? `<img class="req-item-thumb" src="${esc(first.itemThumb)}" alt="">`
-      : '<span class="req-item-thumb ph">◻</span>';
+      : '<span class="req-item-thumb ph"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-square"></use></svg></span>';
     const stock = first.quantity === -1 ? 'unlimited' : `${first.quantity} left`;
     return `<div class="req-item">
       <div class="req-item-hdr">
@@ -864,10 +864,10 @@ async function loadLedger() {
   try {
     const res = await api('/api/treasury/logs');
     if (res.status === 401) { handleUnauth(); return; }
-    if (!res.ok) { body.innerHTML = '<tr><td colspan="6" style="color:var(--err)">Failed to load.</td></tr>'; return; }
+    if (!res.ok) { body.innerHTML = '<tr><td colspan="6" style="color:var(--blood)">Failed to load.</td></tr>'; return; }
     const rows = await res.json();
     if (rows.length === 0) {
-      body.innerHTML = '<tr><td colspan="6" style="color:var(--txd)">Nothing claimed or bought yet.</td></tr>';
+      body.innerHTML = '<tr><td colspan="6" style="color:var(--ash)">Nothing claimed or bought yet.</td></tr>';
       return;
     }
     body.innerHTML = rows.map(r => {
@@ -875,15 +875,15 @@ async function loadLedger() {
       const dt = new Date(raw + (raw && !raw.endsWith('Z') && raw.includes('T') ? 'Z' : ''));
       const when = isNaN(dt) ? esc(raw) : `${dt.toLocaleDateString()} ${dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
       return `<tr>
-        <td style="white-space:nowrap;color:var(--txd);font-size:11px">${when}</td>
+        <td style="white-space:nowrap;color:var(--ash);font-size:11px">${when}</td>
         <td><span class="badge ${r.type}">${r.type === 'claim' ? 'Claim' : 'Buy'}</span></td>
         <td><strong>${esc(r.charName)}</strong></td>
         <td>${esc(r.itemName)}</td>
         <td style="text-align:center">${r.qty}</td>
-        <td style="color:var(--exp);white-space:nowrap">${r.type === 'claim' ? '—' : cpToGp(r.totalCp)}</td>
+        <td style="color:var(--arc);white-space:nowrap">${r.type === 'claim' ? '—' : cpToGp(r.totalCp)}</td>
       </tr>`;
     }).join('');
-  } catch { body.innerHTML = '<tr><td colspan="6" style="color:var(--err)">Network error.</td></tr>'; }
+  } catch { body.innerHTML = '<tr><td colspan="6" style="color:var(--blood)">Network error.</td></tr>'; }
 }
 
 // ── Keyboard ─────────────────────────────────────────────────────────────────

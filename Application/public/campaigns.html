@@ -1,18 +1,21 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="lamplit">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Campaigns — RPG Play</title>
 <link rel="manifest" href="/manifest.json">
-<meta name="theme-color" content="#1a1a2e">
+<meta name="theme-color" content="#080C15">
+<link rel="stylesheet" href="/css/tokens.css">
+<link rel="stylesheet" href="/css/fonts.css">
+<link rel="stylesheet" href="/css/base.css">
 <link rel="stylesheet" href="/css/campaigns.css">
 <script>if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js');</script>
 </head>
 <body>
 
 <div class="top">
-  <h1>⚔ RPG Play</h1>
+  <h1><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-swords"></use></svg> RPG Play</h1>
   <span class="sub">Choose a campaign</span>
   <span class="spacer"></span>
   <button class="btn btn-sm btn-ghost" onclick="openNewCampaign()">+ New Campaign</button>
@@ -32,7 +35,7 @@
   <!-- Detail: the selected campaign, its stats and its login -->
   <div class="detail-pane" id="detail">
     <div class="detail-empty">
-      <div class="big">🗺️</div>
+      <div class="big"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-map"></use></svg> </div>
       <div>Select a campaign to see its details and log in.</div>
     </div>
   </div>
@@ -43,7 +46,7 @@
   <div class="modal-box">
     <div class="modal-hdr">
       <h3>New Campaign</h3>
-      <button class="modal-x" onclick="closeModal('new-modal')">✕</button>
+      <button class="modal-x" onclick="closeModal('new-modal')"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg> </button>
     </div>
     <div class="modal-body">
       <div class="field">
@@ -80,14 +83,14 @@
   <div class="modal-box">
     <div class="modal-hdr">
       <h3>Campaign Settings</h3>
-      <button class="modal-x" onclick="closeModal('manage-modal')">✕</button>
+      <button class="modal-x" onclick="closeModal('manage-modal')"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg> </button>
     </div>
     <div class="modal-body">
       <div class="field">
         <label>DM Password (to authorise these changes)</label>
         <input type="password" id="mg-auth" placeholder="This campaign's DM password" autocomplete="current-password">
       </div>
-      <hr style="border:none;border-top:1px solid var(--sep);margin:14px 0">
+      <hr style="border:none;border-top:1px solid var(--rule);margin:14px 0">
       <div class="field">
         <label>Campaign Name</label>
         <input id="mg-name" maxlength="80">
@@ -106,7 +109,7 @@
       </div>
       <div class="err-msg" id="mg-err"></div>
       <div class="ok-msg" id="mg-ok"></div>
-      <hr style="border:none;border-top:1px solid var(--sep);margin:14px 0">
+      <hr style="border:none;border-top:1px solid var(--rule);margin:14px 0">
       <label>Danger Zone</label>
       <div class="hint" style="margin-top:2px">
         Deleting a campaign permanently destroys its characters, table, treasury,
@@ -126,7 +129,7 @@
   <div class="modal-box">
     <div class="modal-hdr">
       <h3>Delete Campaign</h3>
-      <button class="modal-x" onclick="closeModal('del-modal')">✕</button>
+      <button class="modal-x" onclick="closeModal('del-modal')"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg> </button>
     </div>
     <div class="modal-body">
       <div class="hint" style="margin-top:0">
@@ -149,6 +152,7 @@
   </div>
 </div>
 
+<script src="/js/lib/icons.js"></script>
 <script src="/js/lib/modal-guard.js"></script>
 <script src="/js/campaigns.js"></script>
 </body>

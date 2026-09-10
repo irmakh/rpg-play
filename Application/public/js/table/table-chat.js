@@ -304,7 +304,7 @@ function openDiceRollerModal() {
       const cells = [1,2,3,4,5,6].map(n =>
         `<td style="padding:2px 3px;text-align:center"><button class="btn sm" onclick="rollDiceModal(${n},${sides})" style="min-width:28px;font-size:11px">${n}</button></td>`
       ).join('');
-      return `<tr><td style="padding:4px 6px;color:var(--ac);font-weight:bold;white-space:nowrap">d${sides}</td>${cells}</tr>`;
+      return `<tr><td style="padding:4px 6px;color:var(--bone);font-weight:bold;white-space:nowrap">d${sides}</td>${cells}</tr>`;
     }).join('');
   }
   document.getElementById('dice-roller-modal').style.display = 'flex';

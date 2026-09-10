@@ -80,7 +80,7 @@ function _refreshHpPanel(tok) {
       rpImg.src = portrait; rpImg.style.display = ''; rpPh.style.display = 'none';
     } else {
       rpImg.style.display = 'none'; rpPh.style.display = '';
-      rpPh.textContent = tok.type === 'monster' ? '🐉' : '⚔';
+      rpPh.innerHTML = tok.type === 'monster' ? '🐉' : '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-swords"></use></svg>';
     }
   }
 
@@ -92,7 +92,7 @@ function _refreshHpPanel(tok) {
   if (isDM() && tok.type === 'monster' && tok.label) {
     // DM view: lead with the player-facing identifier, monster type in brackets.
     const baseName = tok.name.slice(0, tok.name.length - tok.label.length).trimEnd() || tok.name;
-    hpNameEl.innerHTML = esc(tok.label) + ` <span style="color:var(--txd);font-weight:normal;font-size:11px">[${esc(baseName)}]</span>`;
+    hpNameEl.innerHTML = esc(tok.label) + ` <span style="color:var(--ash);font-weight:normal;font-size:11px">[${esc(baseName)}]</span>`;
   } else {
     hpNameEl.textContent = tokDisplayName(tok);
   }
@@ -122,8 +122,8 @@ function _refreshHpPanel(tok) {
     if (isDM()) {
       visRow.style.display = '';
       const isVisible = tok.visible !== false;
-      visBtn.textContent = isVisible ? '👁 Visible to players' : '🚫 Hidden from players';
-      visBtn.style.background = isVisible ? 'var(--ok)' : 'var(--err)';
+      visBtn.innerHTML = isVisible ? '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-eye"></use></svg> Visible to players' : '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-eye-off"></use></svg> Hidden from players';
+      visBtn.style.background = isVisible ? 'var(--verdigris)' : 'var(--blood)';
       visBtn.style.color = '#fff';
       visBtn.style.border = 'none';
     } else {
@@ -152,9 +152,9 @@ function _refreshHpPanel(tok) {
       initRow.style.display = '';
       const hasEntry = !!initData.entries.find(e => e.id === tok.initiativeId);
       if (tok.type === 'monster') {
-        initBtn.textContent = '🎲 Roll Monster Initiative';
+        initBtn.innerHTML = '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg> Roll Monster Initiative';
       } else {
-        initBtn.textContent = hasEntry ? '🎲 Reroll Initiative' : '🎲 Roll Initiative';
+        initBtn.innerHTML = hasEntry ? '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg> Reroll Initiative' : '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg> Roll Initiative';
       }
     } else {
       initRow.style.display = 'none';
@@ -424,17 +424,17 @@ function _updateGroupInitUI() {
     const btn = document.getElementById(`group-init-btn-${m}`);
     if (!btn) continue;
     const active = _groupInitMode === m;
-    btn.style.background = active ? 'var(--ac)' : '';
+    btn.style.background = active ? 'var(--bone)' : '';
     btn.style.color = active ? '#fff' : '';
-    btn.style.borderColor = active ? 'var(--ac)' : '';
+    btn.style.borderColor = active ? 'var(--bone)' : '';
   }
   for (const t of ['normal', 'adv', 'dis']) {
     const btn = document.getElementById(`group-init-btn-${t}`);
     if (!btn) continue;
     const active = _groupInitRollType === t;
-    btn.style.background = active ? 'var(--ac)' : '';
+    btn.style.background = active ? 'var(--bone)' : '';
     btn.style.color = active ? '#fff' : '';
-    btn.style.borderColor = active ? 'var(--ac)' : '';
+    btn.style.borderColor = active ? 'var(--bone)' : '';
   }
 }
 
@@ -539,7 +539,7 @@ async function confirmGroupInitRoll() {
   let html = `<strong>Initiative${rtLabel}${mode === 'merged' ? ' · group' : ''}</strong>`;
   html += `<div style="margin-top:4px;display:flex;flex-direction:column;gap:2px">`;
   for (const r of rows) {
-    const color = r.isCrit ? '#44ff44' : r.isFail ? '#ff5555' : 'inherit';
+    const color = r.isCrit ? 'var(--verdigris)' : r.isFail ? 'var(--blood)' : 'inherit';
     html += `<div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline">`
       + `<span>${esc(r.name)}</span>`
       + `<span><span style="font-size:10px;opacity:.55">${esc(r.detail)}</span> <strong style="color:${color};font-size:14px">${r.total}</strong></span></div>`;
@@ -705,7 +705,7 @@ function renderHpTable() {
     return true;
   });
   if (visible.length === 0) {
-    list.innerHTML = '<div style="font-size:11px;color:var(--txd)">No tokens on map.</div>';
+    list.innerHTML = '<div style="font-size:11px;color:var(--ash)">No tokens on map.</div>';
     return;
   }
   const activeTokId = getActiveTurnTokenId();
@@ -722,12 +722,12 @@ function renderHpTable() {
     const ownerId = tok.assignedCharId || (!isMonster ? tok.linkedId : '');
     const ownerChar = ownerId ? _charList.find(c => c.id === ownerId) : null;
     const controllerHtml = ownerChar && ownerChar.name !== tokDisplayName(tok)
-      ? `<div style="font-size:9px;color:var(--ac);margin-top:1px">⚔ ${esc(ownerChar.name)}</div>`
+      ? `<div style="font-size:9px;color:var(--bone);margin-top:1px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-swords"></use></svg> ${esc(ownerChar.name)}</div>`
       : '';
     const isBulk = isDM() && bulkTokenIds.has(tok.id);
-    const rowStyle = `display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid var(--sep)${isCur ? ';background:var(--a22);margin:0 -10px;padding-left:10px;padding-right:10px' : ''}${canOpenPanel ? ';cursor:pointer' : ''}${isBulk ? ';border-left:3px solid #00e5ff;padding-left:5px' : ''}`;
+    const rowStyle = `display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid var(--rule)${isCur ? ';background:var(--wash);margin:0 -10px;padding-left:10px;padding-right:10px' : ''}${canOpenPanel ? ';cursor:pointer' : ''}${isBulk ? ';border-left:3px solid #00e5ff;padding-left:5px' : ''}`;
     const hpNumStr = showNums
-      ? `<span style="font-weight:bold;color:${col}">${cur}</span><span style="color:var(--txd)">/${max}</span>${temp > 0 ? `<span style="color:#aaddff;font-size:10px"> +${temp}</span>` : ''}`
+      ? `<span style="font-weight:bold;color:${col}">${cur}</span><span style="color:var(--ash)">/${max}</span>${temp > 0 ? `<span style="color:var(--arc);font-size:10px"> +${temp}</span>` : ''}`
       : '';
     const clickAttr = canOpenPanel ? `onclick="hpTrackerRowClick('${escJs(tok.id)}', event)"` : '';
     const activeConds = parseConditions(tok.conditions);
@@ -740,14 +740,14 @@ function renderHpTable() {
       : '';
     return `<div style="${rowStyle}" ${clickAttr}>
       <div style="flex:1;min-width:0">
-        <div style="font-size:11px;word-break:break-word${isCur ? ';color:var(--ac);font-weight:bold' : ''}">${isCur ? '▶ ' : ''}${esc(tokDisplayName(tok))}</div>
+        <div style="font-size:11px;word-break:break-word${isCur ? ';color:var(--bone);font-weight:bold' : ''}">${isCur ? '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-play"></use></svg> ' : ''}${esc(tokDisplayName(tok))}</div>
         ${controllerHtml}
         ${condsHtml}
         <div style="display:flex;align-items:center;gap:3px;margin-top:2px">
-          <div style="flex:1;background:var(--bg3);border-radius:2px;overflow:hidden;height:4px">
+          <div style="flex:1;background:var(--slate-hi);border-radius:2px;overflow:hidden;height:4px">
             <div style="width:${hpPct*100}%;height:100%;background:${col};transition:width .3s"></div>
           </div>
-          ${temp > 0 ? `<div style="width:${Math.min(30,temp/max*100)}%;max-width:20%;height:4px;background:#aaddff;border-radius:2px;flex-shrink:0"></div>` : ''}
+          ${temp > 0 ? `<div style="width:${Math.min(30,temp/max*100)}%;max-width:20%;height:4px;background:var(--arc);border-radius:2px;flex-shrink:0"></div>` : ''}
         </div>
       </div>
       <div style="font-size:11px;min-width:44px;text-align:right;flex-shrink:0;line-height:1.3">${hpNumStr}</div>
@@ -817,7 +817,7 @@ function renderBulkPanel() {
   const namesList = document.getElementById('bulk-names-list');
   if (namesList) {
     namesList.innerHTML = selected.map(tok =>
-      `<span style="font-size:10px;background:var(--bg3);border:1px solid #00e5ff44;border-radius:2px;padding:1px 5px;cursor:pointer;display:inline-flex;align-items:center;gap:3px" onclick="bulkDeselectToken('${escJs(tok.id)}')" title="Remove from selection">${esc(tokDisplayName(tok))} <span style="color:var(--txd);font-size:9px">✕</span></span>`
+      `<span style="font-size:10px;background:var(--slate-hi);border:1px solid #00e5ff44;border-radius:2px;padding:1px 5px;cursor:pointer;display:inline-flex;align-items:center;gap:3px" onclick="bulkDeselectToken('${escJs(tok.id)}')" title="Remove from selection">${esc(tokDisplayName(tok))} <span style="color:var(--ash);font-size:9px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg></span></span>`
     ).join('');
   }
 
@@ -933,7 +933,7 @@ function openGroupCheckModal(kind) {
   _groupCheckRollType = 'normal';
   const sel = [...bulkTokenIds].map(id => tokens.find(t => t.id === id)).filter(Boolean);
   const titleEl = document.getElementById('group-check-title');
-  if (titleEl) titleEl.textContent = _groupCheckKind === 'save' ? '🛡 Group Saving Throw' : '🎲 Group Ability Check';
+  if (titleEl) titleEl.innerHTML = _groupCheckKind === 'save' ? '🛡 Group Saving Throw' : '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg> Group Ability Check';
   const descEl = document.getElementById('group-check-desc');
   if (descEl) descEl.textContent = `${sel.length} token${sel.length !== 1 ? 's' : ''} will roll individually.`;
   _updateGroupCheckUI();
@@ -953,17 +953,17 @@ function _updateGroupCheckUI() {
     const btn = document.getElementById('group-check-ab-' + i);
     if (!btn) continue;
     const active = _groupCheckAbility === i;
-    btn.style.background  = active ? 'var(--ac)' : '';
+    btn.style.background  = active ? 'var(--bone)' : '';
     btn.style.color       = active ? '#fff' : '';
-    btn.style.borderColor = active ? 'var(--ac)' : '';
+    btn.style.borderColor = active ? 'var(--bone)' : '';
   }
   for (const t of ['normal', 'adv', 'dis']) {
     const btn = document.getElementById('group-check-rt-' + t);
     if (!btn) continue;
     const active = _groupCheckRollType === t;
-    btn.style.background  = active ? 'var(--ac)' : '';
+    btn.style.background  = active ? 'var(--bone)' : '';
     btn.style.color       = active ? '#fff' : '';
-    btn.style.borderColor = active ? 'var(--ac)' : '';
+    btn.style.borderColor = active ? 'var(--bone)' : '';
   }
 }
 
@@ -1030,7 +1030,7 @@ async function confirmGroupCheckRoll() {
     if (r.total === null) {
       html += `<div style="display:flex;justify-content:space-between;gap:10px;opacity:.5"><span>${esc(r.name)}</span><span>—</span></div>`;
     } else {
-      const color = r.isCrit ? '#44ff44' : r.isFail ? '#ff5555' : 'inherit';
+      const color = r.isCrit ? 'var(--verdigris)' : r.isFail ? 'var(--blood)' : 'inherit';
       html += `<div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline">`
         + `<span>${esc(r.name)}</span>`
         + `<span><span style="font-size:10px;opacity:.55">${esc(r.detail)}</span> <strong style="color:${color};font-size:14px">${r.total}</strong></span></div>`;

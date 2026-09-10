@@ -38,7 +38,7 @@ body.po-sheet-window #side-panel {
   background:
     radial-gradient(1100px 620px at 50% -14%, rgba(96, 108, 178, .20), transparent 62%),
     radial-gradient(700px 500px at 100% 0%, rgba(150, 90, 160, .10), transparent 60%),
-    linear-gradient(180deg, var(--bg2, #131b32), var(--bg, #0b1124));
+    linear-gradient(180deg, var(--slate), var(--ink));
 }
 
 body.po-sheet-window #rp-token-details { max-width: 1080px; margin: 0 auto; padding: 8px 0; }
@@ -67,14 +67,14 @@ body.po-sheet-window .rp-portrait-area::after {
   width: min(420px, 80%);
   height: 1px;
   transform: translateX(-50%);
-  background: linear-gradient(90deg, transparent, rgba(200, 160, 74, .55), transparent);
+  background: linear-gradient(90deg, transparent, var(--bone), transparent);
 }
 body.po-sheet-window #rp-portrait-img,
 body.po-sheet-window #rp-portrait-ph {
   width: 86px !important;
   height: 86px !important;
   font-size: 34px !important;
-  box-shadow: 0 0 0 4px rgba(11, 17, 36, .8), 0 0 18px rgba(200, 160, 74, .25);
+  box-shadow: 0 0 0 4px rgba(11, 17, 36, .8), 0 0 18px var(--rule-hi);
 }
 body.po-sheet-window #hp-panel-name {
   font-size: 24px !important;
@@ -98,7 +98,7 @@ body.po-sheet-window .rp-stat-block {
   flex: 0 1 118px;
   padding: 12px 8px 14px;
   border-radius: 12px 12px 9px 9px;
-  border: 1.5px solid rgba(200, 160, 74, .42);
+  border: 1.5px solid var(--rule-hi);
   background: linear-gradient(180deg, rgba(46, 58, 98, .55), rgba(18, 26, 50, .65));
   box-shadow: 0 3px 12px rgba(0, 0, 0, .35), inset 0 1px 0 rgba(255, 255, 255, .05);
 }
@@ -111,18 +111,18 @@ body.po-sheet-window .rp-stat-block::after {
   transform: translateX(-50%);
   border-left: 9px solid transparent;
   border-right: 9px solid transparent;
-  border-top: 9px solid rgba(200, 160, 74, .42);
+  border-top: 9px solid var(--rule-hi);
 }
 body.po-sheet-window .rp-stat-cur { font-size: 28px !important; }
 body.po-sheet-window #hp-cur-display { font-size: 28px !important; }
-body.po-sheet-window .rp-stat-lbl { color: rgba(200, 160, 74, .7); letter-spacing: 1px; }
+body.po-sheet-window .rp-stat-lbl { color: var(--bone); letter-spacing: 1px; }
 
 /* ── Top edit controls (conditions / damage-heal / init) ───────────────────── */
 body.po-sheet-window #hp-conditions-row,
 body.po-sheet-window #hp-edit-area,
 body.po-sheet-window #hp-init-row,
 body.po-sheet-window #hp-vis-row {
-  border-top: 1px solid rgba(200, 160, 74, .12);
+  border-top: 1px solid var(--wash);
   padding-left: clamp(12px, 3vw, 26px);
   padding-right: clamp(12px, 3vw, 26px);
 }
@@ -141,7 +141,7 @@ body.po-sheet-window .rp-tabs {
   max-width: 460px;
   margin: 6px auto 12px;
   border-radius: 8px;
-  border: 1px solid rgba(200, 160, 74, .18);
+  border: 1px solid var(--wash);
 }
 body.po-sheet-window .rp-tab { padding: 10px 6px; font-size: 12px; }
 
@@ -168,7 +168,7 @@ body.po-sheet-window .rp-sec-stat {
   flex: 0 1 104px;
   padding: 10px 6px 13px;
   border-radius: 11px 11px 8px 8px;
-  border: 1.4px solid rgba(200, 160, 74, .38);
+  border: 1.4px solid var(--rule-hi);
   background: linear-gradient(180deg, rgba(40, 52, 90, .5), rgba(16, 24, 46, .6));
   box-shadow: 0 2px 10px rgba(0, 0, 0, .3);
 }
@@ -180,10 +180,10 @@ body.po-sheet-window .rp-sec-stat::after {
   transform: translateX(-50%);
   border-left: 8px solid transparent;
   border-right: 8px solid transparent;
-  border-top: 8px solid rgba(200, 160, 74, .38);
+  border-top: 8px solid var(--rule-hi);
 }
 body.po-sheet-window .rp-sec-val { font-size: 20px; }
-body.po-sheet-window .rp-sec-lbl { color: rgba(200, 160, 74, .65); font-size: 8px; letter-spacing: .8px; }
+body.po-sheet-window .rp-sec-lbl { color: var(--bone); font-size: 8px; letter-spacing: .8px; }
 
 /* ── Ability circles ───────────────────────────────────────────────────────── */
 body.po-sheet-window .rp-ability-grid {
@@ -197,12 +197,12 @@ body.po-sheet-window .rp-ability-block {
   aspect-ratio: 1 / 1;
   justify-content: center;
   border-radius: 50%;
-  border: 2px solid rgba(200, 160, 74, .5);
+  border: 2px solid var(--bone);
   background: radial-gradient(circle at 50% 34%, rgba(46, 58, 98, .75), rgba(13, 19, 40, .92));
   box-shadow: 0 3px 9px rgba(0, 0, 0, .4), inset 0 0 14px rgba(0, 0, 0, .45);
   padding: 4px;
 }
-body.po-sheet-window .rp-ability-name { font-size: 9px; color: rgba(200, 160, 74, .7); }
+body.po-sheet-window .rp-ability-name { font-size: 9px; color: var(--bone); }
 body.po-sheet-window .rp-ability-mod { font-size: 23px; }
 body.po-sheet-window .rp-ability-score { font-size: 11px; }
 
@@ -215,7 +215,7 @@ body.po-sheet-window .rp-flat-hdr {
   background: transparent;
   border: none;
   text-align: center;
-  color: var(--ac);
+  color: var(--bone);
   font-size: 12px;
   letter-spacing: 2px;
   padding: 4px 6px 8px;
@@ -229,8 +229,8 @@ body.po-sheet-window .rp-flat-hdr::after {
   max-width: 54px;
   pointer-events: none;
 }
-body.po-sheet-window .rp-flat-hdr::before { background: linear-gradient(90deg, transparent, rgba(200, 160, 74, .5)); }
-body.po-sheet-window .rp-flat-hdr::after  { background: linear-gradient(90deg, rgba(200, 160, 74, .5), transparent); }
+body.po-sheet-window .rp-flat-hdr::before { background: linear-gradient(90deg, transparent, var(--bone)); }
+body.po-sheet-window .rp-flat-hdr::after  { background: linear-gradient(90deg, var(--bone), transparent); }
 
 /* ── Framed section content panels ─────────────────────────────────────────── */
 body.po-sheet-window .rp-skill-grid,
@@ -238,7 +238,7 @@ body.po-sheet-window .rp-save-grid,
 body.po-sheet-window .rp-atk-list,
 body.po-sheet-window .rp-spell-slots {
   background: rgba(9, 14, 28, .5);
-  border: 1px solid rgba(200, 160, 74, .18);
+  border: 1px solid var(--wash);
   border-radius: 9px;
   padding: 6px;
   margin: 0 0 14px;

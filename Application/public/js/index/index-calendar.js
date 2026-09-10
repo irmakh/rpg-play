@@ -110,7 +110,7 @@ function pcalRenderGrid() {
     area.innerHTML = `
       <div class="cal-festival-row${isToday?' cal-is-today':''}${isSelected?' cal-is-today':''}"
            onclick="pcalDayClick(null,'${pcalView.festival}')" style="cursor:pointer">
-        <span class="cal-fest-icon">✦</span>
+        <span class="cal-fest-icon"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-star"></use></svg></span>
         <span class="cal-fest-name">${esc(fest ? fest.name : pcalView.festival)}</span>
         ${dots ? `<div class="cal-fest-dots">${dots}</div>` : ''}
         ${isToday ? '<span class="cal-fest-mark">Today</span>' : ''}
@@ -167,7 +167,7 @@ function pcalRenderEventsList() {
     }
     const m = FR_MONTHS.find(mo => mo.num === pcalView.month);
     const allMonthLabel = pcalSelectedDay.festival ? frFestivalName(pcalSelectedDay.festival) : (m ? m.name : '');
-    showAllLink = `<a href="#" style="font-size:10px;color:var(--txd);text-decoration:none;margin-left:8px" onclick="pcalClearSelection();return false">&#8592; All of ${allMonthLabel}</a>`;
+    showAllLink = `<a href="#" style="font-size:10px;color:var(--ash);text-decoration:none;margin-left:8px" onclick="pcalClearSelection();return false">&#8592; All of ${allMonthLabel}</a>`;
   } else {
     evs = pcalEventsForView();
     if (pcalView.type === 'festival') {
@@ -189,12 +189,12 @@ function pcalRenderEventsList() {
     const dateStr = frFormatDate({ frYear: e.frYear, frMonth: e.frMonth, frDay: e.frDay, frFestival: e.frFestival });
     const isJournal = !!e.authorCharId;
     const authorLine = isJournal
-      ? `<div class="cal-event-author">📖 ${esc(e.authorName || 'Journal')}${e.isPublic ? '' : ' · 🔒 Private'}</div>`
+      ? `<div class="cal-event-author"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-book"></use></svg> ${esc(e.authorName || 'Journal')}${e.isPublic ? '' : ' · <svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-lock"></use></svg> Private'}</div>`
       : '';
     const actions = pcalCanEdit(e)
       ? `<div class="cal-event-actions">
            <button class="btn sm" onclick="pcalEditJournal('${escJs(e.id)}')">Edit</button>
-           <button class="btn danger sm" onclick="pcalDeleteJournal('${escJs(e.id)}')">✕</button>
+           <button class="btn danger sm" onclick="pcalDeleteJournal('${escJs(e.id)}')"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg></button>
          </div>`
       : '';
     return `
@@ -377,8 +377,8 @@ function pcalRenderPendingMedia() {
   el.innerHTML = pcalPendingMedia.map((m, i) => {
     const preview = m.type === 'image'
       ? `<img src="${esc(m.thumb || m.url)}">`
-      : `<span class="cal-media-chip-icon">${m.type === 'audio' ? '🎵' : '🎬'}</span>`;
-    return `<span class="cal-media-chip">${preview}<button type="button" onclick="pcalRemovePendingMedia(${i})">✕</button></span>`;
+      : `<span class="cal-media-chip-icon">${m.type === 'audio' ? '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-music"></use></svg>' : '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-camera"></use></svg>'}</span>`;
+    return `<span class="cal-media-chip">${preview}<button type="button" onclick="pcalRemovePendingMedia(${i})"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg></button></span>`;
   }).join('');
 }
 

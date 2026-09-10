@@ -74,19 +74,19 @@ function renderMonsterActionsPanel(data, tok) {
     if (atkMatch) {
       const bonus = parseInt(atkMatch[1]);
       const dmgRow = dmgStr
-        ? `<div class="qroll-row" onclick="rollMonsterDamage('${section}',${idx},'${dmgStr}')" style="padding-left:20px;background:rgba(0,0,0,.15)"><span style="font-size:11px;color:var(--txd)">↳ Damage</span><span class="qroll-val" style="color:#ff9966;font-size:13px">${esc(dmgStr)}</span></div>`
+        ? `<div class="qroll-row" onclick="rollMonsterDamage('${section}',${idx},'${dmgStr}')" style="padding-left:20px;background:rgba(0,0,0,.15)"><span style="font-size:11px;color:var(--ash)"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-right"></use></svg> Damage</span><span class="qroll-val" style="color:#ff9966;font-size:13px">${esc(dmgStr)}</span></div>`
         : '';
       return `<div style="display:flex;align-items:center;gap:2px"><div class="qroll-row" style="flex:1;min-width:0;margin:0" onclick="qroll('${sn} atk','${bonus}')" title="${esc(entryText.slice(0, 120))}"><span>${parseEntry(item.name || '')}</span><span class="qroll-val">${bonus >= 0 ? '+' : ''}${bonus}</span></div>${useBtn}</div>${dmgRow}`;
     }
 
-    return `<div style="display:flex;align-items:center;gap:2px;padding:2px 4px"><span style="flex:1;font-size:11px;color:var(--ac);font-weight:bold;font-style:italic">${parseEntry(item.name || '')}</span>${useBtn}</div>`;
+    return `<div style="display:flex;align-items:center;gap:2px;padding:2px 4px"><span style="flex:1;font-size:11px;color:var(--bone);font-weight:bold;font-style:italic">${parseEntry(item.name || '')}</span>${useBtn}</div>`;
   }
 
-  const HR2 = '<hr style="border:none;border-top:1px solid var(--a44);margin:4px 0">';
+  const HR2 = '<hr style="border:none;border-top:1px solid var(--rule-hi);margin:4px 0">';
 
   function rActionGroup(items, title, section) {
     if (!items || !items.length) return '';
-    return `${HR2}<div style="font-size:10px;color:var(--ac);text-transform:uppercase;font-weight:bold;letter-spacing:.5px;margin-bottom:2px">${title}</div>` +
+    return `${HR2}<div style="font-size:10px;color:var(--bone);text-transform:uppercase;font-weight:bold;letter-spacing:.5px;margin-bottom:2px">${title}</div>` +
       items.map((item, idx) => rActionItem(item, section, idx)).join('');
   }
 
@@ -98,7 +98,7 @@ function renderMonsterActionsPanel(data, tok) {
 
   return `<div class="qroll-section">
     <div class="qroll-section-hdr" onclick="toggleSideSection('monster-actions')">
-      <span style="color:#ff9999">Actions</span>
+      <span style="color:var(--blood)">Actions</span>
       <span id="side-sec-monster-actions-arrow">${_sideSecArrow('monster-actions')}</span>
     </div>
     <div id="side-sec-monster-actions" class="qroll-rows" style="${_sideSecStyle('monster-actions')}">${content}</div>
@@ -144,7 +144,7 @@ function renderMonsterFullStats(data, tok) {
     // Action row: Init (primary) + Info button
     const actionRowHtml=`<div class="rp-action-row">`
       +(tok?.linkedId?`<button class="btn sm" onclick="showMonsterInfoModal('${escJs(tok.linkedId)}')" style="font-size:10px;padding:2px 7px">Info</button>`:'')
-      +`<button class="btn sm primary" onclick="rollMonsterInitiativeFromPanel()" title="Roll Initiative (d20${initStr})" style="font-size:10px;padding:2px 7px">🎲 Init ${initStr}</button>`
+      +`<button class="btn sm primary" onclick="rollMonsterInitiativeFromPanel()" title="Roll Initiative (d20${initStr})" style="font-size:10px;padding:2px 7px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg> Init ${initStr}</button>`
       +`</div>`;
 
     // Secondary stats bar: CR | Initiative (clickable) | Speed | Passive Perc
@@ -179,7 +179,7 @@ function renderMonsterFullStats(data, tok) {
       const prof=!!profVal;
       return `<div class="rp-save-cell${prof?' rp-save-prof':''}" onclick="qroll('${snames[i]} Save','${val}')" title="${snames[i]} Saving Throw${prof?' (proficient)':''}">`
         +`<div class="rp-save-val">${val}</div>`
-        +`<div class="rp-save-name">${snames[i]}${prof?'<span class="rp-save-star">★</span>':''}</div></div>`;
+        +`<div class="rp-save-name">${snames[i]}${prof?'<span class="rp-save-star"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-star"></use></svg></span>':''}</div></div>`;
     }).join('')+`</div>`;
 
     // Skills (only if monster has explicit skill entries)
@@ -215,7 +215,7 @@ function renderMonsterFullStats(data, tok) {
             +useBtn+`</div>`;
         }
         return `<div class="rp-atk-row">`
-          +`<span class="rp-atk-name" style="color:var(--ac);font-style:italic">${parseEntry(item.name||'')}</span>`
+          +`<span class="rp-atk-name" style="color:var(--bone);font-style:italic">${parseEntry(item.name||'')}</span>`
           +useBtn+`</div>`;
       };
       const rActGroup=(items,title,section)=>{
@@ -255,7 +255,7 @@ function renderMonsterFullStats(data, tok) {
     }
 
     const linkHtml=tok?.linkedId
-      ?`<div class="rp-mon-link"><a href="/monsters.html" target="_blank">📖 Full stat block →</a></div>`:'';
+      ?`<div class="rp-mon-link"><a href="/monsters.html" target="_blank"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-book"></use></svg> Full stat block <svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-arrow-right"></use></svg></a></div>`:'';
 
     return actionRowHtml+secStatsHtml
       +`<div class="rp-flat-hdr rp-abil-hdr">Abilities</div>`+abilityGridHtml
@@ -264,43 +264,43 @@ function renderMonsterFullStats(data, tok) {
   }
 
   // ── Classic path (unchanged) ─────────────────────────────────────────────────
-  const HR='<hr style="border:none;border-top:1px solid var(--a44);margin:6px 0">';
-  function rSection(items,title){if(!items||!items.length)return'';return HR+'<div style="font-size:10px;color:var(--ac);text-transform:uppercase;font-weight:bold;letter-spacing:.5px;margin-bottom:3px">'+title+'</div>'+items.map(item=>'<div style="margin:4px 0"><span style="color:var(--ac);font-weight:bold;font-style:italic">'+parseEntry(item.name||'')+'</span> '+rEntries(item.entries)+'</div>').join('');}
-  function rSectionRollable(items,title){if(!items||!items.length)return'';const HR2=HR+'<div style="font-size:10px;color:var(--ac);text-transform:uppercase;font-weight:bold;letter-spacing:.5px;margin-bottom:3px">'+title+'</div>';return HR2+items.map(item=>{const entryText=[].concat(item.entries||[]).join(' ');const atkMatch=entryText.match(/\{@hit\s([+-]?\d+)\}|([+-]\d+)\s+to\s+hit/i);const dmgMatch=entryText.match(/\d+d\d+(?:[+-]\d+)?/i);if(atkMatch){const bonus=parseInt(atkMatch[1]||atkMatch[2]);const dmgStr=dmgMatch?dmgMatch[0]:'';const sn=item.name.replace(/'/g,"\\'");const dmgRow=dmgStr?'<div class="qroll-row" onclick="rollDamageStr(\''+sn+' Dmg\',\''+dmgStr+'\')" style="padding-left:20px;background:rgba(0,0,0,.15)"><span style="font-size:11px;color:var(--txd)">↳ Damage</span><span class="qroll-val" style="color:#ff9966;font-size:13px">'+esc(dmgStr)+'</span></div>':'';return'<div class="qroll-row" onclick="qroll(\''+sn+' atk\',\''+bonus+'\')" title="'+esc(entryText.slice(0,120))+'">'+'<span>'+parseEntry(item.name||'')+'</span>'+'<span class="qroll-val">'+(bonus>=0?'+':'')+bonus+'</span></div>'+dmgRow;}return'<div style="margin:4px 0"><span style="color:var(--ac);font-weight:bold;font-style:italic">'+parseEntry(item.name||'')+'</span> '+rEntries(item.entries)+'</div>';}).join('');}
+  const HR='<hr style="border:none;border-top:1px solid var(--rule-hi);margin:6px 0">';
+  function rSection(items,title){if(!items||!items.length)return'';return HR+'<div style="font-size:10px;color:var(--bone);text-transform:uppercase;font-weight:bold;letter-spacing:.5px;margin-bottom:3px">'+title+'</div>'+items.map(item=>'<div style="margin:4px 0"><span style="color:var(--bone);font-weight:bold;font-style:italic">'+parseEntry(item.name||'')+'</span> '+rEntries(item.entries)+'</div>').join('');}
+  function rSectionRollable(items,title){if(!items||!items.length)return'';const HR2=HR+'<div style="font-size:10px;color:var(--bone);text-transform:uppercase;font-weight:bold;letter-spacing:.5px;margin-bottom:3px">'+title+'</div>';return HR2+items.map(item=>{const entryText=[].concat(item.entries||[]).join(' ');const atkMatch=entryText.match(/\{@hit\s([+-]?\d+)\}|([+-]\d+)\s+to\s+hit/i);const dmgMatch=entryText.match(/\d+d\d+(?:[+-]\d+)?/i);if(atkMatch){const bonus=parseInt(atkMatch[1]||atkMatch[2]);const dmgStr=dmgMatch?dmgMatch[0]:'';const sn=item.name.replace(/'/g,"\\'");const dmgRow=dmgStr?'<div class="qroll-row" onclick="rollDamageStr(\''+sn+' Dmg\',\''+dmgStr+'\')" style="padding-left:20px;background:rgba(0,0,0,.15)"><span style="font-size:11px;color:var(--ash)">↳ Damage</span><span class="qroll-val" style="color:#ff9966;font-size:13px">'+esc(dmgStr)+'</span></div>':'';return'<div class="qroll-row" onclick="qroll(\''+sn+' atk\',\''+bonus+'\')" title="'+esc(entryText.slice(0,120))+'">'+'<span>'+parseEntry(item.name||'')+'</span>'+'<span class="qroll-val">'+(bonus>=0?'+':'')+bonus+'</span></div>'+dmgRow;}return'<div style="margin:4px 0"><span style="color:var(--bone);font-weight:bold;font-style:italic">'+parseEntry(item.name||'')+'</span> '+rEntries(item.entries)+'</div>';}).join('');}
 
   const actionsPanel = renderMonsterActionsPanel(data, tok);
   let html='<div style="font-size:11px;line-height:1.5">';
-  if(size||typeStr||align)html+='<div style="font-size:10px;font-style:italic;color:var(--txd);margin-bottom:4px">'+esc([size,typeStr,align].filter(Boolean).join(', '))+'</div>';
+  if(size||typeStr||align)html+='<div style="font-size:10px;font-style:italic;color:var(--ash);margin-bottom:4px">'+esc([size,typeStr,align].filter(Boolean).join(', '))+'</div>';
   html+=HR;
-  html+='<div><span style="color:var(--ac);font-weight:bold">HP</span> <span style="color:'+hpBarColor(hpFrac)+'">'+tok.hpCurrent+'/'+tok.hpMax+'</span> <span style="color:var(--txd);font-size:10px">('+esc(hpStr)+')</span></div>';
-  html+='<div><span style="color:var(--ac);font-weight:bold">AC</span> '+esc(acStr)+'</div>';
-  html+='<div><span style="color:var(--ac);font-weight:bold">Speed</span> '+esc(speedStr)+'</div>';
-  html+='<div><span style="color:var(--ac);font-weight:bold">CR</span> '+esc(String(cr))+'</div>';
+  html+='<div><span style="color:var(--bone);font-weight:bold">HP</span> <span style="color:'+hpBarColor(hpFrac)+'">'+tok.hpCurrent+'/'+tok.hpMax+'</span> <span style="color:var(--ash);font-size:10px">('+esc(hpStr)+')</span></div>';
+  html+='<div><span style="color:var(--bone);font-weight:bold">AC</span> '+esc(acStr)+'</div>';
+  html+='<div><span style="color:var(--bone);font-weight:bold">Speed</span> '+esc(speedStr)+'</div>';
+  html+='<div><span style="color:var(--bone);font-weight:bold">CR</span> '+esc(String(cr))+'</div>';
   html+=HR+'<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:2px;text-align:center;margin:4px 0">';
-  for(let i=0;i<6;i++){const sc=scores[i];const val=data[sc]||10;const m=Math.floor((val-10)/2);const ms=(m>=0?'+':'')+m;html+='<div onclick="qroll(\''+snames[i]+' Check\',\''+ms+'\')" title="'+snames[i]+' ability check" style="background:var(--bg3);border-radius:3px;padding:3px 1px;cursor:pointer"><div style="font-size:8px;color:var(--ac);font-weight:bold">'+snames[i]+'</div><div style="font-size:12px;font-weight:bold">'+val+'</div><div style="font-size:9px;color:var(--txd)">'+ms+'</div></div>';}
+  for(let i=0;i<6;i++){const sc=scores[i];const val=data[sc]||10;const m=Math.floor((val-10)/2);const ms=(m>=0?'+':'')+m;html+='<div onclick="qroll(\''+snames[i]+' Check\',\''+ms+'\')" title="'+snames[i]+' ability check" style="background:var(--slate-hi);border-radius:3px;padding:3px 1px;cursor:pointer"><div style="font-size:8px;color:var(--bone);font-weight:bold">'+snames[i]+'</div><div style="font-size:12px;font-weight:bold">'+val+'</div><div style="font-size:9px;color:var(--ash)">'+ms+'</div></div>';}
   html+='</div>'+HR;
-  html+=HR+'<div style="font-size:10px;color:var(--ac);text-transform:uppercase;font-weight:bold;letter-spacing:.5px;margin-bottom:3px">Saves</div>';
+  html+=HR+'<div style="font-size:10px;color:var(--bone);text-transform:uppercase;font-weight:bold;letter-spacing:.5px;margin-bottom:3px">Saves</div>';
   html+=scores.map((sc,i)=>{const profVal=data.save&&data.save[sc];const rawMod=Math.floor(((data[sc]||10)-10)/2);const val=profVal||(rawMod>=0?'+'+rawMod:''+rawMod);const prof=!!profVal;return'<div class="qroll-row" onclick="qroll(\''+snames[i]+' Save\',\''+val+'\')" title="'+snames[i]+' Saving Throw'+(prof?' (proficient)':'')+'" style="'+(prof?'':'opacity:0.75')+'"><span>'+snames[i]+(prof?' ★':'')+'</span><span class="qroll-val">'+val+'</span></div>';}).join('');
-  if(data.skill&&Object.keys(data.skill).length){html+=HR+'<div style="font-size:10px;color:var(--ac);text-transform:uppercase;font-weight:bold;letter-spacing:.5px;margin-bottom:3px">Skills</div>';html+=Object.entries(data.skill).map(([key,val])=>{const label=key.charAt(0).toUpperCase()+key.slice(1);return'<div class="qroll-row" onclick="qroll(\''+label+'\',\''+val+'\')" title="'+label+'"><span>'+label+'</span><span class="qroll-val">'+val+'</span></div>';}).join('');}
-  if(immuneStr)html+='<div><span style="color:var(--ac);font-weight:bold">Immune</span> '+esc(immuneStr)+'</div>';
-  if(resistStr)html+='<div><span style="color:var(--ac);font-weight:bold">Resist</span> '+esc(resistStr)+'</div>';
-  if(condImmStr)html+='<div><span style="color:var(--ac);font-weight:bold">Cond. Immune</span> '+esc(condImmStr)+'</div>';
-  if(sensesStr)html+='<div><span style="color:var(--ac);font-weight:bold">Senses</span> '+esc(sensesStr)+'</div>';
-  html+='<div><span style="color:var(--ac);font-weight:bold">Languages</span> '+esc(langStr)+'</div>';
+  if(data.skill&&Object.keys(data.skill).length){html+=HR+'<div style="font-size:10px;color:var(--bone);text-transform:uppercase;font-weight:bold;letter-spacing:.5px;margin-bottom:3px">Skills</div>';html+=Object.entries(data.skill).map(([key,val])=>{const label=key.charAt(0).toUpperCase()+key.slice(1);return'<div class="qroll-row" onclick="qroll(\''+label+'\',\''+val+'\')" title="'+label+'"><span>'+label+'</span><span class="qroll-val">'+val+'</span></div>';}).join('');}
+  if(immuneStr)html+='<div><span style="color:var(--bone);font-weight:bold">Immune</span> '+esc(immuneStr)+'</div>';
+  if(resistStr)html+='<div><span style="color:var(--bone);font-weight:bold">Resist</span> '+esc(resistStr)+'</div>';
+  if(condImmStr)html+='<div><span style="color:var(--bone);font-weight:bold">Cond. Immune</span> '+esc(condImmStr)+'</div>';
+  if(sensesStr)html+='<div><span style="color:var(--bone);font-weight:bold">Senses</span> '+esc(sensesStr)+'</div>';
+  html+='<div><span style="color:var(--bone);font-weight:bold">Languages</span> '+esc(langStr)+'</div>';
   html+=rSection(data.trait,'Traits');
-  html+='<div style="margin-top:8px"><a href="/monsters.html" target="_blank" style="color:var(--ac);font-size:10px">📖 Full view →</a></div>';
+  html+='<div style="margin-top:8px"><a href="/monsters.html" target="_blank" style="color:var(--bone);font-size:10px">📖 Full view →</a></div>';
   html+='</div>';
   return `<div style="padding:2px 0 4px;display:flex;align-items:center;justify-content:space-between">
-    <span style="font-size:12px;color:#ff9999;font-weight:bold">${esc(data.name||'Monster')}${tok&&tok.label?` <span style="color:var(--txd);font-weight:normal;font-size:11px">[${esc(tok.label)}]</span>`:''}</span>
+    <span style="font-size:12px;color:var(--blood);font-weight:bold">${esc(data.name||'Monster')}${tok&&tok.label?` <span style="color:var(--ash);font-weight:normal;font-size:11px">[${esc(tok.label)}]</span>`:''}</span>
     <div style="display:flex;gap:4px">
       ${tok&&tok.linkedId?`<button class="btn sm" onclick="showMonsterInfoModal('${escJs(tok.linkedId)}')" title="View full stat block" style="font-size:10px;padding:2px 6px">Info</button>`:''}
-      <button class="btn sm" onclick="rollMonsterInitiativeFromPanel()" title="Roll Initiative (d20${initStr})" style="font-size:10px;padding:2px 6px">🎲 Init ${initStr}</button>
+      <button class="btn sm" onclick="rollMonsterInitiativeFromPanel()" title="Roll Initiative (d20${initStr})" style="font-size:10px;padding:2px 6px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg> Init ${initStr}</button>
     </div>
   </div>
   ${actionsPanel}
   <div class="qroll-section">
     <div class="qroll-section-hdr" onclick="toggleSideSection('monster')">
-      <span style="color:#ff9999">Stat Block</span>
+      <span style="color:var(--blood)">Stat Block</span>
       <span id="side-sec-monster-arrow">${_sideSecArrow('monster')}</span>
     </div>
     <div id="side-sec-monster" class="qroll-rows" style="${_sideSecStyle('monster')}">${html}</div>

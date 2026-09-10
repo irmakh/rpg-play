@@ -64,7 +64,7 @@ function initItemPropsGrid() {
   if (!grid || grid.childElementCount > 0) return;
   grid.innerHTML = ITEM_WEAPON_PROPS.map(p =>
     `<label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:12px">
-      <input type="checkbox" id="iw-prop-${p.replace(/[^a-zA-Z]/g,'').toLowerCase()}" value="${p}" onchange="onItemPropChange()" style="width:13px;height:13px;accent-color:var(--ac)">
+      <input type="checkbox" id="iw-prop-${p.replace(/[^a-zA-Z]/g,'').toLowerCase()}" value="${p}" onchange="onItemPropChange()" style="width:13px;height:13px;accent-color:var(--bone)">
       ${p}</label>`
   ).join('');
 }
@@ -90,7 +90,7 @@ function addBonusRow(target = 'save-str', value = 1) {
   row.innerHTML =
     `<select class="im-bonus-target" style="flex:1;font-size:12px">${_bonusTargetOptionsHtml(target)}</select>`
     + `<input type="number" class="im-bonus-value" value="${parseInt(value) || 0}" style="width:64px">`
-    + `<button type="button" class="del-btn" onclick="removeBonusRow(this)">✕</button>`;
+    + `<button type="button" class="del-btn" onclick="removeBonusRow(this)"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg></button>`;
   list.appendChild(row);
 }
 
@@ -189,7 +189,7 @@ function syncWeaponItemToAttacks(item) {
     const tbl = document.getElementById('wpn-tbl');
     const tr = document.createElement('tr');
     tr.dataset.itemId = item.id;
-    tr.innerHTML = `<td><input type="text" value="${esc(item.name)}"></td><td><div style="display:flex;align-items:center;gap:2px"><input type="text" value="${esc(atkStr)}" style="width:46px"><button class="roll-btn" onclick="rollWeaponAtk(this)" title="Roll attack">🎲</button></div></td><td><div style="display:flex;align-items:center;gap:2px"><input type="text" value="${esc(dmgStr)}"><button class="roll-btn" onclick="rollWeaponDmg(this)" title="Roll damage">🎲</button></div></td><td><input type="text" value="${esc(notes)}"></td><td><button class="del-btn" onclick="delRow(this)">✕</button></td>`;
+    tr.innerHTML = `<td><input type="text" value="${esc(item.name)}"></td><td><div style="display:flex;align-items:center;gap:2px"><input type="text" value="${esc(atkStr)}" style="width:46px"><button class="roll-btn" onclick="rollWeaponAtk(this)" title="Roll attack"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg></button></div></td><td><div style="display:flex;align-items:center;gap:2px"><input type="text" value="${esc(dmgStr)}"><button class="roll-btn" onclick="rollWeaponDmg(this)" title="Roll damage"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg></button></div></td><td><input type="text" value="${esc(notes)}"></td><td><button class="del-btn" onclick="delRow(this)"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg></button></td>`;
     tbl.appendChild(tr);
   }
   renderWeaponsSummary();
@@ -294,7 +294,7 @@ function openItemDetail(id) {
   rows.push(['Equipped', item.equipped ? 'Yes' : 'No']);
   if (item.requiresAttunement) rows.push(['Attuned', item.attuned ? 'Yes' : 'No']);
   let html = `<table style="width:100%;border-collapse:collapse;font-size:12px">` +
-    rows.map(([k, v]) => `<tr><td style="padding:4px 6px;color:var(--txd);width:42%">${k}</td><td style="padding:4px 6px;font-weight:bold">${esc(String(v))}</td></tr>`).join('') +
+    rows.map(([k, v]) => `<tr><td style="padding:4px 6px;color:var(--ash);width:42%">${k}</td><td style="padding:4px 6px;font-weight:bold">${esc(String(v))}</td></tr>`).join('') +
     `</table>`;
   if (item.notes) html += `<div style="margin-top:10px"><div class="lbl" style="margin-bottom:4px">Notes</div><div style="font-size:12px;white-space:pre-wrap;line-height:1.5">${esc(item.notes)}</div></div>`;
   document.getElementById('item-detail-body').innerHTML = html;
@@ -316,7 +316,7 @@ function renderItems() {
   const body = document.getElementById('items-body');
   if (!body) return;
   if (items.length === 0) {
-    body.innerHTML = '<div style="color:var(--txd);font-size:11px;padding:4px 0">No items — click "+ Add Item" to begin.</div>';
+    body.innerHTML = '<div style="color:var(--ash);font-size:11px;padding:4px 0">No items — click "+ Add Item" to begin.</div>';
     return;
   }
 
@@ -349,20 +349,20 @@ function renderItems() {
     if (nBonus) bonusParts.push(`✦${nBonus}`);
     const bonusStr = bonusParts.join(' ');
     const attuneStr = item.attuned ? ' 🔮' : '';
-    const equippedStyle = item.equipped ? 'color:var(--ahi);font-weight:bold' : 'color:var(--txd)';
-    const valueStr = item.value ? ` · <span style="color:var(--exp)">${esc(item.value)}</span>` : '';
+    const equippedStyle = item.equipped ? 'color:var(--arc-hi);font-weight:bold' : 'color:var(--ash)';
+    const valueStr = item.value ? ` · <span style="color:var(--arc)">${esc(item.value)}</span>` : '';
 
     return `<div class="item-row">
       <input type="checkbox" class="item-chk" ${item.equipped ? 'checked' : ''} onchange="toggleItemEquipped(${item.id})" title="Equipped">
       <span class="item-name" style="${equippedStyle};cursor:pointer" onclick="openItemDetail(${item.id})">${esc(item.name)}${attuneStr}</span>
       <span class="item-meta">${typeLabel}${bonusStr ? ' · ' + bonusStr : ''}${valueStr}</span>
       <button class="char-btn" style="padding:2px 8px;font-size:11px" onclick="openItemModal(${item.id})">Edit</button>
-      <button class="del-btn" onclick="deleteItem(${item.id})">✕</button>
+      <button class="del-btn" onclick="deleteItem(${item.id})"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg></button>
     </div>`;
   }).join('');
 
   const summary = summaryParts.length > 0
-    ? `<div style="font-size:10px;color:var(--txd);margin-top:6px;padding-top:4px;border-top:1px solid var(--sep)">⚡ Equipped: ${summaryParts.join(' · ')}</div>`
+    ? `<div style="font-size:10px;color:var(--ash);margin-top:6px;padding-top:4px;border-top:1px solid var(--rule)"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-bolt"></use></svg> Equipped: ${summaryParts.join(' · ')}</div>`
     : '';
 
   body.innerHTML = rows + summary;
@@ -379,7 +379,7 @@ function renderEquippedItemsSummary() {
   if (!el) return;
   const equipped = items.filter(i => i.equipped);
   if (equipped.length === 0) {
-    el.innerHTML = '<div style="color:var(--txd);font-size:11px;padding:4px 0">No equipped items — add them in the Inventory tab.</div>';
+    el.innerHTML = '<div style="color:var(--ash);font-size:11px;padding:4px 0">No equipped items — add them in the Inventory tab.</div>';
     return;
   }
   const html = equipped.map(item => {
@@ -388,21 +388,21 @@ function renderEquippedItemsSummary() {
                     : item.itemType === 'weapon' ? 'weapon'
                     : 'wondrous';
     const chips = [];
-    if (item.itemType === 'armor') chips.push(`<span style="background:var(--a44);padding:1px 5px;border-radius:3px;font-size:10px">Base AC ${item.acBase}</span>`);
-    if (item.acBonus)    chips.push(`<span style="background:var(--a44);padding:1px 5px;border-radius:3px;font-size:10px">AC ${item.acBonus > 0 ? '+' : ''}${item.acBonus}</span>`);
-    if (item.initBonus)  chips.push(`<span style="background:var(--a44);padding:1px 5px;border-radius:3px;font-size:10px">Init ${item.initBonus > 0 ? '+' : ''}${item.initBonus}</span>`);
-    if (item.speedBonus) chips.push(`<span style="background:var(--a44);padding:1px 5px;border-radius:3px;font-size:10px">Speed ${item.speedBonus > 0 ? '+' : ''}${item.speedBonus} ft</span>`);
-    if (item.spellAtkBonus) chips.push(`<span style="background:var(--a44);padding:1px 5px;border-radius:3px;font-size:10px">Spell Atk ${item.spellAtkBonus > 0 ? '+' : ''}${item.spellAtkBonus}</span>`);
-    if (item.spellDcBonus)  chips.push(`<span style="background:var(--a44);padding:1px 5px;border-radius:3px;font-size:10px">Spell DC ${item.spellDcBonus > 0 ? '+' : ''}${item.spellDcBonus}</span>`);
+    if (item.itemType === 'armor') chips.push(`<span style="background:var(--rule-hi);padding:1px 5px;border-radius:3px;font-size:10px">Base AC ${item.acBase}</span>`);
+    if (item.acBonus)    chips.push(`<span style="background:var(--rule-hi);padding:1px 5px;border-radius:3px;font-size:10px">AC ${item.acBonus > 0 ? '+' : ''}${item.acBonus}</span>`);
+    if (item.initBonus)  chips.push(`<span style="background:var(--rule-hi);padding:1px 5px;border-radius:3px;font-size:10px">Init ${item.initBonus > 0 ? '+' : ''}${item.initBonus}</span>`);
+    if (item.speedBonus) chips.push(`<span style="background:var(--rule-hi);padding:1px 5px;border-radius:3px;font-size:10px">Speed ${item.speedBonus > 0 ? '+' : ''}${item.speedBonus} ft</span>`);
+    if (item.spellAtkBonus) chips.push(`<span style="background:var(--rule-hi);padding:1px 5px;border-radius:3px;font-size:10px">Spell Atk ${item.spellAtkBonus > 0 ? '+' : ''}${item.spellAtkBonus}</span>`);
+    if (item.spellDcBonus)  chips.push(`<span style="background:var(--rule-hi);padding:1px 5px;border-radius:3px;font-size:10px">Spell DC ${item.spellDcBonus > 0 ? '+' : ''}${item.spellDcBonus}</span>`);
     (item.bonuses || []).forEach(b => {
-      if (b && b.value) chips.push(`<span style="background:var(--a44);padding:1px 5px;border-radius:3px;font-size:10px">${esc(itemBonusTargetLabel(b.target))} ${b.value > 0 ? '+' : ''}${b.value}</span>`);
+      if (b && b.value) chips.push(`<span style="background:var(--rule-hi);padding:1px 5px;border-radius:3px;font-size:10px">${esc(itemBonusTargetLabel(b.target))} ${b.value > 0 ? '+' : ''}${b.value}</span>`);
     });
     const attuneStr = item.attuned ? ' 🔮' : '';
-    const notesSnip = item.notes ? `<div style="font-size:10px;color:var(--txd);margin-top:2px">${esc(item.notes.slice(0,80))}${item.notes.length > 80 ? '…' : ''}</div>` : '';
-    return `<div style="display:flex;align-items:flex-start;gap:6px;padding:4px 0;border-bottom:1px solid var(--sep)">
+    const notesSnip = item.notes ? `<div style="font-size:10px;color:var(--ash);margin-top:2px">${esc(item.notes.slice(0,80))}${item.notes.length > 80 ? '…' : ''}</div>` : '';
+    return `<div style="display:flex;align-items:flex-start;gap:6px;padding:4px 0;border-bottom:1px solid var(--rule)">
       <div style="flex:1;min-width:0">
-        <span style="font-weight:bold;color:var(--ahi);cursor:pointer" onclick="showTab('inventory',document.querySelector('.tab[onclick*=inventory]'));openItemDetail(${item.id})">${esc(item.name)}${attuneStr}</span>
-        <span style="color:var(--txd);font-size:10px;margin-left:4px">${typeLabel}</span>
+        <span style="font-weight:bold;color:var(--arc-hi);cursor:pointer" onclick="showTab('inventory',document.querySelector('.tab[onclick*=inventory]'));openItemDetail(${item.id})">${esc(item.name)}${attuneStr}</span>
+        <span style="color:var(--ash);font-size:10px;margin-left:4px">${typeLabel}</span>
         ${chips.length ? `<div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:3px">${chips.join('')}</div>` : ''}
         ${notesSnip}
       </div>

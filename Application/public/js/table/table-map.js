@@ -166,7 +166,7 @@ function renderFog() {
         fCtx.textAlign = 'center';
         fCtx.textBaseline = 'middle';
         fCtx.shadowColor = '#000'; fCtx.shadowBlur = 3;
-        fCtx.fillStyle = 'rgba(200,160,74,0.9)';
+        fCtx.fillStyle = 'rgba(140,158,255,0.9)';
         fCtx.fillText(r.label, px + pw / 2, py + ph / 2);
         fCtx.shadowBlur = 0; fCtx.textBaseline = 'alphabetic';
       }
@@ -188,9 +188,9 @@ function renderFogPanel() {
   panel.style.display = show ? '' : 'none';
   if (!show) return;
   list.innerHTML = fogRegions.map(r => `
-    <div style="display:flex;align-items:center;gap:6px;padding:3px 0;border-bottom:1px solid var(--sep);cursor:default"
+    <div style="display:flex;align-items:center;gap:6px;padding:3px 0;border-bottom:1px solid var(--rule);cursor:default"
          onmouseenter="highlightMapRegion('${escJs(r.id)}')" onmouseleave="clearMapHighlight()">
-      <span style="flex:1;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:${r.visible ? 'var(--ok)' : 'var(--txd)'}">${esc(r.label || 'Region')}</span>
+      <span style="flex:1;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:${r.visible ? 'var(--verdigris)' : 'var(--ash)'}">${esc(r.label || 'Region')}</span>
       ${!r.visible
         ? `<button class="btn sm" onclick="revealFogRegion('${escJs(r.id)}')">Reveal</button>`
         : `<button class="btn sm" onclick="hideFogRegion('${escJs(r.id)}')" style="font-size:10px">Hide</button>`}
@@ -265,19 +265,19 @@ function renderItemsPanel() {
   panel.style.display = show ? '' : 'none';
   if (!show) return;
   list.innerHTML = hiddenItems.map(item => `
-    <div style="border:1px solid var(--a44);border-radius:4px;margin-bottom:4px;overflow:hidden"
+    <div style="border:1px solid var(--rule-hi);border-radius:4px;margin-bottom:4px;overflow:hidden"
          onmouseenter="highlightMapItem('${escJs(item.id)}')" onmouseleave="clearMapHighlight()">
       <div style="display:flex;align-items:center;gap:6px;padding:4px 5px;cursor:pointer;user-select:none"
-           onclick="const b=this.parentElement.querySelector('.item-body');if(b){const open=b.style.display==='block';b.style.display=open?'none':'block';this.querySelector('span').textContent=open?'▶':'▼'}">
-        <span style="font-size:10px;color:var(--txd)">▶</span>
+           onclick="const b=this.parentElement.querySelector('.item-body');if(b){const open=b.style.display==='block';b.style.display=open?'none':'block';this.querySelector('span').textContent=open?'<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-play"></use></svg>':'<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-down"></use></svg>'}">
+        <span style="font-size:10px;color:var(--ash)"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-play"></use></svg></span>
         <span style="font-size:13px">${ITEM_ICONS[item.type] || '?'}</span>
-        <span style="flex:1;font-size:11px;font-weight:bold;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:${item.visible ? 'var(--ok)' : 'var(--txd)'}">${esc(item.label || 'Item')}</span>
+        <span style="flex:1;font-size:11px;font-weight:bold;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:${item.visible ? 'var(--verdigris)' : 'var(--ash)'}">${esc(item.label || 'Item')}</span>
         ${!item.visible
           ? `<button class="btn sm" onclick="event.stopPropagation();revealItem('${escJs(item.id)}')">Reveal</button>`
           : `<button class="btn sm" onclick="event.stopPropagation();hideItem('${escJs(item.id)}')" style="font-size:10px">Hide</button>`}
       </div>
-      <div class="item-body" style="padding:4px 5px 5px;border-top:1px solid var(--sep)">
-        ${item.description ? `<div style="font-size:10px;color:var(--txd);white-space:pre-wrap">${esc(item.description)}</div>` : '<div style="font-size:10px;color:var(--a44);font-style:italic">No description.</div>'}
+      <div class="item-body" style="padding:4px 5px 5px;border-top:1px solid var(--rule)">
+        ${item.description ? `<div style="font-size:10px;color:var(--ash);white-space:pre-wrap">${esc(item.description)}</div>` : '<div style="font-size:10px;color:var(--rule-hi);font-style:italic">No description.</div>'}
       </div>
     </div>`).join('');
   list.querySelectorAll('.item-body').forEach(b => { b.style.display = 'none'; });
@@ -327,7 +327,7 @@ function highlightMapRegion(id) {
   if (!r) return;
   const cs = tableState.cellSize || 50;
   const ox = tableState.offsetX || 0, oy = tableState.offsetY || 0;
-  _drawHighlight(ox + r.x * cs, oy + r.y * cs, r.w * cs, r.h * cs, 'rgba(200,160,74,1)');
+  _drawHighlight(ox + r.x * cs, oy + r.y * cs, r.w * cs, r.h * cs, 'rgba(140,158,255,1)');
 }
 
 function highlightMapItem(id) {
@@ -355,7 +355,7 @@ function _dismissMapCtxMenu() {
 function _showMapCtxMenu(cx, cy, html) {
   _dismissMapCtxMenu();
   const div = document.createElement('div');
-  div.style.cssText = 'position:fixed;z-index:9999;background:#0f1424;border:1px solid rgba(200,160,74,.4);border-radius:6px;padding:8px 10px;font-size:12px;color:var(--tx);box-shadow:0 4px 18px rgba(0,0,0,.75);min-width:155px;max-width:220px';
+  div.style.cssText = 'position:fixed;z-index:9999;background:var(--slate);border:1px solid rgba(140,158,255,.4);border-radius:6px;padding:8px 10px;font-size:12px;color:var(--bone);box-shadow:0 4px 18px rgba(0,0,0,.75);min-width:155px;max-width:220px';
   div.innerHTML = html;
   document.body.appendChild(div);
   _mapCtxMenu = div;
@@ -376,12 +376,12 @@ canvasArea.addEventListener('click', e => {
   for (const r of fogRegions) {
     if (gx >= r.x && gx < r.x + r.w && gy >= r.y && gy < r.y + r.h) {
       _showMapCtxMenu(e.clientX, e.clientY,
-        `<div style="font-size:9px;color:rgba(200,160,74,.6);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Fog Region</div>`
+        `<div style="font-size:9px;color:rgba(140,158,255,.6);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Fog Region</div>`
         + `<div style="font-weight:bold;margin-bottom:3px">${esc(r.label || 'Region')}</div>`
-        + `<div style="font-size:10px;margin-bottom:7px;color:${r.visible ? '#88ff88' : 'var(--txd)'}">${r.visible ? '👁 Revealed to players' : '🌫 Hidden from players'}</div>`
+        + `<div style="font-size:10px;margin-bottom:7px;color:${r.visible ? 'var(--verdigris)' : 'var(--ash)'}">${r.visible ? '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-eye"></use></svg> Revealed to players' : '🌫 Hidden from players'}</div>`
         + (r.visible
-          ? `<button class="btn sm" onclick="_dismissMapCtxMenu();hideFogRegion('${escJs(r.id)}')" style="width:100%;font-size:11px">🚫 Hide Region</button>`
-          : `<button class="btn sm" onclick="_dismissMapCtxMenu();revealFogRegion('${escJs(r.id)}')" style="width:100%;font-size:11px;background:var(--ok);color:#000;border-color:var(--ok)">👁 Reveal Region</button>`)
+          ? `<button class="btn sm" onclick="_dismissMapCtxMenu();hideFogRegion('${escJs(r.id)}')" style="width:100%;font-size:11px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-eye-off"></use></svg> Hide Region</button>`
+          : `<button class="btn sm" onclick="_dismissMapCtxMenu();revealFogRegion('${escJs(r.id)}')" style="width:100%;font-size:11px;background:var(--verdigris);color:#000;border-color:var(--verdigris)"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-eye"></use></svg> Reveal Region</button>`)
       );
       return;
     }
@@ -392,13 +392,13 @@ canvasArea.addEventListener('click', e => {
     if (gx >= item.x && gx < item.x + iw && gy >= item.y && gy < item.y + ih) {
       const icon = ITEM_ICONS[item.type] || '?';
       _showMapCtxMenu(e.clientX, e.clientY,
-        `<div style="font-size:9px;color:rgba(200,160,74,.6);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">${icon} Hidden Item</div>`
+        `<div style="font-size:9px;color:rgba(140,158,255,.6);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">${icon} Hidden Item</div>`
         + `<div style="font-weight:bold;margin-bottom:3px">${esc(item.label || 'Item')}</div>`
-        + (item.description ? `<div style="font-size:10px;color:var(--txd);margin-bottom:5px;max-height:54px;overflow-y:auto;white-space:pre-wrap;word-break:break-word">${esc(item.description)}</div>` : '')
-        + `<div style="font-size:10px;margin-bottom:7px;color:${item.visible ? '#88ff88' : '#ff8888'}">${item.visible ? '👁 Revealed to players' : '🔴 Hidden from players'}</div>`
+        + (item.description ? `<div style="font-size:10px;color:var(--ash);margin-bottom:5px;max-height:54px;overflow-y:auto;white-space:pre-wrap;word-break:break-word">${esc(item.description)}</div>` : '')
+        + `<div style="font-size:10px;margin-bottom:7px;color:${item.visible ? 'var(--verdigris)' : 'var(--blood)'}">${item.visible ? '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-eye"></use></svg> Revealed to players' : '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-circle"></use></svg> Hidden from players'}</div>`
         + (item.visible
-          ? `<button class="btn sm" onclick="_dismissMapCtxMenu();hideItem('${escJs(item.id)}')" style="width:100%;font-size:11px">🚫 Hide Item</button>`
-          : `<button class="btn sm" onclick="_dismissMapCtxMenu();revealItem('${escJs(item.id)}')" style="width:100%;font-size:11px;background:var(--ok);color:#000;border-color:var(--ok)">👁 Reveal Item</button>`)
+          ? `<button class="btn sm" onclick="_dismissMapCtxMenu();hideItem('${escJs(item.id)}')" style="width:100%;font-size:11px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-eye-off"></use></svg> Hide Item</button>`
+          : `<button class="btn sm" onclick="_dismissMapCtxMenu();revealItem('${escJs(item.id)}')" style="width:100%;font-size:11px;background:var(--verdigris);color:#000;border-color:var(--verdigris)"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-eye"></use></svg> Reveal Item</button>`)
       );
       return;
     }
@@ -876,7 +876,7 @@ function updateDrawSelectionUI() {
   if (deleteBtn) deleteBtn.style.display = (s && drawSubMode === 'select') ? '' : 'none';
   if (s) {
     const colorIn = document.getElementById('draw-color');
-    if (colorIn) colorIn.value = s.color || '#ff4444';
+    if (colorIn) colorIn.value = s.color || '#E4666B';
     document.querySelectorAll('.draw-thick-btn').forEach(b => b.classList.remove('active'));
     const thickBtn = document.getElementById('draw-thick-' + s.thickness);
     if (thickBtn) thickBtn.classList.add('active');
@@ -979,7 +979,7 @@ async function deleteSelectedShape() {
 function renderShape(ctx, s, alpha = 1) {
   ctx.save();
   ctx.globalAlpha = alpha;
-  ctx.strokeStyle = s.color || '#ff4444';
+  ctx.strokeStyle = s.color || '#E4666B';
   ctx.lineWidth = s.thickness || 2;
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
@@ -992,7 +992,7 @@ function renderShape(ctx, s, alpha = 1) {
     const r = Math.sqrt((s.x2 - s.x1) ** 2 + (s.y2 - s.y1) ** 2);
     ctx.beginPath();
     ctx.arc(s.x1, s.y1, r, 0, Math.PI * 2);
-    ctx.fillStyle = s.color || '#ff4444';
+    ctx.fillStyle = s.color || '#E4666B';
     ctx.globalAlpha = alpha * 0.18;
     ctx.fill();
     ctx.globalAlpha = alpha;
@@ -1000,7 +1000,7 @@ function renderShape(ctx, s, alpha = 1) {
   } else if (s.type === 'rect') {
     const x = Math.min(s.x1, s.x2), y = Math.min(s.y1, s.y2);
     const w = Math.abs(s.x2 - s.x1), h = Math.abs(s.y2 - s.y1);
-    ctx.fillStyle = s.color || '#ff4444';
+    ctx.fillStyle = s.color || '#E4666B';
     ctx.globalAlpha = alpha * 0.18;
     ctx.fillRect(x, y, w, h);
     ctx.globalAlpha = alpha;
@@ -1251,9 +1251,9 @@ document.addEventListener('mousemove', e => {
   oCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
   oCtx.beginPath();
   oCtx.arc(cx, cy, size / 2, 0, Math.PI * 2);
-  oCtx.fillStyle = 'rgba(200,160,74,0.3)';
+  oCtx.fillStyle = 'rgba(140,158,255,0.3)';
   oCtx.fill();
-  oCtx.strokeStyle = 'rgba(200,160,74,0.8)';
+  oCtx.strokeStyle = 'rgba(140,158,255,0.8)';
   oCtx.lineWidth = 2;
   oCtx.stroke();
   if (!dragState.freeMove) {
@@ -1263,7 +1263,7 @@ document.addEventListener('mousemove', e => {
     oCtx.font = 'bold 12px Segoe UI';
     oCtx.textAlign = 'center';
     oCtx.shadowColor = '#000'; oCtx.shadowBlur = 3;
-    oCtx.fillStyle = remaining >= 0 ? '#88ff88' : '#ff8888';
+    oCtx.fillStyle = remaining >= 0 ? '#3DD68C' : '#E4666B';
     oCtx.fillText(`${dist}ft  (${remaining >= 0 ? remaining + 'ft left' : Math.abs(remaining) + 'ft over'})`, cx, cy - size / 2 - 8);
     oCtx.shadowBlur = 0;
   }

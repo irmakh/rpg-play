@@ -71,7 +71,7 @@ function toggleLeftPanel() {
   if (!panel) return;
   const hidden = panel.style.display === 'none';
   panel.style.display = hidden ? '' : 'none';
-  if (btn) btn.textContent = hidden ? '◀' : '▶';
+  if (btn) btn.innerHTML = hidden ? '◀' : '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-play"></use></svg>';
 }
 function toggleSidePanel() {
   const panel = document.getElementById('side-panel');
@@ -79,7 +79,7 @@ function toggleSidePanel() {
   if (!panel) return;
   const hidden = panel.style.display === 'none';
   panel.style.display = hidden ? '' : 'none';
-  if (btn) btn.textContent = hidden ? '▶' : '◀';
+  if (btn) btn.innerHTML = hidden ? '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-play"></use></svg>' : '◀';
   if (typeof updateZoomFloat === 'function') updateZoomFloat();
 }
 

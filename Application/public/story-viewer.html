@@ -1,27 +1,31 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="lamplit">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Story Viewer</title>
 <link rel="manifest" href="/manifest.json">
-<meta name="theme-color" content="#1a1a2e">
+<meta name="theme-color" content="#080C15">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <script>if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js');</script>
+<link rel="stylesheet" href="/css/tokens.css">
+<link rel="stylesheet" href="/css/fonts.css">
+<link rel="stylesheet" href="/css/base.css">
 <link rel="stylesheet" href="/css/dm.css">
 <link rel="stylesheet" href="/css/stories.css">
+<script src="/js/lib/icons.js"></script>
 </head>
 <body>
 
 <!-- Stories password gate -->
 <div class="gate" id="stories-gate" style="display:none">
   <div class="gate-box">
-    <div style="font-size:36px;margin-bottom:10px">📖</div>
+    <div style="font-size:36px;margin-bottom:10px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-book"></use></svg> </div>
     <h2>Stories</h2>
     <p>Enter your password to continue.</p>
     <input type="password" id="gate-pw" placeholder="Password…" autocomplete="off"
            onkeydown="if(event.key==='Enter')storiesGateSubmit()">
-    <div id="gate-err" style="color:var(--err);font-size:12px;min-height:16px;margin-top:6px"></div>
+    <div id="gate-err" style="color:var(--blood);font-size:12px;min-height:16px;margin-top:6px"></div>
     <button class="btn primary" style="width:100%;margin-top:8px" onclick="storiesGateSubmit()">Enter</button>
   </div>
 </div>
@@ -59,7 +63,7 @@ async function storiesGateSubmit() {
 <div class="viewer-wrap">
 
   <div class="stories-hdr">
-    <a href="/stories.html" class="btn" style="padding:4px 10px;font-size:11px">← Stories</a>
+    <a href="/stories.html" class="btn" style="padding:4px 10px;font-size:11px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-arrow-left"></use></svg> Stories</a>
     <div class="viewer-hdr-info">
       <div id="story-title" class="viewer-story-title">Loading…</div>
       <div id="story-meta" class="viewer-story-meta"></div>
@@ -84,14 +88,14 @@ async function storiesGateSubmit() {
 
 <!-- Lightbox -->
 <div class="lightbox" id="lightbox" style="display:none" onclick="closeLightbox()">
-  <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+  <button class="lightbox-close" onclick="closeLightbox()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg> </button>
   <img id="lb-img" src="" alt="">
 </div>
 
 <script>
 let story     = null;
 let layout    = 'grid';
-let portraits = {};  // charId → {name, thumb, species, cls, subclass}
+let portraits = {};  // charId <svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-arrow-right"></use></svg> {name, thumb, species, cls, subclass}
 
 async function init() {
   const id = new URLSearchParams(location.search).get('id');
@@ -152,7 +156,7 @@ function renderCast() {
 function render() {
   const seqs = story.sequences || [];
   if (!seqs.length) {
-    setBody('<div class="empty-hint">This story has no panels yet.<br><a href="/story-builder.html?id=' + story.id + '" style="color:var(--ac)">Add panels →</a></div>');
+    setBody('<div class="empty-hint">This story has no panels yet.<br><a href="/story-builder.html?id=' + story.id + '" style="color:var(--bone)">Add panels <svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-arrow-right"></use></svg> </a></div>');
     return;
   }
 

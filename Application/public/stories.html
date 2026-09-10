@@ -1,17 +1,21 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="lamplit">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Stories</title>
 <link rel="manifest" href="/manifest.json">
-<meta name="theme-color" content="#1a1a2e">
+<meta name="theme-color" content="#080C15">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <script>if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js');</script>
+<script src="/js/lib/icons.js"></script>
 <script src="/js/lib/modal-guard.js"></script>
 <script src="/js/lib/realtime.js"></script>
 <script src="/js/lib/notifications.js"></script>
 <script>window.addEventListener('DOMContentLoaded',function(){if(window.guardModal)guardModal('new-modal',closeNewModal);});</script>
+<link rel="stylesheet" href="/css/tokens.css">
+<link rel="stylesheet" href="/css/fonts.css">
+<link rel="stylesheet" href="/css/base.css">
 <link rel="stylesheet" href="/css/dm.css">
 <link rel="stylesheet" href="/css/notifications.css">
 <link rel="stylesheet" href="/css/stories.css">
@@ -21,12 +25,12 @@
 <!-- Stories password gate -->
 <div class="gate" id="stories-gate" style="display:none">
   <div class="gate-box">
-    <div style="font-size:36px;margin-bottom:10px">📖</div>
+    <div style="font-size:36px;margin-bottom:10px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-book"></use></svg> </div>
     <h2>Stories</h2>
     <p>Enter your password to continue.</p>
     <input type="password" id="gate-pw" placeholder="Password…" autocomplete="off"
            onkeydown="if(event.key==='Enter')storiesGateSubmit()">
-    <div id="gate-err" style="color:var(--err);font-size:12px;min-height:16px;margin-top:6px"></div>
+    <div id="gate-err" style="color:var(--blood);font-size:12px;min-height:16px;margin-top:6px"></div>
     <button class="btn primary" style="width:100%;margin-top:8px" onclick="storiesGateSubmit()">Enter</button>
   </div>
 </div>
@@ -64,10 +68,10 @@ async function storiesGateSubmit() {
 <div class="stories-wrap">
 
   <div class="stories-hdr">
-    <a href="/dm.html" class="btn" style="padding:4px 10px;font-size:11px">← Back</a>
+    <a href="/dm.html" class="btn" style="padding:4px 10px;font-size:11px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-arrow-left"></use></svg> Back</a>
     <h1>Stories</h1>
     <div class="hdr-right">
-      <button class="btn" data-notif-bell="connect" title="Notifications">🔔</button>
+      <button class="btn" data-notif-bell="connect" title="Notifications"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-bell"></use></svg> </button>
       <span id="status-msg" class="status-msg"></span>
       <select id="char-filter" class="stories-filter" onchange="renderGrid()">
         <option value="">All characters</option>
@@ -95,10 +99,10 @@ async function storiesGateSubmit() {
                onkeydown="if(event.key==='Enter')createStory()">
       </div>
       <div class="field">
-        <label class="lbl">Description <span style="font-weight:normal;color:var(--txd)">(optional)</span></label>
+        <label class="lbl">Description <span style="font-weight:normal;color:var(--ash)">(optional)</span></label>
         <textarea id="new-desc" rows="2" placeholder="A short summary of this story…"></textarea>
       </div>
-      <div id="new-err" style="color:var(--err);font-size:11px;min-height:14px"></div>
+      <div id="new-err" style="color:var(--blood);font-size:11px;min-height:14px"></div>
     </div>
     <div class="modal-btns">
       <button class="btn" onclick="closeNewModal()">Cancel</button>
@@ -112,7 +116,7 @@ async function storiesGateSubmit() {
   <div class="modal-box" style="max-width:360px;width:96%">
     <div class="ct">Delete Story</div>
     <div class="modal-body">
-      <p id="del-msg" style="font-size:13px;line-height:1.5;color:var(--tx)"></p>
+      <p id="del-msg" style="font-size:13px;line-height:1.5;color:var(--bone)"></p>
     </div>
     <div class="modal-btns">
       <button class="btn" onclick="closeDelModal()">Cancel</button>
@@ -163,7 +167,7 @@ function renderGrid() {
   grid.innerHTML = list.map(s => {
     const cover = s.cover_image
       ? `<img class="story-cover" src="${esc(s.cover_image)}?v=${Date.now()}" alt="" loading="lazy">`
-      : `<div class="story-cover-empty">📖</div>`;
+      : `<div class="story-cover-empty"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-book"></use></svg> </div>`;
     const panels = s.seq_count === 1 ? '1 panel' : `${s.seq_count || 0} panels`;
     const date   = (s.updated_at || s.created_at || '').slice(0, 10);
     return `<div class="story-card">

@@ -72,9 +72,9 @@ function render() {
         <div class="status" id="st-${id}"></div>
         <div class="card-actions">
           ${on
-            ? '<button class="btn" onclick="stopShowing()">▶ Bring back</button>'
-            : `<button class="btn primary" onclick="showScreen('${id}')" ${thumb ? '' : 'disabled title="Give it an image first"'}>⏸ Show</button>`}
-          <button class="btn danger" onclick="removeScreen('${id}')">🗑</button>
+            ? '<button class="btn" onclick="stopShowing()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-play"></use></svg> Bring back</button>'
+            : `<button class="btn primary" onclick="showScreen('${id}')" ${thumb ? '' : 'disabled title="Give it an image first"'}><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-pause"></use></svg> Show</button>`}
+          <button class="btn danger" onclick="removeScreen('${id}')"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-trash"></use></svg></button>
         </div>
       </div>`;
   }).join('');

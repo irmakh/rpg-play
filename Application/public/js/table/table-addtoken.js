@@ -35,16 +35,16 @@ function switchTokenTab(tab) {
 function _monsterRowHtml(m) {
   const portrait = m.data?.portraitThumb || m.data?.portrait;
   const thumb = portrait
-    ? `<img loading="lazy" src="${portrait}" style="width:30px;height:30px;border-radius:50%;object-fit:cover;border:1px solid var(--a55);flex-shrink:0">`
-    : `<div style="width:30px;height:30px;border-radius:50%;background:var(--bg3);border:1px solid var(--a55);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--txd)">?</div>`;
+    ? `<img loading="lazy" src="${portrait}" style="width:30px;height:30px;border-radius:50%;object-fit:cover;border:1px solid var(--rule-hi);flex-shrink:0">`
+    : `<div style="width:30px;height:30px;border-radius:50%;background:var(--slate-hi);border:1px solid var(--rule-hi);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--ash)">?</div>`;
   return `<div class="qroll-row" onclick="selectTokenMonster('${escJs(m.id)}','${escJs(m.name)}')"
-       style="padding:5px 10px;border-bottom:1px solid var(--sep);display:flex;align-items:center;gap:8px">
+       style="padding:5px 10px;border-bottom:1px solid var(--rule);display:flex;align-items:center;gap:8px">
     ${thumb}
     <span style="flex:1">${esc(m.name)}</span>
-    <span style="font-size:10px;color:var(--txd)">CR ${esc(m.cr||'?')}</span>
+    <span style="font-size:10px;color:var(--ash)">CR ${esc(m.cr||'?')}</span>
     <button onclick="event.stopPropagation();uploadMonsterPortrait('${escJs(m.id)}')"
             style="background:none;border:none;cursor:pointer;font-size:14px;padding:0 2px;opacity:.6"
-            title="Upload portrait">📷</button>
+            title="Upload portrait"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-camera"></use></svg></button>
   </div>`;
 }
 
@@ -55,7 +55,7 @@ function filterMonsterList(query) {
   const filtered = q ? _monsterList.filter(m => m.name.toLowerCase().includes(q)) : _monsterList;
   list.innerHTML = filtered.length > 0
     ? filtered.map(_monsterRowHtml).join('')
-    : `<div style="padding:10px;font-size:11px;color:var(--txd)">${q ? 'No monsters match your search.' : 'No monsters found.'}</div>`;
+    : `<div style="padding:10px;font-size:11px;color:var(--ash)">${q ? 'No monsters match your search.' : 'No monsters found.'}</div>`;
 }
 
 async function populateAddTokenModal(chars) {
@@ -64,12 +64,12 @@ async function populateAddTokenModal(chars) {
   if (charTab && chars.length > 0) {
     charTab.innerHTML = chars.map(c => `
       <div class="qroll-row" onclick="selectTokenChar('${escJs(c.id)}','${escJs(c.name)}','${escJs(c.char_type||'character')}')"
-           style="padding:6px 10px;border-bottom:1px solid var(--sep)">
+           style="padding:6px 10px;border-bottom:1px solid var(--rule)">
         <span>${esc(c.name)}</span>
-        <span style="font-size:10px;color:var(--txd)">${c.char_type === 'npc' ? 'NPC' : 'PC'}</span>
+        <span style="font-size:10px;color:var(--ash)">${c.char_type === 'npc' ? 'NPC' : 'PC'}</span>
       </div>`).join('');
   } else if (charTab) {
-    charTab.innerHTML = '<div style="padding:10px;font-size:11px;color:var(--txd)">No characters found.</div>';
+    charTab.innerHTML = '<div style="padding:10px;font-size:11px;color:var(--ash)">No characters found.</div>';
   }
 
   // Monsters tab (load on demand)
@@ -118,14 +118,14 @@ function selectTokenChar(charId, charName, charType) {
   _pendingTokenType = charType === 'npc' ? 'npc' : 'character';
   // highlight selected
   document.querySelectorAll('#tok-tab-chars .qroll-row').forEach(r => r.style.background = '');
-  event.currentTarget.style.background = 'var(--a22)';
+  event.currentTarget.style.background = 'var(--wash)';
 }
 
 function selectTokenMonster(monsterId, monsterName) {
   _pendingTokenLinkedId = monsterId;
   _pendingTokenType = 'monster';
   document.querySelectorAll('#tok-tab-monsters .qroll-row').forEach(r => r.style.background = '');
-  event.currentTarget.style.background = 'var(--a22)';
+  event.currentTarget.style.background = 'var(--wash)';
 }
 
 async function submitAddToken() {
@@ -191,7 +191,7 @@ async function submitAddToken() {
     payload = {
       name, type: _pendingTokenType || 'character', linkedId: _pendingTokenLinkedId,
       hpCurrent: hpCur, hpMax, hpTemp, speed, ac: charAc,
-      color: _pendingTokenType === 'npc' ? '#7ec8e3' : '#c8a04a',
+      color: _pendingTokenType === 'npc' ? '#E0A93F' : '#E6EDF7',   // --arc / --bone
       initiativeId: initEntry?.id || '',
       portrait, portraitThumb,
       tokenSize, x: centerX, y: centerY

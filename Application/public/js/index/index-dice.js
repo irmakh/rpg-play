@@ -119,7 +119,7 @@ function renderRollHistory() {
   const list = document.getElementById('rh-list');
   if (!list) return;
   if (rollHistory.length === 0) {
-    list.innerHTML = '<li style="color:var(--txd);font-size:12px;padding:8px">No rolls yet — click any modifier on the sheet to roll!</li>';
+    list.innerHTML = '<li style="color:var(--ash);font-size:12px;padding:8px">No rolls yet — click any modifier on the sheet to roll!</li>';
     return;
   }
   const pad = n => String(n).padStart(2,'0');
@@ -149,7 +149,7 @@ function initRollClickHandlers() {
     const btn = document.createElement('button');
     btn.className = 'sk-roll-btn';
     btn.title = 'Roll ' + SKILL_NAMES[i];
-    btn.textContent = '🎲';
+    btn.innerHTML = '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg>';
     btn.type = 'button';
     (function(idx) {
       btn.addEventListener('click', function() {
@@ -166,7 +166,7 @@ function initRollClickHandlers() {
     const btn = document.createElement('button');
     btn.className = 'sk-roll-btn';
     btn.title = 'Roll ' + AB_NAMES[s] + ' Save';
-    btn.textContent = '🎲';
+    btn.innerHTML = '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg>';
     btn.type = 'button';
     btn.addEventListener('click', function() {
       const valEl = document.querySelector(`[data-key="save-${s}"]`);

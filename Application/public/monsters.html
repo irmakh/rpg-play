@@ -1,22 +1,27 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="lamplit app-page">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Monsters — DM Panel</title>
 <script>(function(){try{var s=JSON.parse(sessionStorage.getItem('rpgSession')||'null');if(!s||s.role!=='dm'){location.replace('/login.html?next='+encodeURIComponent(location.pathname));}}catch(e){location.replace('/login.html');}})();</script>
 <link rel="manifest" href="/manifest.json">
-<meta name="theme-color" content="#1a1a2e">
+<meta name="theme-color" content="#080C15">
 <script>if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js');</script>
+<link rel="stylesheet" href="/css/tokens.css">
+<link rel="stylesheet" href="/css/fonts.css">
+<link rel="stylesheet" href="/css/base.css">
+<link rel="stylesheet" href="/css/app-shell.css">
 <link rel="stylesheet" href="/css/monsters.css">
 <link rel="stylesheet" href="/css/notifications.css">
+<script src="/js/lib/icons.js"></script>
 </head>
 <body>
 
 <!-- Password gate -->
 <div class="gate" id="gate">
   <div class="gate-box">
-    <div style="font-size:36px;margin-bottom:10px">🐉</div>
+    <div style="font-size:36px;margin-bottom:10px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-swords"></use></svg> </div>
     <h2>Monsters</h2>
     <p>Enter master password to manage monsters.</p>
     <input type="password" id="gate-pw" placeholder="Master password…" autocomplete="off"
@@ -27,56 +32,61 @@
 </div>
 
 <!-- Main content -->
-<div class="sheet" id="main-content" style="display:none">
+<div class="sheet app-shell" id="main-content" style="display:none">
 
   <div class="hdr">
     <div class="hdr-left">
-      <button class="btn" onclick="location.href='/dm.html'" title="Back to DM Panel">← DM</button>
-      <h1>🐉 Monsters</h1>
-      <select id="theme-sel" onchange="applyTheme(this.value)" title="Theme">
-        <option value="dark-gold">🌙</option>
-        <option value="parchment">📜</option>
-        <option value="midnight">🌌</option>
-      </select>
+      <button class="btn" onclick="location.href='/dm.html'" title="Back to DM Panel"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-arrow-left"></use></svg> DM</button>
+      <h1><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-swords"></use></svg> Monsters</h1>
+      
     </div>
     <div class="hdr-right">
-      <button class="btn" data-notif-bell="connect" title="Notifications">🔔</button>
-      <button class="btn" onclick="loadMonsters()">↻ Refresh</button>
+      <button class="btn" onclick="openImportModal()" title="Import monsters from JSON"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-download"></use></svg> Import</button>
+      <button class="btn" data-notif-bell="connect" title="Notifications"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-bell"></use></svg> </button>
+      <button class="btn" onclick="loadMonsters()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-refresh"></use></svg> Refresh</button>
       <button class="btn primary" onclick="openAddMonsterModal()">+ Add Monster</button>
     </div>
   </div>
 
   <div id="status-msg"></div>
 
-  <!-- Import card -->
-  <div class="card">
-    <div class="ct">Import Monsters (JSON)</div>
-    <div class="cb">
+  <div class="app-body">
+    <aside class="app-side" style="--side-w:320px">
+      <div class="app-side-top">
+        <input type="text" id="search-input" placeholder="Search by name or type" oninput="renderTable()" aria-label="Search monsters">
+      </div>
+      <div class="app-list" id="monster-table-wrap">
+        <div class="app-empty">Loading</div>
+      </div>
+    </aside>
+
+    <main class="app-main" id="monster-detail" aria-live="polite">
+      <div class="app-empty">Select a monster to see its stat block.</div>
+    </main>
+  </div>
+
+</div>
+
+
+<!-- Import monsters. A paste-JSON form does not belong in a master-detail
+     sidebar, so it moved to a modal off the header, like the other DM tools
+     handle their rare actions. Same ids, so importMonsters() is untouched. -->
+<div class="modal-overlay" id="import-modal" style="display:none">
+  <div class="modal-box" style="max-width:640px;width:96%">
+    <div class="ct">Import monsters</div>
+    <div class="modal-body" style="padding:14px 16px">
       <div class="field">
-        <label class="lbl">Paste monster JSON — single object <code style="font-size:10px;opacity:.7">{...}</code> or array <code style="font-size:10px;opacity:.7">[{...},{...}]</code> or 5etools format <code style="font-size:10px;opacity:.7">{"monster":[...]}</code></label>
-        <textarea id="import-text" style="min-height:120px;font-family:monospace;font-size:11px" placeholder='{"name":"Goblin","cr":"1/4","dex":14,...}'></textarea>
+        <label class="lbl" for="import-text">Paste monster JSON &mdash; a single object, an array, or 5etools format</label>
+        <textarea id="import-text" style="min-height:180px;font-family:ui-monospace,Consolas,monospace;font-size:12px" placeholder='{"name":"Goblin","cr":"1/4","dex":14,...}'></textarea>
       </div>
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-        <button class="btn primary" onclick="importMonsters()">Import</button>
-        <button class="btn" onclick="document.getElementById('import-text').value=''">Clear</button>
-        <span id="import-status" style="font-size:11px;color:var(--ok)"></span>
-      </div>
+      <span id="import-status" style="font-size:var(--t-sm);color:var(--verdigris)"></span>
+    </div>
+    <div class="modal-btns">
+      <button class="btn" onclick="document.getElementById('import-text').value=''">Clear</button>
+      <button class="btn" onclick="closeImportModal()">Cancel</button>
+      <button class="btn primary" onclick="importMonsters()">Import</button>
     </div>
   </div>
-
-  <!-- Monster list card -->
-  <div class="card">
-    <div class="ct">Monster List</div>
-    <div class="cb">
-      <div class="search-bar">
-        <input type="text" id="search-input" placeholder="Search by name or type…" oninput="renderTable()">
-      </div>
-      <div id="monster-table-wrap">
-        <div style="text-align:center;color:var(--txd);padding:20px">Loading…</div>
-      </div>
-    </div>
-  </div>
-
 </div>
 
 <!-- Monster info modal -->
@@ -108,8 +118,8 @@
 
       <div class="ef-sec">Portrait</div>
       <div style="display:flex;align-items:center;gap:12px;padding:4px 0 8px">
-        <img id="ef-portrait-preview" loading="lazy" style="width:64px;height:64px;object-fit:cover;border-radius:50%;border:2px solid var(--a44);display:none" alt="Portrait">
-        <div id="ef-portrait-none" style="font-size:11px;color:var(--txd)">No portrait set</div>
+        <img id="ef-portrait-preview" loading="lazy" style="width:64px;height:64px;object-fit:cover;border-radius:50%;border:2px solid var(--rule-hi);display:none" alt="Portrait">
+        <div id="ef-portrait-none" style="font-size:11px;color:var(--ash)">No portrait set</div>
         <button class="btn sm" onclick="efPickPortrait()">Upload Portrait</button>
         <button class="btn sm danger" id="ef-portrait-clear" onclick="efClearPortrait()" style="display:none">Remove</button>
         <input type="file" id="ef-portrait-input" accept="image/*" style="display:none" onchange="efPortraitChosen(this)">
@@ -132,7 +142,7 @@
         <div class="field"><label class="lbl">Init Modifier</label><input type="number" id="ef-init-bonus" min="-20" max="20" placeholder="0"></div>
         <div class="field" style="display:flex;align-items:center;gap:6px;padding-bottom:4px">
           <input type="checkbox" id="ef-init-prof" style="margin:0;cursor:pointer">
-          <label for="ef-init-prof" style="font-size:12px;cursor:pointer;color:var(--txd)">Add proficiency bonus to initiative</label>
+          <label for="ef-init-prof" style="font-size:12px;cursor:pointer;color:var(--ash)">Add proficiency bonus to initiative</label>
         </div>
       </div>
 
@@ -174,7 +184,7 @@
       <div class="ef-sec">Legendary Actions <button class="btn sm" onclick="addEditRow('ef-legendary')">+ Add</button></div>
       <div id="ef-legendary"></div>
 
-      <div id="edit-err" style="color:var(--err);font-size:11px;min-height:14px;margin-top:8px"></div>
+      <div id="edit-err" style="color:var(--blood);font-size:11px;min-height:14px;margin-top:8px"></div>
     </div>
     <div class="modal-btns">
       <button class="btn" onclick="closeEditMonsterModal()">Cancel</button>
@@ -188,7 +198,7 @@
   <div class="modal-box">
     <div class="ct" id="init-modal-title">Add to Initiative</div>
     <div class="modal-body">
-      <div style="margin-bottom:10px;font-size:12px;color:var(--txd)" id="init-modal-desc"></div>
+      <div style="margin-bottom:10px;font-size:12px;color:var(--ash)" id="init-modal-desc"></div>
       <div class="field">
         <label class="lbl">Name (optional override)</label>
         <input type="text" id="init-name-override" placeholder="">
@@ -197,7 +207,7 @@
         <label class="lbl">Initiative Bonus</label>
         <input type="number" id="init-bonus-val" min="-10" max="30">
       </div>
-      <div id="init-modal-err" style="color:var(--err);font-size:11px;min-height:14px"></div>
+      <div id="init-modal-err" style="color:var(--blood);font-size:11px;min-height:14px"></div>
     </div>
     <div class="modal-btns">
       <button class="btn" onclick="closeInitModal()">Cancel</button>

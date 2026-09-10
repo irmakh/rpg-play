@@ -1,133 +1,130 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="lamplit app-page">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Music Library — DM</title>
 <script>(function(){try{var s=JSON.parse(sessionStorage.getItem('rpgSession')||'null');if(!s||s.role!=='dm'){location.replace('/login.html?next='+encodeURIComponent(location.pathname));}}catch(e){location.replace('/login.html');}})();</script>
 <link rel="manifest" href="/manifest.json">
-<meta name="theme-color" content="#1a1a2e">
+<meta name="theme-color" content="#080C15">
 <script>if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js');</script>
+<link rel="stylesheet" href="/css/tokens.css">
+<link rel="stylesheet" href="/css/fonts.css">
+<link rel="stylesheet" href="/css/base.css">
+<link rel="stylesheet" href="/css/app-shell.css">
 <link rel="stylesheet" href="/css/dm.css">
 <link rel="stylesheet" href="/css/notifications.css">
 <style>
-html,body{height:100%;overflow:hidden;margin:0;padding:0}
-.sheet{display:flex;flex-direction:column;height:100%;width:100%;max-width:none;margin:0;padding:0}
-.hdr{flex-shrink:0;margin-bottom:0;padding:8px 12px;background:var(--bg2);border-bottom:1px solid var(--a44)}
+.hdr{flex-shrink:0;margin-bottom:0;padding:8px 12px;background:var(--slate);border-bottom:1px solid var(--rule-hi)}
 
 /* ── Two-pane body ── */
-#pl-body{display:flex;flex:1;min-height:0}
 
 /* Sidebar */
-#pl-sidebar{width:300px;flex-shrink:0;display:flex;flex-direction:column;border-right:1px solid var(--a44);background:var(--bg2);min-height:0}
-.sb-hdr{flex-shrink:0;font-size:10px;color:var(--ac);text-transform:uppercase;letter-spacing:.5px;font-weight:bold;display:flex;justify-content:space-between;align-items:center;gap:6px;padding:7px 10px;background:var(--a22);border-bottom:1px solid var(--a44);user-select:none}
+#pl-sidebar{width:300px;flex-shrink:0;display:flex;flex-direction:column;border-right:1px solid var(--rule-hi);background:var(--slate);min-height:0}
+.sb-hdr{flex-shrink:0;font-size:10px;color:var(--bone);font-weight:bold;display:flex;justify-content:space-between;align-items:center;gap:6px;padding:7px 10px;background:var(--wash);border-bottom:1px solid var(--rule-hi);user-select:none}
 .sb-hdr .btn.sm{text-transform:none;letter-spacing:0}
-.sb-hdr-meta{font-weight:normal;color:var(--txd);text-transform:none;letter-spacing:0;flex:1;text-align:right}
+.sb-hdr-meta{font-weight:normal;color:var(--ash);text-transform:none;letter-spacing:0;flex:1;text-align:right}
 
 /* Playlist list */
-#pl-list{flex-shrink:0;max-height:34vh;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--a44) transparent;border-bottom:1px solid var(--a44)}
-.pl-row{display:flex;align-items:center;gap:7px;padding:7px 10px;border-bottom:1px solid var(--sep);font-size:12px;cursor:pointer}
+#pl-list{flex-shrink:0;max-height:34vh;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--rule-hi) transparent;border-bottom:1px solid var(--rule-hi)}
+.pl-row{display:flex;align-items:center;gap:7px;padding:7px 10px;border-bottom:1px solid var(--rule);font-size:12px;cursor:pointer}
 .pl-row:last-child{border-bottom:none}
-.pl-row:hover{background:var(--a22)}
-.pl-row.selected{background:var(--a22);border-left:3px solid var(--ac);padding-left:7px}
-.pl-row.drop-hint{outline:1px dashed var(--ac);outline-offset:-2px;background:var(--a22)}
+.pl-row:hover{background:var(--arc-fill)}
+.pl-row.selected{background:var(--arc-fill);border-left:3px solid var(--arc);padding-left:7px}
+.pl-row.drop-hint{outline:1px dashed var(--bone);outline-offset:-2px;background:var(--wash)}
 .pl-row-name{flex:1;min-width:0;font-weight:bold;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.pl-row-meta{font-size:10px;color:var(--txd);flex-shrink:0;white-space:nowrap}
-.pl-live{color:var(--ok);font-size:10px;flex-shrink:0}
-.sb-empty{font-size:11px;color:var(--txd);padding:12px 10px;text-align:center}
+.pl-row-meta{font-size:10px;color:var(--ash);flex-shrink:0;white-space:nowrap}
+.pl-live{color:var(--verdigris);font-size:10px;flex-shrink:0}
+.sb-empty{font-size:11px;color:var(--ash);padding:12px 10px;text-align:center}
 
 /* Library controls */
-#lib-controls{flex-shrink:0;display:flex;gap:5px;padding:6px 8px;border-bottom:1px solid var(--sep);flex-wrap:wrap}
+#lib-controls{flex-shrink:0;display:flex;gap:5px;padding:6px 8px;border-bottom:1px solid var(--rule);flex-wrap:wrap}
 #lib-controls input[type=text]{flex:1;min-width:90px;width:auto}
 #lib-controls select{width:auto;font-size:11px;padding:3px 4px;flex-shrink:0}
-#lib-bulk{flex-shrink:0;display:none;align-items:center;gap:5px;padding:6px 8px;background:var(--a22);border-bottom:1px solid var(--a44);font-size:11px;flex-wrap:wrap}
+#lib-bulk{flex-shrink:0;display:none;align-items:center;gap:5px;padding:6px 8px;background:var(--wash);border-bottom:1px solid var(--rule-hi);font-size:11px;flex-wrap:wrap}
 #lib-bulk select{width:auto;flex:1;min-width:80px;font-size:11px;padding:3px 4px}
 
 /* Library list */
-#lib-list{flex:1;overflow-y:auto;min-height:0;scrollbar-width:thin;scrollbar-color:var(--a44) transparent}
-#lib-list.drag-over{outline:2px dashed var(--ac);outline-offset:-4px}
-.lib-row{display:flex;align-items:center;gap:6px;padding:5px 8px;border-bottom:1px solid var(--sep);font-size:12px}
+#lib-list{flex:1;overflow-y:auto;min-height:0;scrollbar-width:thin;scrollbar-color:var(--rule-hi) transparent}
+#lib-list.drag-over{outline:2px dashed var(--bone);outline-offset:-4px}
+.lib-row{display:flex;align-items:center;gap:6px;padding:5px 8px;border-bottom:1px solid var(--rule);font-size:12px}
 .lib-row:last-child{border-bottom:none}
-.lib-row:hover{background:var(--a22)}
+.lib-row:hover{background:var(--arc-fill)}
 .lib-row input[type=checkbox]{width:13px;height:13px;cursor:pointer;flex-shrink:0;margin:0}
 .lib-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:grab}
-.lib-dur{font-size:10px;color:var(--txd);flex-shrink:0;font-variant-numeric:tabular-nums}
+.lib-dur{font-size:10px;color:var(--ash);flex-shrink:0;font-variant-numeric:tabular-nums}
 .lib-row .row-actions{display:none;gap:2px;flex-shrink:0}
 .lib-row:hover .row-actions{display:flex}
-.row-btn{background:none;border:none;color:var(--ac);cursor:pointer;font-size:12px;padding:1px 4px;line-height:1;opacity:.75;flex-shrink:0}
+.row-btn{background:none;border:none;color:var(--bone);cursor:pointer;font-size:12px;padding:1px 4px;line-height:1;opacity:.75;flex-shrink:0}
 .row-btn:hover{opacity:1}
-.row-btn.danger{color:#ff8888}
-.name-edit{flex:1;min-width:0;background:var(--bg3);border:1px solid var(--ac);color:var(--tx);border-radius:3px;padding:2px 5px;font-size:12px;width:auto}
+.row-btn.danger{color:var(--blood)}
+.name-edit{flex:1;min-width:0;background:var(--slate-hi);border:1px solid var(--bone);color:var(--bone);border-radius:3px;padding:2px 5px;font-size:12px;width:auto}
 
 /* Detail pane */
 #pl-detail{flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden}
-#det-empty{flex:1;display:flex;align-items:center;justify-content:center;color:var(--txd);font-size:13px;text-align:center;padding:20px}
-#det-hdr{flex-shrink:0;padding:10px 14px;border-bottom:1px solid var(--a44);background:var(--bg2)}
+#det-empty{flex:1;display:flex;align-items:center;justify-content:center;color:var(--ash);font-size:13px;text-align:center;padding:20px}
+#det-hdr{flex-shrink:0;padding:10px 14px;border-bottom:1px solid var(--rule-hi);background:var(--slate)}
 #det-hdr-row1{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-#det-name{flex:1;min-width:140px;width:auto;font-size:16px;font-weight:bold;background:transparent;border:1px solid transparent;color:var(--ac);padding:3px 6px}
-#det-name:hover{border-color:var(--a55)}
-#det-name:focus{background:var(--bg3);border-color:var(--ac)}
+#det-name{flex:1;min-width:140px;width:auto;font-size:16px;font-weight:bold;background:transparent;border:1px solid transparent;color:var(--bone);padding:3px 6px}
+#det-name:hover{border-color:var(--rule-hi)}
+#det-name:focus{background:var(--slate-hi);border-color:var(--arc)}
 #det-hdr-row2{display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap;font-size:11px}
 #det-hdr-row2 select,#det-hdr-row2 input[type=text]{width:auto;font-size:11px;padding:3px 5px}
-#det-stats{color:var(--txd);margin-left:auto;white-space:nowrap}
+#det-stats{color:var(--ash);margin-left:auto;white-space:nowrap}
 
 /* Track list */
-#trk-list{flex:1;overflow-y:auto;min-height:0;scrollbar-width:thin;scrollbar-color:var(--a44) transparent}
-.trk-row{display:flex;align-items:center;gap:6px;padding:6px 12px;border-bottom:1px solid var(--sep);font-size:12px;border-top:2px solid transparent}
-.trk-row:hover{background:var(--a22)}
-.trk-row.drag-over{border-top:2px solid var(--ac)}
-.trk-grip{cursor:grab;color:var(--txd);font-size:13px;flex-shrink:0;user-select:none}
-.trk-num{width:20px;text-align:right;color:var(--txd);font-size:10px;flex-shrink:0;font-variant-numeric:tabular-nums}
+#trk-list{flex:1;overflow-y:auto;min-height:0;scrollbar-width:thin;scrollbar-color:var(--rule-hi) transparent}
+.trk-row{display:flex;align-items:center;gap:6px;padding:6px 12px;border-bottom:1px solid var(--rule);font-size:12px;border-top:2px solid transparent}
+.trk-row:hover{background:var(--arc-fill)}
+.trk-row.drag-over{border-top:2px solid var(--bone)}
+.trk-grip{cursor:grab;color:var(--ash);font-size:13px;flex-shrink:0;user-select:none}
+.trk-num{width:20px;text-align:right;color:var(--ash);font-size:10px;flex-shrink:0;font-variant-numeric:tabular-nums}
 .trk-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.trk-dur{font-size:10px;color:var(--txd);flex-shrink:0;font-variant-numeric:tabular-nums}
+.trk-dur{font-size:10px;color:var(--ash);flex-shrink:0;font-variant-numeric:tabular-nums}
 .trk-row .trk-btns{display:flex;gap:2px;flex-shrink:0}
 .trk-row .row-btn:disabled{opacity:.2;cursor:default}
-.det-empty-tracks{padding:26px 14px;text-align:center;color:var(--txd);font-size:12px}
+.det-empty-tracks{padding:26px 14px;text-align:center;color:var(--ash);font-size:12px}
 
 /* Live (playing on table) track */
-.trk-row.live .trk-name{color:var(--ok);font-weight:bold}
+.trk-row.live .trk-name{color:var(--verdigris);font-weight:bold}
 
 /* Table (live) badge */
-#table-badge{display:none;align-items:center;gap:4px;font-size:11px;background:var(--a22);border:1px solid var(--a55);border-radius:3px;padding:2px 6px}
-#tb-name{max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ok);font-weight:bold}
+#table-badge{display:none;align-items:center;gap:4px;font-size:11px;background:var(--wash);border:1px solid var(--rule-hi);border-radius:3px;padding:2px 6px}
+#tb-name{max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--verdigris);font-weight:bold}
 
 /* Modals */
 .modal-body{padding:12px 16px}
-.drop-zone{border:2px dashed var(--a55);border-radius:6px;padding:18px;text-align:center;color:var(--txd);font-size:12px;cursor:pointer;transition:border-color .15s}
-.drop-zone:hover,.drop-zone.drag-over{border-color:var(--ac);color:var(--ac);background:var(--a22)}
+.drop-zone{border:2px dashed var(--rule-hi);border-radius:6px;padding:18px;text-align:center;color:var(--ash);font-size:12px;cursor:pointer;transition:border-color .15s}
+.drop-zone:hover,.drop-zone.drag-over{border-color:var(--arc);color:var(--arc);background:var(--arc-fill)}
 #up-queue{margin-top:10px;max-height:240px;overflow-y:auto}
-.up-row{display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid var(--sep);font-size:12px;flex-wrap:wrap}
+.up-row{display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid var(--rule);font-size:12px;flex-wrap:wrap}
 .up-row input[type=text]{flex:1;min-width:120px;width:auto;font-size:12px;padding:3px 5px}
-.up-size{font-size:10px;color:var(--txd);flex-shrink:0}
+.up-size{font-size:10px;color:var(--ash);flex-shrink:0}
 .up-state{font-size:10px;flex-shrink:0;min-width:44px;text-align:right}
-.up-bar-wrap{flex-basis:100%;background:var(--a22);border-radius:3px;height:4px;overflow:hidden;display:none}
-.up-bar{height:100%;width:0%;background:var(--ac);transition:width .1s}
-#at-list{max-height:260px;overflow-y:auto;border:1px solid var(--a55);border-radius:3px;background:var(--bg3);margin-top:8px}
+.up-bar-wrap{flex-basis:100%;background:var(--wash);border-radius:3px;height:4px;overflow:hidden;display:none}
+.up-bar{height:100%;width:0%;background:var(--bone);transition:width .1s}
+#at-list{max-height:260px;overflow-y:auto;border:1px solid var(--rule-hi);border-radius:3px;background:var(--slate-hi);margin-top:8px}
 #at-list label{display:flex;align-items:center;gap:8px;padding:5px 8px;cursor:pointer;font-size:12px}
-#at-list label:hover{background:var(--a22)}
+#at-list label:hover{background:var(--arc-fill)}
 #at-list input[type=checkbox]{width:13px;height:13px;cursor:pointer;flex-shrink:0}
 #at-list .at-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-#at-list .at-dur{font-size:10px;color:var(--txd)}
+#at-list .at-dur{font-size:10px;color:var(--ash)}
 
 /* Mobile: stack panes, restore page scroll */
-@media (max-width:760px){
-  html,body{overflow:auto}
-  .sheet{height:auto;min-height:100dvh}
-  #pl-body{flex-direction:column}
-  #pl-sidebar{width:100%;border-right:none;border-bottom:1px solid var(--a44)}
+@media (max-width:860px){
+  #pl-sidebar{width:100%;border-right:none;border-bottom:1px solid var(--rule-hi)}
   #pl-list{max-height:200px}
   #lib-list{max-height:280px;flex:none}
   #pl-detail{overflow:visible}
   #trk-list{overflow:visible}
-}
-</style>
+}</style>
 </head>
 <body>
 
 <!-- Password gate -->
 <div class="gate" id="gate">
   <div class="gate-box">
-    <div style="font-size:36px;margin-bottom:10px">🎵</div>
+    <div style="font-size:36px;margin-bottom:10px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-music"></use></svg> </div>
     <h2>DM Playlists</h2>
     <p>Enter master password to manage sounds and playlists.</p>
     <input type="password" id="gate-pw" placeholder="Master password…" autocomplete="off"
@@ -137,34 +134,30 @@ html,body{height:100%;overflow:hidden;margin:0;padding:0}
   </div>
 </div>
 
-<div class="sheet" id="main-content" style="display:none">
+<div class="sheet app-shell" id="main-content" style="display:none">
 
   <!-- Header -->
   <div class="hdr">
     <div class="hdr-left">
-      <button class="btn" onclick="location.href='/dm.html'">← DM</button>
-      <h1>📚 Music Library</h1>
-      <button class="btn" onclick="location.href='/music.html'" title="Open the music player controls">🎵 Player</button>
-      <select id="theme-sel" onchange="applyTheme(this.value)" title="Theme">
-        <option value="dark-gold">🌙</option>
-        <option value="parchment">📜</option>
-        <option value="midnight">🌌</option>
-      </select>
+      <button class="btn" onclick="location.href='/dm.html'"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-arrow-left"></use></svg> DM</button>
+      <h1><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-book"></use></svg> Music Library</h1>
+      <button class="btn" onclick="location.href='/music.html'" title="Open the music player controls"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-music"></use></svg> Player</button>
+      
     </div>
     <div class="hdr-right">
-      <button class="btn" data-notif-bell="connect" title="Notifications">🔔</button>
-      <span id="status-msg" style="font-size:11px;color:var(--txd)"></span>
+      <button class="btn" data-notif-bell="connect" title="Notifications"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-bell"></use></svg> </button>
+      <span id="status-msg" style="font-size:11px;color:var(--ash)"></span>
       <span id="table-badge">
-        📡 <span id="tb-name"></span>
-        <button class="row-btn" id="tb-pp" onclick="tablePauseResume()" title="Pause / resume on table">⏸</button>
-        <button class="row-btn" onclick="tableNext()" title="Next track on table">⏭</button>
-        <button class="row-btn" onclick="tableStop()" title="Stop on table">⏹</button>
+        <svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-refresh"></use></svg> <span id="tb-name"></span>
+        <button class="row-btn" id="tb-pp" onclick="tablePauseResume()" title="Pause / resume on table"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-pause"></use></svg> </button>
+        <button class="row-btn" onclick="tableNext()" title="Next track on table"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-next"></use></svg> </button>
+        <button class="row-btn" onclick="tableStop()" title="Stop on table"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-stop"></use></svg> </button>
       </span>
     </div>
   </div>
 
   <!-- Body: sidebar + detail -->
-  <div id="pl-body">
+  <div id="pl-body" class="app-body">
 
     <div id="pl-sidebar">
       <div class="sb-hdr">
@@ -176,7 +169,7 @@ html,body{height:100%;overflow:hidden;margin:0;padding:0}
       <div class="sb-hdr">
         <span>Sound Library</span>
         <span class="sb-hdr-meta" id="lib-count"></span>
-        <button class="btn sm" onclick="openUploadModal()">⬆ Upload</button>
+        <button class="btn sm" onclick="openUploadModal()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-arrow-up"></use></svg> Upload</button>
       </div>
       <div id="lib-controls">
         <input type="text" id="lib-search" placeholder="Search…" oninput="renderLibrary()">
@@ -194,7 +187,7 @@ html,body{height:100%;overflow:hidden;margin:0;padding:0}
         <span id="bulk-count"></span>
         <select id="bulk-pl"></select>
         <button class="btn sm primary" onclick="bulkAddToPl()">Add</button>
-        <button class="btn sm" onclick="clearLibSel()">✕</button>
+        <button class="btn sm" onclick="clearLibSel()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg> </button>
       </div>
       <div id="lib-list"
            ondragover="if(event.dataTransfer.types.includes('Files')){event.preventDefault();this.classList.add('drag-over')}"
@@ -228,7 +221,7 @@ html,body{height:100%;overflow:hidden;margin:0;padding:0}
         <label class="lbl">Map Name</label>
         <input type="text" id="np-mapname" maxlength="80" placeholder="Map name">
       </div>
-      <div id="np-err" style="font-size:11px;color:var(--err);min-height:14px"></div>
+      <div id="np-err" style="font-size:11px;color:var(--blood);min-height:14px"></div>
     </div>
     <div class="modal-btns">
       <button class="btn" onclick="closeNewPl()">Cancel</button>
@@ -253,9 +246,9 @@ html,body{height:100%;overflow:hidden;margin:0;padding:0}
       <div id="up-queue"></div>
     </div>
     <div class="modal-btns">
-      <span id="up-status" style="font-size:11px;color:var(--txd);margin-right:auto;align-self:center"></span>
+      <span id="up-status" style="font-size:11px;color:var(--ash);margin-right:auto;align-self:center"></span>
       <button class="btn" id="up-close" onclick="closeUploadModal()">Close</button>
-      <button class="btn primary" id="up-start" onclick="upStart()" disabled>⬆ Upload all</button>
+      <button class="btn primary" id="up-start" onclick="upStart()" disabled><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-arrow-up"></use></svg> Upload all</button>
     </div>
   </div>
 </div>
@@ -275,6 +268,7 @@ html,body{height:100%;overflow:hidden;margin:0;padding:0}
   </div>
 </div>
 
+<script src="/js/lib/icons.js"></script>
 <script src="/js/lib/realtime.js"></script>
 <script src="/js/lib/notifications.js"></script>
 <script src="/js/lib/modal-guard.js"></script>
@@ -293,7 +287,7 @@ function fmtSize(b) { return (b / 1024 / 1024).toFixed(1) + ' MB'; }
 function showStatus(msg, isErr = false) {
   const e = el('status-msg');
   e.textContent = msg;
-  e.style.color = isErr ? 'var(--err)' : 'var(--ok)';
+  e.style.color = isErr ? 'var(--blood)' : 'var(--verdigris)';
   setTimeout(() => { if (e.textContent === msg) e.textContent = ''; }, 3000);
 }
 function plSoundIds(pl) { return (pl.sounds || []).map(s => typeof s === 'string' ? s : s.id); }
@@ -413,9 +407,9 @@ function renderPlaylistList() {
   }
   listEl.innerHTML = playlists.map(pl => {
     const cnt = (pl.sounds || []).length;
-    const icon = pl.type === 'map' ? '🗺' : '🎶';
+    const icon = pl.type === 'map' ? '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-map"></use></svg> ' : '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-music"></use></svg> ';
     const live = (tableState && tableState.url && tableState.playlistId === pl.id)
-      ? `<span class="pl-live">${tableState.isPlaying ? '📡' : '⏸'}</span>` : '';
+      ? `<span class="pl-live">${tableState.isPlaying ? '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-refresh"></use></svg> ' : '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-pause"></use></svg> '}</span>` : '';
     return `<div class="pl-row${pl.id === selectedPlId ? ' selected' : ''}" onclick="selectPl('${escJs(pl.id)}')"
       ondragover="plRowDragOver(event,this)" ondragleave="this.classList.remove('drop-hint')"
       ondrop="plRowDrop(event,'${escJs(pl.id)}',this)">
@@ -533,8 +527,8 @@ function renderDetail() {
     const nm = (s && typeof s === 'object' && s.name) ? s.name : (sounds.find(x => x.id === id)?.name || '?');
     const live = tableState && tableState.url && tableState.playlistId === pl.id && tableState.trackIndex === i;
     const playBtn = (live && tableState.isPlaying)
-      ? `<button class="row-btn" onclick="tablePauseResume()" title="Pause on table">⏸</button>`
-      : `<button class="row-btn" onclick="playOnTable('${escJs(pl.id)}',${i})" title="Play on table (all players)">▶</button>`;
+      ? `<button class="row-btn" onclick="tablePauseResume()" title="Pause on table"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-pause"></use></svg> </button>`
+      : `<button class="row-btn" onclick="playOnTable('${escJs(pl.id)}',${i})" title="Play on table (all players)"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-right"></use></svg> </button>`;
     return `<div class="trk-row${live ? ' live' : ''}" draggable="true" data-idx="${i}"
       ondragstart="trkDragStart(event,${i})" ondragend="trkDragEnd()"
       ondragover="trkDragOver(event,this)" ondragleave="this.classList.remove('drag-over')"
@@ -542,12 +536,12 @@ function renderDetail() {
       <span class="trk-grip" title="Drag to reorder">⠿</span>
       <span class="trk-num">${i + 1}.</span>
       ${playBtn}
-      <span class="trk-name" title="${esc(nm)}">${esc(nm)}${live ? ' 📡' : ''}</span>
+      <span class="trk-name" title="${esc(nm)}">${esc(nm)}${live ? ' <svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-refresh"></use></svg> ' : ''}</span>
       <span class="trk-dur" data-dur-for="${esc(id)}">${fmtDur(durations[id])}</span>
       <span class="trk-btns">
-        <button class="row-btn" onclick="moveTrackBtn(${i},-1)" ${i === 0 ? 'disabled' : ''} title="Move up">▲</button>
-        <button class="row-btn" onclick="moveTrackBtn(${i},1)" ${i === ids.length - 1 ? 'disabled' : ''} title="Move down">▼</button>
-        <button class="row-btn danger" onclick="removeTrack(${i})" title="Remove from playlist">✕</button>
+        <button class="row-btn" onclick="moveTrackBtn(${i},-1)" ${i === 0 ? 'disabled' : ''} title="Move up"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-up"></use></svg> </button>
+        <button class="row-btn" onclick="moveTrackBtn(${i},1)" ${i === ids.length - 1 ? 'disabled' : ''} title="Move down"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-down"></use></svg> </button>
+        <button class="row-btn danger" onclick="removeTrack(${i})" title="Remove from playlist"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg> </button>
       </span>
     </div>`;
   }).join('')
@@ -557,14 +551,14 @@ function renderDetail() {
     <div id="det-hdr">
       <div id="det-hdr-row1">
         <input type="text" id="det-name" maxlength="80" value="${esc(pl.name)}" onchange="savePlMeta()" title="Click to rename">
-        <button class="btn sm primary" onclick="playOnTable('${escJs(pl.id)}',0)" ${ids.length ? '' : 'disabled'} title="Play playlist on table (all players)">📡 Play on table</button>
+        <button class="btn sm primary" onclick="playOnTable('${escJs(pl.id)}',0)" ${ids.length ? '' : 'disabled'} title="Play playlist on table (all players)"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-refresh"></use></svg> Play on table</button>
         <button class="btn sm" onclick="openAddTracks()">+ Add tracks</button>
-        <button class="btn sm danger" onclick="deletePl('${escJs(pl.id)}','${escJs(pl.name)}')" title="Delete playlist">🗑</button>
+        <button class="btn sm danger" onclick="deletePl('${escJs(pl.id)}','${escJs(pl.name)}')" title="Delete playlist"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-trash"></use></svg> </button>
       </div>
       <div id="det-hdr-row2">
         <select id="det-type" onchange="savePlMeta()">
-          <option value="generic" ${pl.type !== 'map' ? 'selected' : ''}>🎶 Generic</option>
-          <option value="map" ${pl.type === 'map' ? 'selected' : ''}>🗺 Map-based</option>
+          <option value="generic" ${pl.type !== 'map' ? 'selected' : ''}><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-music"></use></svg> Generic</option>
+          <option value="map" ${pl.type === 'map' ? 'selected' : ''}><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-map"></use></svg> Map-based</option>
         </select>
         <input type="text" id="det-mapname" maxlength="80" placeholder="Map name" value="${esc(pl.map_name || '')}"
                onchange="savePlMeta()" style="${pl.type === 'map' ? '' : 'display:none'}">
@@ -644,7 +638,7 @@ function renderAtList() {
         <span class="at-name">${esc(s.name)}</span>
         <span class="at-dur">${fmtDur(durations[s.id])}</span>
       </label>`).join('')
-    : '<div style="padding:10px;font-size:11px;color:var(--txd)">' + (q ? 'No matches.' : 'All sounds are already in this playlist.') + '</div>';
+    : '<div style="padding:10px;font-size:11px;color:var(--ash)">' + (q ? 'No matches.' : 'All sounds are already in this playlist.') + '</div>';
 }
 async function atAdd() {
   const ids = Array.from(document.querySelectorAll('#at-list input[type=checkbox]:checked')).map(cb => cb.value);
@@ -681,8 +675,8 @@ function renderLibrary() {
       <span class="lib-name" id="lib-name-${esc(s.id)}" title="${esc(s.name)} — drag onto a playlist" ondblclick="startRename('${escJs(s.id)}')">${esc(s.name)}</span>
       <span class="lib-dur" data-dur-for="${esc(s.id)}">${fmtDur(durations[s.id])}</span>
       <span class="row-actions">
-        <button class="row-btn" onclick="startRename('${escJs(s.id)}')" title="Rename">✏</button>
-        <button class="row-btn danger" onclick="deleteSound('${escJs(s.id)}','${escJs(s.name)}')" title="Delete sound">🗑</button>
+        <button class="row-btn" onclick="startRename('${escJs(s.id)}')" title="Rename"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-pencil"></use></svg> </button>
+        <button class="row-btn danger" onclick="deleteSound('${escJs(s.id)}','${escJs(s.name)}')" title="Delete sound"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-trash"></use></svg> </button>
       </span>
     </div>`).join('')
     : '<div class="sb-empty">' + (sounds.length ? 'No matches.' : 'No sounds yet — upload some.') + '</div>';
@@ -706,7 +700,7 @@ function renderBulkBar() {
   const bar = el('lib-bulk');
   if (!libSelected.size) { bar.style.display = 'none'; return; }
   bar.style.display = 'flex';
-  el('bulk-count').textContent = libSelected.size + ' selected →';
+  el('bulk-count').innerHTML = libSelected.size + ' selected <svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-arrow-right"></use></svg> ';
   const sel = el('bulk-pl');
   const keep = sel.value;
   sel.innerHTML = playlists.map(pl => `<option value="${esc(pl.id)}">${esc(pl.name)}</option>`).join('');
@@ -797,20 +791,20 @@ function renderUpQueue() {
   e.innerHTML = upQueue.map((q, i) => {
     const state = q.status === 'pending' ? '' :
       q.status === 'uploading' ? q.pct + '%' :
-      q.status === 'done' ? '✓' : '✕ ' + esc(q.err);
-    const color = q.status === 'done' ? 'var(--ok)' : q.status === 'error' ? 'var(--err)' : 'var(--txd)';
+      q.status === 'done' ? '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-check"></use></svg> ' : '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg> ' + esc(q.err);
+    const color = q.status === 'done' ? 'var(--verdigris)' : q.status === 'error' ? 'var(--blood)' : 'var(--ash)';
     return `<div class="up-row">
       <input type="text" value="${esc(q.name)}" maxlength="120" placeholder="Sound name"
              onchange="upQueue[${i}].name=this.value" ${q.status !== 'pending' ? 'disabled' : ''}>
       <span class="up-size">${fmtSize(q.file.size)}</span>
       <span class="up-state" style="color:${color}">${state}</span>
-      ${q.status === 'pending' || q.status === 'error' ? `<button class="row-btn danger" onclick="upRemove(${i})" title="Remove">✕</button>` : ''}
+      ${q.status === 'pending' || q.status === 'error' ? `<button class="row-btn danger" onclick="upRemove(${i})" title="Remove"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg> </button>` : ''}
       <div class="up-bar-wrap" id="up-bar-wrap-${i}" style="${q.status === 'uploading' ? 'display:block' : ''}"><div class="up-bar" id="up-bar-${i}" style="width:${q.pct}%"></div></div>
     </div>`;
   }).join('');
   const pending = upQueue.filter(q => q.status === 'pending').length;
   el('up-start').disabled = _uploading || !pending;
-  el('up-start').textContent = _uploading ? 'Uploading…' : '⬆ Upload ' + (pending || 'all');
+  el('up-start').innerHTML = _uploading ? 'Uploading…' : '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-arrow-up"></use></svg> Upload ' + (pending || 'all');
 }
 async function upStart() {
   if (_uploading) return;
@@ -896,7 +890,7 @@ function renderTableBadge() {
   badge.style.display = 'inline-flex';
   el('tb-name').textContent = tableState.name || '';
   el('tb-name').title = 'Playing on table: ' + (tableState.name || '');
-  el('tb-pp').textContent = tableState.isPlaying ? '⏸' : '▶';
+  el('tb-pp').innerHTML = tableState.isPlaying ? '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-pause"></use></svg> ' : '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-play"></use></svg> ';
 }
 async function soundControl(body) {
   await fetch('/api/sound/control', { method: 'POST', headers: authHeaders(), body: JSON.stringify(body) }).catch(() => {});

@@ -1,21 +1,25 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="lamplit">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Loot Manager — DM Panel</title>
 <script>(function(){try{var s=JSON.parse(sessionStorage.getItem('rpgSession')||'null');if(!s||s.role!=='dm'){location.replace('/login.html?next='+encodeURIComponent(location.pathname));}}catch(e){location.replace('/login.html');}})();</script>
 <link rel="manifest" href="/manifest.json">
-<meta name="theme-color" content="#1a1a2e">
+<meta name="theme-color" content="#080C15">
 <script>if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js');</script>
+<link rel="stylesheet" href="/css/tokens.css">
+<link rel="stylesheet" href="/css/fonts.css">
+<link rel="stylesheet" href="/css/base.css">
 <link rel="stylesheet" href="/css/loot.css">
+<script src="/js/lib/icons.js"></script>
 </head>
 <body>
 
 <!-- Password gate -->
 <div class="gate" id="gate">
   <div class="gate-box">
-    <div style="font-size:36px;margin-bottom:10px">⚔️</div>
+    <div style="font-size:36px;margin-bottom:10px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-swords"></use></svg> </div>
     <h2>Loot Manager</h2>
     <p>Enter master password to manage dungeon loot.</p>
     <input type="password" id="gate-pw" placeholder="Master password…" autocomplete="off"
@@ -30,16 +34,12 @@
 
   <div class="hdr">
     <div class="hdr-left">
-      <button class="btn" onclick="location.href='/dm.html'" title="Back to DM Panel">← DM</button>
-      <h1>⚔️ Loot Manager</h1>
-      <select id="theme-sel" onchange="applyTheme(this.value)" title="Theme">
-        <option value="dark-gold">🌙</option>
-        <option value="parchment">📜</option>
-        <option value="midnight">🌌</option>
-      </select>
+      <button class="btn" onclick="location.href='/dm.html'" title="Back to DM Panel"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-arrow-left"></use></svg> DM</button>
+      <h1><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-swords"></use></svg> Loot Manager</h1>
+      
     </div>
     <div class="hdr-right">
-      <button class="btn" onclick="refreshAll()" title="Refresh">↻ Refresh</button>
+      <button class="btn" onclick="refreshAll()" title="Refresh"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-refresh"></use></svg> Refresh</button>
       <button class="btn primary" onclick="openItemModal(null)">+ Add Item</button>
     </div>
   </div>
@@ -67,27 +67,27 @@
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <input type="text" id="import-tag" placeholder="Tag (optional)" style="width:160px;flex:0 0 auto">
         <button class="btn primary" onclick="importItems()">Import</button>
-        <span id="import-status" style="font-size:11px;color:var(--ok)"></span>
+        <span id="import-status" style="font-size:11px;color:var(--verdigris)"></span>
       </div>
     </div>
   </div>
 
   <div class="tabs">
     <div class="tab active" id="tab-btn-items" onclick="showLootTab('items',this)">Loot Items</div>
-    <div class="tab" id="tab-btn-logs" onclick="showLootTab('logs',this)">📋 Claim Logs</div>
+    <div class="tab" id="tab-btn-logs" onclick="showLootTab('logs',this)"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-clipboard"></use></svg> Claim Logs</div>
   </div>
   <div class="tab-wrap">
 
     <!-- Loot Items tab -->
     <div class="tab-panel active" id="tab-items">
-      <div id="loot-loading" style="padding:12px;font-size:11px;color:var(--txd)">Loading…</div>
+      <div id="loot-loading" style="padding:12px;font-size:11px;color:var(--ash)">Loading…</div>
       <div id="table-wrap" style="display:none"></div>
-      <div id="empty-msg" style="padding:12px;font-size:11px;color:var(--txd);display:none">No loot items yet. Use the import tool or click "+ Add Item".</div>
+      <div id="empty-msg" style="padding:12px;font-size:11px;color:var(--ash);display:none">No loot items yet. Use the import tool or click "+ Add Item".</div>
     </div>
 
     <!-- Claim Logs tab -->
     <div class="tab-panel" id="tab-logs">
-      <div id="logs-loading" style="padding:12px;font-size:11px;color:var(--txd);display:none">Loading…</div>
+      <div id="logs-loading" style="padding:12px;font-size:11px;color:var(--ash);display:none">Loading…</div>
       <div id="logs-table-wrap" style="overflow-x:auto">
         <table>
           <thead>
@@ -97,7 +97,7 @@
               <th>Item</th>
             </tr>
           </thead>
-          <tbody id="logs-tbody"><tr><td colspan="3" style="color:var(--txd);padding:12px;font-size:11px">No claims yet.</td></tr></tbody>
+          <tbody id="logs-tbody"><tr><td colspan="3" style="color:var(--ash);padding:12px;font-size:11px">No claims yet.</td></tr></tbody>
         </table>
       </div>
     </div>

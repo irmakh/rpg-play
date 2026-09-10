@@ -155,9 +155,9 @@ function _makeDieEl(sides, value, size, dur) {
       `<defs><filter id="${fid}" x="-30%" y="-30%" width="160%" height="160%">` +
       `<feGaussianBlur stdDeviation="3" result="b"/>` +
       `<feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>` +
-      `<polygon points="${pts}" fill="#0f3460" stroke="#c8a04a" stroke-width="2.5" filter="url(#${fid})"/>` +
+      `<polygon points="${pts}" fill="var(--slate-hi)" stroke="var(--rule-hi)" stroke-width="2.5" filter="url(#${fid})"/>` +
       `<text x="50" y="${ty}" text-anchor="middle" dominant-baseline="middle" ` +
-      `font-size="26" font-weight="bold" fill="#c8a04a" font-family="Segoe UI,sans-serif">${rnd}</text></svg>`;
+      `font-size="26" font-weight="bold" fill="var(--bone)" font-family="var(--ui)">${rnd}</text></svg>`;
     wrap.appendChild(inner);
     return { container: wrap, animEl: inner, textEl: inner.querySelector('text'), isCube: false };
   }
