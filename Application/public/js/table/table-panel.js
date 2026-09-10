@@ -920,20 +920,22 @@ function _postSpellInfo(s) {
 
 function postSpellInfoFromPanel(idx) { _postSpellInfo(_sideSpells[idx]); }
 
+// Rolls a damage string, which may carry several typed parts ("1d6 piercing,
+// 2d8 fire"). Every part rolls at once and shares one grouped overlay; the
+// single-part case goes down the same path and looks exactly as it did.
 async function rollDamageStr(label, dmgStr, description = '') {
-  const result = parseDice(dmgStr);
-  if (!result) return;
-  const sides    = result.die || 6;
-  const rolls    = result.rolls || [result.total];
-  const modifier = result.mod || 0;
-  const { total } = result;
+  const dmg = parseDamage(dmgStr);
+  if (!dmg) return;
+  const { total, groups } = dmg;
+  const first     = dmg.parts[0];
   const duration  = 1000 + Math.random() * 2000;
   const rollId    = Math.random().toString(36).slice(2);
   _selfRollIds.add(rollId);
-  _broadcastDiceRoll(rollId, sides, rolls, modifier, total, label, duration);
-  await showDiceAnimation(sides, rolls, modifier, total, label, duration);
-  await postToChat({ sender: getChatSender(), dice: result.diceExpr || String(total), results: rolls, modifier, total, label, ...(description ? { description } : {}) });
-  _pushRollToChar(getActiveCharLinkedId(), { label, type: 'dmg', detail: result.detail, total, isCrit: false, isFail: false, isDamage: true, time: new Date().toISOString() });
+  _broadcastDiceRoll(rollId, first.sides || 6, first.rolls.length ? first.rolls : [first.total],
+                     first.modifier, total, label, duration, -1, groups);
+  await showDiceGroups(groups, total, label, duration);
+  await postToChat({ sender: getChatSender(), ...dmgChatPayload(dmg, label, description ? { description } : {}) });
+  _pushRollToChar(getActiveCharLinkedId(), { label, type: 'dmg', detail: dmg.detail, total, isCrit: false, isFail: false, isDamage: true, time: new Date().toISOString() });
 }
 
 function rollInitiativeFromPanel() {

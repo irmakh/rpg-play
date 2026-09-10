@@ -17,6 +17,38 @@ function _plainEntry(s) {
     .split('\n').map(l => l.replace(/\s+/g, ' ').trim()).filter(Boolean).join('\n');
 }
 
+/**
+ * Pulls a typed damage string out of a 5etools action entry.
+ *
+ * Stat-block prose reads "…{@h}7 ({@damage 1d10 + 2}) piercing damage plus 3
+ * ({@damage 1d6}) fire damage." — the dice are in the tag and the TYPE follows
+ * the closing brace. Every tag is captured with its type, so the above becomes
+ * "1d10+2 piercing, 1d6 fire" and both parts roll. Previously only the first
+ * tag was read and the fire damage was silently dropped.
+ *
+ * Versatile weapons phrase the ALTERNATIVE as "…slashing damage, or 8
+ * ({@damage 1d10 + 3}) slashing damage if used with two hands" — that second
+ * tag is a substitute, not an addition, so a tag introduced by "or" is skipped.
+ */
+function _monsterDamageStr(entryText) {
+  const text = String(entryText || '');
+  const parts = [];
+  const re = /\{@damage\s+([^}]+)\}/gi;
+  let m;
+  while ((m = re.exec(text)) !== null) {
+    const before = text.slice(Math.max(0, m.index - 24), m.index);
+    if (/\bor\b[^.]*\($/i.test(before)) continue;      // versatile alternative
+    const dice = m[1].split('|')[0].replace(/\s+/g, '');
+    if (!/^\d*d\d+/i.test(dice) && !/^\d+$/.test(dice)) continue;
+    const after = text.slice(m.index + m[0].length, m.index + m[0].length + 48);
+    const t = after.match(/^\s*\)?\s*([A-Za-z]+)\s+damage/);
+    parts.push(t ? `${dice} ${t[1].toLowerCase()}` : dice);
+  }
+  if (parts.length) return parts.join(', ');
+  const plain = text.match(/\d+d\d+\s*(?:[+-]\s*\d+)?/i);
+  return plain ? plain[0].replace(/\s+/g, '') : '';
+}
+
 async function rollMonsterDamage(section, idx, dmgStr) {
   const items = (_currentMonsterData && _currentMonsterData[section]) || [];
   const item = items[idx];
@@ -65,16 +97,14 @@ function renderMonsterActionsPanel(data, tok) {
   function rActionItem(item, section, idx) {
     const entryText = [].concat(item.entries || []).join(' ');
     const atkMatch = entryText.match(/\{@hit\s([+-]?\d+)\}/i);
-    const dmgTagMatch = entryText.match(/\{@damage\s+([^}]+)\}/i);
-    const rawDmg = dmgTagMatch ? dmgTagMatch[1] : (entryText.match(/\d+d\d+\s*(?:[+-]\s*\d+)?/i)?.[0] || '');
-    const dmgStr = rawDmg.replace(/\s+/g, '');
+    const dmgStr = _monsterDamageStr(entryText);
     const sn = escJs(item.name || '');
     const useBtn = `<button class="btn sm" onclick="useMonsterAction('${section}',${idx})" style="font-size:10px;padding:1px 5px;flex-shrink:0;background:rgba(100,150,255,.18);color:#aaf">Use</button>`;
 
     if (atkMatch) {
       const bonus = parseInt(atkMatch[1]);
       const dmgRow = dmgStr
-        ? `<div class="qroll-row" onclick="rollMonsterDamage('${section}',${idx},'${dmgStr}')" style="padding-left:20px;background:rgba(0,0,0,.15)"><span style="font-size:11px;color:var(--ash)"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-right"></use></svg> Damage</span><span class="qroll-val" style="color:#ff9966;font-size:13px">${esc(dmgStr)}</span></div>`
+        ? `<div class="qroll-row" onclick="rollMonsterDamage('${section}',${idx},'${escJs(dmgStr)}')" style="padding-left:20px;background:rgba(0,0,0,.15)"><span style="font-size:11px;color:var(--ash)"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-right"></use></svg> Damage</span><span class="qroll-val" style="color:#ff9966;font-size:13px">${esc(dmgStr)}</span></div>`
         : '';
       return `<div style="display:flex;align-items:center;gap:2px"><div class="qroll-row" style="flex:1;min-width:0;margin:0" onclick="qroll('${sn} atk','${bonus}')" title="${esc(entryText.slice(0, 120))}"><span>${parseEntry(item.name || '')}</span><span class="qroll-val">${bonus >= 0 ? '+' : ''}${bonus}</span></div>${useBtn}</div>${dmgRow}`;
     }
@@ -199,15 +229,13 @@ function renderMonsterFullStats(data, tok) {
       const rActItem=(item,section,idx)=>{
         const entryText=[].concat(item.entries||[]).join(' ');
         const atkMatch=entryText.match(/\{@hit\s([+-]?\d+)\}/i);
-        const dmgTagMatch=entryText.match(/\{@damage\s+([^}]+)\}/i);
-        const rawDmg=dmgTagMatch?dmgTagMatch[1]:(entryText.match(/\d+d\d+\s*(?:[+-]\s*\d+)?/i)?.[0]||'');
-        const dmgStr=rawDmg.replace(/\s+/g,'');
+        const dmgStr=_monsterDamageStr(entryText);
         const sn=(item.name||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
         const useBtn=`<span class="rp-mon-use-btn" onclick="useMonsterAction('${section}',${idx})" title="Send to chat">Use</span>`;
         if(atkMatch){
           const bonus=parseInt(atkMatch[1]);
           const atkClick=`qroll('${sn} atk','${bonus}')`;
-          const dmgClick=dmgStr?`rollMonsterDamage('${section}',${idx},'${dmgStr}')`:null;
+          const dmgClick=dmgStr?`rollMonsterDamage('${section}',${idx},'${escJs(dmgStr)}')`:null;
           return `<div class="rp-atk-row">`
             +`<span class="rp-atk-name" onclick="${atkClick}">${parseEntry(item.name||'')}</span>`
             +`<span class="rp-atk-hit" onclick="${atkClick}">${bonus>=0?'+':''}${bonus}</span>`
@@ -266,7 +294,7 @@ function renderMonsterFullStats(data, tok) {
   // ── Classic path (unchanged) ─────────────────────────────────────────────────
   const HR='<hr style="border:none;border-top:1px solid var(--rule-hi);margin:6px 0">';
   function rSection(items,title){if(!items||!items.length)return'';return HR+'<div style="font-size:10px;color:var(--bone);text-transform:uppercase;font-weight:bold;letter-spacing:.5px;margin-bottom:3px">'+title+'</div>'+items.map(item=>'<div style="margin:4px 0"><span style="color:var(--bone);font-weight:bold;font-style:italic">'+parseEntry(item.name||'')+'</span> '+rEntries(item.entries)+'</div>').join('');}
-  function rSectionRollable(items,title){if(!items||!items.length)return'';const HR2=HR+'<div style="font-size:10px;color:var(--bone);text-transform:uppercase;font-weight:bold;letter-spacing:.5px;margin-bottom:3px">'+title+'</div>';return HR2+items.map(item=>{const entryText=[].concat(item.entries||[]).join(' ');const atkMatch=entryText.match(/\{@hit\s([+-]?\d+)\}|([+-]\d+)\s+to\s+hit/i);const dmgMatch=entryText.match(/\d+d\d+(?:[+-]\d+)?/i);if(atkMatch){const bonus=parseInt(atkMatch[1]||atkMatch[2]);const dmgStr=dmgMatch?dmgMatch[0]:'';const sn=item.name.replace(/'/g,"\\'");const dmgRow=dmgStr?'<div class="qroll-row" onclick="rollDamageStr(\''+sn+' Dmg\',\''+dmgStr+'\')" style="padding-left:20px;background:rgba(0,0,0,.15)"><span style="font-size:11px;color:var(--ash)">↳ Damage</span><span class="qroll-val" style="color:#ff9966;font-size:13px">'+esc(dmgStr)+'</span></div>':'';return'<div class="qroll-row" onclick="qroll(\''+sn+' atk\',\''+bonus+'\')" title="'+esc(entryText.slice(0,120))+'">'+'<span>'+parseEntry(item.name||'')+'</span>'+'<span class="qroll-val">'+(bonus>=0?'+':'')+bonus+'</span></div>'+dmgRow;}return'<div style="margin:4px 0"><span style="color:var(--bone);font-weight:bold;font-style:italic">'+parseEntry(item.name||'')+'</span> '+rEntries(item.entries)+'</div>';}).join('');}
+  function rSectionRollable(items,title){if(!items||!items.length)return'';const HR2=HR+'<div style="font-size:10px;color:var(--bone);text-transform:uppercase;font-weight:bold;letter-spacing:.5px;margin-bottom:3px">'+title+'</div>';return HR2+items.map(item=>{const entryText=[].concat(item.entries||[]).join(' ');const atkMatch=entryText.match(/\{@hit\s([+-]?\d+)\}|([+-]\d+)\s+to\s+hit/i);if(atkMatch){const bonus=parseInt(atkMatch[1]||atkMatch[2]);const dmgStr=_monsterDamageStr(entryText);const sn=item.name.replace(/'/g,"\\'");const dmgRow=dmgStr?'<div class="qroll-row" onclick="rollDamageStr(\''+sn+' Dmg\',\''+escJs(dmgStr)+'\')" style="padding-left:20px;background:rgba(0,0,0,.15)"><span style="font-size:11px;color:var(--ash)">↳ Damage</span><span class="qroll-val" style="color:#ff9966;font-size:13px">'+esc(dmgStr)+'</span></div>':'';return'<div class="qroll-row" onclick="qroll(\''+sn+' atk\',\''+bonus+'\')" title="'+esc(entryText.slice(0,120))+'">'+'<span>'+parseEntry(item.name||'')+'</span>'+'<span class="qroll-val">'+(bonus>=0?'+':'')+bonus+'</span></div>'+dmgRow;}return'<div style="margin:4px 0"><span style="color:var(--bone);font-weight:bold;font-style:italic">'+parseEntry(item.name||'')+'</span> '+rEntries(item.entries)+'</div>';}).join('');}
 
   const actionsPanel = renderMonsterActionsPanel(data, tok);
   let html='<div style="font-size:11px;line-height:1.5">';

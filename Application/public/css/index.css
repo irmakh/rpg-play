@@ -759,3 +759,29 @@ html.lamplit .sk-row input[type=text][readonly]{color:var(--arc);font-weight:700
 html.lamplit .sk-row input[type=text]{color:var(--arc);font-weight:700;background:transparent;border-color:transparent}
 html.lamplit .sk-row input[type=text]:focus{background:var(--sunken);border-color:var(--arc)}
 html.lamplit input.big[readonly]{color:var(--arc)}
+
+/* Grouped multi-type damage: one column per damage part, each captioned with its
+   type and its own subtotal. Type names stay in --ash — gold is reserved for the
+   values (the subtotals and the grand total). */
+#dice-row.dice-row-grouped{align-items:flex-start;gap:26px}
+.dice-group{display:flex;flex-direction:column;align-items:center;gap:8px}
+/* line-height:0 matters: .dice-poly-inner is inline-block, so without it the
+   baseline descender makes a polygon group ~5px taller than a cube or flat one
+   and drops that group's caption below its neighbours'. */
+.dice-group-dice{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:8px;min-height:48px;line-height:0}
+.dice-group-dice svg{display:block}
+.dice-group-cap{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--ash);text-align:center;max-width:150px;line-height:1.3}
+.dice-group-sub{font-size:20px;font-weight:bold;color:var(--arc);opacity:0;transition:opacity .35s ease .1s}
+.dice-group-sub.show{opacity:1}
+.dice-group-more{font-size:13px;color:var(--ash);align-self:center}
+.dice-flat-chip{display:flex;align-items:center;justify-content:center;font-weight:bold;color:var(--bone);background:linear-gradient(145deg,var(--slate-hi),var(--sunken));border:1px solid var(--rule-hi);border-radius:10px;flex-shrink:0}
+
+/* Typed damage breakdown in a chat roll — one row per damage part. The value
+   column is gold because it is a value; the type name stays --ash. */
+.ce-dmg-label{color:var(--ash);font-size:11px;margin-bottom:3px}
+.ce-dmg-parts{display:flex;flex-direction:column;gap:2px;margin:2px 0 1px}
+.ce-dmg-row{display:grid;grid-template-columns:auto 1fr auto;align-items:baseline;gap:8px;font-size:11px}
+.ce-dmg-dice{color:var(--ash);white-space:nowrap}
+.ce-dmg-rolls{opacity:.75}
+.ce-dmg-type{color:var(--ash);text-transform:uppercase;letter-spacing:1px;font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ce-dmg-val{color:var(--arc);font-weight:bold;font-size:12px;justify-self:end}

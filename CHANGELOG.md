@@ -21,6 +21,48 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [216] — 2026-09-10 — Multiple damage types on one attack
+
+**A weapon can now deal several typed damages, rolled together with one click**
+- The Damage/Type field takes a comma-separated list — `1d6 piercing, 2d8 fire`. One
+  click rolls every part, and each part's dice, type and subtotal are reported
+  separately alongside the grand total.
+- A part with no type is shown as **generic**, so an untyped roll still lines up with
+  the typed ones instead of being a special case.
+- Flat amounts are allowed as a part (`1d4 fire, 5 cold`), as are per-part modifiers
+  (`1d8+3 slashing, 1d6 radiant`).
+- The 3D dice overlay grew a grouped mode: one column per damage type, each captioned
+  with the type and its own subtotal, with the grand total underneath. Mixed dice
+  (a d6 next to two d8s) roll in a single overlay rather than several in a row.
+- The ability and magic bonus lands on the **first** part only — a flaming sword adds
+  Strength to its slashing, not to its fire.
+
+**In chat**
+- `/dmg 1d6 piercing, 2d8 fire` (alias `/damage`) rolls typed damage from the chat box
+  on the table, the character sheet and the DM panel.
+- `/r` also accepts a comma-separated list — `/r 1d6 piercing, 2d8 fire`. Its existing
+  behaviour is untouched: trailing words after a single dice expression are still a
+  label, so `/r 2d6 Sneak Attack` labels the roll exactly as before.
+- Roll messages show the per-type breakdown as its own row per part. Messages logged
+  before this release render exactly as they did.
+
+**Monster stat blocks**
+- An attack reading "…piercing damage **plus** 3 (1d6) fire damage" now rolls both.
+  Only the first `{@damage}` tag was ever read, so the second type was silently
+  dropped on every multi-type monster attack.
+- Versatile weapons are excluded from that: a second tag introduced by "or" is the
+  two-handed *alternative*, not extra damage, and must not stack.
+
+**Also**
+- `usedIdx` is now relayed by `/api/dice/broadcast`. The clients already read it, but
+  the server never passed it on, so advantage/disadvantage rolls did not dim the
+  unused die on anyone's screen but the roller's.
+- `dm.html` now loads the shared `dice-engine.js` instead of dm.js keeping its own
+  copy of `parseDiceCommand`.
+- Test suite 866 → 925 across 32 files.
+
+---
+
 ## [215] — 2026-09-10 — One modal style everywhere, DM logout, stacked map layers
 
 **Modal chrome is now defined once, in `base.css`**

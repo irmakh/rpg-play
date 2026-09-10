@@ -725,7 +725,7 @@
       <div id="im-weapon-fields" style="display:none">
         <div class="g2" style="gap:8px;margin-bottom:6px">
           <div class="field"><label class="lbl">Magic Bonus (0, 1, 2…)</label><input type="number" id="im-weapon-atk" value="0" min="0"></div>
-          <div class="field"><label class="lbl">Damage Dice (e.g. 1d8 slashing)</label><input type="text" id="im-weapon-dmg" placeholder="1d6 slashing"></div>
+          <div class="field"><label class="lbl">Damage Dice &mdash; comma-separate extra types</label><input type="text" id="im-weapon-dmg" placeholder="1d6 piercing, 2d8 fire"></div>
         </div>
         <div class="field">
           <label class="lbl">Properties <span id="im-props-count" style="color:var(--ash)">(max 3)</span></label>
@@ -910,7 +910,7 @@
       <div class="chat-log" id="chat-log"></div>
       <div class="chat-roller">
         <div class="chat-input-row">
-          <input type="text" id="chat-input" class="chat-input" placeholder="Message or /r 2d6+5…" autocomplete="off" onkeydown="if(event.key==='Enter')sendChatInput()">
+          <input type="text" id="chat-input" class="chat-input" placeholder="Message, /r 2d6+5 or /dmg 1d6 piercing, 2d8 fire…" autocomplete="off" onkeydown="if(event.key==='Enter')sendChatInput()">
           <button class="dice-btn chat-send-btn" onclick="sendChatInput()">Send</button>
         </div>
       </div>

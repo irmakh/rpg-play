@@ -205,7 +205,7 @@
     <div class="cb">
       <div class="chat-log" id="chat-log"></div>
       <div class="chat-input-row">
-        <input type="text" id="chat-input" class="chat-input" placeholder="Message or /r 2d6+5…" autocomplete="off" onkeydown="if(event.key==='Enter')sendChatInput()">
+        <input type="text" id="chat-input" class="chat-input" placeholder="Message, /r 2d6+5 or /dmg 1d6 piercing, 2d8 fire…" autocomplete="off" onkeydown="if(event.key==='Enter')sendChatInput()">
         <button class="dice-btn chat-send-btn" onclick="sendChatInput()">Send</button>
       </div>
       <div style="margin-top:6px">
@@ -313,6 +313,11 @@
   </div>
 </div>
 
+<script src="/js/lib/dice-engine.js" defer></script>
+<!-- chat-render.js is loaded for chatDamageParts() (the typed-damage breakdown).
+     dm.js loads after it and deliberately redefines appendChatEntry/scrollChatLog —
+     the DM panel's chat rows carry a delete button the shared renderer has no. -->
+<script src="/js/lib/chat-render.js" defer></script>
 <script src="/js/monster-stat-block.js" defer></script>
 <script src="/js/lib/realtime.js" defer></script>
 <script src="/js/lib/notifications.js" defer></script>

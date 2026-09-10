@@ -18,8 +18,174 @@ function parseDice(expr) {
   return { total, detail, rolls, die, num, mod, diceExpr: `${num}d${die}` };
 }
 
+// ── Typed damage ──────────────────────────────────────────────────────────────
+// A damage expression is a comma-separated list of parts, each "<dice> <type>":
+//   "1d6 piercing, 2d8 fire"   "1d8+3 slashing"   "2d6"   "1d4 fire, 5 cold"
+// A part with no type is GENERIC — the roll still tracks it as its own part so
+// the breakdown lines up with the typed ones.
+//
+// Split in two on purpose: parseDamageSpec() is pure (safe to unit-test and to
+// call from parseDiceCommand, which has always been pure), rollDamageSpec()
+// does the randomness.
+const DMG_GENERIC = 'generic';
+
+// Recognised 5e types, used only to tidy capitalisation on display. An
+// unrecognised word is still accepted and shown as typed — the field is free text.
+const DMG_TYPES = ['acid','bludgeoning','cold','fire','force','lightning','necrotic',
+                   'piercing','poison','psychic','radiant','slashing','thunder','healing'];
+
+function _dmgCleanType(raw) {
+  let t = String(raw || '').trim().replace(/\s+/g, ' ');
+  // "fire damage" and a bare "damage" are noise from stat-block prose — drop the word.
+  t = t.replace(/\s*\bdamage\b\s*$/i, '').trim();
+  if (!t) return DMG_GENERIC;
+  const lower = t.toLowerCase();
+  return DMG_TYPES.includes(lower) ? lower : lower.slice(0, 24);
+}
+
+// One part: "1d8+3 slashing" | "2d6" | "5 cold" | "+2 fire"
+function _dmgParsePart(seg) {
+  const s = String(seg || '').trim();
+  if (!s) return null;
+  const dice = s.match(/^(\d*)\s*[dD]\s*(\d+)((?:\s*[+-]\s*\d+)*)\s*(.*)$/);
+  if (dice) {
+    const count = Math.max(1, Math.min(100, parseInt(dice[1] || '1')));
+    const sides = parseInt(dice[2]);
+    if (!sides) return null;
+    let modifier = 0;
+    (dice[3] || '').replace(/\s+/g, '').match(/[+-]\d+/g)?.forEach(x => { modifier += parseInt(x); });
+    return { count, sides, modifier, flat: 0, type: _dmgCleanType(dice[4]) };
+  }
+  const flat = s.match(/^([+-]?\d+)\s*(.*)$/);
+  if (flat) return { count: 0, sides: 0, modifier: 0, flat: parseInt(flat[1]), type: _dmgCleanType(flat[2]) };
+  return null;
+}
+
+// Pure. Returns null when any part of the string is not rollable.
+function parseDamageSpec(expr) {
+  if (expr == null) return null;
+  const segs = String(expr).split(',').map(s => s.trim()).filter(Boolean);
+  if (!segs.length) return null;
+  const parts = [];
+  for (const seg of segs) {
+    const p = _dmgParsePart(seg);
+    if (!p) return null;   // one bad part invalidates the whole expression
+    parts.push(p);
+  }
+  return {
+    parts,
+    multi: parts.length > 1,
+    typed: parts.some(p => p.type !== DMG_GENERIC)
+  };
+}
+
+// Rolls a parsed spec. Shape mirrors parseDice() (total/detail) and adds the
+// per-type breakdown plus `groups`, which is what showDiceGroups() renders.
+function rollDamageSpec(spec) {
+  if (!spec || !spec.parts || !spec.parts.length) return null;
+  const parts = spec.parts.map(p => {
+    if (!p.sides) {
+      return { ...p, rolls: [], total: p.flat, detail: String(p.flat), dice: String(p.flat) };
+    }
+    const rolls = Array.from({ length: p.count }, () => Math.ceil(Math.random() * p.sides));
+    const total = rolls.reduce((a, b) => a + b, 0) + p.modifier;
+    let detail = `${p.count}d${p.sides}(${rolls.join(',')})`;
+    if (p.modifier !== 0) detail += (p.modifier > 0 ? '+' : '') + p.modifier;
+    const dice = `${p.count}d${p.sides}` + (p.modifier ? (p.modifier > 0 ? '+' : '') + p.modifier : '');
+    return { ...p, rolls, total, detail, dice };
+  });
+  const total = parts.reduce((a, p) => a + p.total, 0);
+  return {
+    parts,
+    total,
+    multi: spec.multi,
+    typed: spec.typed,
+    detail:  parts.map(p => p.type === DMG_GENERIC ? p.detail : `${p.detail} ${p.type}`).join(' · '),
+    summary: parts.map(p => p.type === DMG_GENERIC ? String(p.total) : `${p.total} ${p.type}`).join(' · '),
+    groups:  parts.map(p => ({ sides: p.sides, results: p.rolls, modifier: p.modifier,
+                               total: p.total, type: p.type, dice: p.dice })),
+  };
+}
+
+// Parse + roll in one step — the form the weapon and monster damage buttons use.
+function parseDamage(expr) {
+  const spec = parseDamageSpec(expr);
+  return spec ? rollDamageSpec(spec) : null;
+}
+
+// The per-part breakdown carried on a chat entry. Kept small on purpose — the
+// chat store whitelists fields and this rides alongside the legacy dice/results,
+// so an old client still shows a sensible total.
+function _dmgChatParts(dmg) {
+  return dmg.parts.map(p => ({
+    dice: p.dice, type: p.type, results: p.rolls, modifier: p.modifier, total: p.total
+  }));
+}
+
+// Fields every damage-roll chat post shares. `first` keeps the legacy
+// dice/results/modifier contract; `parts` is only attached when it adds something.
+function dmgChatPayload(dmg, label, extra = {}) {
+  const first = dmg.parts[0];
+  return {
+    dice: first.dice || String(dmg.total),
+    results: first.rolls.length ? first.rolls : [first.total],
+    modifier: first.modifier || 0,
+    total: dmg.total,
+    label,
+    ...(dmg.multi || dmg.typed ? { parts: _dmgChatParts(dmg) } : {}),
+    ...extra
+  };
+}
+
+// Every part of a damage list starts with a dice or flat expression. A label
+// never does, which is what lets /r stay backwards compatible below.
+function _dmgLooksLikePart(s) {
+  return /^\d*\s*[dD]\s*\d+/.test(s) || /^[+-]?\d+(\s|$)/.test(s);
+}
+
+/**
+ * Chat commands. Returns null when `text` is not a roll command.
+ *
+ * Damage-typed forms carry a `damage` spec (from parseDamageSpec) alongside the
+ * legacy `count`/`sides`/`modifier`/`label` fields, which are filled from the
+ * FIRST part so existing callers that destructure them keep working:
+ *
+ *   /dmg 1d6 piercing, 2d8 fire   always typed, single or multi part
+ *   /r 1d6 piercing, 2d8 fire     typed — 2+ comma-separated parts is unambiguous
+ *   /r 2d6 Sneak Attack           UNCHANGED: trailing words are still a label
+ */
 function parseDiceCommand(text) {
-  const m = text.match(/^\/r(?:oll)?\s+(\d+)?d(\d+)\s*([+-]\d+)?\s*(.*)?$/i);
+  const t = String(text == null ? '' : text).trim();
+
+  // /dmg | /damage — always a typed damage roll.
+  const dm = t.match(/^\/(?:dmg|damage)\s+(.+)$/i);
+  if (dm) {
+    const spec = parseDamageSpec(dm[1]);
+    if (!spec) return null;
+    const first = spec.parts[0];
+    return {
+      count: first.count || 1, sides: first.sides, modifier: first.modifier,
+      label: null, damage: spec, expr: dm[1].trim()
+    };
+  }
+
+  // /r with 2+ comma-separated parts that each open with a dice expression.
+  const rm = t.match(/^\/r(?:oll)?\s+(.+)$/i);
+  if (rm && rm[1].includes(',')) {
+    const segs = rm[1].split(',').map(s => s.trim()).filter(Boolean);
+    if (segs.length >= 2 && segs.every(_dmgLooksLikePart)) {
+      const spec = parseDamageSpec(rm[1]);
+      if (spec) {
+        const first = spec.parts[0];
+        return {
+          count: first.count || 1, sides: first.sides, modifier: first.modifier,
+          label: null, damage: spec, expr: rm[1].trim()
+        };
+      }
+    }
+  }
+
+  const m = t.match(/^\/r(?:oll)?\s+(\d+)?d(\d+)\s*([+-]\d+)?\s*(.*)?$/i);
   if (!m) return null;
   return {
     count: Math.max(1, Math.min(20, parseInt(m[1] || '1'))),
@@ -190,6 +356,7 @@ function showDiceAnimation(sides, dieResults, modifier, total, label, duration, 
     subEl.textContent = sub;
     const row = document.getElementById('dice-row');
     row.innerHTML = '';
+    row.classList.remove('dice-row-grouped');
     const reveals = [];
     for (let i = 0; i < shown; i++) {
       const { container, animEl, textEl, isCube, reveal } = _makeDieEl(sides, arr[i], size, dur);
@@ -222,10 +389,122 @@ function showDiceAnimation(sides, dieResults, modifier, total, label, duration, 
   });
 }
 
+/**
+ * Multi-type damage overlay: every damage part rolls in ONE overlay, each group
+ * captioned with its type and its own subtotal, with the grand total underneath.
+ *
+ * `groups` is what rollDamageSpec() puts in .groups —
+ *   [{ sides, results[], modifier, total, type, dice }]
+ * A group with sides 0 is a flat part (e.g. "5 cold") and renders as a plain chip.
+ */
+function showDiceGroups(groups, total, label, duration) {
+  if (typeof window !== 'undefined' && window.diceAnimEnabled === false) return Promise.resolve();
+  const list = (groups || []).filter(Boolean);
+  if (!list.length) return Promise.resolve();
+  return new Promise(resolve => {
+    if (_diceAutoClose) { clearTimeout(_diceAutoClose); _diceAutoClose = null; }
+    _polyIntervals.forEach(clearInterval); _polyIntervals = [];
+    if (_diceResolveFn) { _diceResolveFn(); _diceResolveFn = null; }
+    _diceResolveFn = resolve;
+    const dur = duration ?? (1000 + Math.random() * 2000);
+
+    // One shared die-size budget across all groups so a 5-part roll stays on screen.
+    const totalDice = list.reduce((n, g) => n + ((g.results || []).length || 1), 0);
+    const size = totalDice <= 2 ? 90 : totalDice <= 4 ? 72 : totalDice <= 6 ? 60 : 48;
+
+    document.getElementById('dice-type-lbl').textContent =
+      list.map(g => g.dice || String(g.total)).join(' + ');
+    const bigEl = document.getElementById('dice-result-big');
+    const subEl = document.getElementById('dice-result-sub');
+    bigEl.textContent = total;
+    bigEl.className = 'dice-result-big';
+    subEl.className = 'dice-result-sub';
+    subEl.textContent = label || '';
+
+    const row = document.getElementById('dice-row');
+    row.innerHTML = '';
+    row.classList.add('dice-row-grouped');
+    const reveals = [];
+    let budget = MAX_DICE_SHOW;
+
+    list.forEach(g => {
+      const wrap = document.createElement('div');
+      wrap.className = 'dice-group';
+      const diceWrap = document.createElement('div');
+      diceWrap.className = 'dice-group-dice';
+      const results = g.results || [];
+
+      if (!g.sides || !results.length) {
+        // Flat damage — nothing to tumble, show the value as a chip.
+        const chip = document.createElement('div');
+        chip.className = 'dice-flat-chip';
+        chip.style.cssText = `width:${size}px;height:${size}px;font-size:${Math.round(size * 0.34)}px`;
+        chip.textContent = g.total;
+        diceWrap.appendChild(chip);
+      } else {
+        const shown = Math.max(1, Math.min(results.length, budget));
+        budget = Math.max(0, budget - shown);
+        for (let i = 0; i < shown; i++) {
+          const { container, animEl, textEl, isCube, reveal } = _makeDieEl(g.sides, results[i], size, dur);
+          diceWrap.appendChild(container);
+          void animEl.offsetWidth;
+          animEl.classList.add('rolling');
+          reveals.push({ textEl, val: results[i], reveal });
+          if (!isCube && !reveal) {
+            const el = textEl, sides = g.sides;
+            const id = setInterval(() => { el.textContent = Math.ceil(Math.random() * sides); }, 100);
+            _polyIntervals.push(id);
+          }
+        }
+        if (results.length > shown) {
+          const more = document.createElement('div');
+          more.className = 'dice-group-more';
+          more.textContent = `+${results.length - shown}`;
+          diceWrap.appendChild(more);
+        }
+      }
+
+      wrap.appendChild(diceWrap);
+      // An untyped part gets no caption — a lone "1d8" roll then looks exactly
+      // as it did before typed damage existed, rather than saying GENERIC.
+      if (g.type && g.type !== DMG_GENERIC) {
+        const cap = document.createElement('div');
+        cap.className = 'dice-group-cap';
+        cap.textContent = g.type;
+        wrap.appendChild(cap);
+      }
+      // With one part the subtotal IS the grand total shown below — don't say it twice.
+      if (list.length > 1) {
+        const sub = document.createElement('div');
+        sub.className = 'dice-group-sub';
+        sub.textContent = g.total;
+        wrap.appendChild(sub);
+      }
+      row.appendChild(wrap);
+    });
+
+    document.getElementById('dice-overlay').classList.add('active');
+    setTimeout(() => {
+      _polyIntervals.forEach(clearInterval); _polyIntervals = [];
+      reveals.forEach(({ textEl, val, reveal }) => {
+        if (reveal) reveal(val);
+        else if (textEl) textEl.textContent = val;
+      });
+      row.querySelectorAll('.dice-group-sub').forEach(el => el.classList.add('show'));
+      bigEl.classList.add('show');
+      subEl.classList.add('show');
+      if (_diceResolveFn) { _diceResolveFn(); _diceResolveFn = null; }
+      _diceAutoClose = setTimeout(dismissDiceOverlay, 2500);
+    }, dur);
+  });
+}
+
 function dismissDiceOverlay() {
   if (_diceAutoClose) { clearTimeout(_diceAutoClose); _diceAutoClose = null; }
   _polyIntervals.forEach(clearInterval); _polyIntervals = [];
   document.getElementById('dice-overlay').classList.remove('active');
-  document.getElementById('dice-row').innerHTML = '';
+  const row = document.getElementById('dice-row');
+  row.innerHTML = '';
+  row.classList.remove('dice-row-grouped');
   if (_diceResolveFn) { _diceResolveFn(); _diceResolveFn = null; }
 }

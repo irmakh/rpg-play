@@ -151,7 +151,7 @@ export default function register(app, ctx) {
   }
 
   app.post('/api/chat', (req, res) => {
-    const { sender, dice, results, modifier, total, label, type, message, description, dmOnly, html } = req.body;
+    const { sender, dice, results, modifier, total, label, type, message, description, dmOnly, html, parts } = req.body;
     let entry;
     if (type === 'text') {
       if (!sender || !message)
@@ -182,6 +182,16 @@ export default function register(app, ctx) {
         // matches the large HTML-message cap and stays a sane bound against abuse.
         description: description ? String(description).slice(0, 4000) : null,
         dmOnly: dmOnly === true,
+        // Typed damage breakdown ("1d6 piercing, 2d8 fire"). Optional and
+        // additive: dice/results/total above still describe the whole roll, so
+        // an entry logged before this feature renders unchanged.
+        ...(Array.isArray(parts) && parts.length ? { parts: parts.slice(0, 10).map(p => ({
+          dice: p && p.dice ? String(p.dice).slice(0, 20) : '',
+          type: p && p.type ? String(p.type).slice(0, 24) : 'generic',
+          results: Array.isArray(p && p.results) ? p.results.slice(0, 100).map(Number) : [],
+          modifier: parseInt(p && p.modifier) || 0,
+          total: parseInt(p && p.total) || 0,
+        })) } : {}),
         timestamp: new Date().toISOString()
       };
     }
@@ -208,10 +218,28 @@ export default function register(app, ctx) {
 
   // ── Dice broadcast ────────────────────────────────────────────────────────────
   app.post('/api/dice/broadcast', (req, res) => {
-    const { rollId, sides, dieResults, modifier, total, label, duration, sender } = req.body || {};
+    const { rollId, sides, dieResults, modifier, total, label, duration, sender, usedIdx, groups } = req.body || {};
     if (!sides || !Array.isArray(dieResults) || dieResults.length === 0)
       return res.status(400).json({ error: 'sides and dieResults[] required' });
-    broadcast('dice-roll', { rollId, sides, dieResults, modifier: modifier || 0, total, label, duration, sender });
+    // A multi-type damage roll adds `groups` so every client replays the same
+    // grouped overlay. sides/dieResults still describe the first group, so a
+    // client that predates this keeps animating exactly as before.
+    let safeGroups = null;
+    if (Array.isArray(groups) && groups.length) {
+      safeGroups = groups.slice(0, 10).map(g => ({
+        sides: parseInt(g && g.sides) || 0,
+        results: Array.isArray(g && g.results) ? g.results.slice(0, 100).map(Number) : [],
+        modifier: parseInt(g && g.modifier) || 0,
+        total: parseInt(g && g.total) || 0,
+        type: g && g.type ? String(g.type).slice(0, 24) : 'generic',
+        dice: g && g.dice ? String(g.dice).slice(0, 20) : '',
+      }));
+    }
+    broadcast('dice-roll', {
+      rollId, sides, dieResults, modifier: modifier || 0, total, label, duration, sender,
+      ...(usedIdx !== undefined ? { usedIdx } : {}),
+      ...(safeGroups ? { groups: safeGroups } : {}),
+    });
     res.json({ ok: true });
   });
 

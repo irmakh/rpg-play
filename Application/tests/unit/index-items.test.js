@@ -34,6 +34,18 @@ function extractFunctions(src, ...names) {
 
 const FN_SRC = extractFunctions(SRC, 'calcWeaponAtkStr', 'calcWeaponDmgStr');
 
+// calcWeaponDmgStr parses the damage string with parseDamageSpec so it can put
+// the ability bonus on the FIRST part of a multi-type value ("1d6 piercing,
+// 2d8 fire"). Pull in that half of dice-engine.js — everything up to
+// parseDiceCommand is the DOM-free dice/damage math. Sliced by string index
+// rather than brace-counted because the parser's regexes contain braces.
+const ENGINE_SRC = (() => {
+  const src = readFileSync(resolve(__dirname, '../../public/js/lib/dice-engine.js'), 'utf-8');
+  const end = src.indexOf('function parseDiceCommand');
+  if (end === -1) throw new Error('parseDiceCommand not found — was dice-engine.js restructured?');
+  return src.slice(0, end);
+})();
+
 /**
  * Load both functions into a vm context with injected ability scores and prof.
  *
@@ -55,7 +67,11 @@ function load({ str = 10, dex = 10, prof = 2 } = {}) {
     Math,
     parseInt,
     String,
+    Array,
+    Number,
+    isNaN,
   });
+  runInContext(ENGINE_SRC, ctx);
   runInContext(FN_SRC, ctx);
   return {
     calcWeaponAtkStr: ctx.calcWeaponAtkStr,

@@ -158,18 +158,30 @@ function calcWeaponAtkStr(magicBonus, props) {
   return (total >= 0 ? '+' : '') + total;
 }
 
+/**
+ * Applies the ability + magic bonus to a weapon's damage string.
+ *
+ * The string may list several typed parts ("1d6 piercing, 2d8 fire"). The bonus
+ * belongs to the WEAPON's own damage, so it lands on the first part only —
+ * a flaming sword adds Strength to the slashing, not to the fire.
+ */
 function calcWeaponDmgStr(magicBonus, dmgRaw, props) {
   const strMod = getMod('str'), dexMod = getMod('dex');
   const abilityMod = props.includes('Finesse') ? Math.max(strMod, dexMod)
                    : props.includes('Ammunition') ? dexMod : strMod;
   const raw = (dmgRaw || '1d4').trim();
-  const spaceIdx = raw.indexOf(' ');
-  const dicePart = spaceIdx === -1 ? raw : raw.slice(0, spaceIdx);
-  const typePart = spaceIdx === -1 ? '' : raw.slice(spaceIdx + 1).trim();
   const dmgBonus = abilityMod + magicBonus;
-  return dmgBonus > 0 ? `${dicePart}+${dmgBonus}${typePart ? ' ' + typePart : ''}`
-       : dmgBonus < 0 ? `${dicePart}${dmgBonus}${typePart ? ' ' + typePart : ''}`
-       : raw;
+  if (dmgBonus === 0) return raw;
+
+  const spec = typeof parseDamageSpec === 'function' ? parseDamageSpec(raw) : null;
+  if (!spec) return raw;   // unparseable — leave the user's text alone
+
+  return spec.parts.map((p, i) => {
+    const mod = p.modifier + (i === 0 ? dmgBonus : 0);
+    const modStr = mod === 0 ? '' : (mod > 0 ? '+' : '') + mod;
+    const dice = p.sides ? `${p.count}d${p.sides}${modStr}` : String(p.flat + (i === 0 ? dmgBonus : 0));
+    return p.type === DMG_GENERIC ? dice : `${dice} ${p.type}`;
+  }).join(', ');
 }
 
 function syncWeaponItemToAttacks(item) {

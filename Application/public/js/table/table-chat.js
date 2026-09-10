@@ -186,11 +186,14 @@ function _pushRollToChar(charId, entry) {
   }).catch(() => {});
 }
 
-function _broadcastDiceRoll(rollId, sides, dieResults, modifier, total, label, duration, usedIdx = -1) {
+// `groups` (optional) carries a multi-type damage roll so every other client
+// replays the same grouped overlay. sides/dieResults stay populated from the
+// first group, so a client that does not understand groups still animates.
+function _broadcastDiceRoll(rollId, sides, dieResults, modifier, total, label, duration, usedIdx = -1, groups = null) {
   fetch('/api/dice/broadcast', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ rollId, sides, dieResults: Array.isArray(dieResults) ? dieResults : [dieResults], modifier, total, label, duration, usedIdx, sender: getChatSender() })
+    body: JSON.stringify({ rollId, sides, dieResults: Array.isArray(dieResults) ? dieResults : [dieResults], modifier, total, label, duration, usedIdx, ...(groups ? { groups } : {}), sender: getChatSender() })
   }).catch(() => {});
 }
 
@@ -245,6 +248,21 @@ async function sendChatInput() {
   input.value = '';
   const roll = parseDiceCommand(text);
   if (roll) {
+    // Typed damage — "/dmg 1d6 fire" or "/r 1d6 piercing, 2d8 fire".
+    if (roll.damage) {
+      const dmg = rollDamageSpec(roll.damage);
+      const lbl = roll.expr;
+      const duration = 1000 + Math.random() * 2000;
+      const rollId = Math.random().toString(36).slice(2);
+      const first = dmg.parts[0];
+      _selfRollIds.add(rollId);
+      _broadcastDiceRoll(rollId, first.sides || 6, first.rolls.length ? first.rolls : [first.total],
+                         first.modifier, dmg.total, lbl, duration, -1, dmg.groups);
+      await showDiceGroups(dmg.groups, dmg.total, lbl, duration);
+      await postToChat({ sender: getChatSender(), ...dmgChatPayload(dmg, lbl) });
+      _pushRollToChar(getActiveCharLinkedId(), { label: lbl, type: 'dmg', detail: dmg.detail, total: dmg.total, isCrit: false, isFail: false, isDamage: true, time: new Date().toISOString() });
+      return;
+    }
     const { count, sides, modifier, label } = roll;
     const results = Array.from({ length: count }, () => Math.ceil(Math.random() * sides));
     const total = results.reduce((s, r) => s + r, 0) + modifier;

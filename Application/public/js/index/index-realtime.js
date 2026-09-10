@@ -53,7 +53,10 @@ window.addEventListener('load', function startRealtime() {
     },
     'dice-roll': (d) => {
       if (_selfRollIds.has(d.rollId)) { _selfRollIds.delete(d.rollId); return; }
-      showDiceAnimation(d.sides, d.dieResults || [d.dieResult], d.modifier, d.total, d.label, d.duration, d.usedIdx ?? -1);
+      // A multi-type damage roll arrives with groups and replays as one grouped
+      // overlay; everything else keeps the single-die animation.
+      if (Array.isArray(d.groups) && d.groups.length) showDiceGroups(d.groups, d.total, d.label, d.duration);
+      else showDiceAnimation(d.sides, d.dieResults || [d.dieResult], d.modifier, d.total, d.label, d.duration, d.usedIdx ?? -1);
     },
     'calendar-updated': () => {
       pcalOnServerUpdate();

@@ -42,12 +42,14 @@ function confirmRoll(type) {
 
 
 function rollDamage(label, expr, description = '') {
-  const result = parseDice(expr.trim());
-  if (!result) return;
-  const entry = { time: new Date(), label, type: 'dmg', detail: result.detail, total: result.total, isCrit: false, isFail: false, isDamage: true };
+  // Typed/multi-part damage ("1d6 piercing, 2d8 fire") rolls every part in one
+  // go; parseDamage also covers the plain single-part case, so there is one path.
+  const dmg = parseDamage(expr.trim());
+  if (!dmg) return;
+  const entry = { time: new Date(), label, type: 'dmg', detail: dmg.detail, total: dmg.total, isCrit: false, isFail: false, isDamage: true };
   pushRoll(entry);
   showToast(entry);
-  postToChat({ sender: getChatSender(), dice: result.diceExpr || String(result.total), results: result.rolls || [result.total], modifier: result.mod || 0, total: result.total, label, ...(description ? { description } : {}) });
+  postToChat({ sender: getChatSender(), ...dmgChatPayload(dmg, label, description ? { description } : {}) });
 }
 
 function rollWeaponAtk(btn) {

@@ -398,7 +398,7 @@
       <div class="chat-upload-track"><div class="chat-upload-fill"></div></div>
     </div>
     <div class="chat-input-row">
-      <input type="text" id="chat-input" class="chat-input" placeholder="Message or /r 2d6+5…" autocomplete="off" onkeydown="if(event.key==='Enter')sendChatInput()">
+      <input type="text" id="chat-input" class="chat-input" placeholder="Message, /r 2d6+5 or /dmg 1d6 piercing, 2d8 fire…" autocomplete="off" onkeydown="if(event.key==='Enter')sendChatInput()">
       <label class="dice-btn chat-img-btn" id="chat-img-label" title="Share image" style="cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0 7px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-paperclip"></use></svg> <input type="file" id="chat-img-input" accept="image/*" style="display:none" onchange="handleChatImageFile(this.files[0])"></label>
       <button class="dice-btn chat-send-btn" id="chat-send-btn" onclick="sendChatInput()">Send</button>
     </div>

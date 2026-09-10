@@ -68,12 +68,36 @@ function appendChatEntry(e) {
   const descStr = e.description
     ? `<div style="font-size:10px;color:var(--ash);margin-top:3px;font-style:italic;line-height:1.4;white-space:pre-wrap">${esc(e.description)}</div>`
     : '';
+  const partsStr = chatDamageParts(e);
   div.className = `chat-entry${cls}`;
   div.innerHTML = `<div style="display:flex;justify-content:space-between;margin-bottom:2px">
     <span class="ce-sender">${esc(e.sender || '?')}</span>
     <span style="color:var(--ash);font-size:10px">${time}</span>
   </div>
-  <span style="color:var(--ash);font-size:11px">${esc(e.dice || '')}${modStr}${labelStr}</span>${multiStr}
+  ${partsStr ? '' : `<span style="color:var(--ash);font-size:11px">${esc(e.dice || '')}${modStr}${labelStr}</span>${multiStr}`}
+  ${partsStr}
   <div class="ce-total" style="color:${isNat20 ? 'var(--verdigris)' : isNat1 ? 'var(--blood)' : 'var(--bone)'}">${e.total}${natStr}</div>${descStr}`;
   log.appendChild(div);
+}
+
+/**
+ * The per-type breakdown of a typed damage roll, e.g.
+ *   1d6+3 piercing   7
+ *   2d8    fire     10
+ * Returns '' for an ordinary roll (and for any entry logged before typed damage
+ * existed), in which case the caller keeps the original single-line layout.
+ */
+function chatDamageParts(e) {
+  if (!Array.isArray(e.parts) || !e.parts.length) return '';
+  const label = e.label ? `<div class="ce-dmg-label">${esc(e.label)}</div>` : '';
+  const rows = e.parts.map(p => {
+    const rolls = Array.isArray(p.results) && p.results.length
+      ? ` <span class="ce-dmg-rolls">[${p.results.join(', ')}]</span>` : '';
+    return `<div class="ce-dmg-row">`
+      + `<span class="ce-dmg-dice">${esc(p.dice || '')}${rolls}</span>`
+      + `<span class="ce-dmg-type">${esc(p.type || 'generic')}</span>`
+      + `<span class="ce-dmg-val">${p.total}</span>`
+      + `</div>`;
+  }).join('');
+  return `${label}<div class="ce-dmg-parts">${rows}</div>`;
 }

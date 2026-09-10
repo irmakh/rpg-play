@@ -488,3 +488,13 @@ body.secondary-screen {
 html.lamplit .btn-launch,
 html.lamplit .btn-launch:hover{color:var(--bone);text-decoration:none}
 html.lamplit .btn-launch:hover{background:var(--slate-hi)}
+
+/* Typed damage breakdown in a chat roll — one row per damage part. The value
+   column is gold because it is a value; the type name stays --ash. */
+.ce-dmg-label{color:var(--ash);font-size:11px;margin-bottom:3px}
+.ce-dmg-parts{display:flex;flex-direction:column;gap:2px;margin:2px 0 1px}
+.ce-dmg-row{display:grid;grid-template-columns:auto 1fr auto;align-items:baseline;gap:8px;font-size:11px}
+.ce-dmg-dice{color:var(--ash);white-space:nowrap}
+.ce-dmg-rolls{opacity:.75}
+.ce-dmg-type{color:var(--ash);text-transform:uppercase;letter-spacing:1px;font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ce-dmg-val{color:var(--arc);font-weight:bold;font-size:12px;justify-self:end}

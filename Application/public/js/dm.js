@@ -529,16 +529,9 @@ function setMediaStatus(msg, isErr) {
 // ── Chat ──────────────────────────────────────────────────────────────────────
 function rollDie(sides) { return Math.ceil(Math.random() * sides); }
 
-function parseDiceCommand(text) {
-  const m = text.match(/^\/r(?:oll)?\s+(\d+)?d(\d+)\s*([+-]\d+)?\s*(.*)?$/i);
-  if (!m) return null;
-  return {
-    count: Math.max(1, Math.min(20, parseInt(m[1] || '1'))),
-    sides: parseInt(m[2]),
-    modifier: parseInt(m[3] || '0'),
-    label: (m[4] || '').trim() || null
-  };
-}
+// parseDiceCommand / parseDamageSpec / rollDamageSpec come from js/lib/dice-engine.js.
+// The DM panel has no #dice-overlay, so it broadcasts rolls for the table and the
+// players to animate but never animates locally.
 
 async function sendChatInput() {
   const input = document.getElementById('chat-input');
@@ -547,6 +540,32 @@ async function sendChatInput() {
   input.value = '';
   const roll = parseDiceCommand(text);
   if (roll) {
+    // Typed damage — "/dmg 1d6 fire" or "/r 1d6 piercing, 2d8 fire".
+    if (roll.damage) {
+      const dmg = rollDamageSpec(roll.damage);
+      const lbl = roll.expr;
+      const first = dmg.parts[0];
+      const duration = 1000 + Math.random() * 2000;
+      const rollId = Math.random().toString(36).slice(2);
+      try {
+        await fetch('/api/dice/broadcast', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            rollId, sides: first.sides || 6,
+            dieResults: first.rolls.length ? first.rolls : [first.total],
+            modifier: first.modifier, total: dmg.total, label: lbl, duration,
+            groups: dmg.groups, sender: 'DM'
+          })
+        });
+        await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sender: 'DM', ...dmgChatPayload(dmg, lbl) })
+        });
+      } catch { showStatus('Network error.', true); }
+      return;
+    }
     const { count, sides, modifier, label } = roll;
     const results = Array.from({ length: count }, () => rollDie(sides));
     const total = results.reduce((s, r) => s + r, 0) + modifier;
@@ -656,12 +675,16 @@ function appendChatEntry(e) {
   const descStr = e.description
     ? `<div style="font-size:10px;color:var(--ash);margin-top:3px;font-style:italic;line-height:1.4;white-space:pre-wrap">${esc(e.description)}</div>`
     : '';
+  // chatDamageParts() comes from js/lib/chat-render.js; '' for an ordinary roll,
+  // in which case the original single-line dice/label row is kept.
+  const partsStr = typeof chatDamageParts === 'function' ? chatDamageParts(e) : '';
   div.className = `chat-entry${cls}`;
   div.innerHTML = `<div style="display:flex;justify-content:space-between;margin-bottom:2px">
     <span class="ce-sender">${esc(e.sender)}</span>
     ${timeCol}
   </div>
-  <span style="color:var(--ash)">${esc(e.dice || '')}${modStr}${labelStr}</span>${multiStr}
+  ${partsStr ? '' : `<span style="color:var(--ash)">${esc(e.dice || '')}${modStr}${labelStr}</span>${multiStr}`}
+  ${partsStr}
   <div class="ce-total" style="color:${isNat20 ? 'var(--verdigris)' : isNat1 ? 'var(--blood)' : 'var(--bone)'}">${e.total}${natStr}</div>${descStr}`;
   log.appendChild(div);
 }
