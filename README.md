@@ -1,14 +1,57 @@
 # RPG Play — D&D 5e Virtual Tabletop
 
+[![Node.js](https://img.shields.io/badge/Node.js-20-5FA04E?style=flat-square&logo=nodedotjs&logoColor=white)](https://nodejs.org)
+[![Express](https://img.shields.io/badge/Express-4-000000?style=flat-square&logo=express&logoColor=white)](https://expressjs.com)
+[![SQLite](https://img.shields.io/badge/SQLite-better--sqlite3-003B57?style=flat-square&logo=sqlite&logoColor=white)](https://www.sqlite.org)
+[![Electron](https://img.shields.io/badge/Electron-44-47848F?style=flat-square&logo=electron&logoColor=white)](https://www.electronjs.org)
+[![JavaScript](https://img.shields.io/badge/Vanilla_JS-no_build_step-F7DF1E?style=flat-square&logo=javascript&logoColor=black)](#tech-stack)
+[![PWA](https://img.shields.io/badge/PWA-installable-5A0FC8?style=flat-square&logo=pwa&logoColor=white)](#mobile-companion-pwa-console)
+[![Vitest](https://img.shields.io/badge/Vitest-866_passing-6E9F18?style=flat-square&logo=vitest&logoColor=white)](#tech-stack)
+[![Docker](https://img.shields.io/badge/Docker-compose-2496ED?style=flat-square&logo=docker&logoColor=white)](#option-a--docker-recommended-for-local--lan-play)
+
 A self-hosted web app for running D&D 5e sessions. It hosts any number of **campaigns**, each a fully separate world with its own DM password and its own data. Every campaign bundles a full character sheet, a shared virtual battle map, a real-time initiative tracker, a monster library, a treasury for loot and shop items, a synced music player, an AI Dungeon Master, a comic-style story builder, and a mobile companion — all kept live across every connected browser with no external cloud required.
 
 Vanilla JS, no build step, no framework. Runs on SQLite by default; nothing to provision.
+
+![The virtual table — battle map, tokens with HP bars, fog regions and the dice-mode toolbar](docs/screenshots/virtual-table.webp)
+
+---
+
+## Play it as a desktop app
+
+> **RPG Play ships with a native Windows desktop client.** It is the best way to run a
+> session as the DM: real windows instead of browser tabs, one per screen.
+
+[![Electron](https://img.shields.io/badge/Windows_desktop_client-Electron_44-47848F?style=for-the-badge&logo=electron&logoColor=white)](#desktop-client-windows)
+
+![The desktop client — the table in a native window, with the menu bar, token panel and chat dock](docs/screenshots/desktop-client.webp)
+
+The desktop client is a **thin client**: it renders the pages this server already serves,
+so the web app stays unchanged and nothing needs redeploying when the desktop app changes.
+What it adds over a browser:
+
+- **Multi-monitor windows** — the table, DM panel, sheet, monsters, treasury, stories and
+  console each open as a separate native window that remembers its size, position, monitor,
+  fullscreen state and zoom. The table and second screen open on a secondary display by default
+- **Global hotkeys** (`Ctrl+Alt+T/D/C/R`) reach a window while another application has focus
+- **Tray icon**, application menu, real fullscreen, per-window zoom, and native Save dialogs
+  for backups, map exports and character XML
+- **First-run setup** asks for the server address and validates it; self-signed certificates
+  are trusted per host after an explicit prompt and pinned by fingerprint
+
+Anyone already using the web app on Windows is offered the download from the character
+sheet's nav menu; the link stays hidden on every other platform, and inside the desktop
+client itself.
+
+**[Build instructions and artifacts &rarr;](#desktop-client-windows)** &nbsp;·&nbsp; **[Full desktop docs &rarr;](Desktop/README.md)**
 
 ---
 
 ## Feature Overview
 
 ### Campaigns (`/`) — the front door
+
+![The campaign picker — every campaign on the left, the selected one's cover, stats and login on the right](docs/screenshots/campaigns.webp)
 
 The server hosts any number of **campaigns**, and each one is a fully separate tenant: its own characters, table, initiative, monsters, treasury, calendar, weather, maps, sounds, chat, stories and AI DM sessions — and its own DM password.
 
@@ -37,6 +80,9 @@ Nothing filters by a `campaign_id` column, so there is no `WHERE` clause to forg
 Uploaded images and audio under `public/uploads/` are shared across campaigns. Their filenames are UUIDs so they never collide, but deleting a campaign leaves its uploads on disk as orphans.
 
 ### Character Sheet (`/index.html`)
+
+![The character sheet — persistent vitals bar with damage/heal, tabbed sections, auto-calculated ability scores and combat block](docs/screenshots/character-sheet.webp)
+
 - Full D&D 5e sheet: ability scores, skills, saving throws, HP, AC, speed, initiative — all auto-calculated
 - Proficiency bonus auto-derived from level; spell slot tracking with per-level counters and prepared-spell count
 - **Actions tab** — aggregates weapon attacks, action-flagged spells, and freeform **custom actions** into one combat panel. Custom actions carry a category (action / bonus / reaction / other), description, dice, and limited-use tracking with short/long-rest recharge
@@ -53,6 +99,9 @@ Uploaded images and audio under `public/uploads/` are shared across campaigns. T
 - Three themes: Dark Gold, Parchment, Midnight; quick-nav buttons to the Table and Stories
 
 ### Virtual Table (`/table.html`)
+
+![The table with the chat dock open — dice rolls posted from the sheet arrive here live](docs/screenshots/table-chat.webp)
+
 - Shared battle map with a configurable grid overlay; upload any image as the background
 - Token system for PC / NPC / monster tokens, each with a portrait (thumbnails auto-generated on upload)
 - **Open token movement** — anyone can drag any token (no ownership, monster, or turn gating), with a 100 ms hold delay to avoid accidental drags and a single-level **Undo** button to snap the last move back
@@ -78,6 +127,9 @@ Uploaded images and audio under `public/uploads/` are shared across campaigns. T
 - DM unlock via master password; the DM can also **log in as any character** using the master password
 
 ### DM Dashboard (`/dm.html`)
+
+![The DM dashboard — tools grouped by At the table / Prepare / Manage, over the initiative tracker and monster table](docs/screenshots/dm-dashboard.webp)
+
 - Initiative tracker with full CRUD: add PCs and NPCs, set/reorder initiatives, edit, delete
 - Start / stop combat, next / previous turn, skip; **Clean Orphans** removes stale entries without disrupting a running encounter
 - Monster library table: search, filter, add to initiative in one click (identifier shown in chat rolls)
@@ -89,6 +141,9 @@ Uploaded images and audio under `public/uploads/` are shared across campaigns. T
 - Multiple themes
 
 ### DM Calendar (`/events.html`) — DM only
+
+![The Calendar of Harptos — three tendays per month with rolled weather on the grid, and the day's events beside it](docs/screenshots/dm-calendar.webp)
+
 - Full **Calendar of Harptos** (Forgotten Realms): 12 months × 30 days as three tendays × 10 columns
 - Festival rows between months: Midwinter, Greengrass, Midsummer, Shieldmeet (leap years), Highharvestide, The Feast of the Moon
 - Dale Reckoning year names for years 1–1600 (e.g. 1492 DR — Year of Three Ships Sailing)
@@ -106,6 +161,8 @@ Uploaded images and audio under `public/uploads/` are shared across campaigns. T
 
 ### Handouts (`/handouts.html`) — DM only
 
+![A handout — one prompt, a blind skill check, and two bodies: what they read on a success and what they read instead on a failure](docs/screenshots/handouts.webp)
+
 - Author a handout with a title, an optional **prompt** shown before any check, and **two bodies**: one for a successful skill check, one for a failure. Each body takes its own image.
 - Hand it to selected characters (or the whole party); every recipient is tracked independently.
 - **Optionally require a skill check.** The check is **blind**: the player presses a neutral *Examine* button and never learns which skill was tested, what the DC was, or what they rolled. The roll happens on the server using the character's own modifier, so it cannot be forged.
@@ -118,6 +175,8 @@ Uploaded images and audio under `public/uploads/` are shared across campaigns. T
 - **Run it all from the map.** The right-hand character panel on the table gains a **Handouts** tab beside Items. Rows collapse to a single title line to fit the narrow panel — anything awaiting attention opens itself, and ⌄ / ⌃ expand or collapse the lot. Select a player's token as DM and you get their handouts with the roll, the DC's suggestion, and Success / Fail / re-roll / recall — plus a *Hand Out* list to give them a new one, without leaving the map. A player selecting their own token sees the same tab with their history and the Examine button. The tab shows a dot and a count when something needs attention.
 
 ### Treasury (`/treasury.html`) — DM only
+
+![The treasury — items grouped by tag on the left, and the selected item's distribution, description, image and weapon properties on the right](docs/screenshots/treasury.webp)
 One catalogue for everything you hand out, replacing the separate Merchant and Loot managers. Every item carries the full D&D data set — type, price (PP/GP/EP/SP/CP), stock, AC / initiative / speed / spell bonuses, attunement, weapon damage and properties, description — plus a **distribution mode** you flip in place:
 
 | Mode | Players see it | Cost |
@@ -143,10 +202,15 @@ One catalogue for everything you hand out, replacing the separate Merchant and L
 - Connection identity is self-reported by the client and therefore spoofable: the page is informational, **not** an access control
 
 ### Map Prep (`/prepare-map.html`) — DM only
+
+![Map prep — fog regions, tokens and hidden items placed on a map before the session, ready to load to the table](docs/screenshots/map-prep.webp)
+
 - Upload a map and set grid size; draw fog regions; **place tokens** (with portrait and visible/hidden state) and hidden items on the prep canvas
 - Save named presets and load any to the live table instantly; export / import a map as `.map.json`; delete saved maps; load warning before overwriting the live map
 
 ### Waiting Screens (`/waiting-screens.html`) — DM only
+
+![Waiting screens — named full-bleed images with an optional caption, parked over the players' map between scenes](docs/screenshots/waiting-screens.webp)
 
 Park the table on a full-bleed image between scenes — a title card while everyone
 gets a drink, while the DM lays out the next encounter unseen.
@@ -172,6 +236,9 @@ movement is not broadcast to players while parked.
 > gated on the DM password — are the real guarantee.
 
 ### Monster Library (`/monsters.html`) — DM only
+
+![The monster library — searchable list by CR, with the full stat block, traits and actions beside it](docs/screenshots/monster-library.webp)
+
 - Full stat blocks: abilities, skills, saves, senses, CR, HP, AC, speed, traits, actions, legendary actions (multi-line text renders correctly)
 - Portrait upload; per-token portrait override; realtime updates of monster edits
 - Import monsters from XML (D&D Beyond / 5e tools) — bulk, non-destructive merge
@@ -179,12 +246,18 @@ movement is not broadcast to players while parked.
 - Add any monster straight to initiative; search and filter by name; extra fields for vulnerabilities and initiative
 
 ### Music & Sound Player (`/playlists.html`) — DM only
+
+![The music library — playlists and the sound library on the left, the selected playlist's tracks on the right](docs/screenshots/music-library.webp)
+
 - Upload audio and organise into named playlists; reorder, rename, delete tracks
 - **DM playback on the table:** play / stop / seek (seek affects all listeners); **loop modes** (none / track / playlist auto-advance)
 - All clients hear audio in real time; **now-playing bar** with track name, state, and duration; clients joining mid-track start from the current position
 - Pop-out music popup; loading / playing / paused notifications broadcast to all clients
 
 ### AI Dungeon Master (`/ai-dm`) — players only
+
+![The AI Dungeon Master — pick the character who is playing, then run a text adventure in the Forgotten Realms](docs/screenshots/ai-dm.webp)
+
 - Text-based D&D 5e adventure in the Forgotten Realms, powered by a local LM Studio model, OpenRouter, or OpenAI (ChatGPT)
 - Pick your existing character — the full stat block is fed to the AI as context
 - Built-in or custom scenarios (manual or AI-generated from keywords); **streaming** token-by-token responses with a blocking overlay
@@ -197,6 +270,11 @@ movement is not broadcast to players while parked.
 - Seamless entry from the sheet ("⚔ AI DM" button, hidden for DM sessions; auth passed automatically); sessions persist in a separate SQLite DB (`aiDM/aiDM.db`)
 
 ### Stories (`/stories.html`) — password protected
+
+![The story dashboard — a card per story, cover taken from its first panel, filterable by character](docs/screenshots/stories.webp)
+
+![The story viewer — comic panels in a grid with the cast strip above, switchable to a single vertical strip](docs/screenshots/story-viewer.webp)
+
 - Comic-book story system for session recaps and campaign moments
 - **Dashboard** — card grid (cover = first panel, title, cast, panel count, date) with character filter
 - **Builder** (`/story-builder.html`) — title/description with debounced auto-save, **character cast multiselect by portrait**, per-panel image upload and caption, reorder ▲/▼, delete with confirm; images stored under `/story-images/{storyId}/{seqId}.ext`
@@ -204,12 +282,22 @@ movement is not broadcast to players while parked.
 - Password gate on all three screens accepts the DM password or any character password (`POST /api/auth/verify-any`); bypassed if already logged in
 
 ### Mobile Companion PWA (`/console/`)
+
+<p align="center">
+  <img src="docs/screenshots/mobile-console.webp" width="280" alt="The console PWA on a phone — map screen or info panel">
+  &nbsp;&nbsp;
+  <img src="docs/screenshots/mobile-sheet.webp" width="280" alt="The character sheet at phone width — the same vitals bar, with the tab strip scrolled horizontally">
+</p>
+
+<p align="center"><em>The companion PWA, and the character sheet at phone width — a real media query now, not a theme setting.</em></p>
 - Installable PWA for phone / tablet, works offline after first load; full SSE sync with the main table (initiative, HP, state)
 - **Actions tab** for quick common actions; **D-pad** to move the selected token from the phone
 - **DM controls in companion:** token visibility toggle and character assignment
 - Safe-area padding for notched / punch-hole phones (iOS and Android)
 
 ### Desktop App (`Desktop/`) — Windows
+
+Covered in full at the top of this file — **[Play it as a desktop app &uarr;](#play-it-as-a-desktop-app)**.
 
 - Electron **thin client**: renders the pages this server already serves, so the web app is unchanged and nothing needs redeploying when the desktop app changes
 - **Multi-monitor windows** — open the table, DM panel, sheet, monsters, treasury, stories, console and more as separate native windows; each remembers its size, position, monitor, fullscreen state and zoom. Table and Second Screen open on a secondary display by default
@@ -423,7 +511,7 @@ plain Node and crash. A normal PowerShell window is unaffected.
 - **Dice:** 3D CSS dice (icosahedron d20, pentagonal-trapezohedron d10) driven by a shared `dice-engine.js`
 - **Image processing:** `sharp` — each upload generates `_thumb.webp` (80×80 crop) and `_medium.webp` (max 500 px); maps excluded
 - **PWA:** Service Worker (`sw.js`) — network-first for HTML, cache-first for versioned static assets
-- **Tests:** ~20 Vitest files (unit + API) covering the sheet, table, dice fairness, and routes
+- **Tests:** 866 Vitest tests across 30 files (unit + API) covering the sheet, table, dice fairness, and routes
 - **SSL:** Node.js native `https` with Let's Encrypt certificates
 
 ### Frontend cache-busting
