@@ -3,25 +3,37 @@
    look like a different product from the pages it hosts. */
 
 :root {
-  --bg: #1a1a2e;
-  --bg2: #16213e;
-  --bg3: #0f3460;
-  --ac: #c8a04a;
-  --ahi: #e0b860;
-  --a22: #c8a04a22;
-  --a44: #c8a04a44;
-  --tx: #e0d8c8;
-  --txd: #9a927f;
-  --ok: #88ff88;
-  --err: #ff8888;
-  --inf: #aaddff;
+  /* These MIRROR Application/public/css/tokens.css by hand.
+
+     This file is bundled into the desktop app and loaded with loadFile, so it
+     cannot link the server's tokens.css - the app's own setup, settings and
+     error screens would otherwise stay on the pre-redesign palette while every
+     page it connects to uses the new one. Keep these in step with tokens.css
+     whenever the palette changes. */
+  --ink:       #080C15;
+  --slate:     #101A2C;
+  --slate-hi:  #1B2740;
+  --bone:      #E6EDF7;
+  --ash:       #7F8FA8;
+  --arc:       #E0A93F;
+  --arc-hi:    #F2C468;
+  --arc-fill:  #E0A93F24;
+  --arc-line:  #E0A93F66;
+  --blood:     #E4666B;
+  --verdigris: #3DD68C;
+  --rule:      #E6EDF71C;
+  --rule-hi:   #E6EDF733;
+
+  /* Without this the app paints a light canvas and renders its inputs and
+     scrollbars light - the same gap that bit the web pages. */
+  color-scheme: dark;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-  background: var(--bg);
-  color: var(--tx);
+  background: var(--ink);
+  color: var(--bone);
   font: 14px/1.5 "Segoe UI", system-ui, sans-serif;
   padding: 28px 32px 24px;
   -webkit-user-select: none;
@@ -31,53 +43,53 @@ body {
 h1 {
   font-size: 22px;
   font-weight: 600;
-  color: var(--ac);
+  color: var(--bone);
   letter-spacing: 0.4px;
   margin-bottom: 4px;
 }
 
 .sub {
-  color: var(--txd);
+  color: var(--ash);
   font-size: 13px;
   margin-bottom: 22px;
 }
 
 section {
-  background: var(--bg2);
-  border: 1px solid var(--a22);
+  background: var(--slate);
+  border: 1px solid var(--arc-fill);
   border-radius: 8px;
   padding: 16px 18px;
   margin-bottom: 16px;
 }
 
 section > h2 {
-  font-size: 12px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 1.1px;
-  color: var(--ac);
-  background: var(--a22);
-  border-top: 1px solid var(--a44);
+  /* Sentence case and a quiet ground, matching the rest of the app - caps and
+     an accent-tinted bar made this the loudest thing on the window. */
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ash);
+  background: none;
+  border-top: 1px solid var(--rule-hi);
   margin: -16px -18px 14px;
   padding: 8px 18px;
   border-radius: 7px 7px 0 0;
 }
 
-label { display: block; font-size: 12px; color: var(--txd); margin-bottom: 6px; }
+label { display: block; font-size: 12px; color: var(--ash); margin-bottom: 6px; }
 
 input[type="text"] {
   width: 100%;
-  background: var(--bg);
-  border: 1px solid var(--a44);
+  background: var(--ink);
+  border: 1px solid var(--rule-hi);
   border-radius: 6px;
-  color: var(--tx);
+  color: var(--bone);
   font: inherit;
   padding: 9px 11px;
   -webkit-user-select: text;
   user-select: text;
 }
 
-input[type="text"]:focus { outline: none; border-color: var(--ac); }
+input[type="text"]:focus { outline: none; border-color: var(--arc); }
 input[type="text"]:disabled { opacity: 0.55; }
 
 .row { display: flex; gap: 10px; align-items: center; }
@@ -91,31 +103,31 @@ input[type="text"]:disabled { opacity: 0.55; }
   margin-bottom: 12px;
 }
 .check:last-child { margin-bottom: 0; }
-.check input { margin-top: 3px; accent-color: var(--ac); }
+.check input { margin-top: 3px; accent-color: var(--bone); }
 .check .text { font-size: 13px; }
-.check .text small { display: block; color: var(--txd); font-size: 12px; }
+.check .text small { display: block; color: var(--ash); font-size: 12px; }
 
 button {
-  background: var(--a22);
-  border: 1px solid var(--a44);
+  background: var(--arc-fill);
+  border: 1px solid var(--rule-hi);
   border-radius: 6px;
-  color: var(--tx);
+  color: var(--bone);
   cursor: pointer;
   font: inherit;
   padding: 9px 16px;
   white-space: nowrap;
 }
-button:hover:not(:disabled) { background: var(--a44); border-color: var(--ac); }
+button:hover:not(:disabled) { background: var(--rule-hi); border-color: var(--arc); }
 button:disabled { opacity: 0.5; cursor: default; }
-button.primary { background: var(--ac); border-color: var(--ahi); color: #16213e; font-weight: 600; }
-button.primary:hover:not(:disabled) { background: var(--ahi); }
+button.primary { background: var(--arc); border-color: var(--arc-hi); color: #16213e; font-weight: 600; }
+button.primary:hover:not(:disabled) { background: var(--arc-hi); }
 
 .msg { font-size: 13px; margin-top: 12px; min-height: 20px; }
-.msg.ok { color: var(--ok); }
-.msg.err { color: var(--err); }
-.msg.info { color: var(--inf); }
+.msg.ok { color: var(--verdigris); }
+.msg.err { color: var(--blood); }
+.msg.info { color: var(--arc); }
 
-.hint { color: var(--txd); font-size: 12px; margin-top: 10px; }
+.hint { color: var(--ash); font-size: 12px; margin-top: 10px; }
 
 .shortcut-grid { display: grid; grid-template-columns: 1fr 200px; gap: 10px 14px; align-items: center; }
 .shortcut-grid .name { font-size: 13px; }
@@ -125,8 +137,8 @@ button.primary:hover:not(:disabled) { background: var(--ahi); }
 
 code {
   font-family: Consolas, "Cascadia Mono", monospace;
-  background: var(--bg);
-  border: 1px solid var(--a22);
+  background: var(--ink);
+  border: 1px solid var(--arc-fill);
   border-radius: 4px;
   padding: 1px 5px;
   font-size: 12px;
@@ -135,8 +147,8 @@ code {
 }
 
 .warn {
-  border-left: 3px solid var(--err);
-  background: #ff888811;
+  border-left: 3px solid var(--blood);
+  background: var(--blood)11;
   padding: 10px 12px;
   border-radius: 4px;
   font-size: 13px;
