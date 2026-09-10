@@ -41,7 +41,11 @@ export default function register(app, ctx) {
   // posted to chat was pulled into a map backup — on a real campaign that was 45
   // of 57 media rows and most of an 80 MB download. It is its own part now.
   // Restore still reads chatMedia out of an older 'maps' file.
-  const BACKUP_PARTS = ['characters', 'monsters', 'treasury', 'maps', 'chatmedia'];
+  const BACKUP_PARTS = ['characters', 'monsters', 'treasury', 'maps', 'waiting', 'handouts', 'events', 'music', 'chat', 'chatmedia'];
+
+  // A handout carries two images (the success and failure reveals); everything
+  // else that references a picture has one.
+  const _handoutUrls = (r) => [r.successImageUrl, r.failImageUrl].filter(Boolean);
 
   /**
    * shared_media rows split by what they are. Prepared-map images are keyed
@@ -107,6 +111,8 @@ export default function register(app, ctx) {
           shopConfig: [ldb.getShopConfig()],
           purchaseLogs: ldb.listPurchaseLogs(),
           lootLogs: ldb.listLootLogs(),
+          // Pending player claims/purchases belong with the items they are for.
+          treasuryRequests: ldb.exportTreasuryRequests(),
         };
       }
       case 'maps': {
@@ -115,6 +121,43 @@ export default function register(app, ctx) {
           preparedMaps: ldb.listPreparedMaps(),
           mapImages: _sharedMediaWithData(_mediaRows('maps')),
         };
+      }
+      case 'waiting': {
+        // The park pages a parked table shows the players. Their images live
+        // under uploads/ like every other picture; thumb/medium regenerate.
+        const waitingScreens = ldb.listWaitingScreens().map(r => {
+          const { imageThumb, imageMedium, ...rest } = r;
+          return { ...rest, imageB64: readUploadAsBase64(r.imageUrl) };
+        });
+        return { ...base, waitingScreens };
+      }
+      case 'handouts': {
+        const { handouts, handoutRecipients } = ldb.exportHandouts();
+        return {
+          ...base,
+          handouts: handouts.map(r => {
+            const { successImageThumb, successImageMedium, failImageThumb, failImageMedium, ...rest } = r;
+            return {
+              ...rest,
+              successImageB64: readUploadAsBase64(r.successImageUrl),
+              failImageB64: readUploadAsBase64(r.failImageUrl),
+            };
+          }),
+          handoutRecipients,
+        };
+      }
+      case 'events': {
+        // The Events screen is a single blob plus the calendar and weather tables.
+        // Calendar events can carry media; those are uploads/ files like any other.
+        return { ...base, ...ldb.exportEvents() };
+      }
+      case 'music': {
+        // Playlists plus the sound files they name. The audio bytes are files
+        // under uploads/sounds/ and travel in the media archive.
+        return { ...base, ...ldb.exportMusic() };
+      }
+      case 'chat': {
+        return { ...base, chatLog: ldb.exportChatLog() };
       }
       case 'chatmedia': {
         return { ...base, chatMedia: _sharedMediaWithData(_mediaRows('chat')) };
@@ -343,11 +386,53 @@ export default function register(app, ctx) {
         await w(',"shopConfig":'); await w(JSON.stringify([ldb.getShopConfig()]));
         await w(',"purchaseLogs":'); await _writeJsonArray(w, ldb.listPurchaseLogs(), r => r);
         await w(',"lootLogs":'); await _writeJsonArray(w, ldb.listLootLogs(), r => r);
+        await w(',"treasuryRequests":'); await _writeJsonArray(w, ldb.exportTreasuryRequests(), r => r);
         break;
       }
       case 'maps': {
         await w(',"preparedMaps":'); await _writeJsonArray(w, ldb.listPreparedMaps(), m => m);
         await w(',"mapImages":'); await _writeJsonArray(w, _mediaRows('maps'), _mediaRecord);
+        break;
+      }
+      case 'waiting': {
+        await w(',"waitingScreens":');
+        await _writeJsonArray(w, ldb.listWaitingScreens(), r => {
+          const { imageThumb, imageMedium, ...rest } = r;
+          return { ...rest, file: r.imageUrl ? _stripSlash(r.imageUrl) : null };
+        });
+        break;
+      }
+      case 'handouts': {
+        const { handouts, handoutRecipients } = ldb.exportHandouts();
+        await w(',"handouts":');
+        await _writeJsonArray(w, handouts, r => {
+          const { successImageThumb, successImageMedium, failImageThumb, failImageMedium, ...rest } = r;
+          return {
+            ...rest,
+            successFile: r.successImageUrl ? _stripSlash(r.successImageUrl) : null,
+            failFile: r.failImageUrl ? _stripSlash(r.failImageUrl) : null,
+          };
+        });
+        await w(',"handoutRecipients":'); await _writeJsonArray(w, handoutRecipients, r => r);
+        break;
+      }
+      case 'events': {
+        const ev = ldb.exportEvents();
+        await w(',"eventsState":');    await _writeJsonArray(w, ev.eventsState, r => r);
+        await w(',"calendarState":');  await _writeJsonArray(w, ev.calendarState, r => r);
+        await w(',"calendarEvents":'); await _writeJsonArray(w, ev.calendarEvents, r => r);
+        await w(',"weatherConfig":');  await _writeJsonArray(w, ev.weatherConfig, r => r);
+        await w(',"weatherLog":');     await _writeJsonArray(w, ev.weatherLog, r => r);
+        break;
+      }
+      case 'music': {
+        const mu = ldb.exportMusic();
+        await w(',"playlists":');  await _writeJsonArray(w, mu.playlists, r => r);
+        await w(',"soundFiles":'); await _writeJsonArray(w, mu.soundFiles, r => r);
+        break;
+      }
+      case 'chat': {
+        await w(',"chatLog":'); await _writeJsonArray(w, ldb.exportChatLog(), r => r);
         break;
       }
       case 'chatmedia': {
@@ -405,6 +490,18 @@ export default function register(app, ctx) {
       }
     } catch {}
     try { for (const r of ldb.listTreasuryItems()) addUrl(r.imageUrl); } catch {}
+    try { for (const r of ldb.listWaitingScreens()) addUrl(r.imageUrl); } catch {}
+    try { for (const r of ldb.exportHandouts().handouts) _handoutUrls(r).forEach(addUrl); } catch {}
+    // Sound files are the one non-image this collects; the archive is really a
+    // media archive, and a music backup without its audio would be useless.
+    try { for (const r of ldb.exportMusic().soundFiles) addUrl(r.url); } catch {}
+    try {
+      // Calendar events carry a media_json array of { url } entries.
+      for (const r of ldb.exportEvents().calendarEvents) {
+        let media = []; try { media = JSON.parse(r.media_json || '[]'); } catch {}
+        for (const m of media) addUrl(typeof m === 'string' ? m : (m && m.url));
+      }
+    } catch {}
     try {
       for (const row of _mediaRows('all')) {
         const s = row.data.toString();
@@ -591,6 +688,8 @@ export default function register(app, ctx) {
           restored.push(it);
         }
         ldb.importTreasury(restored, backup.shopConfig, backup.purchaseLogs, backup.lootLogs);
+        // Absent from files written before requests were backed up; harmless then.
+        ldb.importTreasuryRequests(backup.treasuryRequests);
         broadcast('treasury', { action: 'reload' });
         break;
       }
@@ -603,6 +702,73 @@ export default function register(app, ctx) {
       case 'loot': {
         ldb.importLoot(backup.lootItems, backup.lootLogs);
         broadcast('treasury', { action: 'reload' });
+        break;
+      }
+      case 'waiting': {
+        const restored = [];
+        for (const r of (backup.waitingScreens || [])) {
+          const it = { ...r };
+          if (r.imageUrl) {
+            _writeUploadFile(r.imageUrl, r.imageB64);
+            const buf = _recordBytes(r.imageB64, r.imageUrl);
+            if (buf) {
+              try {
+                const baseId = path.basename(r.imageUrl, path.extname(r.imageUrl));
+                const urls = await processImageSizes(extToMime(r.imageUrl), buf, 'waiting', baseId);
+                it.imageThumb = urls.thumb;
+                it.imageMedium = urls.medium;
+              } catch {}
+            }
+          }
+          delete it.imageB64; delete it.file;
+          restored.push(it);
+        }
+        ldb.importWaitingScreens(restored);
+        broadcast('table', { action: 'waiting-screens-updated' });
+        break;
+      }
+      case 'handouts': {
+        const restored = [];
+        for (const r of (backup.handouts || [])) {
+          const it = { ...r };
+          // Both reveals restore the same way; each regenerates its own sizes.
+          for (const [urlKey, b64Key, thumbKey, medKey] of [
+            ['successImageUrl', 'successImageB64', 'successImageThumb', 'successImageMedium'],
+            ['failImageUrl',    'failImageB64',    'failImageThumb',    'failImageMedium'],
+          ]) {
+            if (!r[urlKey]) continue;
+            _writeUploadFile(r[urlKey], r[b64Key]);
+            const buf = _recordBytes(r[b64Key], r[urlKey]);
+            if (!buf) continue;
+            try {
+              const baseId = path.basename(r[urlKey], path.extname(r[urlKey]));
+              const urls = await processImageSizes(extToMime(r[urlKey]), buf, 'handouts', baseId);
+              it[thumbKey] = urls.thumb;
+              it[medKey] = urls.medium;
+            } catch {}
+          }
+          delete it.successImageB64; delete it.failImageB64;
+          delete it.successFile; delete it.failFile;
+          restored.push(it);
+        }
+        ldb.importHandouts({ handouts: restored, handoutRecipients: backup.handoutRecipients });
+        broadcast('handouts', { action: 'reload' });
+        break;
+      }
+      case 'events': {
+        ldb.importEvents(backup);
+        broadcast('events', { action: 'reload' });
+        broadcast('calendar-updated', {});
+        break;
+      }
+      case 'music': {
+        ldb.importMusic(backup);
+        broadcast('sound', { action: 'reload' });
+        break;
+      }
+      case 'chat': {
+        ldb.importChatLog(backup.chatLog);
+        broadcast('chat-reload', {});
         break;
       }
       case 'maps':

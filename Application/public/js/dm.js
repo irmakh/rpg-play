@@ -108,7 +108,7 @@ function closeBackupModal() {
   document.getElementById('backup-modal').style.display = 'none';
 }
 
-const BACKUP_SECTIONS = ['characters', 'monsters', 'treasury', 'maps', 'chatmedia'];
+const BACKUP_SECTIONS = ['characters', 'monsters', 'treasury', 'maps', 'waiting', 'handouts', 'events', 'music', 'chat', 'chatmedia'];
 const _selectedBackupParts = () => BACKUP_SECTIONS.filter(p => document.getElementById('bk-' + p)?.checked);
 
 /**

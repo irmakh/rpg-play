@@ -80,6 +80,52 @@ function reconcileParkedCampaigns() {
   } catch {}
 }
 
+/**
+ * Move each campaign's table map onto its own filename.
+ *
+ * Every campaign used to write public/uploads/maps/table-map.<ext>, one shared
+ * file: whoever loaded a map last overwrote the others, and deleting one
+ * campaign's map deleted everyone's. Existing rows still point at that shared
+ * name, so give each campaign its own copy and repoint its row.
+ *
+ * The old file is COPIED, not moved — two campaigns pointing at it must each end
+ * up with their own, and leaving it behind costs one stale file and keeps any
+ * reference that has not been migrated working.
+ */
+function migrateTableMapFiles() {
+  const LEGACY = /^\/uploads\/maps\/table-map(\.[A-Za-z0-9]+)$/;
+  let moved = 0;
+  try {
+    for (const c of cdb.listCampaigns()) {
+      try {
+        // openMediaDb() returns a small facade; `.db` is the better-sqlite3 handle.
+        const mdb = getCampaignData(c.id).mdb.db;
+        const row = mdb.prepare('SELECT data FROM shared_media WHERE id = ?').get('table-map');
+        if (!row) continue;
+        const ref = row.data.toString();
+        if (!ref.startsWith('FILE:')) continue;             // inline blob: nothing on disk
+        const m = LEGACY.exec(ref.slice(5));
+        if (!m) continue;                                    // already per-campaign
+        const destRel = `/uploads/maps/table-map-${c.id}${m[1]}`;
+        const src  = path.join(__dirname, 'public', ref.slice(5));
+        const dest = path.join(__dirname, 'public', destRel);
+        if (fs.existsSync(src)) fs.copyFileSync(src, dest);
+        else if (!fs.existsSync(dest)) continue;             // source gone; leave the row alone
+        mdb.prepare('UPDATE shared_media SET data = ? WHERE id = ?')
+           .run(Buffer.from('FILE:' + destRel), 'table-map');
+        moved++;
+      } catch (err) {
+        // Reported, not swallowed: a silent skip here looks exactly like
+        // "nothing needed migrating", which hid this very function failing.
+        console.warn(`[maps] could not migrate table map for campaign ${c.id}:`, err.message);
+      }
+    }
+  } catch (err) {
+    console.warn('[maps] table map migration skipped:', err.message);
+  }
+  if (moved) console.log(`[maps] gave ${moved} campaign table map(s) their own file`);
+}
+
 function genId() {
   return crypto.randomUUID();
 }
@@ -95,14 +141,39 @@ function readUploadAsBase64(fileUrl) {
   if (!fileUrl || !fileUrl.startsWith('/uploads/')) return null;
   try { return fs.readFileSync(path.join(__dirname, 'public', fileUrl)).toString('base64'); } catch { return null; }
 }
+
+/**
+ * Where a NEW upload goes: uploads/<campaignId>/<subdir>/.
+ *
+ * public/uploads/ was one directory shared by every campaign, which is what let
+ * two campaigns overwrite each other's table map, let deleting one campaign's
+ * map delete another's file, and forced the parked-table gate to be global
+ * because a bare static request could not be attributed to a campaign.
+ *
+ * Only new writes are placed here. Existing files keep working untouched: every
+ * stored reference is a full path (/uploads/maps/x.png), so an old URL resolves
+ * exactly as before and nothing has to be migrated for correctness.
+ *
+ * An upload always happens inside a request, so the campaign resolves; the
+ * fallback to the flat layout covers anything that somehow runs outside one,
+ * which is the old behaviour and therefore safe.
+ */
+function uploadSubPath(subdir) {
+  let cid = '';
+  try { cid = String(currentCampaignId() || ''); } catch {}
+  cid = cid.replace(/[^A-Za-z0-9._-]/g, '');
+  return cid ? `${cid}/${subdir}` : subdir;
+}
+
 const MIME_TO_EXT = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/gif': 'gif', 'image/webp': 'webp', 'image/svg+xml': 'svg', 'audio/mpeg': 'mp3', 'audio/x-m4a': 'm4a', 'video/mpeg': 'mpeg' };
 function mimeToExt(mimeType) { return MIME_TO_EXT[mimeType] || mimeType.split('/')[1] || 'bin'; }
 function saveUploadFile(subdir, id, mimeType, b64) {
   const filename = `${id}.${mimeToExt(mimeType)}`;
-  const dir = path.join(UPLOADS_DIR, subdir);
+  const rel = uploadSubPath(subdir);
+  const dir = path.join(UPLOADS_DIR, rel);
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(dir, filename), Buffer.from(b64, 'base64'));
-  return `/uploads/${subdir}/${filename}`;
+  return `/uploads/${rel}/${filename}`;
 }
 function deleteUploadFile(fileUrl) {
   if (!fileUrl || !fileUrl.startsWith('/uploads/')) return;
@@ -116,7 +187,8 @@ function extToMime(fileUrl) {
 }
 
 async function processImageSizes(mimeType, buffer, subdir, baseId) {
-  const dir = path.join(UPLOADS_DIR, subdir);
+  const rel = uploadSubPath(subdir);          // per-campaign; see uploadSubPath
+  const dir = path.join(UPLOADS_DIR, rel);
   fs.mkdirSync(dir, { recursive: true });
   const origExt  = mimeToExt(mimeType);
   const origFile = `${baseId}.${origExt}`;
@@ -126,9 +198,9 @@ async function processImageSizes(mimeType, buffer, subdir, baseId) {
   await sharp(buffer).resize(80, 80, { fit: 'cover', position: 'center' }).webp({ quality: 80 }).toFile(path.join(dir, thumbFile));
   await sharp(buffer).resize(500, 500, { fit: 'inside', withoutEnlargement: true }).webp({ quality: 85 }).toFile(path.join(dir, mediumFile));
   return {
-    original: `/uploads/${subdir}/${origFile}`,
-    thumb:    `/uploads/${subdir}/${thumbFile}`,
-    medium:   `/uploads/${subdir}/${mediumFile}`,
+    original: `/uploads/${rel}/${origFile}`,
+    thumb:    `/uploads/${rel}/${thumbFile}`,
+    medium:   `/uploads/${rel}/${mediumFile}`,
   };
 }
 
@@ -346,7 +418,7 @@ const MAX_MEDIA_BYTES = 25 * 1024 * 1024;
 // Bump this number whenever frontend JS or CSS files change.
 // Also bump CACHE in public/sw.js to the same value.
 // Both must always match. See deployment notes in CLAUDE.md.
-const FRONTEND_VERSION = 219;
+const FRONTEND_VERSION = 222;
 
 // ── Express app ───────────────────────────────────────────────────────────────
 const app = express();
@@ -399,16 +471,37 @@ app.use((req, res, next) => {
 // source of truth and seeds this at boot (see reconcileParkedCampaigns below).
 const parkedCampaigns = new Set();
 reconcileParkedCampaigns();   // declared above; called here, after the Set exists
+migrateTableMapFiles();       // one-time: shared table-map.<ext> -> per campaign
 
-// The map file is NOT campaign-scoped — UPLOADS_DIR is one shared directory and
-// every campaign writes the same table-map.<ext>. So one campaign being parked
-// closes the path for all of them, which is the safe reading while that remains
-// true. A request that resolved no campaign cannot be attributed at all, which
-// is the other reason this gate is global rather than per campaign.
-const TABLE_MAP_FILE = /^\/maps\/table-map\.[A-Za-z0-9]+$/;
+// A parked table must not leak its map, and express.static would happily serve
+// the file straight off disk, so the gate has to sit in front of the mount.
+//
+// The campaign id is IN THE FILENAME (table-map-<id>.<ext>, written by
+// tableMapFileBase() in routes/table.js), which is what lets this be decided per
+// campaign: only the parked campaign's own map is refused. It used to be one
+// shared table-map.<ext> for every campaign, so the gate could not tell whose
+// request it was and had to close the path for everyone — one campaign parked on
+// a waiting screen blanked the map on every other campaign's table.
+//
+// A legacy name with no campaign in it keeps the old conservative rule: it may
+// belong to any campaign, so any parked campaign still closes it.
+// Three layouts have to be recognised, because files written by each still exist:
+//   /maps/table-map.png                  oldest — shared by every campaign
+//   /maps/table-map-<id>.png             per-campaign filename
+//   /<id>/maps/table-map-<id>.png        per-campaign directory (current)
+// The directory names the owner when present, else the filename suffix does.
+// The filename suffix excludes '.' on purpose: the extension is what a dot
+// separates, so allowing dots there let "table-map-abc.png.txt" match with an
+// owner of "abc.png". A campaign id is a UUID, so hex and hyphens are enough.
+const TABLE_MAP_FILE = /^(?:\/([A-Za-z0-9._-]+))?\/maps\/table-map(?:-([A-Za-z0-9_-]+))?\.[A-Za-z0-9]+$/;
 app.use('/uploads', (req, res, next) => {
-  if (parkedCampaigns.size > 0 && TABLE_MAP_FILE.test(req.path)) {
-    return res.status(403).send('Map unavailable');
+  const m = TABLE_MAP_FILE.exec(req.path);
+  if (m) {
+    const owner = m[1] || m[2];
+    // A name with no campaign in it could belong to any of them, so it keeps the
+    // conservative rule: any parked campaign closes it.
+    const blocked = owner ? parkedCampaigns.has(owner) : parkedCampaigns.size > 0;
+    if (blocked) return res.status(403).send('Map unavailable');
   }
   next();
 });

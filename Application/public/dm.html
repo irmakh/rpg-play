@@ -288,6 +288,26 @@
           <span><strong>Maps</strong> — prepared maps, fog &amp; hidden items</span>
         </label>
         <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px">
+          <input type="checkbox" id="bk-waiting" checked style="width:15px;height:15px;accent-color:var(--bone)">
+          <span><strong>Waiting screens</strong> — the park pages &amp; their images</span>
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px">
+          <input type="checkbox" id="bk-handouts" checked style="width:15px;height:15px;accent-color:var(--bone)">
+          <span><strong>Handouts</strong> — prompts, reveals, images &amp; who has seen them</span>
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px">
+          <input type="checkbox" id="bk-events" checked style="width:15px;height:15px;accent-color:var(--bone)">
+          <span><strong>Events</strong> — event log, calendar &amp; weather history</span>
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px">
+          <input type="checkbox" id="bk-music" checked style="width:15px;height:15px;accent-color:var(--bone)">
+          <span><strong>Music</strong> — playlists &amp; the sound library</span>
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px">
+          <input type="checkbox" id="bk-chat" style="width:15px;height:15px;accent-color:var(--bone)">
+          <span><strong>Chat log</strong> — the message history</span>
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px">
           <input type="checkbox" id="bk-chatmedia" style="width:15px;height:15px;accent-color:var(--bone)">
           <span><strong>Chat media</strong> — every image shared in chat</span>
         </label>
@@ -297,7 +317,7 @@
         <button class="btn" id="arc-img-btn" onclick="downloadArchive('images')" style="width:100%"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-image"></use></svg> Download Images (.tar.gz)</button>
       </div>
       <p style="font-size:11px;color:var(--ash);margin:8px 0 0">
-        The images archive holds every picture, portrait, map and shared file — it ignores the ticks above and always takes them all.
+        The images archive holds every picture, portrait, map, sound file and shared file — it ignores the ticks above and always takes them all.
       </p>
       <div id="arc-status" style="margin-top:10px;font-size:12px;min-height:18px;color:var(--ash)"></div>
 

@@ -83,9 +83,27 @@ export function releaseCampaign(campaignId) {
 }
 
 /** Removes a campaign's entire data directory. Irreversible. */
+/**
+ * Where this campaign's uploaded files live: public/uploads/<campaignId>/.
+ * Files written before uploads were split by campaign are still in the flat
+ * public/uploads/<subdir>/ and are deliberately NOT under here — they may belong
+ * to any campaign, so nothing may assume they are one campaign's to delete.
+ */
+export function campaignUploadsDir(campaignId) {
+  if (!/^[A-Za-z0-9._-]+$/.test(String(campaignId || ''))) {
+    throw new Error(`invalid campaign id: ${campaignId}`);
+  }
+  return path.join(APP_DIR, 'public', 'uploads', String(campaignId));
+}
+
 export function destroyCampaignData(campaignId) {
   releaseCampaign(campaignId);
   fs.rmSync(campaignDir(campaignId), { recursive: true, force: true });
+  // The campaign's uploaded files under public/uploads/<id>/ are deliberately
+  // LEFT ON DISK. Deleting a campaign removes its databases, not its media:
+  // images and audio are the part a DM cannot regenerate, and an unwanted
+  // folder is trivially removed by hand while a deleted one is gone for good.
+  // campaignUploadsDir() exists for tooling that wants to find them.
 }
 
 /** Byte size of a campaign's data files — shown on the campaign detail panel. */

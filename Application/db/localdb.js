@@ -1029,14 +1029,148 @@ function importLoot(lootItems, lootLogs) {
 function importMaps(preparedMaps) {
   const getMap  = db.prepare('SELECT name FROM prepared_maps WHERE id = ?');
   const rekeyMap = db.prepare('UPDATE prepared_maps SET id = ?, name = ? WHERE id = ?');
-  const ins     = db.prepare('INSERT OR IGNORE INTO prepared_maps (id, name, cellSize, offsetX, offsetY, mapWidth, mapHeight, fogRegions, hiddenItems, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+  // preparedTokens is part of a prepared map just as fog is. It was missing from
+  // this INSERT, so restoring a maps backup silently dropped every placed token.
+  const ins     = db.prepare('INSERT OR IGNORE INTO prepared_maps (id, name, cellSize, offsetX, offsetY, mapWidth, mapHeight, fogRegions, hiddenItems, preparedTokens, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+  const asJson = (v, empty) => Array.isArray(v) ? JSON.stringify(v) : (v || empty);
   db.transaction(() => {
     for (const r of (preparedMaps || [])) {
       const ex = getMap.get(r.id);
       if (ex) rekeyMap.run(crypto.randomUUID(), _oldName(ex.name), r.id);
-      const fr = Array.isArray(r.fogRegions) ? JSON.stringify(r.fogRegions) : (r.fogRegions || '[]');
-      const hi = Array.isArray(r.hiddenItems) ? JSON.stringify(r.hiddenItems) : (r.hiddenItems || '[]');
-      ins.run(r.id, r.name || '', r.cellSize || 50, r.offsetX || 0, r.offsetY || 0, r.mapWidth || 0, r.mapHeight || 0, fr, hi, r.createdAt || new Date().toISOString());
+      ins.run(r.id, r.name || '', r.cellSize || 50, r.offsetX || 0, r.offsetY || 0,
+        r.mapWidth || 0, r.mapHeight || 0,
+        asJson(r.fogRegions, '[]'), asJson(r.hiddenItems, '[]'), asJson(r.preparedTokens, '[]'),
+        r.createdAt || new Date().toISOString());
+    }
+  })();
+}
+
+/**
+ * Raw row insert, columns read from the live schema rather than hard-coded, so a
+ * later ALTER TABLE cannot silently drop a column from a restore the way the
+ * hand-written prepared_maps insert dropped preparedTokens. Unknown keys in the
+ * row are ignored and missing ones become NULL, so a backup written by an older
+ * or newer schema still restores what it does have.
+ */
+function _insertRaw(table, rows, conflict = 'IGNORE') {
+  if (!rows || !rows.length) return 0;
+  const cols = db.prepare(`PRAGMA table_info(${table})`).all().map(c => c.name);
+  if (!cols.length) return 0;
+  const stmt = db.prepare(
+    `INSERT OR ${conflict} INTO ${table} (${cols.map(c => `"${c}"`).join(',')}) ` +
+    `VALUES (${cols.map(() => '?').join(',')})`
+  );
+  let n = 0;
+  for (const r of rows) {
+    if (!r) continue;
+    stmt.run(...cols.map(c => (r[c] === undefined ? null : r[c])));
+    n++;
+  }
+  return n;
+}
+
+const _selectAll = (table) => db.prepare(`SELECT * FROM ${table}`).all();
+
+// ── Handouts backup ───────────────────────────────────────────────────────────
+function exportHandouts() {
+  return { handouts: _selectAll('handouts'), handoutRecipients: _selectAll('handout_recipients') };
+}
+
+function importHandouts({ handouts, handoutRecipients } = {}) {
+  const getH   = db.prepare('SELECT title FROM handouts WHERE id = ?');
+  const rekeyH = db.prepare('UPDATE handouts SET id = ?, title = ? WHERE id = ?');
+  db.transaction(() => {
+    for (const r of (handouts || [])) {
+      if (!r || !r.id) continue;
+      const ex = getH.get(r.id);
+      if (ex) rekeyH.run(crypto.randomUUID(), _oldName(ex.title || ''), r.id);
+      _insertRaw('handouts', [r]);
+    }
+    // A recipient row is scoped to its handout by UNIQUE(handoutId, charId); a
+    // duplicate is the same person on the same handout, so leaving it alone is right.
+    _insertRaw('handout_recipients', handoutRecipients);
+  })();
+}
+
+// ── Events backup: the Events screen, its calendar and the weather log ────────
+function exportEvents() {
+  return {
+    eventsState:    _selectAll('events_state'),
+    calendarState:  _selectAll('calendar_state'),
+    calendarEvents: _selectAll('calendar_events'),
+    weatherConfig:  _selectAll('weather_config'),
+    weatherLog:     _selectAll('weather_log'),
+  };
+}
+
+function importEvents({ eventsState, calendarState, calendarEvents, weatherConfig, weatherLog } = {}) {
+  db.transaction(() => {
+    // Singletons: the backup's value replaces the current one, which is what
+    // restoring these screens means.
+    _insertRaw('events_state',   eventsState,   'REPLACE');
+    _insertRaw('calendar_state', calendarState, 'REPLACE');
+    _insertRaw('weather_config', weatherConfig, 'REPLACE');
+    // Rows keyed by id: keep whatever is already there.
+    _insertRaw('calendar_events', calendarEvents);
+    _insertRaw('weather_log',     weatherLog);
+  })();
+}
+
+// ── Treasury requests ─────────────────────────────────────────────────────────
+// Pending player claims/purchases. Restored with the treasury they belong to.
+function exportTreasuryRequests() { return _selectAll('treasury_requests'); }
+function importTreasuryRequests(rows) { db.transaction(() => _insertRaw('treasury_requests', rows))(); }
+
+// ── Chat log ──────────────────────────────────────────────────────────────────
+// Rows are whole chat entries as JSON, so this carries images by reference and
+// typed-damage breakdowns intact. The live table keeps only the most recent
+// CHAT_MAX_LDB entries; a restore is trimmed to the same cap afterwards so a big
+// backup cannot grow the log past what the app maintains.
+function exportChatLog() { return _selectAll('chat_log'); }
+
+function importChatLog(rows) {
+  db.transaction(() => {
+    _insertRaw('chat_log', rows);
+    db.prepare('DELETE FROM chat_log WHERE rowid NOT IN (SELECT rowid FROM chat_log ORDER BY timestamp DESC LIMIT ?)').run(CHAT_MAX_LDB);
+  })();
+}
+
+// ── Music library ─────────────────────────────────────────────────────────────
+// Playlists and the sound files they reference. The audio itself is a file under
+// uploads/sounds/ and travels in the media archive, like every image does.
+function exportMusic() { return { playlists: _selectAll('playlists'), soundFiles: _selectAll('sound_files') }; }
+
+function importMusic({ playlists, soundFiles } = {}) {
+  const getPl   = db.prepare('SELECT name FROM playlists WHERE id = ?');
+  const rekeyPl = db.prepare('UPDATE playlists SET id = ?, name = ? WHERE id = ?');
+  db.transaction(() => {
+    // Sound files are content-addressed by id; a duplicate is the same file.
+    _insertRaw('sound_files', soundFiles);
+    for (const r of (playlists || [])) {
+      if (!r || !r.id) continue;
+      const ex = getPl.get(r.id);
+      if (ex) rekeyPl.run(crypto.randomUUID(), _oldName(ex.name || ''), r.id);
+      // A playlist's track list is its own `sounds` column (a JSON array of
+      // sound ids), so _insertRaw carries it with the rest of the row.
+      _insertRaw('playlists', [r]);
+    }
+  })();
+}
+
+// Waiting screens ("park pages") — the image a parked table shows the players.
+// Merges like every other selective import: a colliding id keeps the existing
+// row under an "_old" name rather than overwriting it.
+function importWaitingScreens(screens) {
+  const getScreen   = db.prepare('SELECT name FROM waiting_screens WHERE id = ?');
+  const rekeyScreen = db.prepare('UPDATE waiting_screens SET id = ?, name = ? WHERE id = ?');
+  const ins = db.prepare('INSERT OR IGNORE INTO waiting_screens (id, name, caption, imageUrl, imageThumb, imageMedium, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?)');
+  db.transaction(() => {
+    for (const r of (screens || [])) {
+      if (!r || !r.id) continue;
+      const ex = getScreen.get(r.id);
+      if (ex) rekeyScreen.run(crypto.randomUUID(), _oldName(ex.name), r.id);
+      ins.run(r.id, r.name || '', r.caption || '', r.imageUrl || '', r.imageThumb || '', r.imageMedium || '',
+        r.createdAt || new Date().toISOString());
     }
   })();
 }
@@ -1407,7 +1541,10 @@ function exportAll() {
     updateDrawing, deleteDrawing, clearDrawings, getTableState, updateTableState, listTableTokens,
     getTableToken, getTableTokensByInitId, getMovedTableTokens, createTableToken, updateTableToken, deleteTableToken,
     clearTableTokens, listChatLog, appendChatLog, deleteChatMessage, clearChatLog, importAll,
-    importCharacters, importMonsters, importTreasury, importShop, importLoot, importMaps,
+    importCharacters, importMonsters, importTreasury, importShop, importLoot, importMaps, importWaitingScreens,
+    exportHandouts, importHandouts, exportEvents, importEvents,
+    exportTreasuryRequests, importTreasuryRequests, exportChatLog, importChatLog,
+    exportMusic, importMusic,
     listWaitingScreens, getWaitingScreen, createWaitingScreen, updateWaitingScreen, deleteWaitingScreen,
     listPreparedMaps, getPreparedMap, createPreparedMap, updatePreparedMap, deletePreparedMap, getEventsData,
     saveEventsData, getCalendarState, saveCalendarState, getWeatherConfig, saveWeatherConfig, listWeatherLog,

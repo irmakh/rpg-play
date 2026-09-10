@@ -190,7 +190,25 @@ export default function register(app, ctx) {
     } catch { return []; }
   }
 
+  // The shared_media ROW id. Each campaign has its own media.db, so this stays a
+  // constant — it is already campaign-scoped by which database it is written to.
   const TABLE_MAP_MEDIA_ID = 'table-map';
+
+  /**
+   * The table map's FILENAME, which is not campaign-scoped by anything else:
+   * public/uploads/ is one directory shared by every campaign. Writing them all
+   * to "table-map.<ext>" meant two campaigns silently overwrote each other's map
+   * and deleting one campaign's map deleted the other's file — and it forced the
+   * parked-table gate to be global, so one campaign parked on a waiting screen
+   * returned 403 for every campaign's map.
+   *
+   * The campaign id in the name is what lets that gate be per-campaign; the
+   * pattern it matches lives in server.js and must stay in step with this.
+   */
+  function tableMapFileBase() {
+    const id = String(currentCampaignId() || '').replace(/[^A-Za-z0-9._-]/g, '');
+    return id ? `${TABLE_MAP_MEDIA_ID}-${id}` : TABLE_MAP_MEDIA_ID;
+  }
 
   // ── Table state ───────────────────────────────────────────────────────────────
   /**
@@ -297,7 +315,7 @@ export default function register(app, ctx) {
       if (Math.ceil(b64.length * 0.75) > 30_000_000) return res.status(413).json({ error: 'Image too large (max ~30 MB)' });
       const oldMap = _mediaGet.get(TABLE_MAP_MEDIA_ID);
       if (oldMap) { const s = oldMap.data.toString(); if (s.startsWith('FILE:')) deleteUploadFile(s.slice(5)); }
-      const mapFileUrl = saveUploadFile('maps', TABLE_MAP_MEDIA_ID, mimeType, b64);
+      const mapFileUrl = saveUploadFile('maps', tableMapFileBase(), mimeType, b64);
       _mapUpsert.run(TABLE_MAP_MEDIA_ID, mimeType, Buffer.from('FILE:' + mapFileUrl), Date.now());
       const stateUpdate = { hasMap: true, mapWidth: parseInt(mapWidth) || 0, mapHeight: parseInt(mapHeight) || 0 };
       ldb.updateTableState(stateUpdate);
@@ -781,7 +799,7 @@ export default function register(app, ctx) {
         if (srcDataStr.startsWith('FILE:')) {
           const srcFilePath = path.join(__dirname, 'public', srcDataStr.slice(5));
           const ext = path.extname(srcFilePath);
-          const destFileUrl = `/uploads/maps/${TABLE_MAP_MEDIA_ID}${ext}`;
+          const destFileUrl = `/uploads/maps/${tableMapFileBase()}${ext}`;
           const destFilePath = path.join(__dirname, 'public', destFileUrl);
           const oldTableMap = _mediaGet.get(TABLE_MAP_MEDIA_ID);
           if (oldTableMap) { const s = oldTableMap.data.toString(); if (s.startsWith('FILE:') && s.slice(5) !== destFileUrl) deleteUploadFile(s.slice(5)); }

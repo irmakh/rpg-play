@@ -21,6 +21,53 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [222] — 2026-09-10 — A parked table no longer blanks everyone's map; backups cover the rest of the campaign
+
+**The map that would not load**
+
+Loading a prepared map to the table showed nothing, while the same map displayed
+fine in Map Prep. The cause was not the map: a campaign parked on a waiting screen
+closed the table-map file for **every** campaign, not just its own. Every campaign
+wrote to one shared `table-map.<ext>`, so the guard that hides a parked table's map
+could not tell whose request it was and had to refuse them all.
+
+Each campaign's table map now has its own file, and the guard refuses only the
+campaign that is actually parked. Existing maps are moved to their own copy on
+first start. This also settles two older faults in the same place: two campaigns
+could overwrite each other's table map, and deleting one campaign's map deleted
+the other's file.
+
+**Uploads are now filed per campaign**
+
+New uploads go to `uploads/<campaign>/…` instead of one shared folder. Existing
+files are left exactly where they are and keep working — nothing needs moving.
+
+Deleting a campaign removes its databases and **keeps its uploaded images and
+audio**. Those are the part that cannot be regenerated; an unwanted folder is easy
+to remove by hand, a deleted one is not.
+
+**Six more sections can be backed up**
+
+The backup covered characters, monsters, treasury and maps. It now also covers:
+
+- **Waiting screens** — the park pages, their captions and images
+- **Handouts** — prompts, both reveals with their images, and who has seen what
+- **Events** — the event log, the calendar, and the weather history
+- **Music** — playlists and the sound library, with the audio in the media archive
+- **Chat log** — the message history
+- **Treasury requests** — pending player claims, restored with the treasury
+
+**Restoring a map no longer loses its tokens**
+
+Prepared tokens were missing from the restore's insert, so restoring a maps backup
+silently dropped every token placed on every prepared map. Verified fixed against a
+real campaign: 4, 2 and 13 tokens restored where all were previously lost.
+
+**Also**
+- Test suite 1003 → 1025 across 36 files.
+
+---
+
 ## [219] — 2026-09-10 — Backup modal shows only the archives and the raw DB
 
 The per-part JSON download is gone from the backup modal. It was superseded by the
