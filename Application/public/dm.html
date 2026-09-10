@@ -142,36 +142,14 @@
     </section>
   </nav>
 
-  <!-- Initiative Tracker -->
-  <div class="card">
-    <div class="ct"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-swords"></use></svg> Initiative Tracker</div>
-    <div class="cb">
-      <div class="init-controls">
-        <button class="btn primary" onclick="openAddNpcModal()">+ Add NPC</button>
-        <button class="btn" onclick="prevTurn()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-left"></use></svg> Prev Turn</button>
-        <button class="btn" onclick="nextTurn()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-right"></use></svg> Next Turn</button>
-        <button class="btn" onclick="cleanupInitiative()" title="Remove initiative entries for monsters no longer on the map"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-trash"></use></svg> Clean Orphans</button>
-        <button class="btn danger" onclick="clearInitiative()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg> Clear All</button>
-      </div>
-      <div id="init-list" class="init-list">
-        <div class="init-empty">No combatants in tracker.</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Monsters -->
-  <div class="card">
-    <div class="ct"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-swords"></use></svg> Monsters</div>
-    <div class="cb">
-      <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
-        <input type="text" id="dm-monster-search" placeholder="Search by name or type…" oninput="renderDmMonsters()" style="flex:1;min-width:120px">
-        <a href="monsters.html" class="btn" style="white-space:nowrap;text-decoration:none">Manage <svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-arrow-right"></use></svg> </a>
-      </div>
-      <div id="dm-monster-table-wrap">
-        <div style="text-align:center;color:var(--ash);font-size:12px;padding:12px 0">Loading…</div>
-      </div>
-    </div>
-  </div>
+  <!-- The Initiative Tracker and Monsters cards that used to sit here are gone;
+       both live on the table screen, which is where combat is actually run.
+       Their code in dm.js is left in place and simply finds nothing to draw
+       into — renderInitiative() and renderDmMonsters() both return early on a
+       missing container, which matters because a realtime 'initiative' event
+       still calls loadInitiative() on this page.
+       The monster info modal below STAYS: it is reachable from elsewhere and
+       costs nothing idle. -->
 
   <!-- Media Share -->
   <div class="card">

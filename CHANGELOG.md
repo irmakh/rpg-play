@@ -21,6 +21,18 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [224] — 2026-09-10 — Initiative tracker and monster table off the DM panel
+
+The DM panel no longer carries the Initiative Tracker card or the Monsters stat
+table. Both duplicated what the table screen already does, which is where combat is
+actually run; the monster table existed mainly for its "+ Init" button, and
+monsters are still managed on the Monsters page.
+
+The panel now goes straight from the navigation cards to Share Media to Chat and
+the chat log. Nothing else moved.
+
+---
+
 ## [223] — 2026-09-10 — Both backup archives follow the ticked sections
 
 The images archive used to ignore the section ticks and always take every file in

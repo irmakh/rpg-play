@@ -72,6 +72,10 @@ async function loadInitiative() {
 
 function renderInitiative() {
   const list = document.getElementById('init-list');
+  // The tracker card is no longer on this page, but a realtime 'initiative'
+  // event still calls loadInitiative() here — without this it would throw on
+  // every turn change. Same early return renderDmMonsters() uses.
+  if (!list) return;
   const sorted = [...(initData.entries || [])].sort((a, b) => (b.roll || 0) - (a.roll || 0));
   initDataMap = {};
   sorted.forEach(e => { initDataMap[e.id] = e; });
