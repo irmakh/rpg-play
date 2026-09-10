@@ -87,3 +87,21 @@
   --r-md:6px;             /* panels, cards                                  */
   --r-full:999px;         /* rings, avatars, tokens                         */
 }
+
+/* ============================================================================
+   The two rules every page needs whether or not it loads base.css.
+
+   Four separate bugs came from this gap: the table pop-outs, the console PWA,
+   the music modal painting a white canvas, and the login page rendering its
+   icon at the SVG default 300x150. Those surfaces all load tokens.css - it is
+   the one file nothing can skip - so these live here rather than in base.css.
+   ============================================================================ */
+:root{color-scheme:dark}
+
+.lt-icon{
+  width:1.15em; height:1.15em;
+  flex:none;
+  stroke:currentColor; fill:none;
+  stroke-width:1.75; stroke-linecap:round; stroke-linejoin:round;
+  vertical-align:-.15em;
+}
