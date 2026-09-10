@@ -670,7 +670,7 @@ html.lamplit .sk-roll-btn:hover{opacity:1;background:var(--slate-hi)}
    proper nouns - "ALIYR GALANODEL" is harder to read than "Aliyr Galanodel"
    and uppercase strips the shapes a name is recognised by. */
 #char-title-h1{flex:1;margin:0;font-family:var(--display);font-variation-settings:'opsz' 96,'WONK' 1;font-weight:600;font-size:var(--t-2xl);line-height:1.1;letter-spacing:-.01em;color:var(--bone);text-align:left;text-transform:none}
-#portrait-img{width:64px;height:80px;object-fit:cover;border-radius:var(--r-sm);border:1px solid var(--rule-hi);cursor:pointer;display:block}
+#portrait-img{width:64px;height:80px;object-fit:cover;border-radius:var(--r-sm);border:2px solid var(--arc);cursor:pointer;display:block}
 @media (max-width:760px){ #char-title-h1{font-size:var(--t-xl)} }
 
 
@@ -747,3 +747,16 @@ html.lamplit .ds-g input[type=checkbox]{width:22px;height:22px;flex-shrink:0;mar
   html.lamplit .sk-row{min-height:44px}
   html.lamplit .ds-g input[type=checkbox]{width:26px;height:26px}
 }
+
+
+/* ── Values are gold ────────────────────────────────────────────────────────
+   The numbers you actually read - ability modifiers, saving throws, skills,
+   AC and Speed - carry the accent. Their LABELS stay muted, so the eye lands
+   on the number rather than the word. Editable fields stay ink-coloured, so
+   "a value you read" and "a field you change" remain visually distinct. */
+html.lamplit .abil .circle{color:var(--arc)}
+html.lamplit .vitals-stat b{color:var(--arc)}
+html.lamplit .sk-row input[type=text][readonly]{color:var(--arc);font-weight:700}
+html.lamplit .sk-row input[type=text]{color:var(--arc);font-weight:700;background:transparent;border-color:transparent}
+html.lamplit .sk-row input[type=text]:focus{background:var(--sunken);border-color:var(--arc)}
+html.lamplit input.big[readonly]{color:var(--arc)}

@@ -169,7 +169,7 @@
       '<link rel="stylesheet" href="/css/table-theme-modern.css' + v + '">' +
       '<link rel="stylesheet" href="/css/table-sheet-popout.css' + v + '">' +
       '<style>' +
-        'html,body{margin:0;height:100%;overflow:hidden;background:var(--ink,#16130F);color:var(--bone,#E8E1D4)}' +
+        'html,body{margin:0;height:100%;overflow:hidden;background:var(--ink,#080C15);color:var(--bone,#E6EDF7)}' +
         '#po-host{position:fixed;inset:0;display:flex;flex-direction:column}' +
         '#po-host>*{flex:1 1 auto;min-height:0;width:100%!important;max-width:none!important;' +
           'height:auto!important;border:0!important;box-shadow:none!important}' +

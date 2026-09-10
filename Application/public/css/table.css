@@ -714,3 +714,13 @@ html.lamplit .tool-btn{min-height:38px;width:38px;padding:0;justify-content:cent
   html.lamplit #toolbar .btn{min-height:40px;padding:var(--s2)}
   html.lamplit .tool-btn{min-height:44px;width:44px}
 }
+
+
+/* ── Values are gold (side panel) ───────────────────────────────────────────
+   Same rule as the character sheet: the readouts carry the accent, the labels
+   stay muted. This is the panel the reference screenshot shows. */
+html.lamplit .rp-stat-cur{color:var(--arc)}
+html.lamplit .rp-ability-mod{color:var(--arc);font-weight:700}
+html.lamplit .rp-save-val{color:var(--arc);font-weight:700}
+html.lamplit .rp-sec-val{color:var(--arc);font-weight:700}
+html.lamplit .qroll-val{color:var(--arc);font-weight:700}

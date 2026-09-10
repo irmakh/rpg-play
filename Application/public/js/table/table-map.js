@@ -876,7 +876,7 @@ function updateDrawSelectionUI() {
   if (deleteBtn) deleteBtn.style.display = (s && drawSubMode === 'select') ? '' : 'none';
   if (s) {
     const colorIn = document.getElementById('draw-color');
-    if (colorIn) colorIn.value = s.color || '#EB7E73';
+    if (colorIn) colorIn.value = s.color || '#E4666B';
     document.querySelectorAll('.draw-thick-btn').forEach(b => b.classList.remove('active'));
     const thickBtn = document.getElementById('draw-thick-' + s.thickness);
     if (thickBtn) thickBtn.classList.add('active');
@@ -979,7 +979,7 @@ async function deleteSelectedShape() {
 function renderShape(ctx, s, alpha = 1) {
   ctx.save();
   ctx.globalAlpha = alpha;
-  ctx.strokeStyle = s.color || '#EB7E73';
+  ctx.strokeStyle = s.color || '#E4666B';
   ctx.lineWidth = s.thickness || 2;
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
@@ -992,7 +992,7 @@ function renderShape(ctx, s, alpha = 1) {
     const r = Math.sqrt((s.x2 - s.x1) ** 2 + (s.y2 - s.y1) ** 2);
     ctx.beginPath();
     ctx.arc(s.x1, s.y1, r, 0, Math.PI * 2);
-    ctx.fillStyle = s.color || '#EB7E73';
+    ctx.fillStyle = s.color || '#E4666B';
     ctx.globalAlpha = alpha * 0.18;
     ctx.fill();
     ctx.globalAlpha = alpha;
@@ -1000,7 +1000,7 @@ function renderShape(ctx, s, alpha = 1) {
   } else if (s.type === 'rect') {
     const x = Math.min(s.x1, s.x2), y = Math.min(s.y1, s.y2);
     const w = Math.abs(s.x2 - s.x1), h = Math.abs(s.y2 - s.y1);
-    ctx.fillStyle = s.color || '#EB7E73';
+    ctx.fillStyle = s.color || '#E4666B';
     ctx.globalAlpha = alpha * 0.18;
     ctx.fillRect(x, y, w, h);
     ctx.globalAlpha = alpha;
@@ -1263,7 +1263,7 @@ document.addEventListener('mousemove', e => {
     oCtx.font = 'bold 12px Segoe UI';
     oCtx.textAlign = 'center';
     oCtx.shadowColor = '#000'; oCtx.shadowBlur = 3;
-    oCtx.fillStyle = remaining >= 0 ? '#6BAA92' : '#EB7E73';
+    oCtx.fillStyle = remaining >= 0 ? '#3DD68C' : '#E4666B';
     oCtx.fillText(`${dist}ft  (${remaining >= 0 ? remaining + 'ft left' : Math.abs(remaining) + 'ft over'})`, cx, cy - size / 2 - 8);
     oCtx.shadowBlur = 0;
   }

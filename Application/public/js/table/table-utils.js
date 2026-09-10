@@ -62,15 +62,15 @@ function tokDisplayName(tok) {
 // A character is deliberately NEUTRAL: the ring carries state (whose turn it
 // is, how hurt they are), so the token itself does not need to shout.
 function tokenRingColor(type) {
-  if (type === 'character') return '#E8E1D4';   // --bone
-  if (type === 'monster')   return '#EB7E73';   // --blood
-  if (type === 'npc')       return '#8C9EFF';   // --arc
-  return '#857D71';                             // --ash-dim
+  if (type === 'character') return '#E6EDF7';   // --bone
+  if (type === 'monster')   return '#E4666B';   // --blood
+  if (type === 'npc')       return '#E0A93F';   // --arc
+  return '#637189';                             // --ash-dim
 }
 function hpBarColor(pct) {
-  if (pct >= 0.5)  return '#6BAA92';            // --verdigris
-  if (pct >= 0.25) return '#C9524B';            // --blood-deep
-  return '#EB7E73';                             // --blood
+  if (pct >= 0.5)  return '#3DD68C';            // --verdigris
+  if (pct >= 0.25) return '#C2434A';            // --blood-deep
+  return '#E4666B';                             // --blood
 }
 function getActiveTurnTokenId() {
   if (!initData.currentId) return null;

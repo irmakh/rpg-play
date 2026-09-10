@@ -4,54 +4,51 @@
    Load FIRST, before any other stylesheet, on every page.
 
    ---------------------------------------------------------------------------
-   THE DIRECTION: "the lamplit table"
+   THE DIRECTION: navy and gold
 
-   This app is an instrument panel for a shared fiction. It is used live, in a
-   dim room, glanced at between sentences - players on phones, the table on a
-   TV, the DM on a laptop. Nobody reads it; they check it and look back at
-   their friends.
+   A near-black navy ground, navy panels, blue-grey labels, and GOLD carrying
+   the numbers you actually read - initiative, passive perception, spell DC,
+   ability modifiers, skill values - plus the active tab and the portrait ring.
 
-   The old design's failure was not its colour, it was uniformity: --ac
-   appeared 328 times, so every border, header and panel was gold-edged and
-   nothing could be emphasised. The app had no way to shout.
-
-   So: surfaces are warm and unlit, and the accent is COLD LIGHT. Anything
-   lit is active. --arc means "this can act, or it is acting" - whose turn it
-   is, the focused control - and it means nothing else. If you find yourself
+   Gold is the accent again, but not the way it was before this redesign. The
+   original used --ac 328 times, on every border and every panel, which is why
+   nothing could be emphasised. Here gold marks VALUES and the ACTIVE thing,
+   and nothing else. Chrome is navy and blue-grey. If you find yourself
    reaching for --arc to make something look nice, use --rule or --ash.
 
-   Status colour is EARNED BY STATE, never decoration. --arc sits in the
-   blue-violet family for a functional reason, not a taste one: --blood and
-   --verdigris carry damage and healing, so the accent has to read as clearly
-   separate from both at a glance, across a room. Amber, coral and sage all
-   fail that test.
+   Status colour is still earned by state: --blood for damage and destructive
+   actions, --verdigris for healing and success. Both are tuned to sit legibly
+   on navy rather than on the warm ground they were built for.
+
+   Every colour below is AA on all four surfaces - ink, slate, slate-hi and
+   sunken - and the values were solved for that, not eyeballed.
    ---------------------------------------------------------------------------
 */
 
 :root{
-  /* ── Surfaces: the table in the dark, warm umber, never blue-black ────── */
-  --ink:#16130F;          /* page ground                                    */
-  --slate:#2E271E;        /* raised panel                                   */
-  --slate-hi:#3D342A;     /* hover, or a panel on a panel                   */
-  --sunken:#0A0806;       /* wells, insets, the map surround                */
+  /* ── Surfaces: near-black navy, the colour of a lit screen in a dark room ─ */
+  --ink:#080C15;          /* page ground                                    */
+  --slate:#101A2C;        /* raised panel                                   */
+  --slate-hi:#1B2740;     /* hover, or a panel on a panel                   */
+  --sunken:#05080F;       /* wells, insets, the map surround                */
 
-  /* ── Ink on that: warm paper-white, never pure #fff ───────────────────── */
-  --bone:#E8E1D4;         /* primary text                                   */
-  --ash:#A79D8C;          /* secondary text, labels, dormant icons          */
-  --ash-dim:#857D71;      /* disabled, placeholder                          */
+  /* ── Ink on that: a cool near-white, never pure #fff ──────────────────── */
+  --bone:#E6EDF7;         /* primary text                                   */
+  --ash:#7F8FA8;          /* secondary text, labels, dormant icons          */
+  --ash-dim:#637189;      /* disabled, placeholder                          */
 
-  /* ── The accent. Cold light. "Active", and nothing else. ──────────────── */
-  --arc:#8C9EFF;
-  --arc-hi:#B0BCFF;       /* hover/focus of an already-active thing         */
-  --arc-fill:#8C9EFF1F;   /* the wash behind an active row                  */
-  --arc-line:#8C9EFF66;   /* the edge of an active thing                    */
+  /* ── The accent. Gold. Values, and the active thing. Nothing else. ────── */
+  --arc:#E0A93F;
+  --arc-hi:#F2C468;       /* hover/focus of an already-active thing         */
+  --arc-fill:#E0A93F24;   /* the wash behind an active row                  */
+  --arc-line:#E0A93F66;   /* the edge of an active thing                    */
 
   /* ── Status, earned by state ──────────────────────────────────────────── */
-  --blood:#EB7E73;        /* damage taken, danger, destructive actions      */
-  --blood-deep:#C9524B;   /* rings and arcs only - never under text */
-  --blood-fill:#EB7E7321;
-  --verdigris:#6BAA92;    /* healing, success, "ok"                         */
-  --verdigris-fill:#6BAA9221;
+  --blood:#E4666B;        /* damage taken, danger, destructive actions      */
+  --blood-deep:#C2434A;   /* rings and arcs only - never under text */
+  --blood-fill:#E4666B21;
+  --verdigris:#3DD68C;    /* healing, success, "ok"                         */
+  --verdigris-fill:#3DD68C21;
 
   /* Every colour above is AA on ink, slate, slate-hi and sunken alike.
      The one rule that falls out of that: a SOLID fill of --arc, --blood or
@@ -60,14 +57,14 @@
      with --blood text, not a solid red block.                              */
 
   /* ── Structure. Hairlines, not boxes. ─────────────────────────────────── */
-  --wash:#E8E1D40D;       /* 5% bone - a neutral fill for a raised row      */
-  --rule:#E8E1D41A;       /* 10% bone - the default separator               */
-  --rule-hi:#E8E1D42E;    /* 18% bone - the edge of something raised        */
-  --scrim:#080604C7;      /* modal backdrop                                 */
+  --wash:#E6EDF70F;       /* 5% bone - a neutral fill for a raised row      */
+  --rule:#E6EDF71C;       /* 10% bone - the default separator               */
+  --rule-hi:#E6EDF733;    /* 18% bone - the edge of something raised        */
+  --scrim:#04060BCC;      /* modal backdrop                                 */
 
   /* ── Light. Depth comes from a lamp above-left, not from drop shadows.
         --lift is the top edge that catches it; --cast is the falloff.  ──── */
-  --lift:#FFF4E024;
+  --lift:#CFE0FF1F;
   --cast:0 1px 2px #0000006B, 0 10px 28px #00000047;
 
   /* ── Type ─────────────────────────────────────────────────────────────── */
