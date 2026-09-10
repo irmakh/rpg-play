@@ -66,7 +66,7 @@ function renderHandouts() {
       // Blind check: no skill name, no DC, no number — just an invitation.
       body = `
         <div class="ho-prompt">${esc(h.promptText || 'Something here rewards a closer look.')}</div>
-        <button class="add-btn" style="margin-top:8px" onclick="rollHandout('${escJs(h.id)}',this)">🔍 Examine</button>`;
+        <button class="add-btn" style="margin-top:8px" onclick="rollHandout('${escJs(h.id)}',this)"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-search"></use></svg> Examine</button>`;
     } else if (h.awaitingDm) {
       body = `
         <div class="ho-prompt">${esc(h.promptText || '')}</div>
@@ -125,11 +125,11 @@ async function rollHandout(id, btn) {
     });
     // The response carries no total on purpose — the check is blind.
     if (!res.ok && res.status !== 409) {
-      if (btn) { btn.disabled = false; btn.textContent = '🔍 Examine'; }
+      if (btn) { btn.disabled = false; btn.innerHTML = '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-search"></use></svg> Examine'; }
       return;
     }
   } catch {
-    if (btn) { btn.disabled = false; btn.textContent = '🔍 Examine'; }
+    if (btn) { btn.disabled = false; btn.innerHTML = '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-search"></use></svg> Examine'; }
     return;
   }
   await loadHandouts();

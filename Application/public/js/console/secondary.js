@@ -175,8 +175,8 @@ function sRenderInitiative() {
   const dmToggle  = document.getElementById('s-dm-init-toggle');
   const running   = !!sInitData.currentId;
 
-  if (toggleBtn) toggleBtn.textContent = running ? '⏹ End' : '▶ Start';
-  if (dmToggle)  dmToggle.textContent  = running ? '⏹ End Initiative' : '▶ Start Initiative';
+  if (toggleBtn) toggleBtn.innerHTML = running ? '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-stop"></use></svg> End' : '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-play"></use></svg> Start';
+  if (dmToggle)  dmToggle.innerHTML = running ? '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-stop"></use></svg> End Initiative' : '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-play"></use></svg> Start Initiative';
 
   if (sInitData.currentId) {
     const cur = sInitData.entries.find(e => e.id === sInitData.currentId);
@@ -198,9 +198,9 @@ function sRenderInitiative() {
   list.innerHTML = sorted.map(e => {
     const isCur = e.id === sInitData.currentId;
     const name  = (sIsDM() || !e.monsterId) ? esc(e.name) : esc(e.name.trim().split(' ').pop());
-    const del   = sIsDM() ? `<button class="s-del-btn" onclick="sRemoveInitEntry('${escJs(e.id)}')">✕</button>` : '';
+    const del   = sIsDM() ? `<button class="s-del-btn" onclick="sRemoveInitEntry('${escJs(e.id)}')"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg></button>` : '';
     return `<div class="s-init-row${isCur ? ' s-init-cur' : ''}">
-      <span class="s-init-marker">${isCur ? '▶' : ''}</span>
+      <span class="s-init-marker">${isCur ? '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-play"></use></svg>' : ''}</span>
       <span class="s-init-name">${name}</span>
       <span class="s-init-roll">${e.roll}</span>
       ${del}
@@ -259,7 +259,7 @@ function sRenderHpPanel(tok) {
     const visBtn = document.getElementById('s-vis-toggle-btn');
     if (visBtn) {
       const nowHidden = tok.visible === false;
-      visBtn.textContent = nowHidden ? '👁 Show Token' : '🚫 Hide Token';
+      visBtn.innerHTML = nowHidden ? '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-eye"></use></svg> Show Token' : '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-eye-off"></use></svg> Hide Token';
       visBtn.className = 's-btn' + (nowHidden ? ' s-btn-success' : '');
     }
     const assignSel = document.getElementById('s-assign-sel');
@@ -290,7 +290,7 @@ function sRenderHpPanel(tok) {
   const initBtn = document.getElementById('s-roll-init-btn');
   if (initBtn) {
     const hasEntry = !!sInitData.entries.find(e => e.id === tok.initiativeId);
-    initBtn.textContent = hasEntry ? '🎲 Reroll Initiative' : '🎲 Roll Initiative';
+    initBtn.innerHTML = hasEntry ? '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg> Reroll Initiative' : '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg> Roll Initiative';
   }
 
   sRenderCharStats(tok);
@@ -381,7 +381,7 @@ function sToggleStatsSection(name) {
   if (!el) return;
   const hidden = el.style.display === 'none';
   el.style.display = hidden ? '' : 'none';
-  if (arrow) arrow.textContent = hidden ? '▼' : '▶';
+  if (arrow) arrow.innerHTML = hidden ? '▼' : '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-play"></use></svg>';
 }
 
 function sQrollRoll(label, modifier) {
@@ -463,7 +463,7 @@ function sRenderCharStats(tok) {
     const wNoteJs = escJs(r[3] || '');
     const dmgRow = wDmg
       ? `<div class="s-qroll-row" onclick="sRollDamageStr('${escJs(wName)} Dmg','${escJs(wDmg)}')" style="padding-left:20px;background:rgba(0,0,0,.2)">
-          <span class="s-qroll-label" style="color:var(--ash);font-size:11px">↳ Damage</span>
+          <span class="s-qroll-label" style="color:var(--ash);font-size:11px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-right"></use></svg> Damage</span>
           <span class="s-qroll-val" style="color:#ff9966">${esc(wDmg)}</span>
         </div>` : '';
     return `<div class="s-qroll-row" onclick="sQrollRoll('${escJs(wName)} Atk','${escJs(wAtk)}')">
@@ -482,7 +482,7 @@ function sRenderCharStats(tok) {
   container.innerHTML = `
     <div class="s-stats-header">
       <span>${esc(sQrollCharName)}</span>
-      <button class="s-btn" onclick="sQrollRoll('Initiative','${initStr}')" style="flex:none;padding:5px 10px;font-size:11px;min-height:32px">🎲 Init ${esc(initStr)}</button>
+      <button class="s-btn" onclick="sQrollRoll('Initiative','${initStr}')" style="flex:none;padding:5px 10px;font-size:11px;min-height:32px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg> Init ${esc(initStr)}</button>
     </div>
     <div class="s-roll-mode-row">
       <span class="s-label" style="padding-right:6px">Roll:</span>
@@ -491,15 +491,15 @@ function sRenderCharStats(tok) {
       <button id="s-roll-mode-dis"  class="s-roll-mode-btn" onclick="sSetRollMode('dis')">Dis</button>
     </div>
     <div class="s-qroll-section">
-      <div class="s-qroll-hdr" onclick="sToggleStatsSection('skills')">Skills <span id="s-stats-skills-arrow">▶</span></div>
+      <div class="s-qroll-hdr" onclick="sToggleStatsSection('skills')">Skills <span id="s-stats-skills-arrow"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-play"></use></svg></span></div>
       <div id="s-stats-skills" class="s-qroll-rows" style="display:none">${skillRows}</div>
     </div>
     <div class="s-qroll-section">
-      <div class="s-qroll-hdr" onclick="sToggleStatsSection('saves')">Saves <span id="s-stats-saves-arrow">▶</span></div>
+      <div class="s-qroll-hdr" onclick="sToggleStatsSection('saves')">Saves <span id="s-stats-saves-arrow"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-play"></use></svg></span></div>
       <div id="s-stats-saves" class="s-qroll-rows" style="display:none">${saveRows}</div>
     </div>
     <div class="s-qroll-section">
-      <div class="s-qroll-hdr" onclick="sToggleStatsSection('attacks')">Attacks <span id="s-stats-attacks-arrow">▶</span></div>
+      <div class="s-qroll-hdr" onclick="sToggleStatsSection('attacks')">Attacks <span id="s-stats-attacks-arrow"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-play"></use></svg></span></div>
       <div id="s-stats-attacks" class="s-qroll-rows" style="display:none">${atkRows}</div>
     </div>`;
   sSetRollMode(sRollMode);
@@ -604,7 +604,7 @@ function sRenderMonsterStats(tok) {
       const bStr  = (bonus >= 0 ? '+' : '') + bonus;
       const dmgRow = dmgStr
         ? `<div class="s-qroll-row" onclick="sMonsterRollDamage('${section}',${idx})" style="padding-left:20px;background:rgba(0,0,0,.2)">
-            <span class="s-qroll-label" style="color:var(--ash);font-size:11px">↳ Damage</span>
+            <span class="s-qroll-label" style="color:var(--ash);font-size:11px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-right"></use></svg> Damage</span>
             <span class="s-qroll-val" style="color:#ff9966">${esc(dmgStr)}</span>
           </div>`
         : '';
@@ -623,7 +623,7 @@ function sRenderMonsterStats(tok) {
     if (!items || !items.length) return '';
     return `<div class="s-qroll-section">
       <div class="s-qroll-hdr" onclick="sToggleStatsSection('mon-${section}')">
-        ${title} <span id="s-stats-mon-${section}-arrow">▶</span>
+        ${title} <span id="s-stats-mon-${section}-arrow"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-play"></use></svg></span>
       </div>
       <div id="s-stats-mon-${section}" class="s-qroll-rows" style="display:none">
         ${items.map((item, idx) => rActionItem(item, section, idx)).join('')}
@@ -635,7 +635,7 @@ function sRenderMonsterStats(tok) {
   container.innerHTML = `
     <div class="s-stats-header">
       <span style="color:#ff9999">${esc(displayName)}<span style="color:var(--ash);font-weight:normal;font-size:11px"> CR ${esc(String(cr))}</span></span>
-      <button class="s-btn" onclick="sQrollRoll('Initiative','${initStr}')" style="flex:none;padding:5px 10px;font-size:11px;min-height:32px">🎲 Init ${initStr}</button>
+      <button class="s-btn" onclick="sQrollRoll('Initiative','${initStr}')" style="flex:none;padding:5px 10px;font-size:11px;min-height:32px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg> Init ${initStr}</button>
     </div>
     <div class="s-roll-mode-row">
       <span class="s-label" style="padding-right:6px">Roll:</span>
@@ -753,7 +753,7 @@ function sRenderMonsterStatBlock(data, tok) {
     const rawMod  = Math.floor(((data[sc] || 10) - 10) / 2);
     const val     = profVal || (rawMod >= 0 ? '+' + rawMod : '' + rawMod);
     return `<div class="s-qroll-row" onclick="sQrollRoll('${snames[i]} Save','${val}')" style="${profVal ? '' : 'opacity:.7'}">
-      <span>${snames[i]}${profVal ? ' ★' : ''}</span><span class="s-qroll-val">${val}</span>
+      <span>${snames[i]}${profVal ? ' <svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-star"></use></svg>' : ''}</span><span class="s-qroll-val">${val}</span>
     </div>`;
   }).join('');
   if (data.skill && Object.keys(data.skill).length) {
@@ -871,7 +871,7 @@ function sRenderDmHpList() {
     const isSel  = sSelectedToken?.id === tok.id;
     return `<div class="s-hp-row${isCur ? ' s-hp-cur' : ''}${isSel ? ' s-hp-selected' : ''}${canSel ? ' clickable' : ''}" ${canSel ? `onclick="sSelectToken('${escJs(tok.id)}')"` : ''}>
       <div style="flex:1;min-width:0">
-        <div class="s-hp-row-name">${isCur ? '▶ ' : ''}${esc(sTokDisplayName(tok))}</div>
+        <div class="s-hp-row-name">${isCur ? '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-play"></use></svg> ' : ''}${esc(sTokDisplayName(tok))}</div>
         <div class="s-hp-bar-mini"><div style="width:${pct*100}%;height:100%;background:${col};border-radius:2px"></div></div>
       </div>
       <div class="s-hp-row-nums">${cur}<span style="color:var(--ash);font-weight:normal">/${max}</span></div>
@@ -925,7 +925,7 @@ async function sHideFog(id) {
 }
 
 // ── Hidden Items (DM tab) ─────────────────────────────────────────────────────
-const S_ITEM_ICONS = { trap: '⚠', chest: '◈', door: '▭', note: '✎', other: '◉' };
+const S_ITEM_ICONS = { trap: '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-shield"></use></svg>', chest: '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-circle"></use></svg>', door: '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-square"></use></svg>', note: '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-pencil"></use></svg>', other: '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-circle"></use></svg>' };
 
 function sRenderItemsSection() {
   const section = document.getElementById('s-items-section');
@@ -1285,7 +1285,7 @@ function sMusicRenderTracks(activeIdx) {
   if (!tracks.length) { el.innerHTML = '<div style="color:var(--ash);font-size:11px;text-align:center;padding:8px">No tracks</div>'; return; }
   el.innerHTML = tracks.map((t, i) => `
     <div onclick="sMusicPlayTrack(${i})" style="padding:7px 8px;border-radius:3px;cursor:pointer;font-size:12px;display:flex;align-items:center;gap:6px;background:${i === activeIdx ? 'var(--rule-hi)' : 'transparent'}">
-      <span style="color:${i === activeIdx ? 'var(--bone)' : 'var(--ash)'};font-size:11px;flex-shrink:0">${i === activeIdx ? '▶' : (i + 1) + '.'}</span>
+      <span style="color:${i === activeIdx ? 'var(--bone)' : 'var(--ash)'};font-size:11px;flex-shrink:0">${i === activeIdx ? '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-play"></use></svg>' : (i + 1) + '.'}</span>
       <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${sEscHtml(t.name)}</span>
     </div>`).join('');
 }
@@ -1322,7 +1322,7 @@ function sMusicSendControl(body) {
 
 function sMusicUpdateBtn(playing) {
   const btn = document.getElementById('s-music-play-btn');
-  if (btn) btn.textContent = playing ? '⏸ Pause' : '▶ Play';
+  if (btn) btn.innerHTML = playing ? '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-pause"></use></svg> Pause' : '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-play"></use></svg> Play';
 }
 
 function sMusicUpdateNowPlaying(name, state) {

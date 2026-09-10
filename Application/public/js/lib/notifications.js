@@ -218,7 +218,7 @@ function _notifPanel() {
          <span class="notif-hdr-title">Notifications</span>
          <button class="notif-link" onclick="notifMarkAll()">Mark all read</button>
          <button class="notif-link" onclick="notifClear()" title="Remove these from your list">Clear</button>
-         <button class="notif-link" onclick="notifToggleSettings()" title="Sound and popups">⚙</button>
+         <button class="notif-link" onclick="notifToggleSettings()" title="Sound and popups"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-gear"></use></svg></button>
        </div>
        <div id="notif-settings" style="display:none"></div>
        <div id="notif-list"></div>`;

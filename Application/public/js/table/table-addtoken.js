@@ -44,7 +44,7 @@ function _monsterRowHtml(m) {
     <span style="font-size:10px;color:var(--ash)">CR ${esc(m.cr||'?')}</span>
     <button onclick="event.stopPropagation();uploadMonsterPortrait('${escJs(m.id)}')"
             style="background:none;border:none;cursor:pointer;font-size:14px;padding:0 2px;opacity:.6"
-            title="Upload portrait">📷</button>
+            title="Upload portrait"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-camera"></use></svg></button>
   </div>`;
 }
 

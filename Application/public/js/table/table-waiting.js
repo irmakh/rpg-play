@@ -202,7 +202,7 @@ function _renderWaitingPicker(activeId) {
   if (_waitingList.length === 0) {
     body.innerHTML =
       '<div class="wp-empty">No waiting screens yet.<br>' +
-      '<a href="/waiting-screens.html">Create one →</a></div>';
+      '<a href="/waiting-screens.html">Create one <svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-arrow-right"></use></svg></a></div>';
     return;
   }
   body.innerHTML = _waitingList.map(w => {

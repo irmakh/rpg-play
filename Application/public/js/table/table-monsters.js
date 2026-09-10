@@ -74,7 +74,7 @@ function renderMonsterActionsPanel(data, tok) {
     if (atkMatch) {
       const bonus = parseInt(atkMatch[1]);
       const dmgRow = dmgStr
-        ? `<div class="qroll-row" onclick="rollMonsterDamage('${section}',${idx},'${dmgStr}')" style="padding-left:20px;background:rgba(0,0,0,.15)"><span style="font-size:11px;color:var(--ash)">↳ Damage</span><span class="qroll-val" style="color:#ff9966;font-size:13px">${esc(dmgStr)}</span></div>`
+        ? `<div class="qroll-row" onclick="rollMonsterDamage('${section}',${idx},'${dmgStr}')" style="padding-left:20px;background:rgba(0,0,0,.15)"><span style="font-size:11px;color:var(--ash)"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-right"></use></svg> Damage</span><span class="qroll-val" style="color:#ff9966;font-size:13px">${esc(dmgStr)}</span></div>`
         : '';
       return `<div style="display:flex;align-items:center;gap:2px"><div class="qroll-row" style="flex:1;min-width:0;margin:0" onclick="qroll('${sn} atk','${bonus}')" title="${esc(entryText.slice(0, 120))}"><span>${parseEntry(item.name || '')}</span><span class="qroll-val">${bonus >= 0 ? '+' : ''}${bonus}</span></div>${useBtn}</div>${dmgRow}`;
     }
@@ -144,7 +144,7 @@ function renderMonsterFullStats(data, tok) {
     // Action row: Init (primary) + Info button
     const actionRowHtml=`<div class="rp-action-row">`
       +(tok?.linkedId?`<button class="btn sm" onclick="showMonsterInfoModal('${escJs(tok.linkedId)}')" style="font-size:10px;padding:2px 7px">Info</button>`:'')
-      +`<button class="btn sm primary" onclick="rollMonsterInitiativeFromPanel()" title="Roll Initiative (d20${initStr})" style="font-size:10px;padding:2px 7px">🎲 Init ${initStr}</button>`
+      +`<button class="btn sm primary" onclick="rollMonsterInitiativeFromPanel()" title="Roll Initiative (d20${initStr})" style="font-size:10px;padding:2px 7px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg> Init ${initStr}</button>`
       +`</div>`;
 
     // Secondary stats bar: CR | Initiative (clickable) | Speed | Passive Perc
@@ -179,7 +179,7 @@ function renderMonsterFullStats(data, tok) {
       const prof=!!profVal;
       return `<div class="rp-save-cell${prof?' rp-save-prof':''}" onclick="qroll('${snames[i]} Save','${val}')" title="${snames[i]} Saving Throw${prof?' (proficient)':''}">`
         +`<div class="rp-save-val">${val}</div>`
-        +`<div class="rp-save-name">${snames[i]}${prof?'<span class="rp-save-star">★</span>':''}</div></div>`;
+        +`<div class="rp-save-name">${snames[i]}${prof?'<span class="rp-save-star"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-star"></use></svg></span>':''}</div></div>`;
     }).join('')+`</div>`;
 
     // Skills (only if monster has explicit skill entries)
@@ -255,7 +255,7 @@ function renderMonsterFullStats(data, tok) {
     }
 
     const linkHtml=tok?.linkedId
-      ?`<div class="rp-mon-link"><a href="/monsters.html" target="_blank">📖 Full stat block →</a></div>`:'';
+      ?`<div class="rp-mon-link"><a href="/monsters.html" target="_blank"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-book"></use></svg> Full stat block <svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-arrow-right"></use></svg></a></div>`:'';
 
     return actionRowHtml+secStatsHtml
       +`<div class="rp-flat-hdr rp-abil-hdr">Abilities</div>`+abilityGridHtml
@@ -294,7 +294,7 @@ function renderMonsterFullStats(data, tok) {
     <span style="font-size:12px;color:#ff9999;font-weight:bold">${esc(data.name||'Monster')}${tok&&tok.label?` <span style="color:var(--ash);font-weight:normal;font-size:11px">[${esc(tok.label)}]</span>`:''}</span>
     <div style="display:flex;gap:4px">
       ${tok&&tok.linkedId?`<button class="btn sm" onclick="showMonsterInfoModal('${escJs(tok.linkedId)}')" title="View full stat block" style="font-size:10px;padding:2px 6px">Info</button>`:''}
-      <button class="btn sm" onclick="rollMonsterInitiativeFromPanel()" title="Roll Initiative (d20${initStr})" style="font-size:10px;padding:2px 6px">🎲 Init ${initStr}</button>
+      <button class="btn sm" onclick="rollMonsterInitiativeFromPanel()" title="Roll Initiative (d20${initStr})" style="font-size:10px;padding:2px 6px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg> Init ${initStr}</button>
     </div>
   </div>
   ${actionsPanel}

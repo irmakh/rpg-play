@@ -36,7 +36,7 @@ function renderInitiativeTracker(showBadge) {
            onchange="updateInitRoll(this)" onclick="event.stopPropagation()">`
       : `<span class="init-row-roll">${e.roll}</span>`;
     const delHtml  = isDM()
-      ? `<button class="btn sm danger" style="padding:1px 5px;font-size:11px;line-height:1.2;margin-left:4px" onclick="event.stopPropagation();removeInitEntry('${escJs(e.id)}')" title="Remove from initiative">✕</button>`
+      ? `<button class="btn sm danger" style="padding:1px 5px;font-size:11px;line-height:1.2;margin-left:4px" onclick="event.stopPropagation();removeInitEntry('${escJs(e.id)}')" title="Remove from initiative"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg></button>`
       : '';
     const clickAttr = canView ? `onclick="viewInitEntry('${escJs(e.id)}')"` : '';
 
@@ -62,7 +62,7 @@ function renderInitiativeTracker(showBadge) {
       const curBorder   = isCur ? ' init-cur-portrait' : '';
       const avatarHtml  = portrait
         ? `<img class="init-avatar${curBorder}" src="${portrait}" alt="">`
-        : `<div class="init-avatar-ph${curBorder}">${e.monsterId ? '🐉' : '⚔'}</div>`;
+        : `<div class="init-avatar-ph${curBorder}">${e.monsterId ? '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-swords"></use></svg>' : '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-swords"></use></svg>'}</div>`;
       return `<div class="init-row${isCur ? ' init-cur' : ''}${isViewing ? ' init-viewing' : ''}" ${clickAttr}>
         ${avatarHtml}
         <div class="init-meta">
@@ -76,7 +76,7 @@ function renderInitiativeTracker(showBadge) {
 
     // ── Classic row ──────────────────────────────────────────────────────────
     return `<div class="init-row${isCur ? ' init-cur' : ''}${isViewing ? ' init-viewing' : ''}" ${clickAttr}>
-      <span class="init-cur-marker">${isCur ? '▶' : ''}</span>
+      <span class="init-cur-marker">${isCur ? '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-play"></use></svg>' : ''}</span>
       <span class="init-row-name">${nameHtml}</span>
       ${rollHtml}
       ${delHtml}

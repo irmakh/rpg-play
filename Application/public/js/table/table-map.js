@@ -268,8 +268,8 @@ function renderItemsPanel() {
     <div style="border:1px solid var(--rule-hi);border-radius:4px;margin-bottom:4px;overflow:hidden"
          onmouseenter="highlightMapItem('${escJs(item.id)}')" onmouseleave="clearMapHighlight()">
       <div style="display:flex;align-items:center;gap:6px;padding:4px 5px;cursor:pointer;user-select:none"
-           onclick="const b=this.parentElement.querySelector('.item-body');if(b){const open=b.style.display==='block';b.style.display=open?'none':'block';this.querySelector('span').textContent=open?'▶':'▼'}">
-        <span style="font-size:10px;color:var(--ash)">▶</span>
+           onclick="const b=this.parentElement.querySelector('.item-body');if(b){const open=b.style.display==='block';b.style.display=open?'none':'block';this.querySelector('span').textContent=open?'<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-play"></use></svg>':'<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-down"></use></svg>'}">
+        <span style="font-size:10px;color:var(--ash)"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-play"></use></svg></span>
         <span style="font-size:13px">${ITEM_ICONS[item.type] || '?'}</span>
         <span style="flex:1;font-size:11px;font-weight:bold;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:${item.visible ? 'var(--verdigris)' : 'var(--ash)'}">${esc(item.label || 'Item')}</span>
         ${!item.visible
@@ -378,10 +378,10 @@ canvasArea.addEventListener('click', e => {
       _showMapCtxMenu(e.clientX, e.clientY,
         `<div style="font-size:9px;color:rgba(140,158,255,.6);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Fog Region</div>`
         + `<div style="font-weight:bold;margin-bottom:3px">${esc(r.label || 'Region')}</div>`
-        + `<div style="font-size:10px;margin-bottom:7px;color:${r.visible ? '#88ff88' : 'var(--ash)'}">${r.visible ? '👁 Revealed to players' : '🌫 Hidden from players'}</div>`
+        + `<div style="font-size:10px;margin-bottom:7px;color:${r.visible ? '#88ff88' : 'var(--ash)'}">${r.visible ? '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-eye"></use></svg> Revealed to players' : '🌫 Hidden from players'}</div>`
         + (r.visible
-          ? `<button class="btn sm" onclick="_dismissMapCtxMenu();hideFogRegion('${escJs(r.id)}')" style="width:100%;font-size:11px">🚫 Hide Region</button>`
-          : `<button class="btn sm" onclick="_dismissMapCtxMenu();revealFogRegion('${escJs(r.id)}')" style="width:100%;font-size:11px;background:var(--verdigris);color:#000;border-color:var(--verdigris)">👁 Reveal Region</button>`)
+          ? `<button class="btn sm" onclick="_dismissMapCtxMenu();hideFogRegion('${escJs(r.id)}')" style="width:100%;font-size:11px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-eye-off"></use></svg> Hide Region</button>`
+          : `<button class="btn sm" onclick="_dismissMapCtxMenu();revealFogRegion('${escJs(r.id)}')" style="width:100%;font-size:11px;background:var(--verdigris);color:#000;border-color:var(--verdigris)"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-eye"></use></svg> Reveal Region</button>`)
       );
       return;
     }
@@ -395,10 +395,10 @@ canvasArea.addEventListener('click', e => {
         `<div style="font-size:9px;color:rgba(140,158,255,.6);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">${icon} Hidden Item</div>`
         + `<div style="font-weight:bold;margin-bottom:3px">${esc(item.label || 'Item')}</div>`
         + (item.description ? `<div style="font-size:10px;color:var(--ash);margin-bottom:5px;max-height:54px;overflow-y:auto;white-space:pre-wrap;word-break:break-word">${esc(item.description)}</div>` : '')
-        + `<div style="font-size:10px;margin-bottom:7px;color:${item.visible ? '#88ff88' : '#ff8888'}">${item.visible ? '👁 Revealed to players' : '🔴 Hidden from players'}</div>`
+        + `<div style="font-size:10px;margin-bottom:7px;color:${item.visible ? '#88ff88' : '#ff8888'}">${item.visible ? '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-eye"></use></svg> Revealed to players' : '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-circle"></use></svg> Hidden from players'}</div>`
         + (item.visible
-          ? `<button class="btn sm" onclick="_dismissMapCtxMenu();hideItem('${escJs(item.id)}')" style="width:100%;font-size:11px">🚫 Hide Item</button>`
-          : `<button class="btn sm" onclick="_dismissMapCtxMenu();revealItem('${escJs(item.id)}')" style="width:100%;font-size:11px;background:var(--verdigris);color:#000;border-color:var(--verdigris)">👁 Reveal Item</button>`)
+          ? `<button class="btn sm" onclick="_dismissMapCtxMenu();hideItem('${escJs(item.id)}')" style="width:100%;font-size:11px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-eye-off"></use></svg> Hide Item</button>`
+          : `<button class="btn sm" onclick="_dismissMapCtxMenu();revealItem('${escJs(item.id)}')" style="width:100%;font-size:11px;background:var(--verdigris);color:#000;border-color:var(--verdigris)"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-eye"></use></svg> Reveal Item</button>`)
       );
       return;
     }

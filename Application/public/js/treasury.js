@@ -352,7 +352,7 @@ function renderList() {
     const rows = g.map(i => {
       const thumb = i.imageThumb
         ? `<img class="it-thumb" src="${esc(i.imageThumb)}" alt="">`
-        : `<span class="it-thumb ph">◻</span>`;
+        : `<span class="it-thumb ph"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-square"></use></svg></span>`;
       return `<div class="it-row${i.id === currentId ? ' sel' : ''}${selected.has(i.id) ? ' checked' : ''}"
                    onclick="selectItem('${escJs(i.id)}')">
         <input type="checkbox" ${selected.has(i.id) ? 'checked' : ''} style="accent-color:var(--bone)"
@@ -765,8 +765,8 @@ function whenText(raw) {
 }
 
 function decideBtns(r) {
-  return `<button class="btn sm primary" onclick="approveRequest('${escJs(r.id)}')" title="Give it to this character">✓ Approve</button>
-          <button class="btn sm danger" onclick="declineRequest('${escJs(r.id)}')" title="Turn this one down">✕</button>`;
+  return `<button class="btn sm primary" onclick="approveRequest('${escJs(r.id)}')" title="Give it to this character"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-check"></use></svg> Approve</button>
+          <button class="btn sm danger" onclick="declineRequest('${escJs(r.id)}')" title="Turn this one down"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg></button>`;
 }
 
 function renderRequests() {
@@ -786,7 +786,7 @@ function renderRequests() {
     const first = rows[0];
     const thumb = first.itemThumb
       ? `<img class="req-item-thumb" src="${esc(first.itemThumb)}" alt="">`
-      : '<span class="req-item-thumb ph">◻</span>';
+      : '<span class="req-item-thumb ph"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-square"></use></svg></span>';
     const stock = first.quantity === -1 ? 'unlimited' : `${first.quantity} left`;
     return `<div class="req-item">
       <div class="req-item-hdr">

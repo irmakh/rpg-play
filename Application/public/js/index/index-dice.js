@@ -149,7 +149,7 @@ function initRollClickHandlers() {
     const btn = document.createElement('button');
     btn.className = 'sk-roll-btn';
     btn.title = 'Roll ' + SKILL_NAMES[i];
-    btn.textContent = '🎲';
+    btn.innerHTML = '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg>';
     btn.type = 'button';
     (function(idx) {
       btn.addEventListener('click', function() {
@@ -166,7 +166,7 @@ function initRollClickHandlers() {
     const btn = document.createElement('button');
     btn.className = 'sk-roll-btn';
     btn.title = 'Roll ' + AB_NAMES[s] + ' Save';
-    btn.textContent = '🎲';
+    btn.innerHTML = '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg>';
     btn.type = 'button';
     btn.addEventListener('click', function() {
       const valEl = document.querySelector(`[data-key="save-${s}"]`);

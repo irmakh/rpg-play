@@ -332,8 +332,16 @@ a.char-btn{display:inline-block;text-decoration:none;line-height:1.5}
 .item-name{flex:1;font-size:12px;font-weight:bold;min-width:60px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .item-meta{font-size:10px;color:var(--ash);white-space:nowrap;flex-shrink:0}
 /* Skill/save roll buttons */
-.sk-roll-btn{background:none;border:none;cursor:pointer;padding:0 3px;font-size:11px;opacity:0.5;line-height:1;flex-shrink:0;color:inherit;font-family:inherit}
-.sk-roll-btn:hover{opacity:1}
+/* Roll buttons sit on every skill and every save - among the most-tapped
+   controls on the sheet - and were 19px wide. Square, and a real target. */
+html.lamplit .sk-roll-btn{background:none;border:none;cursor:pointer;padding:0;font-size:var(--t-sm);opacity:.55;line-height:1;flex-shrink:0;color:inherit;font-family:inherit;width:36px;height:36px;display:inline-flex;align-items:center;justify-content:center;border-radius:var(--r-sm)}
+html.lamplit .sk-roll-btn .lt-icon{width:16px;height:16px}
+html.lamplit .sk-roll-btn:hover{opacity:1;background:var(--slate-hi)}
+@media (max-width:760px){
+  html.lamplit .sk-roll-btn{width:44px;height:44px}
+  html.lamplit .sk-roll-btn .lt-icon{width:18px;height:18px}
+}
+
 /* ── Media gallery ── */
 .media-gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
 .media-card{background:var(--slate-hi);border:1px solid var(--rule-hi);border-radius:6px;overflow:hidden;position:relative;display:flex;flex-direction:column}

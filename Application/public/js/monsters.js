@@ -281,7 +281,7 @@ async function importMonsters() {
     if (res.status === 401) { location.href = '/dm.html'; return; }
     const data = await res.json();
     if (!res.ok) { statusEl.style.color = 'var(--blood)'; statusEl.textContent = data.error || 'Import failed.'; return; }
-    statusEl.style.color = 'var(--verdigris)'; statusEl.textContent = `✓ Imported ${data.count} monster${data.count !== 1 ? 's' : ''}.`;
+    statusEl.style.color = 'var(--verdigris)'; statusEl.textContent = `<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-check"></use></svg> Imported ${data.count} monster${data.count !== 1 ? 's' : ''}.`;
     document.getElementById('import-text').value = '';
     await loadMonsters();
   } catch { statusEl.style.color = 'var(--blood)'; statusEl.textContent = 'Network error.'; }
@@ -313,7 +313,7 @@ function efAppendRow(container, item) {
   div.className = 'ef-entry-row';
   div.innerHTML = `<div style="display:flex;gap:6px;margin-bottom:4px;align-items:center">
     <input type="text" placeholder="Name" data-field="name" style="flex:1">
-    <button type="button" class="btn sm danger" onclick="this.closest('.ef-entry-row').remove()">✕</button>
+    <button type="button" class="btn sm danger" onclick="this.closest('.ef-entry-row').remove()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg></button>
   </div>
   <textarea placeholder="Description" data-field="entries" style="min-height:56px;resize:vertical;width:100%"></textarea>`;
   div.querySelector('[data-field=name]').value = item.name || '';

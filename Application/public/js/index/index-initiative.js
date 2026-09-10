@@ -78,11 +78,11 @@ function renderInitiativeTracker(showBadge = false) {
     // otherwise reveal the real monster name) for players.
     const canEdit = dm || !e.monsterId;
     const editBtns = canEdit
-      ? `<button class="sk-roll-btn" onclick="openInitEditModal('${escJs(e.id)}')" title="Edit">✎</button>
-      <button class="del-btn" onclick="deleteInitEntry('${escJs(e.id)}')" title="Remove">✕</button>`
+      ? `<button class="sk-roll-btn" onclick="openInitEditModal('${escJs(e.id)}')" title="Edit"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-pencil"></use></svg></button>
+      <button class="del-btn" onclick="deleteInitEntry('${escJs(e.id)}')" title="Remove"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg></button>`
       : '';
     return `<div class="init-row${isCur ? ' init-cur' : ''}">
-      <span class="init-cur-marker">${isCur ? '▶' : ''}</span>
+      <span class="init-cur-marker">${isCur ? '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-play"></use></svg>' : ''}</span>
       <span class="init-row-name">${esc(displayName)}</span>
       <span class="init-row-roll">${e.roll}</span>
       ${editBtns}

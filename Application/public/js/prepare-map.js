@@ -64,7 +64,7 @@ function togglePmSidebar() {
   if (!el) return;
   const hidden = el.style.display === 'none';
   el.style.display = hidden ? '' : 'none';
-  if (btn) btn.textContent = hidden ? '◀ Panel' : '▶ Panel';
+  if (btn) btn.innerHTML = hidden ? '◀ Panel' : '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-play"></use></svg> Panel';
   if (currentMapId) refreshCanvases();
 }
 
@@ -84,7 +84,7 @@ function toggleSbSection(name) {
   if (!el) return;
   const hidden = el.style.display === 'none';
   el.style.display = hidden ? '' : 'none';
-  if (arrow) arrow.textContent = hidden ? '▼' : '▶';
+  if (arrow) arrow.innerHTML = hidden ? '▼' : '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-play"></use></svg>';
   if (currentMapId) refreshCanvases();
 }
 
@@ -435,8 +435,8 @@ function renderPrepFog() {
 // Undo affordance shown in place of a just-deleted row (fog / token / item).
 function _undoRowHTML(name) {
   return `<div style="display:flex;align-items:center;gap:6px;padding:5px 7px;margin-bottom:4px;border:1px dashed var(--rule-hi);border-radius:4px;background:var(--wash)">
-    <span style="flex:1;font-size:11px;color:var(--ash);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">🗑 Deleted "${esc(name)}"</span>
-    <button class="btn sm" onclick="undoDelete()" style="flex-shrink:0;font-size:10px;padding:2px 8px">↶ Undo</button>
+    <span style="flex:1;font-size:11px;color:var(--ash);overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-trash"></use></svg> Deleted "${esc(name)}"</span>
+    <button class="btn sm" onclick="undoDelete()" style="flex-shrink:0;font-size:10px;padding:2px 8px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-undo"></use></svg> Undo</button>
   </div>`;
 }
 
@@ -473,7 +473,7 @@ function renderFogList() {
       <input type="text" value="${esc(r.label)}" onchange="updateFogLabel(${i}, this.value)"
         style="flex:1;padding:2px 5px;font-size:11px;background:var(--slate-hi);border:1px solid var(--rule-hi);color:var(--bone);border-radius:3px">
       <span style="font-size:10px;color:var(--ash);white-space:nowrap">${r.w}×${r.h} cells</span>
-      <button class="btn danger sm" onclick="deleteFogRegion(${i})">✕</button>
+      <button class="btn danger sm" onclick="deleteFogRegion(${i})"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg></button>
     </div>`);
   if (_lastDeleted && _lastDeleted.type === 'fog') {
     rows.splice(Math.min(_lastDeleted.index, rows.length), 0, _undoRowHTML(_lastDeleted.obj.label || 'region'));
@@ -515,9 +515,9 @@ function renderItemList() {
         <input type="text" value="${esc(item.label)}" onchange="updateItemLabel(${i}, this.value)"
           style="flex:1;min-width:0;padding:2px 5px;font-size:11px;background:var(--slate-hi);border:1px solid var(--rule-hi);color:var(--bone);border-radius:3px">
         <button class="btn sm" onclick="toggleItemExpand('${escJs(item.id)}')" title="${expanded ? 'Collapse' : 'Edit description'}"
-          style="padding:1px 6px;font-size:10px;flex-shrink:0;${hasDesc && !expanded ? 'color:var(--bone)' : ''}">${expanded ? '▴' : '▾'}</button>
-        <button class="btn sm" onclick="cloneItem(${i})" title="Clone item" style="flex-shrink:0">⎘</button>
-        <button class="btn danger sm" onclick="deleteItem(${i})" style="flex-shrink:0">✕</button>
+          style="padding:1px 6px;font-size:10px;flex-shrink:0;${hasDesc && !expanded ? 'color:var(--bone)' : ''}">${expanded ? '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-up"></use></svg>' : '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-down"></use></svg>'}</button>
+        <button class="btn sm" onclick="cloneItem(${i})" title="Clone item" style="flex-shrink:0"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-popout"></use></svg></button>
+        <button class="btn danger sm" onclick="deleteItem(${i})" style="flex-shrink:0"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg></button>
       </div>
       ${expanded ? `<div style="padding:0 5px 5px">
         <textarea placeholder="DM description (players never see this)…" rows="2" onchange="updateItemDesc(${i}, this.value)"
@@ -1210,7 +1210,7 @@ function openPmTokModal(editIdx) {
   const titleEl = document.getElementById('pm-tok-modal-title');
   if (titleEl) titleEl.textContent = isEdit ? 'Edit Token' : 'Add Prepared Token';
   const confirmBtn = document.getElementById('pm-tok-confirm-btn');
-  if (confirmBtn) confirmBtn.textContent = isEdit ? '💾 Save Changes' : '📍 Place on Map';
+  if (confirmBtn) confirmBtn.innerHTML = isEdit ? '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-save"></use></svg> Save Changes' : '📍 Place on Map';
 
   pmPortraitDataUrl = null;
 
@@ -1273,7 +1273,7 @@ function _updateVisibleLbl() {
   const lbl = document.getElementById('pm-tok-visible-lbl');
   if (!lbl) return;
   const on = cb ? cb.checked : true;
-  lbl.textContent = on ? '👁 Visible' : '🚫 Hidden';
+  lbl.innerHTML = on ? '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-eye"></use></svg> Visible' : '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-eye-off"></use></svg> Hidden';
   lbl.style.color = on ? 'var(--verdigris)' : 'var(--ash)';
 }
 
@@ -1503,10 +1503,10 @@ function renderTokenList() {
       <input type="checkbox" ${sel ? 'checked' : ''} onchange="toggleTokenSelect('${escJs(tok.id)}', this.checked)" title="Select for recolor" style="cursor:pointer;flex-shrink:0;width:13px;height:13px">
       <div style="width:11px;height:11px;border-radius:50%;background:${esc(tok.color)};flex-shrink:0;border:1px solid rgba(255,255,255,.3);${hidden ? 'opacity:0.4' : ''}"></div>
       <span style="flex:1;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(tok.name)}">${esc(tok.name)}</span>
-      <span title="${hidden ? 'Hidden from players' : 'Visible to players'}" style="font-size:10px;flex-shrink:0;${hidden ? 'color:var(--ash)' : 'color:var(--verdigris)'}">${hidden ? '🚫' : '👁'}</span>
-      <button class="btn sm" onclick="cloneToken(${i})" title="Duplicate token" style="padding:1px 5px;font-size:10px;flex-shrink:0">⎘</button>
-      <button class="btn sm" onclick="openPmTokModal(${i})" style="padding:1px 5px;font-size:10px;flex-shrink:0" title="Edit">✏</button>
-      <button class="btn danger sm" onclick="deleteToken(${i})" style="padding:1px 5px;font-size:10px;flex-shrink:0">✕</button>
+      <span title="${hidden ? 'Hidden from players' : 'Visible to players'}" style="font-size:10px;flex-shrink:0;${hidden ? 'color:var(--ash)' : 'color:var(--verdigris)'}">${hidden ? '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-eye-off"></use></svg>' : '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-eye"></use></svg>'}</span>
+      <button class="btn sm" onclick="cloneToken(${i})" title="Duplicate token" style="padding:1px 5px;font-size:10px;flex-shrink:0"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-popout"></use></svg></button>
+      <button class="btn sm" onclick="openPmTokModal(${i})" style="padding:1px 5px;font-size:10px;flex-shrink:0" title="Edit"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-pencil"></use></svg></button>
+      <button class="btn danger sm" onclick="deleteToken(${i})" style="padding:1px 5px;font-size:10px;flex-shrink:0"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg></button>
     </div>`;
   });
   if (_lastDeleted && _lastDeleted.type === 'token') {
@@ -1526,7 +1526,7 @@ function renderTokenList() {
     </label>
     <span style="flex:1"></span>
     <button class="btn sm" onclick="openRecolorPopup()" ${selCount ? '' : 'disabled'} title="Recolor selected tokens"
-      style="font-size:10px;padding:2px 8px;flex-shrink:0;${selCount ? '' : 'opacity:.45'}">🎨 Recolor${selCount ? ` (${selCount})` : ''}</button>
+      style="font-size:10px;padding:2px 8px;flex-shrink:0;${selCount ? '' : 'opacity:.45'}"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-pencil"></use></svg> Recolor${selCount ? ` (${selCount})` : ''}</button>
   </div>`;
   el.innerHTML = controls + rows.join('');
 }

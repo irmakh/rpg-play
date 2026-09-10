@@ -37,7 +37,7 @@ function toggleSideSection(name) {
   if (el) {
     const hidden = el.style.display === 'none';
     el.style.display = hidden ? '' : 'none';
-    if (arrow) arrow.textContent = hidden ? '▼' : '▶';
+    if (arrow) arrow.innerHTML = hidden ? '▼' : '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-play"></use></svg>';
     if (hidden) _sideOpenSections.add(name); else _sideOpenSections.delete(name);
   }
 }
@@ -170,7 +170,7 @@ function renderSideCharacter() {
         const nameSpan = `<span class="rp-spell-name" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px" onclick="postSpellInfoFromPanel(${idx})" title="Send to chat">${esc(sName)}</span>${flags}`;
         spellListHtml += `<div class="qroll-row" style="padding:3px 10px;font-size:11px">`
           + nameSpan
-          + (spAtk !== null ? `<span class="qroll-val" onclick="event.stopPropagation();qroll('${escJs(sName)}','${escJs(String(spAtk))}')" style="font-size:11px;cursor:pointer" title="Spell attack">⚡</span>` : '')
+          + (spAtk !== null ? `<span class="qroll-val" onclick="event.stopPropagation();qroll('${escJs(sName)}','${escJs(String(spAtk))}')" style="font-size:11px;cursor:pointer" title="Spell attack"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-bolt"></use></svg></span>` : '')
           + `</div>`;
       }
     }
@@ -384,8 +384,8 @@ function _sidePanelActionSections(d, canEdit) {
   }
   const restHtml = (sections.length && canEdit && hasLimited)
     ? `<div class="rp-act-rest">`
-      + `<button class="btn sm" onclick="tableActionRest('short')" title="Restore short-rest uses">↻ Short</button>`
-      + `<button class="btn sm" onclick="tableActionRest('long')" title="Restore short- and long-rest uses">↻ Long</button>`
+      + `<button class="btn sm" onclick="tableActionRest('short')" title="Restore short-rest uses"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-refresh"></use></svg> Short</button>`
+      + `<button class="btn sm" onclick="tableActionRest('long')" title="Restore short- and long-rest uses"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-refresh"></use></svg> Long</button>`
       + `</div>`
     : '';
   return { sections, restHtml };
@@ -397,7 +397,7 @@ function _renderSidePanelSpell(s, idx, d) {
   const spAtk = d['sp-atk'];
   const nameSpan = `<span class="rp-spell-name" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px" onclick="postSpellInfoFromAll(${idx})" title="Send to chat">${esc(sName)}</span>`;
   const atk = (spAtk !== undefined && spAtk !== null && spAtk !== '')
-    ? `<span class="qroll-val" onclick="event.stopPropagation();qroll('Spell Attack','${escJs(String(spAtk))}')" style="font-size:11px;cursor:pointer" title="Spell attack">⚡</span>`
+    ? `<span class="qroll-val" onclick="event.stopPropagation();qroll('Spell Attack','${escJs(String(spAtk))}')" style="font-size:11px;cursor:pointer" title="Spell attack"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-bolt"></use></svg></span>`
     : '';
   return `<div class="qroll-row" style="padding:3px 10px;font-size:11px">${nameSpan} <span style="font-size:10px;color:var(--ash)">${lvl}</span> ${atk}</div>`;
 }
@@ -408,7 +408,7 @@ function _renderSidePanelCustom(a, canEdit) {
   const uses = parseInt(a.uses) || 0;
   const used = Math.min(parseInt(a.used) || 0, uses);
   const diceBtn = dice
-    ? `<span class="rp-act-roll" data-name="${n}" data-dice="${esc(dice)}" onclick="rollDamageStr(this.dataset.name, this.dataset.dice)" title="Roll ${esc(dice)}">🎲 ${esc(dice)}</span>`
+    ? `<span class="rp-act-roll" data-name="${n}" data-dice="${esc(dice)}" onclick="rollDamageStr(this.dataset.name, this.dataset.dice)" title="Roll ${esc(dice)}"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg> ${esc(dice)}</span>`
     : '';
   let usesHtml = '';
   if (uses > 0) {
@@ -841,7 +841,7 @@ function _postSpellInfo(s) {
   if (s[2])  meta.push(`⏱ ${s[2]}`);
   if (s[3])  meta.push(`🎯 ${s[3]}`);
   if (s[14]) meta.push(`⏳ ${s[14]}`);
-  const link = `<div style="margin-top:4px"><a href="${esc(_spell5eUrl(name))}" target="_blank" rel="noopener">📖 Open on 5e.tools ↗</a></div>`;
+  const link = `<div style="margin-top:4px"><a href="${esc(_spell5eUrl(name))}" target="_blank" rel="noopener"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-book"></use></svg> Open on 5e.tools <svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-external"></use></svg></a></div>`;
   postChatInfoCard({ name, meta, html: (desc || '') + link });
 }
 

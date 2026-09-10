@@ -120,9 +120,9 @@ function _actRenderAttacks(attacks) {
   if (!attacks.length) return '';
   const rows = attacks.map(w => {
     const n = esc(w.name), a = esc(w.atk || '+0'), d = esc(w.dmg || '—');
-    const atkBtn = `<button class="roll-btn" data-name="${n}" data-val="${a}" onclick="rollWeaponAtkVal(this.dataset.name,this.dataset.val)" title="Roll attack">🎲</button>`;
+    const atkBtn = `<button class="roll-btn" data-name="${n}" data-val="${a}" onclick="rollWeaponAtkVal(this.dataset.name,this.dataset.val)" title="Roll attack"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg></button>`;
     const dmgBtn = w.dmg
-      ? `<button class="roll-btn" data-name="${n}" data-val="${esc(w.dmg)}" data-notes="${esc(w.notes)}" onclick="rollWeaponDmgVal(this.dataset.name,this.dataset.val,this.dataset.notes)" title="Roll damage">🎲</button>`
+      ? `<button class="roll-btn" data-name="${n}" data-val="${esc(w.dmg)}" data-notes="${esc(w.notes)}" onclick="rollWeaponDmgVal(this.dataset.name,this.dataset.val,this.dataset.notes)" title="Roll damage"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg></button>`
       : '';
     return `<tr>
       <td class="act-atk-name">${n}</td>
@@ -144,11 +144,11 @@ function _actRenderSpellList(list) {
     const n = esc(sp.name);
     const lvl = sp.level && sp.level !== '0' ? `(${esc(sp.level)})` : '(cantrip)';
     const atkBtn = spAtk
-      ? `<button class="roll-btn" data-name="${n}" data-val="${esc(spAtk)}" onclick="startRoll(this.dataset.name + ' (Spell Atk)', this.dataset.val)" title="Roll spell attack">🎲</button>`
+      ? `<button class="roll-btn" data-name="${n}" data-val="${esc(spAtk)}" onclick="startRoll(this.dataset.name + ' (Spell Atk)', this.dataset.val)" title="Roll spell attack"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg></button>`
       : '';
     const dmgMatch = (sp.notes || '').match(/\d+d\d+(\s*[+-]\s*\d+)?/);
     const dmgBtn = dmgMatch
-      ? `<button class="roll-btn" data-name="${n}" data-val="${esc(dmgMatch[0])}" onclick="rollDamage(this.dataset.name + ' Damage', this.dataset.val)" title="Roll damage ${esc(dmgMatch[0])}">⚔️</button>`
+      ? `<button class="roll-btn" data-name="${n}" data-val="${esc(dmgMatch[0])}" onclick="rollDamage(this.dataset.name + ' Damage', this.dataset.val)" title="Roll damage ${esc(dmgMatch[0])}"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-swords"></use></svg></button>`
       : '';
     return `<div class="act-item act-spell">
       <div class="act-head"><span class="act-name">${n}</span> <span class="act-lvl">${lvl}</span>
@@ -165,7 +165,7 @@ function _actRenderCustom(a) {
   const dice = (a.dice || '').trim();
   const tag = ACT_CAT_LABEL[a.category] || 'Action';
   const diceBtn = dice
-    ? `<button class="roll-btn" data-name="${n}" data-val="${esc(dice)}" onclick="rollDamage(this.dataset.name, this.dataset.val)" title="Roll ${esc(dice)}">🎲 ${esc(dice)}</button>`
+    ? `<button class="roll-btn" data-name="${n}" data-val="${esc(dice)}" onclick="rollDamage(this.dataset.name, this.dataset.val)" title="Roll ${esc(dice)}"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg> ${esc(dice)}</button>`
     : '';
   let usesHtml = '';
   if (uses > 0) {
@@ -179,7 +179,7 @@ function _actRenderCustom(a) {
   return `<div class="act-item">
     <div class="act-head">
       <span class="act-name">${n}</span> <span class="act-tag">${esc(tag)}</span>
-      <span class="act-controls">${diceBtn}<button class="act-edit-btn" onclick="openActionModal(${a.id})" title="Edit">✎</button></span>
+      <span class="act-controls">${diceBtn}<button class="act-edit-btn" onclick="openActionModal(${a.id})" title="Edit"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-pencil"></use></svg></button></span>
     </div>
     ${a.description ? `<div class="act-desc">${esc(a.description)}</div>` : ''}
     ${usesHtml}

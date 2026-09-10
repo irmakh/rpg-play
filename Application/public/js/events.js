@@ -122,7 +122,7 @@ function calRenderGrid() {
     const festWx  = calWeather[festKey];
     area.innerHTML = `
       <div class="cal-festival-row${isToday?' cal-is-today':''}" onclick="calDayClick(null,null,'${calView.festival}')">
-        <span class="cal-fest-icon">✦</span>
+        <span class="cal-fest-icon"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-star"></use></svg></span>
         <span class="cal-fest-name">${esc(fest ? fest.name : calView.festival)}</span>
         ${dots ? `<div class="cal-fest-dots">${dots}</div>` : ''}
         ${isToday ? '<span class="cal-fest-mark">Today</span>' : ''}
@@ -184,7 +184,7 @@ function calRenderEventsList() {
       : (e.isPublic
         ? '<span class="cal-event-badge pub">Public</span>'
         : '<span class="cal-event-badge priv">DM Only</span>');
-    const author = e.authorCharId ? `<div class="cal-event-author">📖 ${esc(e.authorName || 'Journal')}</div>` : '';
+    const author = e.authorCharId ? `<div class="cal-event-author"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-book"></use></svg> ${esc(e.authorName || 'Journal')}</div>` : '';
     const dateStr = frFormatDate({ frYear: e.frYear, frMonth: e.frMonth, frDay: e.frDay, frFestival: e.frFestival });
     return `
       <div class="cal-event-item">
@@ -529,7 +529,7 @@ function weatherRenderHistory() {
         <b style="margin-left:4px">${esc(e.dateLabel || frFormatDate(e))}</b>
         <span style="color:var(--ash)"> — ${esc(weatherSummary(e))}</span>
       </span>
-      <button class="btn sm" style="flex-shrink:0" onclick="weatherDeleteEntry('${escJs(e.id)}')" title="Delete">✕</button>
+      <button class="btn sm" style="flex-shrink:0" onclick="weatherDeleteEntry('${escJs(e.id)}')" title="Delete"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg></button>
     </div>`).join('');
 }
 
@@ -756,8 +756,8 @@ function calRenderPendingMedia() {
   el.innerHTML = calPendingMedia.map((m, i) => {
     const preview = m.type === 'image'
       ? `<img src="${esc(m.thumb || m.url)}">`
-      : `<span class="cal-media-chip-icon">${m.type === 'audio' ? '🎵' : '🎬'}</span>`;
-    return `<span class="cal-media-chip">${preview}<button type="button" onclick="calRemovePendingMedia(${i})">✕</button></span>`;
+      : `<span class="cal-media-chip-icon">${m.type === 'audio' ? '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-music"></use></svg>' : '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-camera"></use></svg>'}</span>`;
+    return `<span class="cal-media-chip">${preview}<button type="button" onclick="calRemovePendingMedia(${i})"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg></button></span>`;
   }).join('');
 }
 

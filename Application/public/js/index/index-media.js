@@ -63,7 +63,7 @@ function renderMedia() {
       <div class="media-card-name">${esc(m.name)}</div>
       <div class="media-card-actions">
         ${setPortBtn}
-        <button class="del-btn" style="font-size:11px;padding:2px 8px" onclick="deleteMedia('${escJs(m.id)}')">✕</button>
+        <button class="del-btn" style="font-size:11px;padding:2px 8px" onclick="deleteMedia('${escJs(m.id)}')"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg></button>
       </div>
     </div>`;
   }).join('');

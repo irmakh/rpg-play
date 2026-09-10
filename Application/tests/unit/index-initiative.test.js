@@ -253,7 +253,7 @@ describe('renderInitiativeTracker — active turn marker', () => {
     expect(monsterRow).not.toContain(' init-cur"');
   });
 
-  it('the active marker ▶ appears only on the current entry', () => {
+  it('the active-turn marker appears on exactly one entry, the current one', () => {
     const { render, listEl } = load({
       entries: [
         { id: 'e1', name: 'Fighter', roll: 20, monsterId: '' },
@@ -262,10 +262,15 @@ describe('renderInitiativeTracker — active turn marker', () => {
       currentId: 'e2',
     });
     render();
-    expect(listEl.innerHTML).toContain('▶');
-    // Count occurrences — only one ▶
-    const count = (listEl.innerHTML.match(/▶/g) || []).length;
-    expect(count).toBe(1);
+    // Assert the marker's PRESENCE and placement, not which glyph draws it -
+    // this used to hardcode the emoji and broke when it became an icon.
+    const markers = [...listEl.innerHTML.matchAll(/<span class="init-cur-marker">([\s\S]*?)<\/span>/g)]
+      .map(m => m[1].trim());
+    expect(markers).toHaveLength(2);              // one span per entry
+    const filled = markers.filter(Boolean);
+    expect(filled).toHaveLength(1);               // exactly one is marked
+    expect(markers[1]).toBeTruthy();              // and it is the current entry
+    expect(markers[0]).toBe('');
   });
 
   it('no ▶ appears when currentId does not match any entry', () => {

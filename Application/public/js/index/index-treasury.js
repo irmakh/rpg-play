@@ -52,7 +52,7 @@ function requesterLine(item) {
   // Contested loot is worth pointing at — that is the whole reason the names
   // are on screen rather than hidden in the DM's queue.
   const color = count > 1 ? 'var(--bone)' : 'var(--ash)';
-  return `<div style="font-size:10px;color:${color};margin-top:2px">👥 ${esc(names)}</div>`;
+  return `<div style="font-size:10px;color:${color};margin-top:2px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-users"></use></svg> ${esc(names)}</div>`;
 }
 
 // ── Wallet ───────────────────────────────────────────────────────────────────
@@ -156,7 +156,7 @@ function renderTreasuryItems() {
   if (!body) return;
 
   if (treasurySeg === 'shop' && !treasuryData.shopOpen) {
-    body.innerHTML = '<div style="text-align:center;padding:32px 0;color:var(--ash);font-size:13px">🔒 The shop is currently closed.</div>';
+    body.innerHTML = '<div style="text-align:center;padding:32px 0;color:var(--ash);font-size:13px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-lock"></use></svg> The shop is currently closed.</div>';
     return;
   }
 
@@ -202,9 +202,9 @@ function renderTreasuryItems() {
             : ''}
         ${bonuses ? `<div class="shop-item-bonuses" style="margin-top:2px">${esc(bonuses)}</div>` : ''}
       </div>
-      ${claimed ? '<span style="font-size:10px;color:var(--verdigris);flex-shrink:0;padding-top:2px">✓ Claimed</span>' : ''}
+      ${claimed ? '<span style="font-size:10px;color:var(--verdigris);flex-shrink:0;padding-top:2px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-check"></use></svg> Claimed</span>' : ''}
       ${requested
-        ? `<span style="font-size:10px;color:var(--bone);flex-shrink:0;padding-top:2px">⏳ Requested</span>
+        ? `<span style="font-size:10px;color:var(--bone);flex-shrink:0;padding-top:2px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-hourglass"></use></svg> Requested</span>
            <button class="add-btn" style="width:auto;padding:3px 10px;margin:0;flex-shrink:0"
                    onclick="withdrawLootRequest('${escJs(item.id)}')" title="Take your name off this item">Withdraw</button>`
         : `<button class="add-btn" style="width:auto;padding:3px 10px;margin:0;flex-shrink:0"
@@ -271,7 +271,7 @@ function openTreasuryDetail(id) {
   if (!forSale) {
     const names = requesterNames(item);
     html += `<div style="margin-top:10px"><div class="lbl" style="margin-bottom:4px">Requested by</div>
-      <div style="font-size:12px;color:${names ? 'var(--bone)' : 'var(--ash)'}">${names ? '👥 ' + esc(names) : 'Nobody yet.'}</div>
+      <div style="font-size:12px;color:${names ? 'var(--bone)' : 'var(--ash)'}">${names ? '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-users"></use></svg> ' + esc(names) : 'Nobody yet.'}</div>
       <div style="font-size:10px;color:var(--ash);margin-top:4px">The DM decides who receives it.</div></div>`;
     document.getElementById('shop-detail-body').innerHTML = html;
   }
@@ -358,7 +358,7 @@ function renderTreasuryCart() {
       return `<div class="shop-cart-row">
         <span class="shop-cart-name">${esc(e.item.name)} ×${e.qty}</span>
         <span class="shop-cart-subtotal">${cpToGp(subtotal)}</span>
-        <button class="del-btn" onclick="removeFromCart('${escJs(e.item.id)}')">✕</button>
+        <button class="del-btn" onclick="removeFromCart('${escJs(e.item.id)}')"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg></button>
       </div>`;
     }).join('');
     totalEl.textContent = `Total: ${cpToGp(totalCp)}`;
@@ -375,7 +375,7 @@ function renderTreasuryCart() {
   }
   body.innerHTML = lootCart.map(item => `<div class="shop-cart-row">
     <span class="shop-cart-name">${esc(item.name)}</span>
-    <button class="del-btn" onclick="removeFromLootCart('${escJs(item.id)}')">✕</button>
+    <button class="del-btn" onclick="removeFromLootCart('${escJs(item.id)}')"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg></button>
   </div>`).join('');
   btn.disabled = !currentCharId;
 }
@@ -460,7 +460,7 @@ function renderClaimedLoots() {
           ? `<div style="font-size:11px;color:var(--ash);margin-top:2px;white-space:pre-wrap">${esc(l.description)}</div>`
           : ''}
     </div>
-    <button class="del-btn" onclick="removeLoot(${i})" title="Remove loot">✕</button>
+    <button class="del-btn" onclick="removeLoot(${i})" title="Remove loot"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg></button>
   </div>`).join('');
 }
 

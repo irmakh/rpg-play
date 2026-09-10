@@ -88,7 +88,7 @@ function renderInitiative() {
       <span class="init-cur-marker">${isCur ? '▶' : ''}</span>
       ${nameEl}
       <span class="init-row-roll">${e.roll}</span>
-      <button class="edit-btn" onclick="openEditModal('${escJs(e.id)}')" title="Edit">✎</button>
+      <button class="edit-btn" onclick="openEditModal('${escJs(e.id)}')" title="Edit"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-pencil"></use></svg></button>
       <button class="del-btn" onclick="deleteEntry('${escJs(e.id)}')" title="Remove">✕</button>
     </div>`;
   }).join('');
@@ -502,7 +502,7 @@ async function shareMedia() {
     document.getElementById('media-caption').value = '';
     setTimeout(() => setMediaStatus(''), 3000);
   } catch { setMediaStatus('Network error.', true); }
-  finally { btn.disabled = false; btn.textContent = '📤 Share to Chat'; }
+  finally { btn.disabled = false; btn.innerHTML = '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-upload"></use></svg> Share to Chat'; }
 }
 
 function setMediaStatus(msg, isErr) {

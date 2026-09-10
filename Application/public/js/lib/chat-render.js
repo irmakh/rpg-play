@@ -44,7 +44,7 @@ function appendChatEntry(e) {
     } else if (e.mimeType && e.mimeType.startsWith('audio/')) {
       mediaEl = `<audio src="${url}" controls style="max-width:100%;margin-top:6px;display:block"></audio>`;
     } else {
-      mediaEl = `<a href="${url}" target="_blank" style="display:inline-block;margin-top:6px;padding:4px 8px;background:var(--slate-hi);border-radius:4px;color:var(--bone);font-size:11px">📎 Open file</a>`;
+      mediaEl = `<a href="${url}" target="_blank" style="display:inline-block;margin-top:6px;padding:4px 8px;background:var(--slate-hi);border-radius:4px;color:var(--bone);font-size:11px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-paperclip"></use></svg> Open file</a>`;
     }
     const cap = e.caption ? `<div style="font-size:10px;color:var(--ash);margin-top:4px">${esc(e.caption)}</div>` : '';
     div.className = 'chat-entry';
@@ -63,8 +63,8 @@ function appendChatEntry(e) {
   const multiStr = e.results && e.results.length > 1
     ? ` <span style="font-size:10px;color:var(--ash)">[${e.results.join(', ')}]</span>` : '';
   const labelStr = e.label ? ` — ${esc(e.label)}` : '';
-  const natStr = isNat20 ? ' <span style="color:var(--verdigris)">✨ NAT 20!</span>'
-               : isNat1  ? ' <span style="color:var(--blood)">💀 NAT 1</span>' : '';
+  const natStr = isNat20 ? ' <span style="color:var(--verdigris)"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-star"></use></svg> NAT 20!</span>'
+               : isNat1  ? ' <span style="color:var(--blood)"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-skull"></use></svg> NAT 1</span>' : '';
   const descStr = e.description
     ? `<div style="font-size:10px;color:var(--ash);margin-top:3px;font-style:italic;line-height:1.4;white-space:pre-wrap">${esc(e.description)}</div>`
     : '';

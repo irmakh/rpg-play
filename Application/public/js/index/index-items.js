@@ -90,7 +90,7 @@ function addBonusRow(target = 'save-str', value = 1) {
   row.innerHTML =
     `<select class="im-bonus-target" style="flex:1;font-size:12px">${_bonusTargetOptionsHtml(target)}</select>`
     + `<input type="number" class="im-bonus-value" value="${parseInt(value) || 0}" style="width:64px">`
-    + `<button type="button" class="del-btn" onclick="removeBonusRow(this)">✕</button>`;
+    + `<button type="button" class="del-btn" onclick="removeBonusRow(this)"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg></button>`;
   list.appendChild(row);
 }
 
@@ -189,7 +189,7 @@ function syncWeaponItemToAttacks(item) {
     const tbl = document.getElementById('wpn-tbl');
     const tr = document.createElement('tr');
     tr.dataset.itemId = item.id;
-    tr.innerHTML = `<td><input type="text" value="${esc(item.name)}"></td><td><div style="display:flex;align-items:center;gap:2px"><input type="text" value="${esc(atkStr)}" style="width:46px"><button class="roll-btn" onclick="rollWeaponAtk(this)" title="Roll attack">🎲</button></div></td><td><div style="display:flex;align-items:center;gap:2px"><input type="text" value="${esc(dmgStr)}"><button class="roll-btn" onclick="rollWeaponDmg(this)" title="Roll damage">🎲</button></div></td><td><input type="text" value="${esc(notes)}"></td><td><button class="del-btn" onclick="delRow(this)">✕</button></td>`;
+    tr.innerHTML = `<td><input type="text" value="${esc(item.name)}"></td><td><div style="display:flex;align-items:center;gap:2px"><input type="text" value="${esc(atkStr)}" style="width:46px"><button class="roll-btn" onclick="rollWeaponAtk(this)" title="Roll attack"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg></button></div></td><td><div style="display:flex;align-items:center;gap:2px"><input type="text" value="${esc(dmgStr)}"><button class="roll-btn" onclick="rollWeaponDmg(this)" title="Roll damage"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg></button></div></td><td><input type="text" value="${esc(notes)}"></td><td><button class="del-btn" onclick="delRow(this)"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg></button></td>`;
     tbl.appendChild(tr);
   }
   renderWeaponsSummary();
@@ -357,12 +357,12 @@ function renderItems() {
       <span class="item-name" style="${equippedStyle};cursor:pointer" onclick="openItemDetail(${item.id})">${esc(item.name)}${attuneStr}</span>
       <span class="item-meta">${typeLabel}${bonusStr ? ' · ' + bonusStr : ''}${valueStr}</span>
       <button class="char-btn" style="padding:2px 8px;font-size:11px" onclick="openItemModal(${item.id})">Edit</button>
-      <button class="del-btn" onclick="deleteItem(${item.id})">✕</button>
+      <button class="del-btn" onclick="deleteItem(${item.id})"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg></button>
     </div>`;
   }).join('');
 
   const summary = summaryParts.length > 0
-    ? `<div style="font-size:10px;color:var(--ash);margin-top:6px;padding-top:4px;border-top:1px solid var(--rule)">⚡ Equipped: ${summaryParts.join(' · ')}</div>`
+    ? `<div style="font-size:10px;color:var(--ash);margin-top:6px;padding-top:4px;border-top:1px solid var(--rule)"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-bolt"></use></svg> Equipped: ${summaryParts.join(' · ')}</div>`
     : '';
 
   body.innerHTML = rows + summary;
