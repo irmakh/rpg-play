@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" class="lamplit">
+<html lang="en" class="lamplit app-page">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,15 +11,13 @@
 <link rel="stylesheet" href="/css/tokens.css">
 <link rel="stylesheet" href="/css/fonts.css">
 <link rel="stylesheet" href="/css/base.css">
+<link rel="stylesheet" href="/css/app-shell.css">
 <link rel="stylesheet" href="/css/dm.css">
 <link rel="stylesheet" href="/css/notifications.css">
 <style>
-html,body{height:100%;overflow:hidden;margin:0;padding:0}
-.sheet{display:flex;flex-direction:column;height:100%;width:100%;max-width:none;margin:0;padding:0}
 .hdr{flex-shrink:0;margin-bottom:0;padding:8px 12px;background:var(--slate);border-bottom:1px solid var(--rule-hi)}
 
 /* ── Two-pane body ── */
-#pl-body{display:flex;flex:1;min-height:0}
 
 /* Sidebar */
 #pl-sidebar{width:300px;flex-shrink:0;display:flex;flex-direction:column;border-right:1px solid var(--rule-hi);background:var(--slate);min-height:0}
@@ -113,17 +111,13 @@ html,body{height:100%;overflow:hidden;margin:0;padding:0}
 #at-list .at-dur{font-size:10px;color:var(--ash)}
 
 /* Mobile: stack panes, restore page scroll */
-@media (max-width:760px){
-  html,body{overflow:auto}
-  .sheet{height:auto;min-height:100dvh}
-  #pl-body{flex-direction:column}
+@media (max-width:860px){
   #pl-sidebar{width:100%;border-right:none;border-bottom:1px solid var(--rule-hi)}
   #pl-list{max-height:200px}
   #lib-list{max-height:280px;flex:none}
   #pl-detail{overflow:visible}
   #trk-list{overflow:visible}
-}
-</style>
+}</style>
 </head>
 <body>
 
@@ -140,7 +134,7 @@ html,body{height:100%;overflow:hidden;margin:0;padding:0}
   </div>
 </div>
 
-<div class="sheet" id="main-content" style="display:none">
+<div class="sheet app-shell" id="main-content" style="display:none">
 
   <!-- Header -->
   <div class="hdr">
@@ -163,7 +157,7 @@ html,body{height:100%;overflow:hidden;margin:0;padding:0}
   </div>
 
   <!-- Body: sidebar + detail -->
-  <div id="pl-body">
+  <div id="pl-body" class="app-body">
 
     <div id="pl-sidebar">
       <div class="sb-hdr">

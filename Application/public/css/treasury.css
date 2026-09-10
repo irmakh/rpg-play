@@ -5,7 +5,7 @@
 
 
 
-body{font-family:'Segoe UI',sans-serif;background:var(--ink);color:var(--bone);font-size:13px;height:100vh;overflow:hidden}
+body{font-family:var(--ui);background:var(--ink);color:var(--bone);font-size:13px}
 h1{color:var(--bone);font-size:18px;margin:0;white-space:nowrap}
 
 /* ── Form primitives (shared with the other DM pages) ───────────────────────── */
@@ -39,7 +39,7 @@ td{padding:5px 6px;border-bottom:1px solid var(--rule);vertical-align:middle;fon
 #gate-err{color:var(--blood);font-size:11px;min-height:16px;margin-bottom:10px}
 
 /* ── Shell ──────────────────────────────────────────────────────────────────── */
-#shell{display:flex;flex-direction:column;height:100vh}
+
 .hdr{display:flex;align-items:center;gap:8px;justify-content:space-between;
      padding:8px 12px;background:var(--slate);border-bottom:1px solid var(--rule-hi);flex-wrap:wrap;flex-shrink:0}
 .hdr-left,.hdr-right{display:flex;align-items:center;gap:6px;flex-wrap:wrap}

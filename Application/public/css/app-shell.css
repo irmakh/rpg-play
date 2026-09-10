@@ -6,11 +6,12 @@
 */
 
 html.app-page, html.app-page body{height:100%;width:100%;margin:0;padding:0;overflow:hidden}
-.sheet.app-shell{display:flex;flex-direction:column;height:100%;width:100%;max-width:none;margin:0;padding:0}
+html.app-page .app-shell{display:flex;flex-direction:column;height:100%;width:100%;max-width:none;margin:0;padding:0}
 /* The centred-document pages got their gutter from .sheet's own padding, which
    the shell removes - so the header supplies its own or the last button sits
    flush against the viewport edge. */
-.app-shell .hdr{flex-shrink:0;margin-bottom:0;padding:var(--s2) var(--s3);border-bottom:1px solid var(--rule-hi);gap:var(--s2)}
+:where(.app-shell) .hdr{flex-shrink:0;margin-bottom:0;padding:var(--s2) var(--s3);border-bottom:1px solid var(--rule-hi);gap:var(--s2)}
+.app-shell > .hdr{flex-shrink:0;margin-bottom:0}
 .app-shell #status-msg:empty{display:none}
 .app-shell #status-msg{flex-shrink:0;padding:0 var(--s3)}
 
@@ -47,7 +48,7 @@ html.app-page, html.app-page body{height:100%;width:100%;margin:0;padding:0;over
 
 @media (max-width:860px){
   html.app-page, html.app-page body{overflow:auto}
-  .sheet.app-shell{height:auto; min-height:100dvh}
+  html.app-page .app-shell{height:auto; min-height:100dvh}
   .app-body{flex-direction:column; overflow:visible}
   .app-side{width:auto; border-right:0; border-bottom:1px solid var(--rule-hi); max-height:46vh}
   .app-main{padding:var(--s3)}

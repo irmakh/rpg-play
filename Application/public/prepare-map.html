@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" class="lamplit">
+<html lang="en" class="lamplit app-page">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,15 +11,12 @@
 <link rel="stylesheet" href="/css/tokens.css">
 <link rel="stylesheet" href="/css/fonts.css">
 <link rel="stylesheet" href="/css/base.css">
+<link rel="stylesheet" href="/css/app-shell.css">
 <link rel="stylesheet" href="/css/dm.css">
 <link rel="stylesheet" href="/css/notifications.css">
 <style>
-  html,body{height:100%;width:100%;overflow:hidden;margin:0;padding:0}
-  .sheet{display:flex;flex-direction:column;height:100%;width:100%;max-width:none;margin:0;padding:0}
-  .hdr{flex-shrink:0;margin-bottom:0}
 
   /* ── Full-screen editor layout ── */
-  #pm-body{display:flex;flex:1;overflow:hidden;min-height:0}
 
   /* Sidebar */
   #pm-sidebar{width:240px;flex-shrink:0;display:flex;flex-direction:column;border-right:1px solid var(--rule-hi);background:var(--slate);overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--rule-hi) transparent}
@@ -67,8 +64,7 @@
   /* Hidden items section fills remaining sidebar height */
   #sb-items-section{flex:1;display:flex;flex-direction:column;min-height:0}
   #sb-sec-items{flex:1;display:flex;flex-direction:column;min-height:0;overflow:hidden}
-  #item-list{flex:1;overflow-y:auto;min-height:0}
-</style>
+  #item-list{flex:1;overflow-y:auto;min-height:0}</style>
 <script src="/js/lib/icons.js"></script>
 </head>
 <body>
@@ -87,7 +83,7 @@
 </div>
 
 <!-- Main content -->
-<div class="sheet" id="main-content" style="display:none">
+<div class="sheet app-shell" id="main-content" style="display:none">
 
   <!-- Top header bar -->
   <div class="hdr">
@@ -105,7 +101,7 @@
   </div>
 
   <!-- Body: sidebar (hidden by default) + editor -->
-  <div id="pm-body">
+  <div id="pm-body" class="app-body">
 
     <!-- Sidebar -->
     <div id="pm-sidebar">
