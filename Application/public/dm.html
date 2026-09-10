@@ -42,7 +42,7 @@
       <button class="btn" data-notif-bell title="Notifications"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-bell"></use></svg> </button>
       <button class="btn success" onclick="openBackupModal()" title="Download database backup"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-save"></use></svg> Backup</button>
       <button class="btn" onclick="triggerImport()" title="Restore from backup file"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-download"></use></svg> Import</button>
-      <input type="file" id="import-file-input" accept=".json" multiple style="display:none" onchange="doImport(this)">
+      <input type="file" id="import-file-input" accept=".json,.gz,.tgz,application/gzip" multiple style="display:none" onchange="doImport(this)">
       <button class="btn" onclick="refreshAll()" title="Refresh"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-refresh"></use></svg> Refresh</button>
       <button class="btn" onclick="logout()" title="Sign out and return to the campaign picker"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-exit"></use></svg> Logout</button>
     </div>
@@ -265,7 +265,7 @@
   <div class="modal-box" style="max-width:360px">
     <div class="ct"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-save"></use></svg> Select Backup Files</div>
     <div class="modal-body">
-      <p style="font-size:12px;color:var(--ash);margin:0 0 14px">Each selected section downloads as a separate JSON file.</p>
+      <p style="font-size:12px;color:var(--ash);margin:0 0 14px">Pick the sections to back up. They can download as one archive (below) or as separate JSON files.</p>
       <div style="display:flex;flex-direction:column;gap:10px">
         <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px">
           <input type="checkbox" id="bk-characters" checked style="width:15px;height:15px;accent-color:var(--bone)">
@@ -281,10 +281,28 @@
         </label>
         <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px">
           <input type="checkbox" id="bk-maps" checked style="width:15px;height:15px;accent-color:var(--bone)">
-          <span><strong>Maps</strong> — prepared maps &amp; chat media</span>
+          <span><strong>Maps</strong> — prepared maps, fog &amp; hidden items</span>
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px">
+          <input type="checkbox" id="bk-chatmedia" style="width:15px;height:15px;accent-color:var(--bone)">
+          <span><strong>Chat media</strong> — every image shared in chat</span>
         </label>
       </div>
       <div id="backup-status" style="margin-top:12px;font-size:12px;min-height:18px;color:var(--ash)"></div>
+
+      <div style="border-top:1px solid var(--rule-hi);margin:16px 0 12px"></div>
+      <div class="ct" style="font-size:14px;margin-bottom:6px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-save"></use></svg> Archive (recommended)</div>
+      <p style="font-size:12px;color:var(--ash);margin:0 0 10px">
+        The records archive holds the selected sections as JSON, with no images inside — it is small and quick.
+        The images archive holds every picture, portrait and shared file as its own file.
+        Both are built and streamed on the server, so neither loads a whole backup into memory.
+        Restore either one through <strong>Import</strong>.
+      </p>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <button class="btn success" id="arc-dl-btn" onclick="downloadArchive('records')" style="width:100%"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-arrow-down"></use></svg> Download Records (.tar.gz)</button>
+        <button class="btn" id="arc-img-btn" onclick="downloadArchive('images')" style="width:100%"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-image"></use></svg> Download Images (.tar.gz)</button>
+      </div>
+      <div id="arc-status" style="margin-top:10px;font-size:12px;min-height:18px;color:var(--ash)"></div>
 
       <div style="border-top:1px solid var(--bd,#3a3a4a);margin:16px 0 12px"></div>
       <div class="ct" style="font-size:14px;margin-bottom:6px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-folder"></use></svg> Raw Database Files</div>

@@ -21,6 +21,61 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [218] — 2026-09-10 — Backups that stream, in two archives
+
+**Why downloading maps could kill the server**
+
+The maps backup built one JSON object containing every image as base64, entirely
+in memory, before sending a byte. On a real campaign that was 47 MB of images
+becoming 64 MB of base64 inside an 80 MB JSON string — held several times over
+between the array, `JSON.stringify` and the socket. Measured peak memory: **37 MB
+→ 222 MB**. A server with a smaller heap than the dev machine simply dies.
+
+Two things made it worse than it looked. The maps part quietly included **every
+image ever posted in chat** (45 of 57 media rows), so it grew without bound. And
+older character media is stored as a `data:` URL *inside the database column* —
+another 32 MB of base64 that was being copied straight through.
+
+**The new download: two archives, built and streamed on the server**
+
+- **Records** (`.tar.gz`) — the selected sections as one JSON file each, with no
+  images inside. Each part is written out incrementally, so no whole part is ever
+  assembled in memory. For the campaign above this is **83 KB**, down from ~136 MB
+  across the old per-part files.
+- **Images** (`.tar.gz`) — every picture, portrait, map and shared file, each as a
+  real file copied through as raw bytes. No base64 anywhere, so it is a third
+  smaller than the equivalent JSON, and the records archive stays tiny.
+
+Peak memory for the whole cycle now: **40 MB** for records, **74 MB** for images
+(against 222 MB before), and **51 MB** to restore a 106 MB archive.
+
+**Restoring**
+
+Import accepts either archive — drop the `.tar.gz` in and the server works out
+which it is from the entries themselves. The upload is consumed as a stream and
+image bytes go straight to disk, so nothing large is buffered on either side.
+Restoring both archives reproduces a campaign exactly: verified table by table
+against the source, every row matching.
+
+Restoring an archive also migrates legacy inline `data:` images into real files,
+which shrinks the database.
+
+**Also**
+- **Chat media is now its own backup section**, unticked by default, instead of
+  riding along inside Maps. A maps backup is small and fast again.
+- The existing per-part JSON download and JSON import are unchanged and still
+  work, so files you already have keep restoring exactly as before.
+- Backups are named after the campaign they came from.
+- Test suite 960 → 977 across 34 files, including a round-trip test that pins the
+  tar writer and reader against each other across split chunk boundaries.
+
+**Still outstanding:** the raw SQLite `.tar.gz` remains database-only — the images
+archive is now the companion to it, but the two are separate downloads. Map export
+from the Map Prep screen still builds the image in browser memory
+(`goals/fix_map_export_memory.md`).
+
+---
+
 ## [217] — 2026-09-10 — Backup, export and import repairs
 
 An audit of every backup/export/import path found six ways data was being lost or

@@ -108,12 +108,70 @@ function closeBackupModal() {
   document.getElementById('backup-modal').style.display = 'none';
 }
 
+const BACKUP_SECTIONS = ['characters', 'monsters', 'treasury', 'maps', 'chatmedia'];
+const _selectedBackupParts = () => BACKUP_SECTIONS.filter(p => document.getElementById('bk-' + p)?.checked);
+
+/**
+ * The archive downloads. `kind` is 'records' (the selected sections as JSON, no
+ * images inside) or 'images' (every picture as its own file). Both are built and
+ * streamed server-side, so a large campaign no longer has to fit in memory —
+ * the old per-part JSON embedded every image as base64 and assembled the whole
+ * thing before sending, which is what ran the server out of memory.
+ */
+let _archiveInFlight = false;
+async function downloadArchive(kind) {
+  if (_archiveInFlight) return;
+  const statusEl = document.getElementById('arc-status');
+  const btn = document.getElementById(kind === 'images' ? 'arc-img-btn' : 'arc-dl-btn');
+  let url = '/api/admin/backup-images';
+  if (kind === 'records') {
+    const parts = _selectedBackupParts();
+    if (parts.length === 0) { statusEl.style.color = 'var(--blood)'; statusEl.textContent = 'Select at least one section.'; return; }
+    url = `/api/admin/backup-archive?parts=${encodeURIComponent(parts.join(','))}`;
+  }
+  _archiveInFlight = true;
+  btn.disabled = true;
+  statusEl.style.color = 'var(--ash)';
+  statusEl.textContent = kind === 'images' ? 'Collecting images…' : 'Building archive…';
+  try {
+    const res = await fetch(url, { headers: { 'x-master-password': masterPw } });
+    if (!res.ok) {
+      let msg = 'HTTP ' + res.status;
+      try { msg = (await res.json()).error || msg; } catch {}
+      statusEl.style.color = 'var(--blood)';
+      statusEl.textContent = 'Failed: ' + msg;
+      return;
+    }
+    const name = (res.headers.get('content-disposition') || '').match(/filename="([^"]+)"/)?.[1]
+      || `dnd-${kind}-${new Date().toISOString().split('T')[0]}.tar.gz`;
+    const blob = await res.blob();
+    const href = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = href; a.download = name;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(href);
+    statusEl.style.color = 'var(--verdigris)';
+    statusEl.textContent = `${name} — ${_fmtBytes(blob.size)}`;
+  } catch (err) {
+    statusEl.style.color = 'var(--blood)';
+    statusEl.textContent = 'Failed: ' + err.message;
+  } finally {
+    _archiveInFlight = false;
+    btn.disabled = false;
+  }
+}
+
+function _fmtBytes(n) {
+  if (n < 1024) return n + ' B';
+  if (n < 1048576) return (n / 1024).toFixed(1) + ' KB';
+  if (n < 1073741824) return (n / 1048576).toFixed(1) + ' MB';
+  return (n / 1073741824).toFixed(2) + ' GB';
+}
+
 let _backupInFlight = false;
 async function runSelectiveBackup() {
   if (_backupInFlight) return;
-  const parts = ['characters', 'monsters', 'treasury', 'maps'].filter(p =>
-    document.getElementById('bk-' + p)?.checked
-  );
+  const parts = _selectedBackupParts();
   if (parts.length === 0) {
     document.getElementById('backup-status').textContent = 'Select at least one section.';
     return;
@@ -224,13 +282,39 @@ function triggerImport() {
   document.getElementById('import-file-input').click();
 }
 
+const _isArchiveFile = (f) => /\.t(ar\.)?gz$/i.test(f.name) || f.type === 'application/gzip';
+
+/**
+ * Uploads one .tar.gz to the archive restore, which unpacks it server-side. The
+ * body is the File itself, so the browser streams it rather than reading a
+ * possibly-huge archive into a string first. The content type is deliberately
+ * NOT json — that keeps the global express.json() parser off the request so the
+ * server can consume it as a stream.
+ */
+async function _importArchive(file) {
+  const res = await fetch('/api/admin/restore-archive', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/gzip', 'x-master-password': masterPw },
+    body: file,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || res.statusText);
+  }
+  return res.json();
+}
+
 async function doImport(input) {
   const files = Array.from(input.files);
   if (!files.length) return;
 
-  // Parse all files first so we can show a meaningful confirm
+  // .tar.gz archives are handed to the server whole; .json files are parsed here
+  // so the confirm can name the sections they carry.
+  const archives = files.filter(_isArchiveFile);
+  const jsonFiles = files.filter(f => !_isArchiveFile(f));
+
   const parsed = [];
-  for (const file of files) {
+  for (const file of jsonFiles) {
     let backup;
     try { backup = JSON.parse(await file.text()); } catch {
       showStatus(`Import failed: "${file.name}" is not valid JSON.`, true); return;
@@ -238,6 +322,31 @@ async function doImport(input) {
     if (!backup.version) { showStatus(`Import failed: "${file.name}" is not a valid backup file.`, true); return; }
     parsed.push({ file, backup });
   }
+
+  if (archives.length) {
+    const names = archives.map(f => `${f.name} (${_fmtBytes(f.size)})`).join('\n');
+    if (!confirm(`Restore these archives?\n\n${names}\n\nExisting records with the same ID will be renamed with an "_old" suffix and kept. Images are written back into place.`)) return;
+    let ok = 0; const bad = [];
+    for (const f of archives) {
+      showStatus(`Restoring "${f.name}" — this can take a while for a large archive…`, false);
+      try {
+        const r = await _importArchive(f);
+        const bits = [];
+        if (r.parts && r.parts.length) bits.push(r.parts.join(', '));
+        if (r.images) bits.push(`${r.images} image${r.images !== 1 ? 's' : ''}`);
+        showStatus(`"${f.name}": restored ${bits.join(' + ') || 'nothing'}.`, false);
+        ok++;
+      } catch (err) { console.error(err); bad.push(`${f.name}: ${err.message}`); }
+    }
+    if (bad.length) { showStatus(`${ok} archive(s) restored, ${bad.length} failed: ${bad.join('; ')}`, true); return; }
+    if (!parsed.length) {
+      showStatus(`${ok} archive${ok !== 1 ? 's' : ''} restored — reloading…`, false);
+      setTimeout(() => location.reload(), 1400);
+      return;
+    }
+  }
+
+  if (!parsed.length) return;
 
   const labels = parsed.map(({ file, backup }) => backup.type ? `${backup.type} (${file.name})` : `full backup (${file.name})`);
   if (!confirm(`Import the following sections?\n\n${labels.join('\n')}\n\nExisting records with the same ID will be renamed with an "_old" suffix and kept. New records will be added alongside them.`)) return;
