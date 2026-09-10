@@ -21,6 +21,23 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [219] — 2026-09-10 — Backup modal shows only the archives and the raw DB
+
+The per-part JSON download is gone from the backup modal. It was superseded by the
+records archive in the previous release and only made the dialog ambiguous — two
+ways to take the same backup, one of which is the memory-hungry one.
+
+The modal now offers three downloads and nothing else: **Records** (the ticked
+sections, as one `.tar.gz`), **Images**, and **Raw Database Files**. The section
+checkboxes now clearly belong to the records archive, and the raw-DB note points at
+the images archive as its companion rather than saying media is missing.
+
+The `GET /api/admin/backup?part=` endpoint is still served, and Import still
+restores the `.json` files it produces — backups taken before the archives existed
+keep working exactly as they did.
+
+---
+
 ## [218] — 2026-09-10 — Backups that stream, in two archives
 
 **Why downloading maps could kill the server**

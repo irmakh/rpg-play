@@ -263,9 +263,13 @@
 <!-- Backup selection modal -->
 <div class="modal-overlay" id="backup-modal" style="display:none">
   <div class="modal-box" style="max-width:360px">
-    <div class="ct"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-save"></use></svg> Select Backup Files</div>
+    <div class="ct"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-save"></use></svg> Backup</div>
     <div class="modal-body">
-      <p style="font-size:12px;color:var(--ash);margin:0 0 14px">Pick the sections to back up. They can download as one archive (below) or as separate JSON files.</p>
+      <div class="ct" style="font-size:14px;margin-bottom:6px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-save"></use></svg> Records Archive</div>
+      <p style="font-size:12px;color:var(--ash);margin:0 0 12px">
+        The sections you tick, as one <code>.tar.gz</code> of JSON files with no images inside — small and quick.
+        Images travel in their own archive below. Restore either through <strong>Import</strong>.
+      </p>
       <div style="display:flex;flex-direction:column;gap:10px">
         <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px">
           <input type="checkbox" id="bk-characters" checked style="width:15px;height:15px;accent-color:var(--bone)">
@@ -288,34 +292,26 @@
           <span><strong>Chat media</strong> — every image shared in chat</span>
         </label>
       </div>
-      <div id="backup-status" style="margin-top:12px;font-size:12px;min-height:18px;color:var(--ash)"></div>
-
-      <div style="border-top:1px solid var(--rule-hi);margin:16px 0 12px"></div>
-      <div class="ct" style="font-size:14px;margin-bottom:6px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-save"></use></svg> Archive (recommended)</div>
-      <p style="font-size:12px;color:var(--ash);margin:0 0 10px">
-        The records archive holds the selected sections as JSON, with no images inside — it is small and quick.
-        The images archive holds every picture, portrait and shared file as its own file.
-        Both are built and streamed on the server, so neither loads a whole backup into memory.
-        Restore either one through <strong>Import</strong>.
-      </p>
-      <div style="display:flex;flex-direction:column;gap:8px">
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:12px">
         <button class="btn success" id="arc-dl-btn" onclick="downloadArchive('records')" style="width:100%"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-arrow-down"></use></svg> Download Records (.tar.gz)</button>
         <button class="btn" id="arc-img-btn" onclick="downloadArchive('images')" style="width:100%"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-image"></use></svg> Download Images (.tar.gz)</button>
       </div>
+      <p style="font-size:11px;color:var(--ash);margin:8px 0 0">
+        The images archive holds every picture, portrait, map and shared file — it ignores the ticks above and always takes them all.
+      </p>
       <div id="arc-status" style="margin-top:10px;font-size:12px;min-height:18px;color:var(--ash)"></div>
 
-      <div style="border-top:1px solid var(--bd,#3a3a4a);margin:16px 0 12px"></div>
+      <div style="border-top:1px solid var(--rule-hi);margin:16px 0 12px"></div>
       <div class="ct" style="font-size:14px;margin-bottom:6px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-folder"></use></svg> Raw Database Files</div>
       <p style="font-size:12px;color:var(--ash);margin:0 0 10px">
-        Downloads every SQLite database file as-is, bundled into one <code>.tar.gz</code> — for a full off-site backup.
-        <br><span style="color:var(--blood)">Note:</span> uploaded images &amp; audio (under <code>uploads/</code>) are stored separately and are <strong>not</strong> included yet.
+        Downloads this campaign's SQLite database files as-is, bundled into one <code>.tar.gz</code> — for a full off-site backup.
+        <br><span style="color:var(--blood)">Note:</span> uploaded images &amp; audio are not in here — take the images archive above alongside it.
       </p>
       <button class="btn" id="dbbk-dl-btn" onclick="downloadRawDbBackup()" style="width:100%"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-arrow-down"></use></svg> Download Raw DB Files (.tar.gz)</button>
       <div id="dbbk-status" style="margin-top:10px;font-size:12px;min-height:18px;color:var(--ash)"></div>
     </div>
     <div class="modal-btns">
-      <button class="btn" onclick="closeBackupModal()">Cancel</button>
-      <button class="btn success" id="backup-dl-btn" onclick="runSelectiveBackup()">Download Selected</button>
+      <button class="btn" onclick="closeBackupModal()">Close</button>
     </div>
   </div>
 </div>

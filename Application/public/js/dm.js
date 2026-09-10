@@ -100,8 +100,8 @@ async function refreshAll() {
 }
 
 function openBackupModal() {
-  document.getElementById('backup-status').textContent = '';
-  document.getElementById('backup-dl-btn').disabled = false;
+  document.getElementById('arc-status').textContent = '';
+  document.getElementById('dbbk-status').textContent = '';
   document.getElementById('backup-modal').style.display = 'flex';
 }
 function closeBackupModal() {
@@ -168,58 +168,10 @@ function _fmtBytes(n) {
   return (n / 1073741824).toFixed(2) + ' GB';
 }
 
-let _backupInFlight = false;
-async function runSelectiveBackup() {
-  if (_backupInFlight) return;
-  const parts = _selectedBackupParts();
-  if (parts.length === 0) {
-    document.getElementById('backup-status').textContent = 'Select at least one section.';
-    return;
-  }
-  _backupInFlight = true;
-  const btn = document.getElementById('backup-dl-btn');
-  const statusEl = document.getElementById('backup-status');
-  btn.disabled = true;
-  const date = new Date().toISOString().split('T')[0];
-  let failed = [];
-  for (const part of parts) {
-    statusEl.textContent = `Downloading ${part}…`;
-    try {
-      const res = await fetch(`/api/admin/backup?part=${part}`, {
-        headers: { 'x-master-password': masterPw }
-      });
-      if (res.status === 401) { showStatus('Unauthorized.', true); break; }
-      if (res.status === 409) { failed.push(part + ' (server busy)'); continue; }
-      if (!res.ok) {
-        let msg = part;
-        try { msg += ': ' + (await res.json()).error; } catch {}
-        failed.push(msg); continue;
-      }
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `dnd-backup-${part}-${date}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      await new Promise(r => setTimeout(r, 400));
-    } catch (err) {
-      console.error(err);
-      failed.push(part + ': ' + err.message);
-    }
-  }
-  _backupInFlight = false;
-  btn.disabled = false;
-  if (failed.length) {
-    statusEl.style.color = 'var(--blood)';
-    statusEl.textContent = 'Failed: ' + failed.join(', ');
-  } else {
-    statusEl.style.color = 'var(--verdigris)';
-    statusEl.textContent = `${parts.length} file${parts.length !== 1 ? 's' : ''} downloaded successfully.`;
-  }
-}
+// The per-part JSON download (GET /api/admin/backup?part=) is no longer offered
+// in the backup modal — the two archives supersede it. The endpoint is still
+// served and Import still restores the .json files it produced, so backups taken
+// before the archives existed keep working.
 
 let _dbBackupInFlight = false;
 async function downloadRawDbBackup() {
