@@ -123,12 +123,13 @@ async function downloadArchive(kind) {
   if (_archiveInFlight) return;
   const statusEl = document.getElementById('arc-status');
   const btn = document.getElementById(kind === 'images' ? 'arc-img-btn' : 'arc-dl-btn');
-  let url = '/api/admin/backup-images';
-  if (kind === 'records') {
-    const parts = _selectedBackupParts();
-    if (parts.length === 0) { statusEl.style.color = 'var(--blood)'; statusEl.textContent = 'Select at least one section.'; return; }
-    url = `/api/admin/backup-archive?parts=${encodeURIComponent(parts.join(','))}`;
-  }
+  // Both archives take the same section list, so a records archive and an images
+  // archive downloaded from one selection describe exactly the same thing.
+  const parts = _selectedBackupParts();
+  if (parts.length === 0) { statusEl.style.color = 'var(--blood)'; statusEl.textContent = 'Select at least one section.'; return; }
+  const url = kind === 'records'
+    ? `/api/admin/backup-archive?parts=${encodeURIComponent(parts.join(','))}`
+    : `/api/admin/backup-images?parts=${encodeURIComponent(parts.join(','))}`;
   _archiveInFlight = true;
   btn.disabled = true;
   statusEl.style.color = 'var(--ash)';

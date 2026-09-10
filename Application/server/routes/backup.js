@@ -446,7 +446,21 @@ export default function register(app, ctx) {
 
   // Every image this campaign references, as { archivePath, absPath | buffer }.
   // Derived thumb/medium sizes are left out — restore regenerates them.
-  function collectImageEntries() {
+  /**
+   * The media files this campaign references, limited to the sections asked for.
+   *
+   * `parts` is the same section list the records archive takes, so ticking
+   * Characters and Maps gives you an images archive holding exactly the files
+   * those two sections' records point at — the two archives stay a matching
+   * pair. Omitting it collects everything.
+   *
+   * Sections with no files of their own ('chat' is text; its pictures belong to
+   * 'chatmedia') simply contribute nothing.
+   */
+  function collectImageEntries(parts) {
+    const want = (Array.isArray(parts) && parts.length)
+      ? new Set(parts)
+      : new Set(BACKUP_PARTS);
     const out = new Map();   // archivePath -> entry (dedupes a shared file)
     const addUrl = (url) => {
       const rel = _stripSlash(url);
@@ -462,7 +476,7 @@ export default function register(app, ctx) {
     // marker here and re-read LAZILY at write time (getBuffer), so the ~33 MB of
     // base64 this listing pulls becomes garbage immediately and only the one row
     // being written is ever held.
-    try {
+    if (want.has('characters')) try {
       const meta = ldb.exportAll().media.map(r => ({
         id: r.id,
         mimeType: r.mimeType,
@@ -483,33 +497,38 @@ export default function register(app, ctx) {
         });
       }
     } catch {}
-    try {
+    if (want.has('monsters')) try {
       for (const m of ldb.listMonsters()) {
         let d = {}; try { d = JSON.parse(m.dataJson || '{}'); } catch {}
         addUrl(d.portrait);
       }
     } catch {}
-    try { for (const r of ldb.listTreasuryItems()) addUrl(r.imageUrl); } catch {}
-    try { for (const r of ldb.listWaitingScreens()) addUrl(r.imageUrl); } catch {}
-    try { for (const r of ldb.exportHandouts().handouts) _handoutUrls(r).forEach(addUrl); } catch {}
+    if (want.has('treasury')) try { for (const r of ldb.listTreasuryItems()) addUrl(r.imageUrl); } catch {}
+    if (want.has('waiting')) try { for (const r of ldb.listWaitingScreens()) addUrl(r.imageUrl); } catch {}
+    if (want.has('handouts')) try { for (const r of ldb.exportHandouts().handouts) _handoutUrls(r).forEach(addUrl); } catch {}
     // Sound files are the one non-image this collects; the archive is really a
     // media archive, and a music backup without its audio would be useless.
-    try { for (const r of ldb.exportMusic().soundFiles) addUrl(r.url); } catch {}
-    try {
+    if (want.has('music')) try { for (const r of ldb.exportMusic().soundFiles) addUrl(r.url); } catch {}
+    if (want.has('events')) try {
       // Calendar events carry a media_json array of { url } entries.
       for (const r of ldb.exportEvents().calendarEvents) {
         let media = []; try { media = JSON.parse(r.media_json || '[]'); } catch {}
         for (const m of media) addUrl(typeof m === 'string' ? m : (m && m.url));
       }
     } catch {}
-    try {
-      for (const row of _mediaRows('all')) {
-        const s = row.data.toString();
-        if (s.startsWith('FILE:')) { addUrl(s.slice(5)); continue; }
-        const rel = _mediaFilePath(row);
-        if (!out.has(rel)) out.set(rel, { archivePath: rel, buffer: Buffer.from(row.data) });
-      }
-    } catch {}
+    // shared_media splits the same way the two sections do: prepared-map images
+    // belong to 'maps', everything else to 'chatmedia'.
+    for (const [section, which] of [['maps', 'maps'], ['chatmedia', 'chat']]) {
+      if (!want.has(section)) continue;
+      try {
+        for (const row of _mediaRows(which)) {
+          const s = row.data.toString();
+          if (s.startsWith('FILE:')) { addUrl(s.slice(5)); continue; }
+          const rel = _mediaFilePath(row);
+          if (!out.has(rel)) out.set(rel, { archivePath: rel, buffer: Buffer.from(row.data) });
+        }
+      } catch {}
+    }
     return [...out.values()];
   }
 
@@ -580,12 +599,23 @@ export default function register(app, ctx) {
     }
   });
 
-  // GET /api/admin/backup-images — every referenced image, raw bytes, no base64.
+  // GET /api/admin/backup-images?parts=… — the media the selected sections
+  // reference, raw bytes, no base64. Same `parts` list the records archive takes,
+  // so the two downloads make a matching pair; omitting it takes everything.
   app.get('/api/admin/backup-images', (req, res) => {
     if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
     try {
-      const entries = collectImageEntries();
-      if (entries.length === 0) return res.status(404).json({ error: 'This campaign has no images' });
+      const requested = String(req.query.parts || '').split(',').map(s => s.trim()).filter(Boolean);
+      const parts = requested.filter(p => BACKUP_PARTS.includes(p));
+      if (requested.length && parts.length === 0) {
+        return res.status(400).json({ error: `No valid parts. Choose from: ${BACKUP_PARTS.join(', ')}` });
+      }
+      const entries = collectImageEntries(parts);
+      if (entries.length === 0) {
+        return res.status(404).json({ error: parts.length
+          ? 'The selected sections have no images'
+          : 'This campaign has no images' });
+      }
       const date = new Date().toISOString().split('T')[0];
       streamTar(res, `dnd-images-${_campaignSlug()}-${date}.tar.gz`, entries)
         .on('error', () => res.destroy());

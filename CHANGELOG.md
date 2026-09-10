@@ -21,6 +21,20 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [223] — 2026-09-10 — Both backup archives follow the ticked sections
+
+The images archive used to ignore the section ticks and always take every file in
+the campaign. Now both downloads follow the same selection, so a records archive
+and an images archive taken from one set of ticks describe exactly the same thing —
+and backing up one section no longer means downloading all the media.
+
+On a real campaign: ticking Waiting screens and Handouts gives 833 B of records and
+482 KB of images, where the images archive was previously 270 MB regardless.
+Sections that have no files of their own (Chat log is text; its pictures belong to
+Chat media) simply contribute nothing.
+
+---
+
 ## [222] — 2026-09-10 — A parked table no longer blanks everyone's map; backups cover the rest of the campaign
 
 **The map that would not load**
