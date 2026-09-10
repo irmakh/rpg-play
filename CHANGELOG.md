@@ -21,6 +21,20 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [225] — 2026-09-10 — A player can change their own password again
+
+Opening Set Password while signed in as a character showed only the new-password
+box, with no way to enter the current one — so the change was always refused. It
+worked correctly for the DM, which is the tell: only the DM path recorded whether
+a character already had a password, so for a player that fact was simply unknown
+and the modal assumed there was none. The rejection then focused a field that was
+not on screen.
+
+A character session now looks that up for itself, so the modal asks for the current
+password and the change goes through.
+
+---
+
 ## [224] — 2026-09-10 — Initiative tracker and monster table off the DM panel
 
 The DM panel no longer carries the Initiative Tracker card or the Monsters stat

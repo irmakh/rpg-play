@@ -251,6 +251,25 @@ async function loadCharacterList(skipAutoLoad = false, skipLoad = false) {
     const charId = indexCharId();
     const charPw = indexCharPw();
     if (charPw) charPasswords[charId] = charPw;
+
+    // Whether this character already has a password. Only the DM branch below
+    // used to record it, so for a player it stayed undefined — which left them
+    // unable to change their own password: managePassword() hid the "current
+    // password" field, _pwConfirmSet() then sent no current_password, and the
+    // server (correctly) answered 401. The error even focused the hidden field.
+    // The list endpoint is unauthenticated and returns only id/name/
+    // has_password/char_type; take just this character's row from it.
+    try {
+      const res = await fetch('/api/characters');
+      if (res.ok) {
+        const me = (await res.json()).find(c => c.id === charId);
+        if (me) {
+          charHasPassword[charId] = !!me.has_password;
+          charTypes[charId] = me.char_type || 'pc';
+        }
+      }
+    } catch { /* offline: the modal falls back to treating it as unset */ }
+
     _applySessionUI();
     if (!skipLoad) await loadCharacter(charId);
     return;
