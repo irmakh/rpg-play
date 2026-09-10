@@ -539,7 +539,7 @@ async function confirmGroupInitRoll() {
   let html = `<strong>Initiative${rtLabel}${mode === 'merged' ? ' · group' : ''}</strong>`;
   html += `<div style="margin-top:4px;display:flex;flex-direction:column;gap:2px">`;
   for (const r of rows) {
-    const color = r.isCrit ? '#44ff44' : r.isFail ? '#ff5555' : 'inherit';
+    const color = r.isCrit ? 'var(--verdigris)' : r.isFail ? 'var(--blood)' : 'inherit';
     html += `<div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline">`
       + `<span>${esc(r.name)}</span>`
       + `<span><span style="font-size:10px;opacity:.55">${esc(r.detail)}</span> <strong style="color:${color};font-size:14px">${r.total}</strong></span></div>`;
@@ -727,7 +727,7 @@ function renderHpTable() {
     const isBulk = isDM() && bulkTokenIds.has(tok.id);
     const rowStyle = `display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid var(--rule)${isCur ? ';background:var(--wash);margin:0 -10px;padding-left:10px;padding-right:10px' : ''}${canOpenPanel ? ';cursor:pointer' : ''}${isBulk ? ';border-left:3px solid #00e5ff;padding-left:5px' : ''}`;
     const hpNumStr = showNums
-      ? `<span style="font-weight:bold;color:${col}">${cur}</span><span style="color:var(--ash)">/${max}</span>${temp > 0 ? `<span style="color:#aaddff;font-size:10px"> +${temp}</span>` : ''}`
+      ? `<span style="font-weight:bold;color:${col}">${cur}</span><span style="color:var(--ash)">/${max}</span>${temp > 0 ? `<span style="color:var(--arc);font-size:10px"> +${temp}</span>` : ''}`
       : '';
     const clickAttr = canOpenPanel ? `onclick="hpTrackerRowClick('${escJs(tok.id)}', event)"` : '';
     const activeConds = parseConditions(tok.conditions);
@@ -747,7 +747,7 @@ function renderHpTable() {
           <div style="flex:1;background:var(--slate-hi);border-radius:2px;overflow:hidden;height:4px">
             <div style="width:${hpPct*100}%;height:100%;background:${col};transition:width .3s"></div>
           </div>
-          ${temp > 0 ? `<div style="width:${Math.min(30,temp/max*100)}%;max-width:20%;height:4px;background:#aaddff;border-radius:2px;flex-shrink:0"></div>` : ''}
+          ${temp > 0 ? `<div style="width:${Math.min(30,temp/max*100)}%;max-width:20%;height:4px;background:var(--arc);border-radius:2px;flex-shrink:0"></div>` : ''}
         </div>
       </div>
       <div style="font-size:11px;min-width:44px;text-align:right;flex-shrink:0;line-height:1.3">${hpNumStr}</div>
@@ -1030,7 +1030,7 @@ async function confirmGroupCheckRoll() {
     if (r.total === null) {
       html += `<div style="display:flex;justify-content:space-between;gap:10px;opacity:.5"><span>${esc(r.name)}</span><span>—</span></div>`;
     } else {
-      const color = r.isCrit ? '#44ff44' : r.isFail ? '#ff5555' : 'inherit';
+      const color = r.isCrit ? 'var(--verdigris)' : r.isFail ? 'var(--blood)' : 'inherit';
       html += `<div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline">`
         + `<span>${esc(r.name)}</span>`
         + `<span><span style="font-size:10px;opacity:.55">${esc(r.detail)}</span> <strong style="color:${color};font-size:14px">${r.total}</strong></span></div>`;

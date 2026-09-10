@@ -98,7 +98,7 @@ function renderMonsterActionsPanel(data, tok) {
 
   return `<div class="qroll-section">
     <div class="qroll-section-hdr" onclick="toggleSideSection('monster-actions')">
-      <span style="color:#ff9999">Actions</span>
+      <span style="color:var(--blood)">Actions</span>
       <span id="side-sec-monster-actions-arrow">${_sideSecArrow('monster-actions')}</span>
     </div>
     <div id="side-sec-monster-actions" class="qroll-rows" style="${_sideSecStyle('monster-actions')}">${content}</div>
@@ -291,7 +291,7 @@ function renderMonsterFullStats(data, tok) {
   html+='<div style="margin-top:8px"><a href="/monsters.html" target="_blank" style="color:var(--bone);font-size:10px">📖 Full view →</a></div>';
   html+='</div>';
   return `<div style="padding:2px 0 4px;display:flex;align-items:center;justify-content:space-between">
-    <span style="font-size:12px;color:#ff9999;font-weight:bold">${esc(data.name||'Monster')}${tok&&tok.label?` <span style="color:var(--ash);font-weight:normal;font-size:11px">[${esc(tok.label)}]</span>`:''}</span>
+    <span style="font-size:12px;color:var(--blood);font-weight:bold">${esc(data.name||'Monster')}${tok&&tok.label?` <span style="color:var(--ash);font-weight:normal;font-size:11px">[${esc(tok.label)}]</span>`:''}</span>
     <div style="display:flex;gap:4px">
       ${tok&&tok.linkedId?`<button class="btn sm" onclick="showMonsterInfoModal('${escJs(tok.linkedId)}')" title="View full stat block" style="font-size:10px;padding:2px 6px">Info</button>`:''}
       <button class="btn sm" onclick="rollMonsterInitiativeFromPanel()" title="Roll Initiative (d20${initStr})" style="font-size:10px;padding:2px 6px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg> Init ${initStr}</button>
@@ -300,7 +300,7 @@ function renderMonsterFullStats(data, tok) {
   ${actionsPanel}
   <div class="qroll-section">
     <div class="qroll-section-hdr" onclick="toggleSideSection('monster')">
-      <span style="color:#ff9999">Stat Block</span>
+      <span style="color:var(--blood)">Stat Block</span>
       <span id="side-sec-monster-arrow">${_sideSecArrow('monster')}</span>
     </div>
     <div id="side-sec-monster" class="qroll-rows" style="${_sideSecStyle('monster')}">${html}</div>

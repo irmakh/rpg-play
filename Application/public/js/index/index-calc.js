@@ -134,7 +134,7 @@ function recalcPreparedCount() {
   const el = document.getElementById('prep-count');
   if (el) {
     el.value = `${count} / ${maxPrep}`;
-    el.style.color = count > maxPrep ? '#ff8888' : '#88ff88';
+    el.style.color = count > maxPrep ? 'var(--blood)' : 'var(--verdigris)';
   }
 }
 

@@ -176,7 +176,7 @@ html.lamplit .abil input[type=number]:focus{color:var(--bone);border-color:var(-
 .sk-row input.exp-chk{accent-color:var(--bone);width:12px;height:12px;flex-shrink:0}
 .sk-row input[type=text]{width:44px;text-align:center}
 .add-btn{background:var(--wash);border:1px dashed var(--rule-hi);color:var(--bone);padding:4px 12px;border-radius:3px;cursor:pointer;font-size:11px;width:100%;margin-top:6px}
-.del-btn{background:#ff444422;border:1px solid #ff444444;color:#ff8888;padding:1px 6px;border-radius:3px;cursor:pointer;font-size:10px}
+.del-btn{background:color-mix(in srgb, var(--blood) 13%, transparent);border:1px solid color-mix(in srgb, var(--blood) 27%, transparent);color:var(--blood);padding:1px 6px;border-radius:3px;cursor:pointer;font-size:10px}
 table{width:100%;border-collapse:collapse}
 th{color:var(--bone);font-size:10px;padding:4px;border-bottom:1px solid var(--rule-hi);text-align:left}
 #spell-tbl th.sp-sortable{cursor:pointer;user-select:none}
@@ -301,17 +301,17 @@ a.char-btn{display:inline-block;text-decoration:none;line-height:1.5}
 .adv-label{font-size:13px;color:var(--bone);margin-bottom:14px;font-weight:bold}
 .adv-btns{display:flex;gap:8px;justify-content:center}
 .adv-btn{padding:9px 16px;border-radius:4px;cursor:pointer;font-size:12px;font-weight:bold;border:1px solid}
-.adv-btn.adv{background:#1e3a1e;border-color:#4a8a4a;color:#88ff88}.adv-btn.adv:hover{background:#2a5a2a}
+.adv-btn.adv{background:#1e3a1e;border-color:#4a8a4a;color:var(--verdigris)}.adv-btn.adv:hover{background:#2a5a2a}
 .adv-btn.norm{background:var(--wash);border-color:var(--rule-hi);color:var(--bone)}.adv-btn.norm:hover{background:var(--rule-hi)}
-.adv-btn.dis{background:#3a1e1e;border-color:#8a4a4a;color:#ff8888}.adv-btn.dis:hover{background:#5a2a2a}
+.adv-btn.dis{background:#3a1e1e;border-color:#8a4a4a;color:var(--blood)}.adv-btn.dis:hover{background:#5a2a2a}
 /* Roll toast */
 #roll-toast{position:fixed;bottom:32px;left:50%;transform:translateX(-50%);background:var(--slate);border:2px solid var(--bone);border-radius:10px;padding:14px 24px;min-width:200px;max-width:360px;text-align:center;z-index:3000;display:none;cursor:pointer;box-shadow:0 6px 24px #000c}
 .toast-label{font-size:11px;color:var(--ash);margin-bottom:2px}
 .toast-badge{display:inline-block;font-size:10px;padding:1px 7px;border-radius:10px;margin-bottom:6px;font-weight:bold}
-.toast-badge.adv{background:#1e3a1e;color:#88ff88}.toast-badge.dis{background:#3a1e1e;color:#ff8888}
+.toast-badge.adv{background:#1e3a1e;color:var(--verdigris)}.toast-badge.dis{background:#3a1e1e;color:var(--blood)}
 .toast-badge.norm,.toast-badge.dmg{background:var(--wash);color:var(--bone)}
 .toast-total{font-size:40px;font-weight:bold;color:var(--bone);line-height:1.1}
-.toast-total.crit{color:#88ff88}.toast-total.fail{color:#ff8888}
+.toast-total.crit{color:var(--verdigris)}.toast-total.fail{color:var(--blood)}
 .toast-detail{font-size:11px;color:var(--ash);margin-top:4px}
 /* Roll history */
 .rh-list{list-style:none;padding:0}
@@ -320,11 +320,11 @@ a.char-btn{display:inline-block;text-decoration:none;line-height:1.5}
 .rh-time{font-size:10px;color:var(--ash);white-space:nowrap;min-width:56px}
 .rh-label{flex:1;font-weight:bold}
 .rh-badge{font-size:9px;padding:1px 5px;border-radius:8px;font-weight:bold;white-space:nowrap}
-.rh-badge.adv{background:#1e3a1e;color:#88ff88}.rh-badge.dis{background:#3a1e1e;color:#ff8888}
+.rh-badge.adv{background:#1e3a1e;color:var(--verdigris)}.rh-badge.dis{background:#3a1e1e;color:var(--blood)}
 .rh-badge.norm,.rh-badge.dmg{background:var(--wash);color:var(--bone)}
 .rh-detail{color:var(--ash);font-size:10px}
 .rh-total{font-weight:bold;color:var(--bone);min-width:28px;text-align:right}
-.rh-total.crit{color:#88ff88}.rh-total.fail{color:#ff8888}
+.rh-total.crit{color:var(--verdigris)}.rh-total.fail{color:var(--blood)}
 /* ── Equipment Items ── */
 .item-row{display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid var(--rule);flex-wrap:wrap}
 .item-row:last-child{border-bottom:none}

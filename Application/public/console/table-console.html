@@ -28,7 +28,7 @@
 .pwag-btn:disabled{opacity:.5;cursor:not-allowed}
 .pwag-btn.ghost{background:transparent;border:1px solid var(--arc)55;color:#aaa;margin-top:7px}
 .pwag-btn.ghost:hover{background:var(--arc)22;color:#e0d8c8}
-.pwag-err{color:#ff8888;font-size:11px;min-height:14px;margin-bottom:8px;text-align:center}
+.pwag-err{color:var(--blood);font-size:11px;min-height:14px;margin-bottom:8px;text-align:center}
 .pwag-step-title{font-size:13px;color:var(--arc);font-weight:bold;margin-bottom:3px}
 .pwag-step-sub{font-size:11px;color:#aaa;margin-bottom:14px}
 </style>
@@ -271,7 +271,7 @@ async function pwagLoginDM(){
   <button class="btn sm draw-shape-btn" id="draw-shape-rect" onclick="setDrawShape('rect')">▭ Rect</button>
   <button class="btn sm draw-shape-btn" id="draw-shape-line" onclick="setDrawShape('line')">╱ Line</button>
   <span class="draw-tb-label" style="margin-left:10px">Color:</span>
-  <input type="color" id="draw-color" value="#ff4444" oninput="setDrawColor(this.value)" title="Stroke color">
+  <input type="color" id="draw-color" value="var(--blood)" oninput="setDrawColor(this.value)" title="Stroke color">
   <span class="draw-tb-label" style="margin-left:10px">Size:</span>
   <button class="btn sm draw-thick-btn active" id="draw-thick-2" onclick="setDrawThickness(2)" title="Thin">—</button>
   <button class="btn sm draw-thick-btn" id="draw-thick-4" onclick="setDrawThickness(4)" title="Medium">━</button>
@@ -326,7 +326,7 @@ async function pwagLoginDM(){
         <div style="font-size:12px;padding:6px 10px 2px;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">
           <span>HP: <strong id="hp-cur-display" style="color:var(--verdigris)">0</strong>
             <span style="color:var(--ash)"> / <span id="hp-max-display">0</span></span>
-            <span id="hp-temp-display-wrap" style="display:none"> <span style="color:#aaddff;font-size:11px">(+<span id="hp-temp-display">0</span> temp)</span></span>
+            <span id="hp-temp-display-wrap" style="display:none"> <span style="color:var(--arc);font-size:11px">(+<span id="hp-temp-display">0</span> temp)</span></span>
           </span>
           <span style="color:var(--ash)">AC: <strong id="hp-ac-display" style="color:var(--bone)">—</strong></span>
         </div>

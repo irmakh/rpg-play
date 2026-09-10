@@ -20,11 +20,11 @@ td{padding:6px 6px;border-bottom:1px solid var(--rule);vertical-align:top;font-s
 .btn:hover{background:var(--rule-hi)}
 .btn.primary{background:var(--bone);color:var(--ink);border-color:var(--bone)}
 .btn.primary:hover{background:var(--arc-hi)}
-.btn.danger{border-color:#ff444466;color:#ff8888;background:#ff444411}
-.btn.danger:hover{background:#ff444433}
+.btn.danger{border-color:color-mix(in srgb, var(--blood) 40%, transparent);color:var(--blood);background:color-mix(in srgb, var(--blood) 7%, transparent)}
+.btn.danger:hover{background:color-mix(in srgb, var(--blood) 20%, transparent)}
 .btn.sm{padding:2px 8px;font-size:11px}
-.btn.success{border-color:#44ff4466;color:var(--verdigris);background:#44ff4411}
-.btn.success:hover{background:#44ff4433}
+.btn.success{border-color:color-mix(in srgb, var(--verdigris) 40%, transparent);color:var(--verdigris);background:color-mix(in srgb, var(--verdigris) 7%, transparent)}
+.btn.success:hover{background:color-mix(in srgb, var(--verdigris) 20%, transparent)}
 .gate{position:fixed;inset:0;background:var(--ink);display:flex;align-items:center;justify-content:center;z-index:100}
 .gate-box{background:var(--slate);border:1px solid var(--bone);border-radius:8px;padding:32px 36px;min-width:320px;text-align:center}
 .gate-box h2{color:var(--bone);font-size:18px;margin-bottom:6px}
@@ -42,8 +42,8 @@ td{padding:6px 6px;border-bottom:1px solid var(--rule);vertical-align:top;font-s
 #status-msg{font-size:11px;color:var(--verdigris);min-height:16px;margin-top:8px}
 #status-msg.error{color:var(--blood)}
 .vis-badge{display:inline-block;font-size:10px;padding:1px 7px;border-radius:10px;font-weight:bold}
-.vis-badge.visible{background:#44ff4422;color:var(--verdigris);border:1px solid #44ff4444}
-.vis-badge.hidden{background:#ff444422;color:var(--blood);border:1px solid #ff444444}
+.vis-badge.visible{background:color-mix(in srgb, var(--verdigris) 13%, transparent);color:var(--verdigris);border:1px solid color-mix(in srgb, var(--verdigris) 27%, transparent)}
+.vis-badge.hidden{background:color-mix(in srgb, var(--blood) 13%, transparent);color:var(--blood);border:1px solid color-mix(in srgb, var(--blood) 27%, transparent)}
 #item-err{color:var(--blood);font-size:11px;min-height:14px;margin-top:4px}
 .tabs{display:flex;gap:6px;margin-bottom:0}
 .tab{background:var(--slate);border:1px solid var(--rule-hi);border-bottom:none;color:var(--ash);padding:6px 18px;border-radius:4px 4px 0 0;cursor:pointer;font-size:12px;font-weight:bold}

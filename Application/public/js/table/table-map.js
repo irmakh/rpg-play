@@ -378,7 +378,7 @@ canvasArea.addEventListener('click', e => {
       _showMapCtxMenu(e.clientX, e.clientY,
         `<div style="font-size:9px;color:rgba(140,158,255,.6);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Fog Region</div>`
         + `<div style="font-weight:bold;margin-bottom:3px">${esc(r.label || 'Region')}</div>`
-        + `<div style="font-size:10px;margin-bottom:7px;color:${r.visible ? '#88ff88' : 'var(--ash)'}">${r.visible ? '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-eye"></use></svg> Revealed to players' : '🌫 Hidden from players'}</div>`
+        + `<div style="font-size:10px;margin-bottom:7px;color:${r.visible ? 'var(--verdigris)' : 'var(--ash)'}">${r.visible ? '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-eye"></use></svg> Revealed to players' : '🌫 Hidden from players'}</div>`
         + (r.visible
           ? `<button class="btn sm" onclick="_dismissMapCtxMenu();hideFogRegion('${escJs(r.id)}')" style="width:100%;font-size:11px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-eye-off"></use></svg> Hide Region</button>`
           : `<button class="btn sm" onclick="_dismissMapCtxMenu();revealFogRegion('${escJs(r.id)}')" style="width:100%;font-size:11px;background:var(--verdigris);color:#000;border-color:var(--verdigris)"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-eye"></use></svg> Reveal Region</button>`)
@@ -395,7 +395,7 @@ canvasArea.addEventListener('click', e => {
         `<div style="font-size:9px;color:rgba(140,158,255,.6);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">${icon} Hidden Item</div>`
         + `<div style="font-weight:bold;margin-bottom:3px">${esc(item.label || 'Item')}</div>`
         + (item.description ? `<div style="font-size:10px;color:var(--ash);margin-bottom:5px;max-height:54px;overflow-y:auto;white-space:pre-wrap;word-break:break-word">${esc(item.description)}</div>` : '')
-        + `<div style="font-size:10px;margin-bottom:7px;color:${item.visible ? '#88ff88' : '#ff8888'}">${item.visible ? '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-eye"></use></svg> Revealed to players' : '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-circle"></use></svg> Hidden from players'}</div>`
+        + `<div style="font-size:10px;margin-bottom:7px;color:${item.visible ? 'var(--verdigris)' : 'var(--blood)'}">${item.visible ? '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-eye"></use></svg> Revealed to players' : '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-circle"></use></svg> Hidden from players'}</div>`
         + (item.visible
           ? `<button class="btn sm" onclick="_dismissMapCtxMenu();hideItem('${escJs(item.id)}')" style="width:100%;font-size:11px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-eye-off"></use></svg> Hide Item</button>`
           : `<button class="btn sm" onclick="_dismissMapCtxMenu();revealItem('${escJs(item.id)}')" style="width:100%;font-size:11px;background:var(--verdigris);color:#000;border-color:var(--verdigris)"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-eye"></use></svg> Reveal Item</button>`)
@@ -876,7 +876,7 @@ function updateDrawSelectionUI() {
   if (deleteBtn) deleteBtn.style.display = (s && drawSubMode === 'select') ? '' : 'none';
   if (s) {
     const colorIn = document.getElementById('draw-color');
-    if (colorIn) colorIn.value = s.color || '#ff4444';
+    if (colorIn) colorIn.value = s.color || '#EB7E73';
     document.querySelectorAll('.draw-thick-btn').forEach(b => b.classList.remove('active'));
     const thickBtn = document.getElementById('draw-thick-' + s.thickness);
     if (thickBtn) thickBtn.classList.add('active');
@@ -979,7 +979,7 @@ async function deleteSelectedShape() {
 function renderShape(ctx, s, alpha = 1) {
   ctx.save();
   ctx.globalAlpha = alpha;
-  ctx.strokeStyle = s.color || '#ff4444';
+  ctx.strokeStyle = s.color || '#EB7E73';
   ctx.lineWidth = s.thickness || 2;
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
@@ -992,7 +992,7 @@ function renderShape(ctx, s, alpha = 1) {
     const r = Math.sqrt((s.x2 - s.x1) ** 2 + (s.y2 - s.y1) ** 2);
     ctx.beginPath();
     ctx.arc(s.x1, s.y1, r, 0, Math.PI * 2);
-    ctx.fillStyle = s.color || '#ff4444';
+    ctx.fillStyle = s.color || '#EB7E73';
     ctx.globalAlpha = alpha * 0.18;
     ctx.fill();
     ctx.globalAlpha = alpha;
@@ -1000,7 +1000,7 @@ function renderShape(ctx, s, alpha = 1) {
   } else if (s.type === 'rect') {
     const x = Math.min(s.x1, s.x2), y = Math.min(s.y1, s.y2);
     const w = Math.abs(s.x2 - s.x1), h = Math.abs(s.y2 - s.y1);
-    ctx.fillStyle = s.color || '#ff4444';
+    ctx.fillStyle = s.color || '#EB7E73';
     ctx.globalAlpha = alpha * 0.18;
     ctx.fillRect(x, y, w, h);
     ctx.globalAlpha = alpha;
@@ -1263,7 +1263,7 @@ document.addEventListener('mousemove', e => {
     oCtx.font = 'bold 12px Segoe UI';
     oCtx.textAlign = 'center';
     oCtx.shadowColor = '#000'; oCtx.shadowBlur = 3;
-    oCtx.fillStyle = remaining >= 0 ? '#88ff88' : '#ff8888';
+    oCtx.fillStyle = remaining >= 0 ? '#6BAA92' : '#EB7E73';
     oCtx.fillText(`${dist}ft  (${remaining >= 0 ? remaining + 'ft left' : Math.abs(remaining) + 'ft over'})`, cx, cy - size / 2 - 8);
     oCtx.shadowBlur = 0;
   }

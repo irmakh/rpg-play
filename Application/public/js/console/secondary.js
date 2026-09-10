@@ -145,10 +145,10 @@ function sTokDisplayName(tok) {
 }
 
 function sHpColor(pct) {
-  if (pct > 0.6) return '#88ff88';
+  if (pct > 0.6) return 'var(--verdigris)';
   if (pct > 0.3) return '#ffcc44';
   if (pct > 0)   return '#ff8844';
-  return '#ff4444';
+  return 'var(--blood)';
 }
 
 function sParseConditions(str) { try { return JSON.parse(str || '[]'); } catch { return []; } }
@@ -634,7 +634,7 @@ function sRenderMonsterStats(tok) {
   container.style.display = '';
   container.innerHTML = `
     <div class="s-stats-header">
-      <span style="color:#ff9999">${esc(displayName)}<span style="color:var(--ash);font-weight:normal;font-size:11px"> CR ${esc(String(cr))}</span></span>
+      <span style="color:var(--blood)">${esc(displayName)}<span style="color:var(--ash);font-weight:normal;font-size:11px"> CR ${esc(String(cr))}</span></span>
       <button class="s-btn" onclick="sQrollRoll('Initiative','${initStr}')" style="flex:none;padding:5px 10px;font-size:11px;min-height:32px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg> Init ${initStr}</button>
     </div>
     <div class="s-roll-mode-row">
@@ -730,7 +730,7 @@ function sRenderMonsterStatBlock(data, tok) {
   if (data.portraitMedium || data.portrait) {
     html += `<div style="text-align:center;margin-bottom:8px"><img src="${esc(data.portraitMedium || data.portrait)}" style="max-width:120px;max-height:120px;border-radius:6px;object-fit:cover;border:1px solid var(--rule-hi)" onerror="this.style.display='none'"></div>`;
   }
-  html += `<div style="font-size:15px;font-weight:bold;color:#ff9999">${esc(tok?.label ? tok.label + ' (' + (data.name || '') + ')' : (data.name || 'Monster'))}</div>`;
+  html += `<div style="font-size:15px;font-weight:bold;color:var(--blood)">${esc(tok?.label ? tok.label + ' (' + (data.name || '') + ')' : (data.name || 'Monster'))}</div>`;
   if (size || typeStr || align) html += `<div style="font-size:11px;font-style:italic;color:var(--ash);margin-bottom:4px">${esc([size, typeStr, align].filter(Boolean).join(', '))}${data.source ? ' <span style="font-size:10px;opacity:.6">(' + esc(data.source) + ')</span>' : ''}</div>`;
   html += HR;
   html += `<div style="margin:2px 0"><span style="color:var(--bone);font-weight:bold">AC</span> ${esc(String(acStr))}</div>`;

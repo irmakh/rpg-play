@@ -278,7 +278,7 @@
   transition: background .1s, color .1s;
 }
 .panel-btn:hover { background: var(--wash); color: var(--bone); }
-.panel-btn.del:hover { background: #ff444422; color: var(--blood); }
+.panel-btn.del:hover { background: color-mix(in srgb, var(--blood) 13%, transparent); color: var(--blood); }
 .panel-btn:disabled { opacity: .25; cursor: default; }
 .panel-btn:disabled:hover { background: none; color: var(--ash); }
 

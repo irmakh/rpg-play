@@ -546,7 +546,7 @@
         <label class="lbl">Password (optional)</label>
         <input type="password" id="nc-password" placeholder="Leave blank for no password" style="width:100%;box-sizing:border-box">
       </div>
-      <div id="nc-err" style="color:#ff8888;font-size:11px;min-height:16px;margin-top:6px"></div>
+      <div id="nc-err" style="color:var(--blood);font-size:11px;min-height:16px;margin-top:6px"></div>
     </div>
     <div class="modal-btns">
       <button class="char-btn" onclick="ncClose()">Cancel</button>
@@ -844,7 +844,7 @@
         <label class="lbl">New Password <span style="color:#aaa;font-size:9px">(leave blank to remove)</span></label>
         <input type="password" id="pw-new" autocomplete="off" onkeydown="if(event.key==='Enter')pwConfirm()">
       </div>
-      <div id="pw-err" style="color:#ff8888;font-size:11px;min-height:16px;margin-top:6px"></div>
+      <div id="pw-err" style="color:var(--blood);font-size:11px;min-height:16px;margin-top:6px"></div>
     </div>
     <div class="modal-btns">
       <button class="char-btn" onclick="pwClose()">Cancel</button>
@@ -894,7 +894,7 @@
       <div class="init-panel-btns">
         <button class="dice-btn" onclick="rollMyInitiative()" title="Roll your initiative"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg> Roll</button>
         <button class="dice-btn" onclick="initSkipTurn()" title="Next turn"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-next"></use></svg> Next</button>
-        <button class="dice-btn" style="border-color:#ff444466;color:#ff8888;background:#ff444411" onclick="initClear()" title="Clear all"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg> </button>
+        <button class="dice-btn" style="border-color:color-mix(in srgb, var(--blood) 40%, transparent);color:var(--blood);background:color-mix(in srgb, var(--blood) 7%, transparent)" onclick="initClear()" title="Clear all"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg> </button>
       </div>
       <div id="init-tracker-list"><div class="init-empty-msg">No combatants yet.</div></div>
     </div>

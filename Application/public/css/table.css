@@ -107,10 +107,10 @@ input[type=number].rp-num-input:focus{outline:none;border-color:var(--arc);backg
 .btn:hover{background:var(--rule-hi)}
 .btn.primary{background:var(--slate-hi);color:var(--ink);border-color:var(--bone)}
 .btn.primary:hover{background:var(--arc-hi)}
-.btn.danger{border-color:#ff444466;color:#ff8888;background:#ff444411}
-.btn.danger:hover{background:#ff444433}
-.btn.success{border-color:#44ff4466;color:var(--verdigris);background:#44ff4411}
-.btn.success:hover{background:#44ff4433}
+.btn.danger{border-color:color-mix(in srgb, var(--blood) 40%, transparent);color:var(--blood);background:color-mix(in srgb, var(--blood) 7%, transparent)}
+.btn.danger:hover{background:color-mix(in srgb, var(--blood) 20%, transparent)}
+.btn.success{border-color:color-mix(in srgb, var(--verdigris) 40%, transparent);color:var(--verdigris);background:color-mix(in srgb, var(--verdigris) 7%, transparent)}
+.btn.success:hover{background:color-mix(in srgb, var(--verdigris) 20%, transparent)}
 .btn.sm{padding:2px 8px;font-size:11px}
 .tool-btn.active{background:var(--arc);color:var(--ink)}
 .tool-btn.pop-active{background:var(--slate-hi);color:var(--ink);box-shadow:0 0 0 1px var(--arc-hi) inset}
@@ -151,8 +151,8 @@ input:focus,select:focus{outline:none;border-color:var(--arc)}
 #chat-bar .chat-log{height:200px}
 .chat-log{overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:4px}
 .chat-entry{background:var(--slate-hi);border-radius:4px;padding:5px 8px;font-size:11px;border-left:3px solid var(--rule-hi)}
-.chat-entry.nat20{border-left-color:#44ff44;background:#44ff4411}
-.chat-entry.nat1{border-left-color:#ff4444;background:#ff444411}
+.chat-entry.nat20{border-left-color:var(--verdigris);background:color-mix(in srgb, var(--verdigris) 7%, transparent)}
+.chat-entry.nat1{border-left-color:var(--blood);background:color-mix(in srgb, var(--blood) 7%, transparent)}
 .ce-sender{font-weight:bold;color:var(--bone);margin-bottom:2px;font-size:10px}
 .ce-type{color:var(--ash);font-size:10px}
 .ce-total{font-size:15px;font-weight:bold;margin-top:2px}
@@ -194,11 +194,11 @@ input:focus,select:focus{outline:none;border-color:var(--arc)}
 .adv-btns{display:flex;gap:8px;justify-content:center;margin-bottom:4px}
 .adv-btn{background:var(--wash);border:1px solid var(--rule-hi);color:var(--bone);padding:8px 16px;border-radius:4px;cursor:pointer;font-size:13px;font-weight:bold;min-width:90px}
 .adv-btn:hover{background:var(--rule-hi)}
-.adv-btn.adv{border-color:#44ff4466;color:var(--verdigris);background:#44ff4411}
-.adv-btn.adv:hover{background:#44ff4433}
+.adv-btn.adv{border-color:color-mix(in srgb, var(--verdigris) 40%, transparent);color:var(--verdigris);background:color-mix(in srgb, var(--verdigris) 7%, transparent)}
+.adv-btn.adv:hover{background:color-mix(in srgb, var(--verdigris) 20%, transparent)}
 .adv-btn.norm{border-color:var(--rule-hi);color:var(--bone)}
-.adv-btn.dis{border-color:#ff444466;color:#ff8888;background:#ff444411}
-.adv-btn.dis:hover{background:#ff444433}
+.adv-btn.dis{border-color:color-mix(in srgb, var(--blood) 40%, transparent);color:var(--blood);background:color-mix(in srgb, var(--blood) 7%, transparent)}
+.adv-btn.dis:hover{background:color-mix(in srgb, var(--blood) 20%, transparent)}
 
 /* ── Quick Roll panel ── */
 .qroll-char-row{display:flex;gap:4px;padding:8px;border-bottom:1px solid var(--rule-hi);align-items:center}
@@ -538,15 +538,15 @@ input[type=number]{-moz-appearance:textfield;appearance:textfield}
 }
 .ho-rp-pill.pending { background: #ffffff11; color: var(--ash); }
 .ho-rp-pill.rolled  { background: var(--arc-fill); color: var(--arc); }
-.ho-rp-pill.success { background: #88ff8822; color: #88ff88; }
-.ho-rp-pill.fail    { background: #ff888822; color: #ff8888; }
+.ho-rp-pill.success { background: color-mix(in srgb, var(--verdigris) 13%, transparent); color: var(--verdigris); }
+.ho-rp-pill.fail    { background: color-mix(in srgb, var(--blood) 13%, transparent); color: var(--blood); }
 .ho-rp-sub { font-size: 10px; color: var(--ash); margin-bottom: 5px; }
 .ho-rp-sub b { color: var(--bone); font-size: 12px; }
 .ho-rp-detail { opacity: .7; }
 .ho-rp-suggest { margin-left: 5px; }
 .ho-rp-btns { display: flex; gap: 4px; flex-wrap: wrap; }
-.ho-rp-btns .ho-ok  { border-color: #88ff8855; color: #88ff88; background: transparent; }
-.ho-rp-btns .ho-bad { border-color: #ff888855; color: #ff8888; background: transparent; }
+.ho-rp-btns .ho-ok  { border-color: color-mix(in srgb, var(--verdigris) 33%, transparent); color: var(--verdigris); background: transparent; }
+.ho-rp-btns .ho-bad { border-color: color-mix(in srgb, var(--blood) 33%, transparent); color: var(--blood); background: transparent; }
 .ho-rp-prompt { font-size: 11px; line-height: 1.5; white-space: pre-wrap; }
 .ho-rp-body   { font-size: 11px; line-height: 1.55; white-space: pre-wrap; }
 .ho-rp-wait   { font-size: 10px; color: var(--ash); font-style: italic; margin-top: 5px; }
@@ -615,8 +615,8 @@ input[type=number]{-moz-appearance:textfield;appearance:textfield}
 .ho-mo-char.has:hover { background: transparent; }
 .ho-mo-has { margin-left: auto; font-size: 9px; color: var(--ash); font-style: italic; }
 .ho-mo-status { font-size: 11px; min-height: 15px; margin-top: 8px; }
-.ho-mo-status.ok { color: #88ff88; }
-.ho-mo-status.err { color: #ff8888; }
+.ho-mo-status.ok { color: var(--verdigris); }
+.ho-mo-status.err { color: var(--blood); }
 
 /* ── Hand-out modal: live results ──────────────────────────────────────────── */
 /* A recipient's row replaces their tick box once they hold the handout, so the
@@ -633,14 +633,14 @@ input[type=number]{-moz-appearance:textfield;appearance:textfield}
 }
 .ho-mo-rec:last-child { border-bottom: none; }
 .ho-mo-rec.rolled  { border-left-color: var(--arc); background: var(--arc-fill); }
-.ho-mo-rec.success { border-left-color: #88ff88; }
-.ho-mo-rec.fail    { border-left-color: #ff8888; }
+.ho-mo-rec.success { border-left-color: var(--verdigris); }
+.ho-mo-rec.fail    { border-left-color: var(--blood); }
 .ho-mo-rec-top { display: flex; align-items: center; gap: 6px; font-size: 12px; }
 .ho-mo-rec-sub { font-size: 10px; color: var(--ash); margin: 3px 0 5px; }
 .ho-mo-rec-sub b { color: var(--bone); font-size: 13px; }
 .ho-mo-rec-btns { display: flex; gap: 4px; flex-wrap: wrap; }
-.ho-mo-rec-btns .ho-ok  { border-color: #88ff8855; color: #88ff88; background: transparent; }
-.ho-mo-rec-btns .ho-bad { border-color: #ff888855; color: #ff8888; background: transparent; }
+.ho-mo-rec-btns .ho-ok  { border-color: color-mix(in srgb, var(--verdigris) 33%, transparent); color: var(--verdigris); background: transparent; }
+.ho-mo-rec-btns .ho-bad { border-color: color-mix(in srgb, var(--blood) 33%, transparent); color: var(--blood); background: transparent; }
 
 /* ── Waiting screens ──────────────────────────────────────────────────────────
    The overlay covers #table-wrap and the right panel is lifted above it, so the

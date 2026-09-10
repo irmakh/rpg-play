@@ -165,7 +165,7 @@ function renderSideCharacter() {
       for (const s of byLevel[lvl]) {
         const idx = preparedSpells.indexOf(s);
         const sName = s[1] || '?';
-        const flags = (s[4] ? ' <span style="color:#aaddff" title="Concentration">C</span>' : '')
+        const flags = (s[4] ? ' <span style="color:var(--arc)" title="Concentration">C</span>' : '')
                     + (s[5] ? ' <span style="color:#ddaaff" title="Ritual">R</span>' : '');
         const nameSpan = `<span class="rp-spell-name" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px" onclick="postSpellInfoFromPanel(${idx})" title="Send to chat">${esc(sName)}</span>${flags}`;
         spellListHtml += `<div class="qroll-row" style="padding:3px 10px;font-size:11px">`

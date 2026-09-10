@@ -115,8 +115,8 @@ select option{background:var(--slate-hi)}
 .btn-sm{width:auto;padding:6px 12px;font-size:11px}
 .btn-ghost{background:transparent;border:1px solid var(--rule-hi);color:var(--ash)}
 .btn-ghost:hover{background:var(--wash);color:var(--bone)}
-.btn-danger{background:transparent;border:1px solid #ff888855;color:var(--blood)}
-.btn-danger:hover{background:#ff888822;color:var(--blood)}
+.btn-danger{background:transparent;border:1px solid color-mix(in srgb, var(--blood) 33%, transparent);color:var(--blood)}
+.btn-danger:hover{background:color-mix(in srgb, var(--blood) 13%, transparent);color:var(--blood)}
 .row{display:flex;gap:8px;align-items:center}
 .err-msg{color:var(--blood);font-size:11px;min-height:16px;margin-bottom:8px}
 .ok-msg{color:var(--verdigris);font-size:11px;min-height:16px;margin-bottom:8px}

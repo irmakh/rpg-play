@@ -207,10 +207,10 @@ body.secondary-screen {
 .s-btn:active { background: var(--rule-hi); }
 .s-btn-primary { background: var(--bone); color: var(--ink); border-color: var(--bone); }
 .s-btn-primary:active { background: var(--arc-hi); }
-.s-btn-danger  { border-color: #ff444466; color: #ff8888; background: #ff444411; }
-.s-btn-danger:active  { background: #ff444433; }
-.s-btn-success { border-color: #44ff4466; color: var(--verdigris); background: #44ff4411; }
-.s-btn-success:active { background: #44ff4433; }
+.s-btn-danger  { border-color: color-mix(in srgb, var(--blood) 40%, transparent); color: var(--blood); background: color-mix(in srgb, var(--blood) 7%, transparent); }
+.s-btn-danger:active  { background: color-mix(in srgb, var(--blood) 20%, transparent); }
+.s-btn-success { border-color: color-mix(in srgb, var(--verdigris) 40%, transparent); color: var(--verdigris); background: color-mix(in srgb, var(--verdigris) 7%, transparent); }
+.s-btn-success:active { background: color-mix(in srgb, var(--verdigris) 20%, transparent); }
 
 .s-btn-row {
   display: flex;
@@ -292,8 +292,8 @@ body.secondary-screen {
 .s-init-roll   { font-weight: bold; color: var(--bone); font-size: 15px; min-width: 30px; text-align: right; flex-shrink: 0; }
 .s-del-btn {
   background: none;
-  border: 1px solid #ff444455;
-  color: #ff8888;
+  border: 1px solid color-mix(in srgb, var(--blood) 33%, transparent);
+  color: var(--blood);
   border-radius: 3px;
   padding: 4px 8px;
   cursor: pointer;
@@ -380,10 +380,10 @@ body.secondary-screen {
   min-height: 40px;
   touch-action: manipulation;
 }
-.s-qbtn-dmg { background: #ff444411; border-color: #ff444466; color: #ff8888; }
-.s-qbtn-dmg:active { background: #ff444433; }
-.s-qbtn-heal { background: #44ff4411; border-color: #44ff4466; color: var(--verdigris); }
-.s-qbtn-heal:active { background: #44ff4433; }
+.s-qbtn-dmg { background: color-mix(in srgb, var(--blood) 7%, transparent); border-color: color-mix(in srgb, var(--blood) 40%, transparent); color: var(--blood); }
+.s-qbtn-dmg:active { background: color-mix(in srgb, var(--blood) 20%, transparent); }
+.s-qbtn-heal { background: color-mix(in srgb, var(--verdigris) 7%, transparent); border-color: color-mix(in srgb, var(--verdigris) 40%, transparent); color: var(--verdigris); }
+.s-qbtn-heal:active { background: color-mix(in srgb, var(--verdigris) 20%, transparent); }
 
 .s-temp-row {
   display: flex;

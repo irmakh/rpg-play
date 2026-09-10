@@ -40,8 +40,8 @@ body{font-family:'Segoe UI',sans-serif;background:var(--ink);color:var(--bone);d
 .btn.ghost{background:transparent}
 .btn.primary{background:var(--bone);border-color:var(--bone);color:var(--slate);font-weight:600}
 .btn.primary:hover{background:var(--arc-hi)}
-.btn.danger{color:var(--blood);border-color:#ff888844}
-.btn.danger:hover{background:#ff888818;border-color:var(--blood)}
+.btn.danger{color:var(--blood);border-color:color-mix(in srgb, var(--blood) 27%, transparent)}
+.btn.danger:hover{background:color-mix(in srgb, var(--blood) 9%, transparent);border-color:var(--blood)}
 .btn:disabled{opacity:.5;cursor:not-allowed}
 
 .status{font-size:11px;color:var(--ash);min-height:14px;padding:0 11px 9px}

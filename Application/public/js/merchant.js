@@ -120,11 +120,11 @@ function renderShopStatusBtn() {
     const tagLabel = shopActiveTag ? ` (${shopActiveTag})` : '';
     btn.textContent = `🟢 Shop Open${tagLabel}`;
     btn.style.color = 'var(--verdigris)';
-    btn.style.borderColor = '#88ff8844';
+    btn.style.borderColor = 'color-mix(in srgb, var(--verdigris) 27%, transparent)';
   } else {
     btn.textContent = '🔴 Shop Closed';
     btn.style.color = 'var(--blood)';
-    btn.style.borderColor = '#ff888844';
+    btn.style.borderColor = 'color-mix(in srgb, var(--blood) 27%, transparent)';
   }
 }
 

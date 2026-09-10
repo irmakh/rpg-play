@@ -22,8 +22,8 @@ label.lbl{display:block;font-size:10px;color:var(--bone);margin-bottom:2px}
 .btn:hover{background:var(--rule-hi)}
 .btn.primary{background:var(--bone);color:var(--ink);border-color:var(--bone)}
 .btn.primary:hover{background:var(--arc-hi)}
-.btn.danger{border-color:#ff444466;color:#ff8888;background:#ff444411}
-.btn.danger:hover{background:#ff444433}
+.btn.danger{border-color:color-mix(in srgb, var(--blood) 40%, transparent);color:var(--blood);background:color-mix(in srgb, var(--blood) 7%, transparent)}
+.btn.danger:hover{background:color-mix(in srgb, var(--blood) 20%, transparent)}
 .btn.sm{padding:2px 8px;font-size:11px}
 .btn:disabled{opacity:.45;cursor:not-allowed}
 table{width:100%;border-collapse:collapse}

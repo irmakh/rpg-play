@@ -96,7 +96,7 @@
   <button class="btn sm draw-shape-btn" id="draw-shape-rect" onclick="setDrawShape('rect')"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-square"></use></svg> Rect</button>
   <button class="btn sm draw-shape-btn" id="draw-shape-line" onclick="setDrawShape('line')">╱ Line</button>
   <span class="draw-tb-label" style="margin-left:10px">Color:</span>
-  <input type="color" id="draw-color" value="#ff4444" oninput="setDrawColor(this.value)" title="Stroke color">
+  <input type="color" id="draw-color" value="var(--blood)" oninput="setDrawColor(this.value)" title="Stroke color">
   <span class="draw-tb-label" style="margin-left:10px">Size:</span>
   <button class="btn sm draw-thick-btn active" id="draw-thick-2" onclick="setDrawThickness(2)" title="Thin">—</button>
   <button class="btn sm draw-thick-btn" id="draw-thick-4" onclick="setDrawThickness(4)" title="Medium">━</button>
@@ -272,7 +272,7 @@
           <div class="rp-stat-nums">
             <span id="hp-cur-display" class="rp-stat-cur" style="color:var(--verdigris)">0</span><span class="rp-stat-sep">/</span><span id="hp-max-display" class="rp-stat-max">0</span>
           </div>
-          <div id="hp-temp-display-wrap" style="display:none;font-size:9px;color:#aaddff;text-align:center;margin-bottom:1px">+<span id="hp-temp-display">0</span> temp</div>
+          <div id="hp-temp-display-wrap" style="display:none;font-size:9px;color:var(--arc);text-align:center;margin-bottom:1px">+<span id="hp-temp-display">0</span> temp</div>
           <div class="rp-stat-lbl">HIT POINTS</div>
         </div>
         <div class="rp-stat-divider"></div>

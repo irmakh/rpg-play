@@ -18,11 +18,11 @@ label.lbl{display:block;font-size:var(--t-sm);color:var(--ash);margin-bottom:var
 .btn:hover{background:var(--rule-hi)}
 .btn.primary{background:var(--bone);color:var(--ink);border-color:var(--bone)}
 .btn.primary:hover{background:var(--arc-hi)}
-.btn.danger{border-color:#ff444466;color:#ff8888;background:#ff444411}
-.btn.danger:hover{background:#ff444433}
+.btn.danger{border-color:color-mix(in srgb, var(--blood) 40%, transparent);color:var(--blood);background:color-mix(in srgb, var(--blood) 7%, transparent)}
+.btn.danger:hover{background:color-mix(in srgb, var(--blood) 20%, transparent)}
 .btn.sm{padding:2px 8px;font-size:11px}
-.btn.success{border-color:#44ff4466;color:var(--verdigris);background:#44ff4411}
-.btn.success:hover{background:#44ff4433}
+.btn.success{border-color:color-mix(in srgb, var(--verdigris) 40%, transparent);color:var(--verdigris);background:color-mix(in srgb, var(--verdigris) 7%, transparent)}
+.btn.success:hover{background:color-mix(in srgb, var(--verdigris) 20%, transparent)}
 /* Monsters table */
 table{width:100%;border-collapse:collapse}
 th{color:var(--ash);font-size:var(--t-sm);font-weight:600;padding:var(--s2) var(--s2);border-bottom:1px solid var(--rule);text-align:left;white-space:nowrap}
@@ -73,8 +73,8 @@ tr:hover td{background:var(--wash)}
 .init-row-name{font-size:13px;font-weight:bold;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .init-row-roll{font-size:13px;color:var(--bone);font-weight:bold;white-space:nowrap;text-align:right;min-width:28px}
 .init-empty{color:var(--ash);font-size:12px;padding:12px 0;text-align:center}
-.del-btn{background:none;border:none;color:#ff8888;cursor:pointer;font-size:13px;padding:2px 4px;border-radius:3px;line-height:1}
-.del-btn:hover{background:#ff444422}
+.del-btn{background:none;border:none;color:var(--blood);cursor:pointer;font-size:13px;padding:2px 4px;border-radius:3px;line-height:1}
+.del-btn:hover{background:color-mix(in srgb, var(--blood) 13%, transparent)}
 .edit-btn{background:none;border:none;color:var(--ash);cursor:pointer;font-size:13px;padding:2px 4px;border-radius:3px;line-height:1}
 .edit-btn:hover{background:var(--wash);color:var(--bone)}
 .round-badge{font-size:11px;color:var(--ash);margin-left:8px}
