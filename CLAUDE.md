@@ -167,6 +167,7 @@ Every time frontend JS or CSS files change and are deployed to the server, two v
 |---|---|
 | `Application/server.js` | `const FRONTEND_VERSION = N` → `N+1` |
 | `Application/public/sw.js` | `const CACHE = 'rpg-vN'` → `'rpg-v(N+1)'` |
+| `CHANGELOG.md` | Add the new version at the top, dated, with what shipped |
 
 **How it works:**
 - The server middleware in `server.js` injects `?v=N` into every `src` and `href` attribute on every HTML page at request time.
@@ -179,12 +180,18 @@ Every time frontend JS or CSS files change and are deployed to the server, two v
 1. Make code changes to JS/CSS files
 2. Bump `FRONTEND_VERSION` in `server.js` by 1
 3. Bump `CACHE` in `public/sw.js` to match (e.g. `rpg-v29` → `rpg-v30`)
-4. Upload all changed files to the server via pscp
-5. Upload `server.js` and `public/sw.js` via pscp
-6. Restart the server process (`pm2 restart dnd` or `docker-compose restart`)
-7. Hard-refresh one browser tab to confirm new version is loaded
+4. **Add the release to `CHANGELOG.md`** — new version at the top, dated, a one-line
+   summary of what the release is for, then bullets. Backend-only work shipping in the
+   same deploy goes under that release marked *(no frontend bump)*
+5. Upload all changed files to the server via pscp
+6. Upload `server.js` and `public/sw.js` via pscp
+7. Restart the server — **the user does this manually**; there is no Docker on the
+   production server, so print nothing and simply say the upload is complete
+8. Hard-refresh one browser tab to confirm the new version is loaded
 
 **Rule: `FRONTEND_VERSION` in `server.js` and the number in `sw.js` `CACHE` must always be equal.**
+
+**Rule: a release that changes what a user sees always leaves a `CHANGELOG.md` entry.**
 
 ---
 

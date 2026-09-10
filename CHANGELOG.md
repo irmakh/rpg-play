@@ -1,0 +1,336 @@
+# Changelog
+
+All notable changes to RPG Play.
+
+## How releases are numbered
+
+This project has no semantic version. The release marker is **`FRONTEND_VERSION`** in
+`Application/server.js`, which the server injects as `?v=N` into every `src` and `href`
+at request time, and which must always equal the `CACHE` version in
+`Application/public/sw.js`. Bumping the pair is what actually delivers a change to a
+browser, so a bump *is* a release, and each heading below is the version a user ends up
+running.
+
+Frontend versioning arrived at **v29** (2026-05-17). Everything before that is grouped
+under [Before frontend versioning](#before-frontend-versioning--2026-04-04--2026-05-14).
+Some entries below cover a range of versions: incremental bumps made while one feature
+was being finished are folded into the release they belong to.
+
+Backend-only work that shipped without a frontend bump is listed under the release it
+went out with, marked *(no frontend bump)*.
+
+---
+
+## [212] — 2026-09-10 — The lamplit redesign
+
+A full visual and interaction pass over the whole app, developed on `redesign/lamplit`
+over 21 commits and merged to `main`. Covers v152–212.
+
+**Design system**
+- `css/tokens.css` is now the single source of truth for colour and type. It had been
+  the same `:root` block copy-pasted into ten files, already drifted apart
+- `css/base.css` holds the primitives and the focus ring, scoped to `html.lamplit`
+- `css/app-shell.css` is one full-height DM-tool layout, now shared by all five tools
+  (monsters, events, prepare-map, playlists, treasury)
+- Fraunces and Atkinson Hyperlegible Next are self-hosted as four variable WOFF2 files
+  (180 KB) so the PWA keeps its typography offline
+- Repainted navy and gold; a palette change now means editing one file
+
+**Icons**
+- `js/lib/icons.js` injects an SVG sprite of 65 stroke icons
+- Emoji-as-iconography replaced across 20 pages, the console PWA and 28 JS files. Seven
+  deliberate glyphs remain — weather pictograms, the inspiration star, the loot-request
+  hand — plus stored chat history, which is user data and was left alone
+
+**Interaction**
+- The phone layout existed only as `body.theme-mobile` behind a theme dropdown; it is now
+  a real media query. The sheet had been overflowing 1240 px inside a 375 px viewport
+- Eleven tab strips were `<div onclick>` with no `role` or `aria-` attributes anywhere on
+  the page. They are now a WAI-ARIA tablist
+- A persistent vitals bar with damage/heal; HP used to live inside the Main tab only
+- Ability-score hierarchy un-inverted, and touch targets sized for a thumb
+
+**Fixed**
+- Five separate bugs traced to one cause: a surface that never loaded `base.css`. The
+  table pop-outs (built with `document.write`), the whole console PWA, `music.html`
+  painting a white canvas inside the table modal, `login.html` rendering an icon at the
+  SVG default 300×150, and the desktop app's own screens. `color-scheme` and `.lt-icon`
+  moved into `tokens.css`, the one file every page links
+- `base.css` scoped its element rules as `html.lamplit <el>`, which outranks any plain
+  class in a page stylesheet. Its 21 element rules are now wrapped in `:where()`, which
+  contributes no specificity
+- The table's Music Player modal was a fixed 600 px box
+
+**Documentation**
+- README rebuilt with a screenshot for every page, technology badges, and the desktop
+  client given its own block at the top
+
+## [151] — 2026-09-09 — Waiting screens
+
+Park the table on a full-bleed image between scenes. Players get the image over the map
+and the left panel but keep their character panel, so they can still roll; the DM keeps
+the map and carries on arranging it.
+
+- Hiding is enforced **server-side**: while parked, a player's `GET /api/table` returns
+  `hasMap:false`, no fog or hidden items, and only their own token
+- `/api/table/map` used to redirect to a fixed static path that `express.static` would
+  serve to anyone, so a guard on the API alone would have been cosmetic. A
+  `parkedCampaigns` set gates that one static file, re-derived at boot so a restart
+  mid-break cannot expose it
+- A player whose character has no token on the map now still gets their sheet in the right
+  panel, with their own portrait — reachable any time from a new **My sheet** button
+- *(no frontend bump)* The per-process chat log became a map keyed by campaign. Latent
+  rather than live: production runs the local SQLite backend, where chat was always
+  campaign-isolated
+- *(no frontend bump)* The InstantDB backend was retired — 240 `DB_PROVIDER` guards and
+  318 calls removed across 21 files, −990 lines. That path had already decayed: handouts,
+  notifications, weather, calendar events, drawings and prepared maps all answered 501 or
+  empty there
+
+## [147] — 2026-09-08 — Notifications
+
+Covers v144–147.
+
+- People are told what happened to them: loot handed out, handouts resolved, and the
+  quieter half of the event stream
+- Dice and chat notifications, and real Windows toast popups through the desktop client
+- A music notification opens the player in its own window
+
+## [143] — 2026-09-08 — Free loot is requested, not taken
+
+Players ask for a free-loot item and the DM hands it out, instead of claiming it directly.
+
+## [142] — 2026-09-08 — One music player page
+
+- The modal, the pop-out window and the desktop app now share a single music player page
+- *(no frontend bump)* Music playback became per campaign
+
+## [141] — 2026-09-07 — The Windows desktop client
+
+An Electron **thin client** that renders the pages the server already serves, so the web
+app is unchanged and nothing needs redeploying when the desktop app changes.
+
+- Multi-monitor windows, each remembering size, position, monitor, fullscreen and zoom
+- Global hotkeys (`Ctrl+Alt+T/D/C/R`) that reach a window from another application
+- Tray icon, application menu, per-window zoom, native Save dialogs
+- First run validates the server address; self-signed certificates are trusted per host
+  after an explicit prompt and pinned by fingerprint
+- The login survives opening a second window; role-aware music shortcut; 9 MB trimmed
+  off the build
+- The app is offered as a download from the character sheet's nav menu — Windows only,
+  and never from inside the desktop client itself
+
+## [140] — 2026-09-05 — Handouts
+
+Covers v136–140. A handout carries an optional prompt and two bodies: one read on a
+successful skill check, one read instead on a failure.
+
+- The check is **blind**. The player presses a neutral *Examine* button and never learns
+  which skill was tested, the DC, or what they rolled. The roll happens on the server
+  using the character's own modifier, so it cannot be forged
+- Nothing reaches a player until the DM presses Success or Fail; the DC only pre-selects
+  a suggestion
+- A Handouts tab in the table's right panel runs the whole flow from the map
+- One dialog hands a handout to any mix of characters and shows their checks arriving live
+- A handout pops once; reloading the page no longer replays it
+
+## [134] — 2026-09-05 — Multi-tenant campaigns
+
+The server now hosts any number of campaigns, each a fully separate tenant with its own
+DM password and its own set of SQLite files.
+
+- Cross-campaign reads are impossible by construction: nothing filters on a `campaign_id`
+  column, so there is no `WHERE` clause to forget — a request simply never holds a
+  database handle that reaches another campaign
+- `lib/request-context.js` resolves the campaign at property-access time through an
+  `AsyncLocalStorage` store and a set of proxies, so roughly 200 existing route handlers,
+  ~130 broadcasts and ~103 auth calls became campaign-scoped **without being edited**
+- `/` is now the campaign picker; the campaign cookie is why none of the 276 frontend
+  `fetch()` calls needed changing
+- `MASTER_PASSWORD` became the super-admin key: create and delete campaigns, unlock any
+  campaign, and recover a lost DM password
+
+## [133] — 2026-08-25 — Treasury
+
+Loot and the shop merged into a single Treasury: one item list with a Hidden / Free Loot /
+Shop switch, item images, and unidentified items that show as such to players.
+
+## [129] — 2026-06-21 — Map prep overhaul
+
+Move tool, token portraits, multi-select recolour and undo on the prepare-map screen.
+
+Also in this period, without a recorded frontend bump:
+
+- **2026-07-04** — Playlists screen redesigned as master-detail: track reorder, bulk add,
+  multi-upload, and a table soundboard
+
+## [125] — 2026-06-20 — Maintenance page
+
+A DM-password-gated, unlisted `/maintenance.html` listing every connected real-time
+client: IP, identity, login time, current page, transport and user-agent.
+
+- Client-supplied identity is spoofable, so the dashboard is informational, not an auth
+  control. `X-Forwarded-For` is trusted only when `TRUST_PROXY` is set, and every field
+  is length-capped and escaped
+
+## [124] — 2026-06-20 — Field-level character save
+
+Character saves became field-level, so two people editing the same sheet stop clobbering
+each other.
+
+## [123] — 2026-06-19 — Weather
+
+A daily weather roller: temperature, wind and precipitation each get their own d20 against
+configurable thresholds, with temperature swinging from a session baseline and
+precipitation falling as snow below freezing. Results show as icons on the calendar grid
+and in a table toolbar widget.
+
+## [114–117] — 2026-06-19 — Item bonuses and the tabbed right panel
+
+- Items can carry bonuses to saves, skills and ability checks
+- The classic HUD was retired; the table's right panel became tabbed with combat sub-tabs
+- Adjust HP reworked: quick buttons set the value, Dmg/Heal apply it
+- Fixed pop-out CSS going stale, and index versioning at `/`
+
+## [108–113] — 2026-06-15 — Player calendar journals
+
+Players author their own dated calendar entries, shared by default or kept private to
+themselves and the DM, each able to carry media attachments.
+
+## [103–107] — 2026-06-09 → 06-14 — Raw database backup
+
+- One-click download of every SQLite database as a single streamed `.tar.gz`
+- Clicking a combatant in the initiative list loads them into the right panel,
+  permission-gated
+- Fixed apostrophes breaking inline handlers, via an `escJs()` escaper
+
+## [94–102] — 2026-06-05 → 06-08 — Actions, 3D dice and pop-outs
+
+- **Actions tab** aggregating weapon attacks, action-flagged spells and freeform custom
+  actions with limited-use tracking and rest recharge
+- Flat d20 and d10 replaced with 3D CSS dice — an icosahedron and a pentagonal
+  trapezohedron
+- Table panels pop out into separate browser windows; the real DOM node moves across
+  windows and keeps updating over SSE
+- Group checks and saves: select several tokens, each rolls by its own bonus, results post
+  as one combined chat message
+- An **Ask** dice mode, select merged into the move tool, and equipment wear/unwear in the
+  right panel recomputing AC, initiative, speed and spell DC
+- Character XML export/import round-trips actions and spell action/duration fields
+- The service worker went **network-first for HTML**, cache-first for versioned static
+  assets. Cache-first HTML had been serving a stale app shell to mobile Chrome PWAs,
+  hiding newly added pages
+
+## [76–91] — 2026-06-04 → 06-05 — The initiative rewrite
+
+- Initiative rebuilt on a clean API after a run of bugs: wrong HP during combat, stale
+  player portraits and AC, and cross-contamination between entries
+- Draw tool gained a select mode — edit, move, reshape and delete existing shapes
+- Real-time AC sync between the sheet and the table
+- Token drag activation cut from 500 ms to 100 ms
+- Chat sender identity fixed: players post as their own character, the DM as the selected
+  token
+- Monster types hidden from the sheet's initiative list; identifier only
+
+## [63–68] — 2026-06-03 — Table screen UI overhaul
+
+Panel auto-hide, character sheet redesign, click-to-reveal map fog, monster search in the
+add-token modal, and a floating zoom widget. The modern HUD became the default.
+
+## [53–56] — 2026-06-02 — Chat images and prepared tokens
+
+- Drag-and-drop image sharing in chat, with upload progress, for every user
+- Tokens can be placed, given portraits, hidden and edited during map prep
+
+## [46–51] — 2026-05-29 → 05-30 — AI Dungeon Master
+
+A text-adventure DM for solo play in the Forgotten Realms.
+
+- Runs against LM Studio, OpenRouter or OpenAI, with dice rolling and scenarios
+- Mobile-first layout, a retry system with a Stop button, and back/continue on ended
+  sessions
+- Turkish language support, stored per session and injected into the system prompt
+- A prompt-quality overhaul covering narrative craft, NPC depth, pacing and combat
+
+## [29–45] — 2026-05-17 → 05-24 — Frontend versioning, and the initiative overhaul
+
+- **`FRONTEND_VERSION` introduced** (v29) — the cache-busting scheme this changelog is
+  numbered by
+- Initiative overhaul, monster initiative and bulk selection
+- Monster vulnerability and initiative-bonus fields; per-token portrait upload; real-time
+  monster updates
+- AC and Speed bonus fields; the Fly condition and three-letter condition abbreviations
+- Clicking a token name selects it and pans the map there
+- The music pop-out player, and a fix for dismiss-on-load double play
+- *(no frontend bump)* The Vitest suite was built from scratch — 449 tests across 16 files
+  at the time, covering the table and character-sheet screens
+
+---
+
+## Before frontend versioning — 2026-04-04 → 2026-05-14
+
+No cache-busting scheme existed yet, so these are grouped by date rather than version.
+
+### 2026-05-13 → 05-14 — Stories, and the server split
+- `server.js` split into semantic route modules
+- The comic-style story system: dashboard, panel builder and viewer, with a character cast
+  multiselect by portrait and a password gate accepting the DM or any character password
+- Fixed `white-space: pre-wrap` on monster stat blocks and chat
+
+### 2026-05-04 → 05-10 — Login, PWA and music
+- Login and permissions: per-character passwords, a DM password, and auth guards
+- The console PWA for phone and tablet: session sync, an Actions tab, DM controls, a D-pad
+  for moving the selected token, and safe-area padding for notched phones
+- Monster actions panel with action-to-chat
+- Music: playlist redesign, now-playing bar, seek, duration, loop modes, position sync,
+  and a 50 MB upload limit with a progress bar
+- Chat bottom bar, text formatting fixes and local volume control
+
+### 2026-04-26 → 04-27 — The module split
+- `table.js` (2940 lines) split into 12 focused modules under `js/table/`
+- `index.js` split into 14 modules under `js/index/`
+- Shared code extracted into `js/lib/` — lightbox, realtime connection and D&D constants —
+  removing the duplication between the two screens
+- Monster dice rolling, an info modal, initiative advantage/disadvantage, and editable
+  token identifiers
+- Clickable column sort on the spell table; videos open in the lightbox
+- DM per-message chat delete
+
+### 2026-04-20 → 04-22 — Conditions, concurrency and the calendar
+- D&D 5e status conditions on tokens, shown in the HP tracker with 5e.tools links; any
+  player can toggle conditions on their own token
+- Token operations serialised through an operation queue, in four phases, to stop races
+  under concurrent play: re-entry guards, request serialisation, drag cancellation on
+  remote removal, and selection clearing when the selected token disappears
+- Players blocked from moving monster tokens by arrow key or direct API call
+- The Forgotten Realms Calendar of Harptos, with Roll of Years names for 1501–1600 DR
+- Performance pass and the multi-size image system: every upload generates an 80×80
+  `_thumb.webp` and a 500 px `_medium.webp`
+- Dice animation on the character sheet, and text chat on every screen
+
+### 2026-04-12 → 04-18 — Real-time drawing and HTTPS
+- Real-time drawing tool on the table
+- Monster names hidden from players — identifier only
+- HTTPS with HTTP-to-HTTPS redirect and a certificate renewal script
+- Backup/restore reworked as selective per-section, non-destructive import
+- Initiative fixes: orphaned entries, click-to-view, auto-advance, previous turn
+- Shop item tagging
+
+### 2026-04-04 — Initial release
+- The D&D 5e character sheet and shared virtual table
+- Image and media storage moved from database blobs to the filesystem
+- Map prep with hidden-item cloning and positional placement
+- The Events screen for DM campaign tracking
+
+---
+
+## Keeping this file current
+
+`CHANGELOG.md` is updated **as part of every release**, alongside the paired
+`FRONTEND_VERSION` / `sw.js CACHE` bump — see the frontend release process in
+`CLAUDE.md`. A release that changes what a user sees but leaves no entry here is an
+incomplete release.
+
+Add the new version at the top, dated, with a one-line summary of what the release is for
+and bullets grouped the way the entries above are. Backend-only changes that ship in the
+same deploy belong under that release, marked *(no frontend bump)*.

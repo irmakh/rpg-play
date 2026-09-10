@@ -516,6 +516,9 @@ plain Node and crash. A normal PowerShell window is unaffected.
 
 ### Frontend cache-busting
 
+Release history lives in **[CHANGELOG.md](CHANGELOG.md)**, numbered by the same
+`FRONTEND_VERSION` described here.
+
 Static JS/CSS is served `immutable` and cached by URL forever; the server injects `?v=N` into every `src`/`href` at request time. On any frontend change, bump **both** `FRONTEND_VERSION` in `server.js` and the `CACHE` version in `public/sw.js` together so the URLs change and clients fetch the new files. HTML is served `no-store`, so it always carries the current version.
 
 ---
