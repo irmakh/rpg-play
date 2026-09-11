@@ -6,7 +6,7 @@
 [![Electron](https://img.shields.io/badge/Electron-44-47848F?style=flat-square&logo=electron&logoColor=white)](https://www.electronjs.org)
 [![JavaScript](https://img.shields.io/badge/Vanilla_JS-no_build_step-F7DF1E?style=flat-square&logo=javascript&logoColor=black)](#tech-stack)
 [![PWA](https://img.shields.io/badge/PWA-installable-5A0FC8?style=flat-square&logo=pwa&logoColor=white)](#mobile-companion-pwa-console)
-[![Vitest](https://img.shields.io/badge/Vitest-866_passing-6E9F18?style=flat-square&logo=vitest&logoColor=white)](#tech-stack)
+[![Vitest](https://img.shields.io/badge/Vitest-1152_passing-6E9F18?style=flat-square&logo=vitest&logoColor=white)](#tech-stack)
 [![Docker](https://img.shields.io/badge/Docker-compose-2496ED?style=flat-square&logo=docker&logoColor=white)](#option-a--docker-recommended-for-local--lan-play)
 
 A self-hosted web app for running D&D 5e sessions. It hosts any number of **campaigns**, each a fully separate world with its own DM password and its own data. Every campaign bundles a full character sheet, a shared virtual battle map, a real-time initiative tracker, a monster library, a treasury for loot and shop items, a synced music player, an AI Dungeon Master, a comic-style story builder, and a mobile companion — all kept live across every connected browser with no external cloud required.
@@ -511,7 +511,7 @@ plain Node and crash. A normal PowerShell window is unaffected.
 - **Dice:** 3D CSS dice (icosahedron d20, pentagonal-trapezohedron d10) driven by a shared `dice-engine.js`
 - **Image processing:** `sharp` — each upload generates `_thumb.webp` (80×80 crop) and `_medium.webp` (max 500 px); maps excluded
 - **PWA:** Service Worker (`sw.js`) — network-first for HTML, cache-first for versioned static assets
-- **Tests:** 866 Vitest tests across 30 files (unit + API) covering the sheet, table, dice fairness, and routes
+- **Tests:** 1152 Vitest tests across 43 files (unit + API) covering the sheet, table, dice fairness, login security, and routes
 - **SSL:** Node.js native `https` with Let's Encrypt certificates
 
 ### Frontend cache-busting
@@ -535,7 +535,7 @@ char_sheet/
 │   ├── lib/                #   Request context (campaign scoping) + password hashing
 │   ├── db/                 #   SQLite layers (campaignsdb, campaign-store, localdb, mediadb, storiesdb)
 │   ├── aiDM/               #   AI Dungeon Master module (own DB + routes)
-│   ├── tests/              #   24 Vitest unit + API suites (750 tests)
+│   ├── tests/              #   43 Vitest unit + API suites (1152 tests)
 │   └── public/             #   Served frontend
 │       ├── *.html          #     Page entry points (campaigns, index, table, dm, treasury, events, …)
 │       ├── js/index/       #     14 character-sheet modules
