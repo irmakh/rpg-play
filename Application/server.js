@@ -40,6 +40,7 @@ import registerSound      from './server/routes/sound.js';
 import registerStories    from './server/routes/stories.js';
 import registerHandouts   from './server/routes/handouts.js';
 import registerNotifs     from './server/routes/notifications.js';
+import registerMaintenance from './server/routes/maintenance.js';
 import makeNotify         from './server/notify.js';
 import registerAiDM      from './aiDM/routes.js';
 
@@ -268,7 +269,10 @@ const sessions     = createSessionStore(cdb._db);   // table `sessions` in campa
 const setupTickets = createSetupTickets();
 const captcha      = createCaptchaStore();
 const loginGuard   = createLoginGuard();
-const audit = { record: cdb.recordAuthEvent, list: cdb.listAuthEvents };
+const audit = {
+  record: cdb.recordAuthEvent, list: cdb.listAuthEvents, count: cdb.countAuthEvents,
+  lastForIp: cdb.lastAuthEventForIp,
+};
 
 const auth = createAuth({
   sessions,
@@ -450,7 +454,7 @@ const MAX_MEDIA_BYTES = 25 * 1024 * 1024;
 // Bump this number whenever frontend JS or CSS files change.
 // Also bump CACHE in public/sw.js to the same value.
 // Both must always match. See deployment notes in CLAUDE.md.
-const FRONTEND_VERSION = 226;
+const FRONTEND_VERSION = 228;
 
 // ── Express app ───────────────────────────────────────────────────────────────
 const app = express();
@@ -703,16 +707,8 @@ app.post('/api/maintenance/reload', (req, res) => {
   res.json({ ok: true, mode, version: FRONTEND_VERSION });
 });
 
-// Login activity across every campaign (super-admin): successes, wrong
-// passwords, wrong captcha answers, lockouts, logouts, passwords set.
-app.get('/api/maintenance/auth-events', (req, res) => {
-  if (!auth.isAdmin(req)) return res.status(401).json({ error: 'Unauthorized' });
-  const names = Object.fromEntries(cdb.listCampaigns({ includeInactive: true }).map(c => [c.id, c.name]));
-  const events = audit.list({ limit: req.query.limit })
-    .map(e => ({ ...e, campaignName: names[e.campaignId] || '' }));
-  res.set('Cache-Control', 'no-store');
-  res.json({ events });
-});
+// Login activity (GET /api/maintenance/auth-events) lives in
+// server/routes/maintenance.js, paged, beside the blocked-address routes.
 
 // ── Console relay ─────────────────────────────────────────────────────────────
 app.get('/api/console/events', (req, res) => {
@@ -770,6 +766,12 @@ const ctx = {
   broadcastAll, CAMPAIGN_COOKIE, FRONTEND_VERSION,
   // Waiting screens — the static-mount gate above reads this Set.
   parkedCampaigns,
+  // A character's name from outside a request (the maintenance page names
+  // locked-out accounts). Callers check the campaign still exists first:
+  // getCampaignData() would otherwise provision a deleted one again.
+  characterName: (campaignId, charId) => {
+    try { return getCampaignData(campaignId).ldb.getCharacter(charId)?.name || ''; } catch { return ''; }
+  },
   // Node modules
   sharp, crypto, path, fs, express, __dirname,
 };
@@ -797,6 +799,7 @@ registerSound(app, ctx);
 registerStories(app, ctx);
 registerHandouts(app, ctx);
 registerNotifs(app, ctx);
+registerMaintenance(app, ctx);
 registerAiDM(app, ctx);
 
 // ── Server startup: HTTPS in production, plain HTTP for local dev ─────────────

@@ -50,18 +50,25 @@ export function createLoginGuard({
   alertAt = ALERT_AT,
   maxKeys = MAX_KEYS,
 } = {}) {
-  // key -> { fails: number[], lockUntil, lockCount, lastLockAt, alertedAt }
+  // key -> { kind, ip, account, fails: number[], total, firstAt, lastAt,
+  //          lockUntil, lockCount, lastLockAt, alertedAt }
+  // kind/ip/account say what the entry is, for the maintenance page; total,
+  // firstAt and lastAt survive a lock (fails is emptied when one starts).
   const entries = new Map();
 
-  function entry(key) {
+  function entry(key, meta = {}) {
     let e = entries.get(key);
     if (!e) {
       if (entries.size >= maxKeys) sweep();
       while (entries.size >= maxKeys) entries.delete(entries.keys().next().value);
-      // -Infinity, not 0, for "never alerted": 0 is a real timestamp to a clock
+      // -Infinity / null, not 0, for "never": 0 is a real timestamp to a clock
       // that starts there, and a falsy sentinel re-fired the alert on every
       // failure after the first.
-      e = { fails: [], lockUntil: 0, lockCount: 0, lastLockAt: 0, alertedAt: -Infinity };
+      e = {
+        kind: meta.kind || '', ip: meta.ip || '', account: meta.account || '',
+        fails: [], total: 0, firstAt: null, lastAt: null,
+        lockUntil: 0, lockCount: 0, lastLockAt: 0, alertedAt: -Infinity,
+      };
       entries.set(key, e);
     }
     return e;
@@ -89,10 +96,13 @@ export function createLoginGuard({
     return ms > 0 ? { locked: true, retryAfterSec: Math.ceil(ms / 1000) } : { locked: false, retryAfterSec: 0 };
   }
 
-  function bump(key, max, t) {
-    const e = entry(key);
+  function bump(key, max, t, meta) {
+    const e = entry(key, meta);
     prune(e, t);
     e.fails.push(t);
+    e.total++;
+    if (e.firstAt === null) e.firstAt = t;
+    e.lastAt = t;
     if (e.fails.length >= max) {
       e.lockCount++;
       e.lockUntil = t + Math.min(baseLockMs * 2 ** (e.lockCount - 1), maxLockMs);
@@ -117,12 +127,12 @@ export function createLoginGuard({
    */
   function fail(ip, account, { alertable = true } = {}) {
     const t = now();
-    const pairLocked = bump(pairKey(ip, account), pairMax, t);
-    const ipLocked   = bump(ipKey(ip), ipMax, t);
+    const pairLocked = bump(pairKey(ip, account), pairMax, t, { kind: 'pair', ip, account });
+    const ipLocked   = bump(ipKey(ip), ipMax, t, { kind: 'ip', ip });
 
     let alert = false;
     if (alertable) {
-      const a = entry(acctKey(account));
+      const a = entry(acctKey(account), { kind: 'acct', account });
       prune(a, t);
       a.fails.push(t);
       if (a.fails.length >= alertAt && t - a.alertedAt >= windowMs) {
@@ -148,5 +158,44 @@ export function createLoginGuard({
     }
   }
 
-  return { check, fail, succeed, sweep, size: () => entries.size };
+  /**
+   * Every lock that is live right now, newest first — for the maintenance page.
+   * Both kinds: one account from one address ('pair'), and a whole address
+   * ('ip', account '').
+   */
+  function listLocks() {
+    const t = now();
+    const out = [];
+    for (const e of entries.values()) {
+      if ((e.kind !== 'pair' && e.kind !== 'ip') || e.lockUntil <= t) continue;
+      out.push({
+        kind: e.kind, ip: e.ip, account: e.kind === 'ip' ? '' : e.account,
+        lockedAt: e.lastLockAt, lockedUntil: e.lockUntil,
+        retryAfterSec: Math.ceil((e.lockUntil - t) / 1000),
+        timesLocked: e.lockCount, failures: e.total,
+        firstFailAt: e.firstAt, lastFailAt: e.lastAt,
+      });
+    }
+    return out.sort((a, b) => b.lockedAt - a.lockedAt);
+  }
+
+  /**
+   * Lifts locks early (the admin's Unblock).
+   *   { ip, account }  that one account from that address
+   *   { ip }           the whole-address lock AND every account lock on it
+   * The entries go completely — count and escalation with them — so the next
+   * mistake starts again at one minute. The DM-alert counter is left alone.
+   * @returns {number} entries removed
+   */
+  function unlock({ ip, account } = {}) {
+    if (!ip) return 0;
+    if (account) return entries.delete(pairKey(ip, account)) ? 1 : 0;
+    let removed = entries.delete(ipKey(ip)) ? 1 : 0;
+    for (const [k, e] of entries) {
+      if (e.kind === 'pair' && e.ip === ip && entries.delete(k)) removed++;
+    }
+    return removed;
+  }
+
+  return { check, fail, succeed, sweep, listLocks, unlock, size: () => entries.size };
 }

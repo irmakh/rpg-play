@@ -48,7 +48,7 @@ function _toGate(message) {
   $('gate-pw').focus();
 }
 
-$('btn-refresh').addEventListener('click', () => { loadClients(); loadAuthEvents(); });
+$('btn-refresh').addEventListener('click', () => { loadClients(); loadBlocked(); loadAuthEvents(); });
 $('btn-logout').addEventListener('click', () => {
   AuthUI.logout(_pw);   // end it on the server, not just here
   _toGate('');
@@ -79,11 +79,15 @@ async function sendReload(mode) {
 // ── Polling ───────────────────────────────────────────────────────────────────
 function startPolling() {
   loadClients();
+  loadBlocked();
   loadAuthEvents();
   _pollTick = 0;
   _pollTimer = setInterval(() => {
     loadClients();
-    if (++_pollTick % EVENTS_EVERY === 0) loadAuthEvents();
+    loadBlocked();
+    // Only page 1 refreshes by itself: on an older page new events would push
+    // the rows along while they are being read.
+    if (++_pollTick % EVENTS_EVERY === 0 && _authPage === 1) loadAuthEvents();
   }, POLL_MS);
 }
 function stopPolling() {
@@ -122,6 +126,103 @@ function absTime(ts) {
   try { return new Date(ts).toLocaleString(); } catch { return ''; }
 }
 
+// ── Blocked addresses ─────────────────────────────────────────────────────────
+// Every live login lock (lib/login-guard.js), with Unblock. The countdown ticks
+// locally between polls; the server's clock is the reference, so a skewed
+// client clock does not show the wrong time left.
+let _clockOffset = 0;   // Date.now() - server now
+let _blockedTicker = null;
+
+async function loadBlocked() {
+  if (!_pw) return;
+  try {
+    const res = await fetch('/api/maintenance/blocked', { headers: { 'X-Master-Password': _pw } });
+    if (!res.ok) return;
+    const data = await res.json();
+    _clockOffset = Date.now() - (data.now || Date.now());
+    renderBlocked(data.locks || []);
+  } catch { /* keep the last view */ }
+}
+
+function waitLeft(ms) {
+  const s = Math.max(0, Math.ceil(ms / 1000));
+  if (s <= 0) return 'unlocked';
+  if (s < 60) return `${s} s`;
+  const m = Math.floor(s / 60), r = s % 60;
+  return r ? `${m} min ${r} s` : `${m} min`;
+}
+
+/** "Chrome 153 · Windows" from a user agent; the full string is on hover. */
+function shortBrowser(ua) {
+  if (!ua) return '—';
+  const b = /(Edg|OPR|Firefox|Chrome|Safari)\/(\d+)/.exec(ua);
+  const os = /(Windows|Android|iPhone|iPad|Mac OS X|Linux)/.exec(ua);
+  const name = b ? ({ Edg: 'Edge', OPR: 'Opera' }[b[1]] || b[1]) + ' ' + b[2] : 'Browser';
+  return os ? `${name} · ${os[1].replace('Mac OS X', 'macOS')}` : name;
+}
+
+function renderBlocked(locks) {
+  const host = $('blocked');
+  $('blocked-pill').textContent = locks.length + ' blocked';
+  if (!locks.length) { host.innerHTML = '<div class="muted" style="padding:14px">No addresses are blocked.</div>'; return; }
+
+  // "Unblock address" once per address that has more than one lock.
+  const perIp = {};
+  for (const l of locks) perIp[l.ip] = (perIp[l.ip] || 0) + 1;
+  const offered = new Set();
+
+  host.innerHTML = `<table class="events">
+    <thead><tr><th>Address</th><th>Blocked</th><th>Unlocks in</th><th>Times locked</th><th>Wrong attempts</th><th>Last browser</th><th></th></tr></thead>
+    <tbody>${locks.map(l => {
+      const attempts = `First ${absTime(l.firstFailAt)} · last ${absTime(l.lastFailAt)}`;
+      const whole = l.kind === 'ip';
+      const btns = [`<button data-ip="${esc(l.ip)}" data-account="${esc(whole ? '' : l.account)}" data-label="${esc(whole ? 'the whole address ' + l.ip : l.scope)}">Unblock</button>`];
+      if (!whole && perIp[l.ip] > 1 && !offered.has(l.ip)) {
+        offered.add(l.ip);
+        btns.push(`<button data-ip="${esc(l.ip)}" data-account="" data-label="${esc('every lock on ' + l.ip)}">Unblock address</button>`);
+      }
+      return `<tr>
+        <td class="ip-v">${esc(l.ip)}</td>
+        <td class="${whole ? 'ev-bad' : ''}">${esc(l.scope)}</td>
+        <td class="countdown" data-until="${Number(l.lockedUntil) || 0}">${waitLeft(l.lockedUntil - (Date.now() - _clockOffset))}</td>
+        <td>${Number(l.timesLocked) || 0}</td>
+        <td title="${esc(attempts)}">${Number(l.failures) || 0}</td>
+        <td class="ua-v" title="${esc(l.lastUserAgent || '')}">${esc(shortBrowser(l.lastUserAgent))}</td>
+        <td class="actions">${btns.join('')}</td>
+      </tr>`;
+    }).join('')}</tbody></table>`;
+
+  if (!_blockedTicker) {
+    _blockedTicker = setInterval(() => {
+      const serverNow = Date.now() - _clockOffset;
+      for (const cell of document.querySelectorAll('#blocked .countdown')) {
+        cell.textContent = waitLeft(Number(cell.dataset.until) - serverNow);
+      }
+    }, 1000);
+  }
+}
+
+// One listener for every Unblock button: the values travel in data-*
+// attributes (escaped), never inside an inline handler.
+$('blocked').addEventListener('click', async (e) => {
+  const btn = e.target.closest('button[data-ip]');
+  if (!btn || !_pw) return;
+  const { ip, account, label } = btn.dataset;
+  if (!confirm(`Unblock ${label}?\n\nThey can try to log in again straight away.`)) return;
+  btn.disabled = true;
+  try {
+    const res = await fetch('/api/maintenance/unblock', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Master-Password': _pw },
+      body: JSON.stringify(account ? { ip, account } : { ip }),
+    });
+    if (res.status === 401) { _toGate('Session expired — log in again.'); return; }
+    if (!res.ok) { alert('Unblock failed.'); btn.disabled = false; return; }
+    await loadBlocked();
+    loadAuthEvents();
+  } catch { alert('Unblock failed — network error.'); btn.disabled = false; }
+});
+
 // ── Login activity ────────────────────────────────────────────────────────────
 const EVENT_LABELS = {
   'login':                ['Logged in', 'ok'],
@@ -135,22 +236,64 @@ const EVENT_LABELS = {
   'password-changed':     ['Password changed', 'ok'],
   'password-removed':     ['Password removed', ''],
   'password-change-fail': ['Wrong current password', 'bad'],
+  'unblocked':            ['Unblocked by admin', 'ok'],
 };
 
-async function loadAuthEvents() {
+// Paged on the server (GET /api/maintenance/auth-events?page=&pageSize=).
+const PAGE_SIZE_KEY = 'maintAuthPageSize';
+const PAGE_SIZES = [25, 50, 100];
+let _authPage = 1;
+let _authPages = 1;
+let _authPageSize = (() => {
+  try { const n = Number(localStorage.getItem(PAGE_SIZE_KEY)); return PAGE_SIZES.includes(n) ? n : 50; } catch { return 50; }
+})();
+$('auth-page-size').value = String(_authPageSize);
+
+async function loadAuthEvents(page = _authPage) {
   if (!_pw) return;
   try {
-    const res = await fetch('/api/maintenance/auth-events?limit=200', { headers: { 'X-Master-Password': _pw } });
+    const res = await fetch(`/api/maintenance/auth-events?page=${page}&pageSize=${_authPageSize}`,
+      { headers: { 'X-Master-Password': _pw } });
     if (!res.ok) return;
-    renderAuthEvents((await res.json()).events || []);
+    const data = await res.json();
+    _authPage = data.page || 1;
+    _authPages = data.pages || 1;
+    renderAuthEvents(data.events || []);
+    renderPager(data);
   } catch { /* keep the last view */ }
 }
+
+function renderPager({ page = 1, pages = 1, total = 0 }) {
+  const pager = $('auth-pager');
+  pager.hidden = false;
+  $('auth-page-info').textContent = `Page ${page} of ${pages} · ${total} event${total === 1 ? '' : 's'}`;
+  pager.querySelector('[data-page="first"]').disabled = page <= 1;
+  pager.querySelector('[data-page="prev"]').disabled  = page <= 1;
+  pager.querySelector('[data-page="next"]').disabled  = page >= pages;
+  $('auth-paused').hidden = page <= 1;
+}
+
+$('auth-pager').addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-page]');
+  if (!btn || btn.disabled) return;
+  const to = { first: 1, prev: _authPage - 1, next: _authPage + 1 }[btn.dataset.page];
+  if (to) loadAuthEvents(Math.min(_authPages, Math.max(1, to)));
+});
+
+$('auth-page-size').addEventListener('change', (e) => {
+  const n = Number(e.target.value);
+  if (!PAGE_SIZES.includes(n)) return;
+  _authPageSize = n;
+  try { localStorage.setItem(PAGE_SIZE_KEY, String(n)); } catch {}
+  loadAuthEvents(1);
+});
 
 function renderAuthEvents(events) {
   const host = $('auth-events');
   if (!events.length) { host.innerHTML = '<div class="muted" style="padding:14px">No login activity recorded yet.</div>'; return; }
   const now = Date.now();
-  const who = e => e.role === 'admin' ? 'Admin'
+  const who = e => e.kind === 'unblocked' ? (e.charName || 'Whole address')
+    : e.role === 'admin' ? 'Admin'
     : e.role === 'dm' ? 'DM'
     : e.role === 'stories' ? 'Stories page'
     : (e.charName || e.charId || 'Character');

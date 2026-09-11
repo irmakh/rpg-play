@@ -65,6 +65,22 @@
     .ev-bad{color:var(--blood)}
     .ev-ok{color:var(--verdigris)}
     .muted-hdr{margin-top:32px}
+    .events td.actions{display:flex;gap:6px}
+    .events button{background:var(--slate-hi);color:var(--bone);border:1px solid var(--rule-hi);
+      border-radius:var(--r-sm);padding:4px 10px;font:inherit;font-size:12px;cursor:pointer}
+    .events button:hover,.events button:focus-visible{border-color:var(--arc)}
+    .events .countdown{font-variant-numeric:tabular-nums}
+    .events .ua-v{color:var(--ash)}
+    .pager{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:10px;font-size:12px}
+    .pager[hidden],.pager [hidden]{display:none}
+    .pager button{background:var(--slate-hi);color:var(--bone);border:1px solid var(--rule-hi);
+      border-radius:var(--r-sm);padding:5px 12px;font:inherit;cursor:pointer}
+    .pager button:hover:not(:disabled),.pager button:focus-visible{border-color:var(--arc)}
+    .pager button:disabled{opacity:.45;cursor:not-allowed}
+    .pager-info{color:var(--bone);font-variant-numeric:tabular-nums;padding:0 4px}
+    .pager-size{color:var(--ash);display:flex;align-items:center;gap:6px;margin-left:auto}
+    .pager-size select{background:var(--slate-hi);color:var(--bone);border:1px solid var(--rule-hi);
+      border-radius:var(--r-sm);font:inherit;padding:3px 6px}
   </style>
 </head>
 <body>
@@ -101,10 +117,31 @@
       <div id="empty" style="display:none">No clients are currently connected.</div>
 
       <div class="top muted-hdr">
+        <h1><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-lock"></use></svg> Blocked addresses</h1>
+        <span class="pill" id="blocked-pill">0 blocked</span>
+        <span class="muted">locks lift by themselves when they run out, and on a server restart</span>
+      </div>
+      <div id="blocked" class="events-wrap"></div>
+
+      <div class="top muted-hdr">
         <h1><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-key"></use></svg> Login activity</h1>
         <span class="muted">every campaign · newest first · kept 30 days</span>
       </div>
       <div id="auth-events" class="events-wrap"></div>
+      <div class="pager" id="auth-pager" hidden>
+        <button type="button" data-page="first">« Newest</button>
+        <button type="button" data-page="prev">‹ Newer</button>
+        <span class="pager-info" id="auth-page-info" aria-live="polite"></span>
+        <button type="button" data-page="next">Older ›</button>
+        <span class="muted" id="auth-paused" hidden>auto-refresh paused on older pages</span>
+        <label class="pager-size">Per page
+          <select id="auth-page-size">
+            <option value="25">25</option>
+            <option value="50" selected>50</option>
+            <option value="100">100</option>
+          </select>
+        </label>
+      </div>
     </div>
   </div>
 

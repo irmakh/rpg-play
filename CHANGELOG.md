@@ -21,6 +21,29 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [228] — 2026-09-11 — See and lift login lockouts; login activity in pages
+
+The maintenance page now lists every address that is locked out of logging in, and
+can lift a lock early — so a player who mistyped five times does not have to sit out
+the timer. Its login activity now pages back through the whole 30-day log.
+
+*(v227 only ever ran on the local test server; this entry covers it.)*
+
+- **Blocked addresses** section: the address, what is blocked (the whole address,
+  or one account such as "Aliyr in For the Glory of Amn" or "DM of …"), a live
+  countdown, how many times it has been locked, the wrong attempts (first and last
+  on hover) and the browser last used from there.
+- **Unblock** lifts that one account's lock; **Unblock address** lifts every lock on
+  the address. Either way the next mistake starts again at one minute. Every
+  unblock shows up in Login activity as "Unblocked by admin".
+- Locks still lift by themselves when they run out, and all at once on a server
+  restart.
+- **Login activity comes in pages** — 25, 50 or 100 at a time, remembered — so the
+  whole 30-day log can be read, not just the newest 200. The first page keeps
+  refreshing itself; older pages hold still so rows do not move while you read.
+
+---
+
 ## [226] — 2026-09-11 — A maths problem on every login, and real login sessions
 
 Every form that asks for a password now also asks a small sum, drawn as a

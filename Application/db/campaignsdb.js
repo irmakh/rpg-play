@@ -264,10 +264,22 @@ export function pruneAuthEvents(now = Date.now()) {
     .run(AUDIT_KEEP_ROWS);
 }
 
-/** Newest first. */
-export function listAuthEvents({ limit = 200 } = {}) {
+/** Newest first; `offset` pages back through the log (the maintenance page). */
+export function listAuthEvents({ limit = 200, offset = 0 } = {}) {
   const n = Math.max(1, Math.min(1000, Number(limit) || 200));
-  return db.prepare('SELECT * FROM auth_events ORDER BY id DESC LIMIT ?').all(n);
+  const skip = Math.max(0, Math.floor(Number(offset) || 0));
+  return db.prepare('SELECT * FROM auth_events ORDER BY id DESC LIMIT ? OFFSET ?').all(n, skip);
+}
+
+export function countAuthEvents() {
+  return db.prepare('SELECT COUNT(*) AS n FROM auth_events').get().n;
+}
+
+/** The newest login event from one address — the "last browser" on the maintenance page. */
+export function lastAuthEventForIp(ip) {
+  if (!ip) return null;
+  return db.prepare('SELECT ts, userAgent, kind FROM auth_events WHERE ip = ? ORDER BY id DESC LIMIT 1')
+    .get(String(ip)) || null;
 }
 
 export const _db = db;

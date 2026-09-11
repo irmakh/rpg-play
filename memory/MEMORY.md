@@ -12,6 +12,7 @@
 - Commit author email: irmakh@gmail.com (already set in repo config — verify before committing)
 - Deploy is a PLAIN FILE COPY (pscp) into /home/ubuntu/hdd1/dnd-new/ — there is NO Docker on the production server and no docker-compose.yml. HTTPS on port 443 with Let's Encrypt certs.
 - The USER starts/restarts the server and runs npm install manually. Never probe the server for docker/compose/pm2 and never run server-side commands — upload the files, verify them, then say the upload is complete and stop.
+- END-TO-END BROWSER TESTS ARE THE USER'S (stated 2026-09-11): do NOT drive the app in a browser (Playwright) to test features - the user tests manually on local docker and reports back. Claude's part: unit/API tests (vitest), syntax checks, curl probes, deploying to local docker (restart char_sheet_dev and confirm the ?v=N being served), then stop and report what to try.
 
 ## App Feature Inventory
 

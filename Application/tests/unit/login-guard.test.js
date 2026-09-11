@@ -102,6 +102,63 @@ describe('DM alert', () => {
   });
 });
 
+describe('listLocks and unlock (the maintenance page)', () => {
+  it('lists an account lock with its details', () => {
+    const { g, tick } = make();
+    for (let i = 0; i < 4; i++) { g.fail('1.2.3.4', 'char:c1:a'); tick(1000); }
+    g.fail('1.2.3.4', 'char:c1:a');
+    expect(g.listLocks()).toEqual([expect.objectContaining({
+      kind: 'pair', ip: '1.2.3.4', account: 'char:c1:a',
+      timesLocked: 1, failures: 5, retryAfterSec: 60,
+      firstFailAt: 0, lastFailAt: 4000, lockedAt: 4000, lockedUntil: 64000,
+    })]);
+  });
+
+  it('lists a whole-address lock', () => {
+    const { g } = make({ ipMax: 3, pairMax: 100 });
+    for (const acct of ['char:c1:a', 'char:c1:b', 'dm:c1']) g.fail('9.9.9.9', acct);
+    expect(g.listLocks()).toEqual([expect.objectContaining({ kind: 'ip', ip: '9.9.9.9', account: '', failures: 3 })]);
+  });
+
+  it('drops locks once they have run out', () => {
+    const { g, tick } = make();
+    for (let i = 0; i < 5; i++) g.fail('ip', 'char:c1:a');
+    tick(MIN + 1);
+    expect(g.listLocks()).toEqual([]);
+  });
+
+  it('unlocks one account, and its next lock starts at a minute again', () => {
+    const { g, tick } = make();
+    for (let i = 0; i < 5; i++) g.fail('ip', 'char:c1:a');
+    tick(MIN + 1);
+    let last;
+    for (let i = 0; i < 5; i++) last = g.fail('ip', 'char:c1:a');
+    expect(last.retryAfterSec).toBe(120);                       // escalated
+    expect(g.unlock({ ip: 'ip', account: 'char:c1:a' })).toBe(1);
+    expect(g.check('ip', 'char:c1:a').locked).toBe(false);
+    for (let i = 0; i < 4; i++) g.fail('ip', 'char:c1:a');
+    expect(g.fail('ip', 'char:c1:a').retryAfterSec).toBe(60);  // back to the start
+  });
+
+  it('unlocks a whole address: its own lock and every account lock on it', () => {
+    const { g } = make({ ipMax: 6, pairMax: 3 });
+    for (let i = 0; i < 3; i++) g.fail('x', 'char:c1:a');
+    for (let i = 0; i < 3; i++) g.fail('x', 'char:c1:b');       // 6 on x: the address locks too
+    for (let i = 0; i < 3; i++) g.fail('y', 'char:c1:a');       // someone else, elsewhere
+    expect(g.listLocks().filter(l => l.ip === 'x')).toHaveLength(3);
+    expect(g.unlock({ ip: 'x' })).toBe(3);
+    expect(g.listLocks().map(l => l.ip)).toEqual(['y']);
+    expect(g.check('x', 'char:c1:a').locked).toBe(false);
+  });
+
+  it('returns 0 for an address or account it does not know', () => {
+    const { g } = make();
+    expect(g.unlock({ ip: 'nobody' })).toBe(0);
+    expect(g.unlock({ ip: 'nobody', account: 'dm:c1' })).toBe(0);
+    expect(g.unlock({})).toBe(0);
+  });
+});
+
 describe('housekeeping', () => {
   it('sweeps entries that no longer hold anything', () => {
     const { g, tick } = make();
