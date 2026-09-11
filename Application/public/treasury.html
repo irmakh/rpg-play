@@ -19,6 +19,7 @@
 <body>
 
 <!-- Password gate -->
+<script src="/js/lib/auth-ui.js"></script>
 <div class="gate" id="gate">
   <div class="gate-box">
     <div style="font-size:36px;margin-bottom:10px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-coins"></use></svg> </div>
@@ -26,6 +27,7 @@
     <p>Enter master password to manage loot and shop stock.</p>
     <input type="password" id="gate-pw" placeholder="Master password…" autocomplete="off"
            onkeydown="if(event.key==='Enter')authenticate()">
+    <div id="gate-cap"></div>
     <div id="gate-err"></div>
     <button class="btn primary" style="width:100%" onclick="authenticate()">Unlock</button>
   </div>

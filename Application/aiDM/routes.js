@@ -513,7 +513,7 @@ const AIDM_VERSION = 9;
 
 // ── Main route registration ───────────────────────────────────────────────────
 export default function register(app, ctx) {
-  const { path: nodePath, fs, express, __dirname: appDir, getCharacter, verifyPassword, isMasterPassword, ldb } = ctx;
+  const { path: nodePath, fs, express, __dirname: appDir, getCharacter, charAuth, ldb } = ctx;
 
   // ── Static files for AI DM ────────────────────────────────────────────────
   const publicDir = nodePath.join(__dirname, 'public');
@@ -637,8 +637,7 @@ Return ONLY the JSON object. No markdown code fences. No explanation.`
       const char = await getCharacter(req.params.id);
       if (!char) return res.status(404).json({ error: 'Character not found' });
       if (char.passwordHash) {
-        const pw = req.headers['x-character-password'];
-        if (!pw || (!verifyPassword(pw, char.passwordHash) && !isMasterPassword(pw)))
+        if ((await charAuth(char.id, req)) !== 200)
           return res.status(401).json({ locked: true });
       }
       let data = {};
@@ -702,8 +701,7 @@ Return ONLY the JSON object. No markdown code fences. No explanation.`
       const char = await getCharacter(characterId);
       if (!char) return res.status(404).json({ error: 'Character not found' });
       if (char.passwordHash) {
-        const pw = req.headers['x-character-password'];
-        if (!pw || (!verifyPassword(pw, char.passwordHash) && !isMasterPassword(pw)))
+        if ((await charAuth(char.id, req)) !== 200)
           return res.status(401).json({ locked: true });
       }
       let charData = {};
@@ -775,8 +773,7 @@ Return ONLY the JSON object. No markdown code fences. No explanation.`
       // Verify character password if needed
       const char = await getCharacter(session.characterId);
       if (char && char.passwordHash) {
-        const pw = req.headers['x-character-password'];
-        if (!pw || (!verifyPassword(pw, char.passwordHash) && !isMasterPassword(pw)))
+        if ((await charAuth(char.id, req)) !== 200)
           return res.status(401).json({ locked: true });
       }
 
@@ -825,8 +822,7 @@ Return ONLY the JSON object. No markdown code fences. No explanation.`
 
       const char = await getCharacter(session.characterId);
       if (char && char.passwordHash) {
-        const pw = req.headers['x-character-password'];
-        if (!pw || (!verifyPassword(pw, char.passwordHash) && !isMasterPassword(pw)))
+        if ((await charAuth(char.id, req)) !== 200)
           return res.status(401).json({ locked: true });
       }
 
@@ -931,8 +927,7 @@ Return ONLY the JSON object. No markdown code fences. No explanation.`
       const char = await getCharacter(characterId);
       if (!char) return res.status(404).json({ error: 'Character not found' });
       if (char.passwordHash) {
-        const pw = req.headers['x-character-password'];
-        if (!pw || (!verifyPassword(pw, char.passwordHash) && !isMasterPassword(pw)))
+        if ((await charAuth(char.id, req)) !== 200)
           return res.status(401).json({ locked: true });
       }
       let data = {};
@@ -1006,8 +1001,7 @@ Return ONLY the JSON object. No markdown code fences. No explanation.`
       // Verify character
       const char = await getCharacter(session.characterId);
       if (char && char.passwordHash) {
-        const pw = req.headers['x-character-password'];
-        if (!pw || (!verifyPassword(pw, char.passwordHash) && !isMasterPassword(pw)))
+        if ((await charAuth(char.id, req)) !== 200)
           return res.status(401).json({ locked: true });
       }
 
@@ -1054,8 +1048,7 @@ Return ONLY the JSON object. No markdown code fences. No explanation.`
       if (!session) return res.status(404).json({ error: 'Session not found' });
       const char = await getCharacter(session.characterId);
       if (char && char.passwordHash) {
-        const pw = req.headers['x-character-password'];
-        if (!pw || (!verifyPassword(pw, char.passwordHash) && !isMasterPassword(pw)))
+        if ((await charAuth(char.id, req)) !== 200)
           return res.status(401).json({ locked: true });
       }
       aidb.deleteSession(req.params.id);
@@ -1070,8 +1063,7 @@ Return ONLY the JSON object. No markdown code fences. No explanation.`
       if (!session) return res.status(404).json({ error: 'Session not found' });
       const char = await getCharacter(session.characterId);
       if (char && char.passwordHash) {
-        const pw = req.headers['x-character-password'];
-        if (!pw || (!verifyPassword(pw, char.passwordHash) && !isMasterPassword(pw)))
+        if ((await charAuth(char.id, req)) !== 200)
           return res.status(401).json({ locked: true });
       }
       aidb.reopenSession(req.params.id);
@@ -1086,8 +1078,7 @@ Return ONLY the JSON object. No markdown code fences. No explanation.`
       if (!session) return res.status(404).json({ error: 'Session not found' });
       const char = await getCharacter(session.characterId);
       if (char && char.passwordHash) {
-        const pw = req.headers['x-character-password'];
-        if (!pw || (!verifyPassword(pw, char.passwordHash) && !isMasterPassword(pw)))
+        if ((await charAuth(char.id, req)) !== 200)
           return res.status(401).json({ locked: true });
       }
       const allMessages = aidb.getMessages(session.id);

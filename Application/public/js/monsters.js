@@ -30,22 +30,20 @@ function showStatus(msg, isError) {
   if (msg) setTimeout(() => { if (el.textContent === msg) el.textContent = ''; }, 4000);
 }
 
-async function authenticate() {
-  const pw = document.getElementById('gate-pw').value;
-  const errEl = document.getElementById('gate-err');
-  if (!pw) { errEl.textContent = 'Enter the master password.'; return; }
-  errEl.textContent = '';
-  try {
-    const res = await fetch('/api/treasury/all', { headers: { 'X-Master-Password': pw } });
-    if (res.status === 401) { errEl.textContent = 'Wrong password.'; return; }
-    if (!res.ok) { errEl.textContent = 'Server error.'; return; }
-    masterPw = pw;
-    sessionStorage.setItem('dmMasterPw', pw);
+// The shared DM gate (js/lib/auth-ui.js): maths captcha, lockout, and a session
+// token kept in masterPw where the typed password used to go.
+const _gate = AuthUI.dmGate({
+  capEl:   document.getElementById('gate-cap'),
+  pwInput: document.getElementById('gate-pw'),
+  errEl:   document.getElementById('gate-err'),
+  onUnlock: async (token) => {
+    masterPw = token;
     document.getElementById('gate').style.display = 'none';
     document.getElementById('main-content').style.display = '';
     await loadMonsters();
-  } catch { errEl.textContent = 'Connection error.'; }
-}
+  },
+});
+function authenticate() { return _gate.submit(); }
 
 async function loadMonsters() {
   try {
@@ -637,10 +635,7 @@ document.addEventListener('keydown', e => {
   }
 });
 
-// ── Auto-auth from stored session ─────────────────────────────────────────────
-(async function() {
-  const stored = sessionStorage.getItem('dmMasterPw');
-  if (!stored) return;
-  document.getElementById('gate-pw').value = stored;
-  await authenticate();
-})();
+// ── Auto-auth from the stored session ─────────────────────────────────────────
+// A tab already logged in as DM unlocks without asking again, once the server
+// confirms the session is still live.
+_gate.start();

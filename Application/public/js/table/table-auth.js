@@ -50,6 +50,8 @@ function authHeaders(extra) {
 }
 
 function logout() {
+  // End the session on the server too (js/lib/realtime.js), so a copied token dies with it.
+  if (typeof revokeStoredSession === 'function') revokeStoredSession();
   sessionStorage.removeItem('rpgSession');
   sessionStorage.removeItem('tableMasterPw');
   sessionStorage.removeItem('dmMasterPw');

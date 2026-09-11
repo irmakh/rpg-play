@@ -57,17 +57,27 @@
     .top button:disabled{opacity:.45;cursor:not-allowed}
     .ua{color:var(--ash);font-size:11px;margin-top:8px;word-break:break-word}
     #empty{color:var(--ash);padding:40px;text-align:center}
+    .events-wrap{overflow-x:auto;margin-top:10px;border:1px solid var(--rule-hi);border-radius:var(--r-md)}
+    .events{width:100%;border-collapse:collapse;font-size:12px}
+    .events th,.events td{padding:7px 10px;text-align:left;border-bottom:1px solid var(--rule);white-space:nowrap}
+    .events th{color:var(--ash);font-weight:600}
+    .events tr:last-child td{border-bottom:none}
+    .ev-bad{color:var(--blood)}
+    .ev-ok{color:var(--verdigris)}
+    .muted-hdr{margin-top:32px}
   </style>
 </head>
 <body>
   <!-- Login gate -->
+  <script src="/js/lib/auth-ui.js"></script>
   <div id="gate">
     <div class="card">
       <h1><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-gear"></use></svg> Maintenance</h1>
-      <p>Enter the DM password to view connected clients.</p>
+      <p>Enter the server admin password to view connected clients.</p>
       <form id="gate-form" autocomplete="off">
-        <input id="gate-pw" type="password" placeholder="DM password" autocomplete="current-password">
+        <input id="gate-pw" type="password" placeholder="Admin password" autocomplete="current-password">
         <button type="submit">Unlock</button>
+        <div id="gate-cap" style="margin-top:12px;text-align:left"></div>
         <div id="gate-err"></div>
       </form>
     </div>
@@ -89,6 +99,12 @@
       </div>
       <div id="cards" class="cards"></div>
       <div id="empty" style="display:none">No clients are currently connected.</div>
+
+      <div class="top muted-hdr">
+        <h1><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-key"></use></svg> Login activity</h1>
+        <span class="muted">every campaign · newest first · kept 30 days</span>
+      </div>
+      <div id="auth-events" class="events-wrap"></div>
     </div>
   </div>
 

@@ -61,6 +61,33 @@
 - `js/lib/realtime.js` is now also the shared campaign layer: a `fetch` interceptor that bounces to the picker on `409 NO_CAMPAIGN`, `enforceCampaignSession()` which drops a session belonging to another campaign, `initCampaignBadge()` which fills any `#campaign-badge` element, and `campaign=` on the WS/SSE URL
 
 
+## Application — Login Security (captcha, sessions, lockout — v226)
+
+> Passwords are checked ONLY at login. Every login is captcha-gated and
+> throttled, and returns a session token that the browser stores where the
+> password used to be (rpgSession.masterPw / .charPw, dmMasterPw, tableMasterPw),
+> so the ~180 frontend header sites did not change. The server accepts only
+> tokens in X-Master-Password / X-Character-Password. Nothing new installed:
+> node:crypto, better-sqlite3 and sharp (already dependencies).
+
+**`Application/lib/captcha.js`** — `createCaptchaStore({now, random})`: `issue(ip)` -> `{id, image, expiresIn}` (PNG data URL), `verify(id, answer)` single-use, 5-min expiry, 60 issues / 5 min / IP, 5,000 outstanding max. `makeProblem()` (a op b, answers 0..99), `renderSvg()` (hand-coded stroke glyphs + jitter + noise), `renderPng()` (sharp rasterises it so no readable shapes reach the page). `_answerOf(id)` is for tests only.
+
+**`Application/lib/login-guard.js`** — `createLoginGuard({now})`: `check(ip, account)`, `fail(ip, account, {alertable})`, `succeed(ip, account)`, `sweep()`. 5 failures per (IP, account) lock 60 s doubling to 30 min; 25 per IP lock the address; `fail().alert` is true once per 15 min when an account reaches 5 wrong PASSWORDS (captcha misses do not count toward it). Also `clientIp(req, trustProxy)`.
+
+**`Application/lib/sessions.js`** — `createSessionStore(db, {now})` on the `sessions` table in campaigns.db: `create({campaignId, role:'dm'|'character'|'admin', charId})` -> `{token:'rpgs_…', tokenHash, expiresAt}` (only the SHA-256 is stored), `resolve(token)` SYNC, `revoke`, `revokeCharacter(campaignId, charId, exceptHash)`, `revokeCampaignRole`, `revokeCampaign`, `sweep`. 24 h idle / 7 days absolute. Also `createSetupTickets()` — single-use 10-min tickets that let a player choose an unclaimed character's first password after the login form's captcha.
+
+**`Application/lib/auth.js`** — `createAuth({sessions, campaignIdFromReq, getCharacter})`: `masterAuth(req)` (sync, same name/signature as before), `charAuth(charId, req)`, `campaignDmAuth(req, campaignId)`, `isAdmin(req)`, `callerFor(req, charId)`, `credentialsValid(req)`, `hasAnySession(req)`, plus `credentialHeader(req, name)`.
+
+**`Application/lib/security-middleware.js`** — `securityHeaders({hsts})`, `jsonBody({smallLimit, bigLimit, bigPaths, hasSession})` (1 MB anonymous / 200 MB with a session or on an open upload route), `bodyErrors()` (JSON 413/400), `sessionGate({auth, exempt})` (401 `SESSION_EXPIRED` for a stale credential).
+
+**`Application/lib/passwords.js`** — adds `hashPasswordAsync` / `verifyPasswordAsync` (scrypt off the event loop). The sync pair stays for start-up code only and is NOT in ctx; the ctx names are the async ones plus `checkDmPassword(pw, campaignId)` (async — replaced `isMasterPassword` under a new name so a missed `await` fails loudly instead of passing a truthy Promise).
+
+**`Application/db/campaignsdb.js`** — `verifyDmPassword` is now ASYNC. New `recordAuthEvent(ev)` / `listAuthEvents({limit})` / `pruneAuthEvents()` on the `auth_events` table (30 days / 5,000 rows).
+
+**Routes (`server/routes/auth.js`)** — `GET /api/auth/captcha` · `POST /api/auth/login {type, characterId, password, captchaId, captchaAnswer}` -> `{token, …}` or `{needsSetup, setupTicket}` · `POST /api/auth/admin-login` (no campaign needed) · `POST /api/auth/logout {token}` · `POST /api/auth/verify-any` (Stories gate, captcha + lockout). `PUT /api/characters/:id/password` takes a setup ticket or a DM session for a first password, ends the character's other sessions on change, and returns a token to a caller who had none. `GET /api/maintenance/auth-events` (admin session). `/api/console/event` refuses `SESSION_*` messages.
+
+**Frontend** — `public/js/lib/auth-ui.js`: `AuthUI.captcha(el, {onEnter, lazy})`, `login`, `adminLogin`, `verifyAny`, `setFirstPassword`, `logout(token)`, `dmGate({capEl, pwInput, errEl, onUnlock})` (the DM tool pages' gate: unlocks from a live stored session or mounts the captcha), `storedDmToken()`. Self-contained styles (works on the console, AI DM and Stories pages). `js/lib/realtime.js` gained `revokeStoredSession()`, `goToLogin()`, a load-time drop of any pre-v226 plain-password session, and a fetch interceptor for `401 SESSION_EXPIRED`. Console screens share a login through `BroadcastChannel('rpg-console-session')` (SESSION_REQUEST / SESSION_SYNC / SESSION_LOGOUT), same device only.
+
 ## Application — Handouts
 
 > DM-authored handouts. Each carries TWO bodies — what a player reads on a

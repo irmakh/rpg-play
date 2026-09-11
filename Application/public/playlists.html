@@ -122,6 +122,7 @@
 <body>
 
 <!-- Password gate -->
+<script src="/js/lib/auth-ui.js"></script>
 <div class="gate" id="gate">
   <div class="gate-box">
     <div style="font-size:36px;margin-bottom:10px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-music"></use></svg> </div>
@@ -129,6 +130,7 @@
     <p>Enter master password to manage sounds and playlists.</p>
     <input type="password" id="gate-pw" placeholder="Master password…" autocomplete="off"
            onkeydown="if(event.key==='Enter')authenticate()">
+    <div id="gate-cap"></div>
     <div id="gate-err"></div>
     <button class="btn primary" style="width:100%" onclick="authenticate()">Unlock</button>
   </div>
@@ -302,16 +304,13 @@ function applyTheme(name) {
 (function(){ applyTheme(localStorage.getItem('dm-theme') || 'dark-gold'); })();
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
+// masterPw holds the DM SESSION TOKEN (js/lib/auth-ui.js dmGate), not a password.
 let masterPw = '';
-function authenticate() {
-  const pw = el('gate-pw').value;
-  if (!pw) { el('gate-err').textContent = 'Enter password.'; return; }
-  fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'dm', password: pw }) })
-    .then(r => r.json()).then(d => {
-      if (d.ok || d.role === 'dm') { masterPw = pw; unlock(); }
-      else el('gate-err').textContent = d.error || 'Wrong password.';
-    }).catch(() => { el('gate-err').textContent = 'Connection error.'; });
-}
+const _gate = AuthUI.dmGate({
+  capEl: el('gate-cap'), pwInput: el('gate-pw'), errEl: el('gate-err'),
+  onUnlock: (token) => { masterPw = token; unlock(); },
+});
+function authenticate() { return _gate.submit(); }
 function unlock() {
   el('gate').style.display = 'none';
   el('main-content').style.display = '';
@@ -320,11 +319,8 @@ function unlock() {
 }
 function authHeaders() { return { 'Content-Type': 'application/json', 'X-Master-Password': masterPw }; }
 
-// Try auto-unlock from session
-(function() {
-  const s = JSON.parse(sessionStorage.getItem('rpgSession') || 'null');
-  if (s && s.role === 'dm' && s.masterPw) { masterPw = s.masterPw; unlock(); }
-})();
+// Unlock straight away when this tab already holds a live DM session.
+_gate.start();
 
 // ── State ─────────────────────────────────────────────────────────────────────
 let sounds = [];

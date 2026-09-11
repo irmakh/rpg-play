@@ -116,31 +116,22 @@ function showStatus(msg, isErr) {
 }
 
 // ── Auth ──
-async function authenticate() {
-  const pw = document.getElementById('gate-pw').value;
-  const errEl = document.getElementById('gate-err');
-  if (!pw) { errEl.textContent = 'Enter the master password.'; return; }
-  errEl.textContent = '';
-  try {
-    const res = await fetch('/api/treasury/all', { headers: { 'X-Master-Password': pw } });
-    if (res.status === 401) { errEl.textContent = 'Wrong password.'; return; }
-    if (!res.ok) { errEl.textContent = 'Server error.'; return; }
-    masterPw = pw;
-    sessionStorage.setItem('dmMasterPw', pw);
+// The shared DM gate (js/lib/auth-ui.js): maths captcha, lockout, and a session
+// token kept in masterPw where the typed password used to go. A tab already
+// logged in as DM unlocks without asking again.
+const _gate = AuthUI.dmGate({
+  capEl:   document.getElementById('gate-cap'),
+  pwInput: document.getElementById('gate-pw'),
+  errEl:   document.getElementById('gate-err'),
+  onUnlock: async (token) => {
+    masterPw = token;
     document.getElementById('gate').style.display = 'none';
     document.getElementById('main-content').style.display = '';
     await loadMaps();
-  } catch { errEl.textContent = 'Connection error.'; }
-}
-
-// Auto-login from session
-(function () {
-  const saved = sessionStorage.getItem('dmMasterPw');
-  if (saved) {
-    document.getElementById('gate-pw').value = saved;
-    authenticate();
-  }
-})();
+  },
+});
+function authenticate() { return _gate.submit(); }
+_gate.start();
 
 // ── Map list ──
 async function loadMaps() {

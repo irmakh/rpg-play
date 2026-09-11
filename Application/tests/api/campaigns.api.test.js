@@ -2,10 +2,14 @@
  * Campaign registry + multi-tenant isolation.
  *
  * Unlike the other API suites, this one wires the REAL campaign middleware,
- * registry and per-campaign stores — an in-memory fake would not prove the
- * thing under test, which is that two campaigns cannot see each other's data.
- * Everything is redirected into a temp directory via CAMPAIGNS_DB and
- * CAMPAIGN_DATA_DIR so no real campaign is touched.
+ * registry, per-campaign stores, session store and session gate — an
+ * in-memory fake would not prove the thing under test, which is that two
+ * campaigns cannot see each other's data, and that a credential from one never
+ * opens the other. Everything is redirected into a temp directory via
+ * CAMPAIGNS_DB and CAMPAIGN_DATA_DIR so no real campaign is touched.
+ *
+ * Every privileged call logs in first (captcha and all) and sends the session
+ * token it gets back, exactly as the pages do since v226.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import request from 'supertest';
@@ -14,12 +18,17 @@ import crypto from 'crypto';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
+import { createSessionStore, createSetupTickets } from '../../lib/sessions.js';
+import { createCaptchaStore } from '../../lib/captcha.js';
+import { createLoginGuard } from '../../lib/login-guard.js';
+import { createAuth } from '../../lib/auth.js';
+import { sessionGate } from '../../lib/security-middleware.js';
 
 const SUPER_PW = 'super-admin-pw-9876';
 const A_PW = 'campaign-a-pw';
 const B_PW = 'campaign-b-pw';
 
-let tmpDir, cdb, store, ctxMod, app, campA, campB;
+let tmpDir, cdb, store, ctxMod, app, campA, campB, captcha, sessions;
 
 beforeAll(async () => {
   tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'rpg-campaigns-'));
@@ -40,10 +49,10 @@ beforeAll(async () => {
 
   // ── The same auth + context wiring server.js uses ──────────────────────────
   function isSuperAdminPassword(pw) {
-    if (!pw || pw.length !== SUPER_PW.length) return false;
+    if (typeof pw !== 'string' || pw.length !== SUPER_PW.length) return false;
     try { return crypto.timingSafeEqual(Buffer.from(pw), Buffer.from(SUPER_PW)); } catch { return false; }
   }
-  function isMasterPassword(pw, campaignId = ctxMod.currentCampaignId()) {
+  async function checkDmPassword(pw, campaignId = ctxMod.currentCampaignId()) {
     if (!pw) return false;
     if (isSuperAdminPassword(pw)) return true;
     if (!campaignId) return false;
@@ -60,16 +69,19 @@ beforeAll(async () => {
     const all = cdb.listCampaigns();
     return all.length === 1 ? all[0] : null;
   }
-  function masterAuth(req) {
-    const pw = req.headers['x-master-password'];
-    const c = resolveCampaignForReq(req);
-    return !!(pw && isMasterPassword(pw, c ? c.id : null));
-  }
+
+  sessions = createSessionStore(cdb._db);
+  captcha  = createCaptchaStore({ issueMaxPerIp: 100000 });
+  const auth = createAuth({
+    sessions,
+    campaignIdFromReq: req => resolveCampaignForReq(req)?.id || null,
+    getCharacter: async id => ctxMod.ldb.getCharacter(id),
+  });
 
   app = express();
   app.use(express.json({ limit: '10mb' }));
 
-  const CAMPAIGN_EXEMPT = [/^\/api\/config$/, /^\/api\/campaigns(\/|$)/];
+  const CAMPAIGN_EXEMPT = [/^\/api\/config$/, /^\/api\/campaigns(\/|$)/, /^\/api\/auth\/(captcha|admin-login|logout)$/];
   app.use((req, res, next) => {
     const campaign = resolveCampaignForReq(req);
     if (!campaign) {
@@ -84,14 +96,19 @@ beforeAll(async () => {
       next
     );
   });
+  app.use(sessionGate({ auth, exempt: [/^\/api\/auth\//] }));
 
   const ctx = {
     ldb: ctxMod.ldb, sdb: ctxMod.sdb,
     genId: () => crypto.randomUUID(), crypto,
     broadcast: () => {},
-    masterAuth, isMasterPassword, isSuperAdminPassword,
-    verifyPassword: () => false,
+    masterAuth: auth.masterAuth, charAuth: auth.charAuth, auth,
+    checkDmPassword, isSuperAdminPassword, superAdminEnabled: true,
+    verifyPasswordAsync: async () => false,
     getCharacter: async id => ctxMod.ldb.getCharacter(id),
+    sessions, setupTickets: createSetupTickets(), captcha, loginGuard: createLoginGuard(),
+    audit: { record() {}, list: () => [] },
+    currentCampaignId: ctxMod.currentCampaignId, TRUST_PROXY: false,
     cdb, CAMPAIGN_COOKIE: 'campaign',
     IMAGE_MIME: new Set(['image/png']), MAX_MEDIA_BYTES: 25 * 1024 * 1024,
     processImageSizes: async () => ({ original: '/o.png', thumb: '/t.webp', medium: '/m.webp' }),
@@ -113,6 +130,25 @@ afterAll(() => {
 
 const inA = req => req.set('X-Campaign-Id', campA.id);
 const inB = req => req.set('X-Campaign-Id', campB.id);
+
+async function solved() {
+  const r = await request(app).get('/api/auth/captcha');
+  return { captchaId: r.body.id, captchaAnswer: String(captcha._answerOf(r.body.id)) };
+}
+async function dmLogin(campaignId, password) {
+  return request(app).post('/api/auth/login').set('X-Campaign-Id', campaignId)
+    .send({ type: 'dm', password, ...(await solved()) });
+}
+async function dmToken(campaignId, password) {
+  const r = await dmLogin(campaignId, password);
+  expect(r.status).toBe(200);
+  return r.body.token;
+}
+async function adminToken() {
+  const r = await request(app).post('/api/auth/admin-login').send({ password: SUPER_PW, ...(await solved()) });
+  expect(r.status).toBe(200);
+  return r.body.token;
+}
 
 describe('campaign registry', () => {
   it('lists campaigns without leaking password hashes', async () => {
@@ -144,6 +180,11 @@ describe('campaign registry', () => {
     expect(String(res.headers['set-cookie'])).toContain(`campaign=${campA.id}`);
   });
 
+  it('does not mark the cookie Secure over plain HTTP (it would never be set)', async () => {
+    const res = await request(app).post(`/api/campaigns/${campA.id}/enter`);
+    expect(String(res.headers['set-cookie'])).not.toContain('Secure');
+  });
+
   it('clears the cookie when leaving', async () => {
     const res = await request(app).post('/api/campaigns/leave');
     expect(String(res.headers['set-cookie'])).toContain('Max-Age=0');
@@ -151,119 +192,153 @@ describe('campaign registry', () => {
 });
 
 describe('campaign creation and deletion', () => {
-  it('refuses to create without the super-admin password', async () => {
+  it('refuses to create with a campaign DM session', async () => {
+    const tok = await dmToken(campA.id, A_PW);   // a campaign DM is not enough
     const res = await request(app).post('/api/campaigns')
-      .set('X-Master-Password', A_PW)          // a campaign DM password is not enough
-      .send({ name: 'Sneaky', dmPassword: 'nope123' });
+      .set('X-Master-Password', tok).send({ name: 'Sneaky', dmPassword: 'nope123' });
     expect(res.status).toBe(401);
   });
 
+  it('refuses the super-admin PASSWORD where a session is expected', async () => {
+    const res = await request(app).post('/api/campaigns')
+      .set('X-Master-Password', SUPER_PW).send({ name: 'Sneaky', dmPassword: 'nope123' });
+    expect(res.status).toBe(401);
+    expect(res.body.code).toBe('SESSION_EXPIRED');
+  });
+
   it('requires a name and a DM password of at least 3 characters', async () => {
+    const tok = await adminToken();
     const noName = await request(app).post('/api/campaigns')
-      .set('X-Master-Password', SUPER_PW).send({ dmPassword: 'abc' });
+      .set('X-Master-Password', tok).send({ dmPassword: 'abc' });
     expect(noName.status).toBe(400);
     const shortPw = await request(app).post('/api/campaigns')
-      .set('X-Master-Password', SUPER_PW).send({ name: 'Short', dmPassword: 'ab' });
+      .set('X-Master-Password', tok).send({ name: 'Short', dmPassword: 'ab' });
     expect(shortPw.status).toBe(400);
   });
 
   it('creates a campaign with a complete, empty schema', async () => {
     const res = await request(app).post('/api/campaigns')
-      .set('X-Master-Password', SUPER_PW)
+      .set('X-Master-Password', await adminToken())
       .send({ name: 'Campaign Gamma', description: 'third', dmPassword: 'gamma-pw' });
     expect(res.status).toBe(201);
     expect(res.body.stats).toMatchObject({ characters: 0, monsters: 0, treasury: 0, stories: 0 });
 
     // A brand-new campaign must answer real queries, not blow up on a missing table.
     const monsters = await request(app).get('/api/monsters')
-      .set('X-Campaign-Id', res.body.id).set('X-Master-Password', 'gamma-pw');
+      .set('X-Campaign-Id', res.body.id).set('X-Master-Password', await dmToken(res.body.id, 'gamma-pw'));
     expect(monsters.status).toBe(200);
     expect(monsters.body).toEqual([]);
   });
 
   it('gives duplicate names distinct slugs', async () => {
     const res = await request(app).post('/api/campaigns')
-      .set('X-Master-Password', SUPER_PW)
+      .set('X-Master-Password', await adminToken())
       .send({ name: 'Campaign Alpha', dmPassword: 'dupe-pw' });
     expect(res.status).toBe(201);
     expect(res.body.slug).toBe('campaign-alpha-2');
   });
 
   it('refuses to delete without an exactly matching name', async () => {
+    const tok = await adminToken();
     const created = await request(app).post('/api/campaigns')
-      .set('X-Master-Password', SUPER_PW).send({ name: 'Doomed', dmPassword: 'doom-pw' });
+      .set('X-Master-Password', tok).send({ name: 'Doomed', dmPassword: 'doom-pw' });
     const wrong = await request(app).delete(`/api/campaigns/${created.body.id}`)
-      .set('X-Master-Password', SUPER_PW).send({ confirmName: 'doomed' });   // wrong case
+      .set('X-Master-Password', tok).send({ confirmName: 'doomed' });   // wrong case
     expect(wrong.status).toBe(400);
 
     const ok = await request(app).delete(`/api/campaigns/${created.body.id}`)
-      .set('X-Master-Password', SUPER_PW).send({ confirmName: 'Doomed' });
+      .set('X-Master-Password', tok).send({ confirmName: 'Doomed' });
     expect(ok.status).toBe(200);
     expect(cdb.getCampaign(created.body.id)).toBeNull();
   });
 
   it('deletes the campaign data directory', async () => {
+    const tok = await adminToken();
     const created = await request(app).post('/api/campaigns')
-      .set('X-Master-Password', SUPER_PW).send({ name: 'Ephemeral', dmPassword: 'eph-pw' });
+      .set('X-Master-Password', tok).send({ name: 'Ephemeral', dmPassword: 'eph-pw' });
     const dir = store.campaignDir(created.body.id);
     expect(fs.existsSync(dir)).toBe(true);
     await request(app).delete(`/api/campaigns/${created.body.id}`)
-      .set('X-Master-Password', SUPER_PW).send({ confirmName: 'Ephemeral' });
+      .set('X-Master-Password', tok).send({ confirmName: 'Ephemeral' });
     expect(fs.existsSync(dir)).toBe(false);
+  });
+
+  it("ends the deleted campaign's sessions", async () => {
+    const admin = await adminToken();
+    const created = await request(app).post('/api/campaigns')
+      .set('X-Master-Password', admin).send({ name: 'Short Lived', dmPassword: 'short-pw' });
+    const dm = await dmToken(created.body.id, 'short-pw');
+    await request(app).delete(`/api/campaigns/${created.body.id}`)
+      .set('X-Master-Password', admin).send({ confirmName: 'Short Lived' });
+    expect(sessions.resolve(dm)).toBeNull();
   });
 });
 
 describe('per-campaign DM passwords', () => {
   it("accepts a campaign's own DM password", async () => {
-    const res = await inA(request(app).post('/api/auth/login')).send({ type: 'dm', password: A_PW });
+    const res = await dmLogin(campA.id, A_PW);
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({ ok: true, role: 'dm' });
+    expect(res.body.token).toMatch(/^rpgs_/);
   });
 
   it("rejects another campaign's DM password", async () => {
-    const res = await inA(request(app).post('/api/auth/login')).send({ type: 'dm', password: B_PW });
+    const res = await dmLogin(campA.id, B_PW);
     expect(res.status).toBe(401);
   });
 
   it('accepts the super-admin password in any campaign', async () => {
-    for (const wrap of [inA, inB]) {
-      const res = await wrap(request(app).post('/api/auth/login')).send({ type: 'dm', password: SUPER_PW });
+    for (const c of [campA, campB]) {
+      const res = await dmLogin(c.id, SUPER_PW);
       expect(res.status).toBe(200);
     }
   });
 
-  it("rejects a DM API call carrying another campaign's password", async () => {
-    const res = await inB(request(app).get('/api/monsters')).set('X-Master-Password', A_PW);
+  it("rejects a DM session from another campaign", async () => {
+    const tokA = await dmToken(campA.id, A_PW);
+    const res = await inB(request(app).get('/api/monsters')).set('X-Master-Password', tokA);
     expect(res.status).toBe(401);
+    expect(res.body.code).toBe('SESSION_EXPIRED');
   });
 
-  it('changes the DM password and invalidates the old one', async () => {
-    const created = await request(app).post('/api/campaigns')
-      .set('X-Master-Password', SUPER_PW).send({ name: 'Rotating', dmPassword: 'old-pw-1' });
-    const id = created.body.id;
+  it('refuses a plain DM password in the header — only sessions are credentials', async () => {
+    const res = await inA(request(app).get('/api/monsters')).set('X-Master-Password', A_PW);
+    expect(res.status).toBe(401);
+    expect(res.body.code).toBe('SESSION_EXPIRED');
+  });
 
-    // The old password authorises the change...
+  it('changes the DM password, invalidates the old one and ends DM sessions', async () => {
+    const created = await request(app).post('/api/campaigns')
+      .set('X-Master-Password', await adminToken()).send({ name: 'Rotating', dmPassword: 'old-pw-1' });
+    const id = created.body.id;
+    const tok = await dmToken(id, 'old-pw-1');
+
     const change = await request(app).put(`/api/campaigns/${id}/dm-password`)
-      .set('X-Master-Password', 'old-pw-1').send({ newPassword: 'new-pw-2' });
+      .set('X-Master-Password', tok).send({ newPassword: 'new-pw-2' });
     expect(change.status).toBe(200);
 
-    // ...and stops working immediately afterwards (the verify cache must drop it).
-    expect(cdb.verifyDmPassword(id, 'old-pw-1')).toBe(false);
-    expect(cdb.verifyDmPassword(id, 'new-pw-2')).toBe(true);
+    // The old password stops working immediately (the verify cache must drop it)...
+    expect(await cdb.verifyDmPassword(id, 'old-pw-1')).toBe(false);
+    expect(await cdb.verifyDmPassword(id, 'new-pw-2')).toBe(true);
+    // ...and so does every session opened with it.
+    const after = await request(app).get('/api/monsters').set('X-Campaign-Id', id).set('X-Master-Password', tok);
+    expect(after.status).toBe(401);
   });
 });
 
 describe('campaign isolation', () => {
   it('keeps monsters written in one campaign out of the other', async () => {
+    const tokA = await dmToken(campA.id, A_PW);
+    const tokB = await dmToken(campB.id, B_PW);
     const write = await inA(request(app).post('/api/monsters/import'))
-      .set('X-Master-Password', A_PW)
+      .set('X-Master-Password', tokA)
       .send({ monsters: [{ name: 'Alpha Only Goblin', cr: '1/4', data: {} }] });
     expect(write.status).toBe(200);
 
-    const a = await inA(request(app).get('/api/monsters')).set('X-Master-Password', A_PW);
+    const a = await inA(request(app).get('/api/monsters')).set('X-Master-Password', tokA);
     expect(a.body.map(m => m.name)).toContain('Alpha Only Goblin');
 
-    const b = await inB(request(app).get('/api/monsters')).set('X-Master-Password', B_PW);
+    const b = await inB(request(app).get('/api/monsters')).set('X-Master-Password', tokB);
     expect(b.body.map(m => m.name)).not.toContain('Alpha Only Goblin');
   });
 

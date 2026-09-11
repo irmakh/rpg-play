@@ -65,6 +65,7 @@
         <label>Admin Password</label>
         <input type="password" id="new-adminpw" placeholder="The server MASTER_PASSWORD" autocomplete="current-password">
       </div>
+      <div id="new-cap"></div>
       <div class="err-msg" id="new-err"></div>
       <div class="hint">
         Creating a campaign needs the server's admin password. The new campaign starts
@@ -107,6 +108,7 @@
         <label>New DM Password (leave blank to keep)</label>
         <input type="password" id="mg-newpw" placeholder="At least 3 characters" autocomplete="new-password">
       </div>
+      <div id="mg-cap"></div>
       <div class="err-msg" id="mg-err"></div>
       <div class="ok-msg" id="mg-ok"></div>
       <hr style="border:none;border-top:1px solid var(--rule);margin:14px 0">
@@ -143,6 +145,7 @@
         <label>Admin Password</label>
         <input type="password" id="del-adminpw" autocomplete="current-password">
       </div>
+      <div id="del-cap"></div>
       <div class="err-msg" id="del-err"></div>
     </div>
     <div class="modal-ft">
@@ -154,6 +157,7 @@
 
 <script src="/js/lib/icons.js"></script>
 <script src="/js/lib/modal-guard.js"></script>
+<script src="/js/lib/auth-ui.js"></script>
 <script src="/js/campaigns.js"></script>
 </body>
 </html>

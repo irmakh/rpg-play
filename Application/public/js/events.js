@@ -26,29 +26,23 @@ function escJs(s) {
 }
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
-async function authenticate() {
-  const pw = document.getElementById('gate-pw').value;
-  if (!pw) return;
-  try {
-    const res = await fetch('/api/characters', { headers: { 'X-Master-Password': pw } });
-    if (!res.ok) { document.getElementById('gate-err').textContent = 'Wrong password.'; return; }
-    masterPw = pw;
-    sessionStorage.setItem('dmMasterPw', pw);
+// The shared DM gate (js/lib/auth-ui.js): maths captcha, lockout, and a session
+// token kept in masterPw where the typed password used to go. A tab that is
+// already logged in as DM unlocks without asking again.
+const _gate = AuthUI.dmGate({
+  capEl:   document.getElementById('gate-cap'),
+  pwInput: document.getElementById('gate-pw'),
+  errEl:   document.getElementById('gate-err'),
+  onUnlock: async (token) => {
+    masterPw = token;
     document.getElementById('gate').style.display = 'none';
     document.getElementById('main-content').style.display = '';
     applyTheme(localStorage.getItem('ev-theme') || 'dark-gold');
     await calLoad();
-  } catch { document.getElementById('gate-err').textContent = 'Connection error.'; }
-}
-
-(async function tryAutoLogin() {
-  let saved = null;
-  try { saved = JSON.parse(sessionStorage.getItem('rpgSession') || 'null')?.masterPw; } catch {}
-  if (!saved) saved = sessionStorage.getItem('dmMasterPw');
-  if (!saved) return;
-  document.getElementById('gate-pw').value = saved;
-  await authenticate();
-})();
+  },
+});
+function authenticate() { return _gate.submit(); }
+_gate.start();
 
 // ── Theme ─────────────────────────────────────────────────────────────────────
 function applyTheme(name) {

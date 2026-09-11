@@ -73,6 +73,7 @@
   </div>
 
   <!-- Inline unlock screen -->
+  <script src="/js/lib/auth-ui.js"></script>
   <div id="unlock-screen" style="display:none;text-align:center;padding:48px 20px">
     <div style="font-size:44px;margin-bottom:14px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-lock"></use></svg> </div>
     <div style="font-size:12px;color:var(--ash);margin-bottom:24px">This character is password-protected</div>
@@ -80,6 +81,7 @@
       <input type="password" id="unlock-pw-input" placeholder="Enter password…" autocomplete="off"
              style="text-align:center;margin-bottom:8px;font-size:15px"
              onkeydown="if(event.key==='Enter')unlockSubmit()">
+      <div id="unlock-cap" style="text-align:left"></div>
       <div id="unlock-err" style="color:var(--blood);font-size:11px;min-height:16px;margin-bottom:10px"></div>
       <div style="display:flex;gap:8px;justify-content:center">
         <button class="char-btn" onclick="unlockCancel()">Cancel</button>

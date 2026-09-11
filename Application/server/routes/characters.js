@@ -1,8 +1,11 @@
+import { clientIp } from '../../lib/login-guard.js';
+
 export default function register(app, ctx) {
   const {
     ldb, genId,
     masterAuth, charAuth, getCharacter,
-    hashPassword, verifyPassword, isMasterPassword,
+    hashPasswordAsync, verifyPasswordAsync, checkDmPassword,
+    sessions, setupTickets, loginGuard, audit, auth, currentCampaignId, TRUST_PROXY,
     processImageSizes, saveUploadFile, deleteUploadFile,
     IMAGE_MIME, ALLOWED_MIME, MAX_MEDIA_BYTES,
     broadcast, path,
@@ -305,11 +308,7 @@ export default function register(app, ctx) {
     try {
       const char = await getCharacter(req.params.id);
       if (!char) return res.status(404).json({ error: 'Not found' });
-      if (char.passwordHash) {
-        const pw = req.headers['x-character-password'];
-        if (!pw || (!verifyPassword(pw, char.passwordHash) && !isMasterPassword(pw)))
-          return res.status(401).json({ locked: true });
-      }
+      if ((await charAuth(char.id, req)) !== 200) return res.status(401).json({ locked: true });
       let data = {};
       try { data = JSON.parse(char.dataJson || '{}'); } catch {}
       res.json({ id: char.id, name: char.name, data });
@@ -321,7 +320,7 @@ export default function register(app, ctx) {
       const { name, char_type, password } = req.body;
       if (!name || !name.trim()) return res.status(400).json({ error: 'Name required' });
       const type = char_type === 'npc' ? 'npc' : 'pc';
-      const hash = password ? hashPassword(password) : '';
+      const hash = password ? await hashPasswordAsync(password) : '';
       const newId = genId();
       const fields = { name: name.trim(), dataJson: '{}', charType: type, passwordHash: hash, createdAt: new Date().toISOString() };
       ldb.createCharacter(newId, fields);
@@ -334,11 +333,7 @@ export default function register(app, ctx) {
     try {
       const char = await getCharacter(req.params.id);
       if (!char) return res.status(404).json({ error: 'Not found' });
-      if (char.passwordHash) {
-        const pw = req.headers['x-character-password'];
-        if (!pw || (!verifyPassword(pw, char.passwordHash) && !isMasterPassword(pw)))
-          return res.status(401).json({ error: 'Wrong password' });
-      }
+      if ((await charAuth(char.id, req)) !== 200) return res.status(401).json({ error: 'Wrong password' });
       const { data } = req.body;
       if (!data) return res.status(400).json({ error: 'Data required' });
       const name = (data.name || '').trim() || 'Unnamed';
@@ -360,11 +355,7 @@ export default function register(app, ctx) {
       const charId = req.params.id;
       const char = await getCharacter(charId);
       if (!char) return res.status(404).json({ error: 'Not found' });
-      if (char.passwordHash) {
-        const pw = req.headers['x-character-password'];
-        if (!pw || (!verifyPassword(pw, char.passwordHash) && !isMasterPassword(pw)))
-          return res.status(401).json({ error: 'Wrong password' });
-      }
+      if ((await charAuth(char.id, req)) !== 200) return res.status(401).json({ error: 'Wrong password' });
       const patch = req.body && req.body.patch;
       if (!patch || typeof patch !== 'object' || Array.isArray(patch))
         return res.status(400).json({ error: 'patch object required' });
@@ -384,18 +375,73 @@ export default function register(app, ctx) {
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
   });
 
+  /**
+   * Set, change or remove a character's password.
+   *
+   *   has a password   the current password (or the DM's), typed — throttled
+   *                    like a login, since it is a password check — or a DM
+   *                    session, which needs no typing
+   *   has none yet     the setup ticket the login form issued after its captcha,
+   *                    or a DM session. Claiming works as it always has for a
+   *                    person; a script can no longer do it without the captcha.
+   *
+   * Every OTHER session of the character ends, so a changed password locks out
+   * whoever knew the old one. The caller's own session is kept. A caller with no
+   * session yet (the first-password flow) gets one back, so the player is not
+   * asked to solve a second captcha.
+   */
   app.put('/api/characters/:id/password', async (req, res) => {
     try {
       const char = await getCharacter(req.params.id);
       if (!char) return res.status(404).json({ error: 'Not found' });
-      const { current_password, new_password } = req.body;
+      const { current_password, new_password, setupTicket } = req.body || {};
+      const campaignId = currentCampaignId() || '';
+      const ip = clientIp(req, TRUST_PROXY);
+      const account = `char:${campaignId}:${char.id}`;
+      const { session: caller, isDm: callerIsDm, isSelf: callerIsChar } = auth.callerFor(req, char.id);
+      const who = { role: callerIsDm ? 'dm' : 'character', charId: char.id, charName: char.name || '' };
+
       if (char.passwordHash) {
-        if (!current_password || (!verifyPassword(current_password, char.passwordHash) && !isMasterPassword(current_password)))
-          return res.status(401).json({ error: 'Wrong current password' });
+        if (!callerIsDm) {
+          const lock = loginGuard.check(ip, account);
+          if (lock.locked) {
+            res.setHeader('Retry-After', String(lock.retryAfterSec));
+            return res.status(429).json({ error: 'Too many attempts. Try again later.', code: 'LOCKED', retryAfter: lock.retryAfterSec });
+          }
+          const ok = !!current_password && (
+            await verifyPasswordAsync(current_password, char.passwordHash)
+            || await checkDmPassword(current_password, campaignId));
+          if (!ok) {
+            loginGuard.fail(ip, account);
+            audit?.record({ ...who, kind: 'password-change-fail', campaignId, ip, userAgent: req.headers['user-agent'] });
+            return res.status(401).json({ error: 'Wrong current password' });
+          }
+          loginGuard.succeed(ip, account);
+        }
+      } else if (!callerIsDm) {
+        if (!setupTickets.consume(setupTicket, campaignId, char.id)) {
+          return res.status(403).json({ error: 'Please log in again to choose a password.', code: 'SETUP_TICKET' });
+        }
       }
-      const newHash = new_password ? hashPassword(new_password) : '';
-      ldb.updateCharacter(req.params.id, { passwordHash: newHash });
-      res.json({ ok: true, has_password: !!new_password });
+
+      const newHash = new_password ? await hashPasswordAsync(new_password) : '';
+      ldb.updateCharacter(char.id, { passwordHash: newHash });
+      sessions.revokeCharacter(campaignId, char.id, callerIsChar ? caller.tokenHash : '');
+
+      const kind = !new_password ? 'password-removed' : (char.passwordHash ? 'password-changed' : 'password-set');
+      audit?.record({ ...who, kind, campaignId, ip, userAgent: req.headers['user-agent'] });
+      if (!callerIsDm && typeof ctx.notify === 'function') {
+        const verb = { 'password-removed': 'removed', 'password-changed': 'changed', 'password-set': 'set' }[kind];
+        ctx.notify({ to: 'dm', kind: 'security', priority: 'feed',
+          title: 'Character password', body: `${char.name || 'A character'}'s password was ${verb}.` });
+      }
+
+      const out = { ok: true, has_password: !!new_password };
+      if (new_password && !callerIsDm && !callerIsChar) {
+        const s = sessions.create({ campaignId, role: 'character', charId: char.id, charName: char.name || '', ip, userAgent: req.headers['user-agent'] });
+        Object.assign(out, { token: s.token, expiresAt: s.expiresAt, role: 'character', characterId: char.id, characterName: char.name });
+      }
+      res.json(out);
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
   });
 
@@ -403,11 +449,7 @@ export default function register(app, ctx) {
     try {
       const char = await getCharacter(req.params.id);
       if (!char) return res.status(404).json({ error: 'Not found' });
-      if (char.passwordHash) {
-        const pw = req.headers['x-character-password'];
-        if (!pw || (!verifyPassword(pw, char.passwordHash) && !isMasterPassword(pw)))
-          return res.status(401).json({ error: 'Wrong password' });
-      }
+      if ((await charAuth(char.id, req)) !== 200) return res.status(401).json({ error: 'Wrong password' });
       ldb.deleteCharacter(req.params.id);
       broadcast('characters', { action: 'deleted', id: req.params.id });
       res.json({ ok: true });

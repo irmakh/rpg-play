@@ -122,10 +122,16 @@ function selectCharacter(c) {
 }
 
 // ── Password screen ───────────────────────────────────────────────────────────
+// A real character login — maths captcha included (/js/lib/auth-ui.js). What
+// comes back is a session token, kept in state.charPassword and sent as the
+// x-character-password header; the password itself is never kept.
+let _pwCap = null;
+
 function showPasswordScreen(c) {
   document.getElementById('pw-char-name').textContent = c.name;
   document.getElementById('pw-input').value = '';
   document.getElementById('pw-error').style.display = 'none';
+  _pwCap = AuthUI.captcha(document.getElementById('pw-cap'), { onEnter: submitPassword });
   showScreen('screen-password');
   document.getElementById('pw-input').focus();
 }
@@ -138,14 +144,18 @@ document.getElementById('pw-cancel').addEventListener('click', () => {
 async function submitPassword() {
   const pw = document.getElementById('pw-input').value.trim();
   if (!pw) return;
-  state.charPassword = pw;
-  try {
-    await apiFetch(`/api/ai-dm/characters/${state.selectedChar.id}/data`);
-    afterCharacterAuth();
-  } catch (e) {
+  const errEl = document.getElementById('pw-error');
+  errEl.style.display = 'none';
+  const r = await AuthUI.login({ type: 'character', characterId: state.selectedChar.id, password: pw }, _pwCap);
+  if (!r.ok || !r.data.token) {
     state.charPassword = '';
-    document.getElementById('pw-error').style.display = 'block';
+    errEl.textContent = r.message || 'Wrong password. Try again.';
+    errEl.style.display = 'block';
+    return;
   }
+  state.charPassword = r.data.token;
+  document.getElementById('pw-input').value = '';
+  afterCharacterAuth();
 }
 
 document.getElementById('pw-submit').addEventListener('click', submitPassword);

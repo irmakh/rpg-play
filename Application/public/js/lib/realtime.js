@@ -73,9 +73,7 @@ function enforceCampaignSession() {
     const s = JSON.parse(sessionStorage.getItem('rpgSession') || 'null');
     const cookie = campaignFromCookie();
     if (!s || !s.campaignId || !cookie || s.campaignId === cookie) return;
-    sessionStorage.removeItem('rpgSession');
-    sessionStorage.removeItem('tableMasterPw');
-    sessionStorage.removeItem('dmMasterPw');
+    _dropStoredSession();
     goToCampaignPicker();
   } catch {}
 }
@@ -96,10 +94,65 @@ async function initCampaignBadge() {
 }
 document.addEventListener('DOMContentLoaded', initCampaignBadge);
 
-// Any API call made without a campaign selected answers 409 NO_CAMPAIGN. That
-// happens when the cookie was cleared, expired, or points at a campaign that has
-// since been deleted. Rather than making all ~276 existing fetch() call sites
-// handle it, intercept it once here and bounce to the picker.
+// ── Login sessions ────────────────────────────────────────────────────────────
+// Since v226 a login returns a SESSION TOKEN ('rpgs_…'), stored where the typed
+// password used to be (rpgSession.masterPw / .charPw, dmMasterPw, tableMasterPw).
+// The server accepts nothing else in the credential headers.
+
+function _dropStoredSession() {
+  sessionStorage.removeItem('rpgSession');
+  sessionStorage.removeItem('tableMasterPw');
+  sessionStorage.removeItem('dmMasterPw');
+}
+
+/** Back to the login page, returning here afterwards. */
+function goToLogin() {
+  const next = encodeURIComponent(location.pathname + location.search);
+  location.replace(`/login.html?next=${next}`);
+}
+
+const _isToken = v => typeof v === 'string' && v.startsWith('rpgs_');
+
+/**
+ * Ends this tab's session on the server as well as in the browser. Every
+ * logout button calls this before clearing storage, so a copied token dies too.
+ */
+function revokeStoredSession() {
+  let token = '';
+  try {
+    const s = JSON.parse(sessionStorage.getItem('rpgSession') || 'null');
+    token = (s && (s.role === 'dm' ? s.masterPw : s.charPw)) || sessionStorage.getItem('dmMasterPw') || '';
+  } catch {}
+  if (!_isToken(token)) return;
+  try {
+    fetch('/api/auth/logout', {
+      method: 'POST', keepalive: true,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token }),
+    }).catch(() => {});
+  } catch {}
+}
+
+// A tab opened before v226 still holds the PLAIN PASSWORD. The server no longer
+// accepts it, so drop it now — before this page's own scripts read it — and log
+// in again, rather than letting the page load half-working first.
+(function dropPasswordSession() {
+  try {
+    const s = JSON.parse(sessionStorage.getItem('rpgSession') || 'null');
+    const legacy = sessionStorage.getItem('dmMasterPw') || sessionStorage.getItem('tableMasterPw');
+    const token = s ? (s.role === 'dm' ? s.masterPw : s.charPw) : '';
+    const stale = (s && s.role && !_isToken(token)) || (legacy && !_isToken(legacy));
+    if (!stale) return;
+    _dropStoredSession();
+    if (s && s.role) goToLogin();
+  } catch {}
+})();
+
+// Two answers are handled once here rather than at all ~276 fetch() call sites:
+//   409 NO_CAMPAIGN      the campaign cookie was cleared, expired, or points at a
+//                        campaign that has since been deleted -> the picker
+//   401 SESSION_EXPIRED  the stored session is no longer valid (expired, logged
+//                        out elsewhere, password changed) -> the login page
 (function installCampaignGuard() {
   if (typeof window === 'undefined' || !window.fetch || window.__campaignGuardInstalled) return;
   window.__campaignGuardInstalled = true;
@@ -107,11 +160,15 @@ document.addEventListener('DOMContentLoaded', initCampaignBadge);
   let redirecting = false;
   window.fetch = async (...args) => {
     const res = await nativeFetch(...args);
-    if (res.status === 409 && !redirecting) {
-      // Only a NO_CAMPAIGN 409 redirects — other 409s belong to their caller.
+    if ((res.status === 409 || res.status === 401) && !redirecting) {
+      // Only these two codes redirect — every other 409/401 belongs to its caller.
       try {
         const body = await res.clone().json();
-        if (body && body.code === 'NO_CAMPAIGN') { redirecting = true; goToCampaignPicker(); }
+        if (res.status === 409 && body && body.code === 'NO_CAMPAIGN') {
+          redirecting = true; goToCampaignPicker();
+        } else if (res.status === 401 && body && body.code === 'SESSION_EXPIRED') {
+          redirecting = true; _dropStoredSession(); goToLogin();
+        }
       } catch {}
     }
     return res;

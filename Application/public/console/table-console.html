@@ -38,6 +38,7 @@
 <link rel="stylesheet" href="/css/table.css">
 <link rel="stylesheet" href="/css/console/table-console.css">
 <script src="/js/lib/icons.js"></script>
+<script src="/js/lib/auth-ui.js"></script>
 </head>
 <body class="console-mode">
 
@@ -65,6 +66,7 @@
           <input type="password" id="pwag-char-pw" class="pwag-inp" placeholder="Enter password…"
                  autocomplete="current-password" onkeydown="if(event.key==='Enter')pwagLoginChar()">
         </div>
+        <div id="pwag-char-cap"></div>
         <div class="pwag-err" id="pwag-char-err"></div>
         <button class="pwag-btn" id="pwag-char-btn" onclick="pwagLoginChar()">Login</button>
       </div>
@@ -94,17 +96,28 @@
         <input type="password" id="pwag-dm-pw" class="pwag-inp" placeholder="Enter master password…"
                autocomplete="current-password" onkeydown="if(event.key==='Enter')pwagLoginDM()">
       </div>
+      <div id="pwag-dm-cap"></div>
       <div class="pwag-err" id="pwag-dm-err"></div>
       <button class="pwag-btn" onclick="pwagLoginDM()">Login as DM</button>
     </div>
   </div>
 </div>
 <script>
+// Login captchas (js/lib/auth-ui.js) and the same-device session channel.
+var _pwagCapChar,_pwagCapDm,_pwagTicket,_consoleBC;
 (function(){
-  var _gateEs=new EventSource('/api/console/events');
-  _gateEs.onmessage=function(ev){
+  // Console screens on the SAME device share one login through the browser
+  // (BroadcastChannel). It used to go through /api/console/event, a server
+  // relay anyone could listen to — the session never travels that way now.
+  try{_consoleBC=new BroadcastChannel('rpg-console-session');}catch{}
+  if(_consoleBC)_consoleBC.onmessage=function(ev){
     try{
-      var d=JSON.parse(ev.data);
+      var d=ev.data||{};
+      if(d.type==='SESSION_REQUEST'){
+        var mine=null;try{mine=JSON.parse(sessionStorage.getItem('rpgSession')||'null');}catch{}
+        if(mine&&mine.role)_consoleBC.postMessage({type:'SESSION_SYNC',session:mine});
+        return;
+      }
       if(d.type==='SESSION_SYNC'&&d.session){
         var cur=null;try{cur=JSON.parse(sessionStorage.getItem('rpgSession')||'null');}catch{}
         if(cur&&cur.role===d.session.role&&(cur.role==='dm'?cur.masterPw===d.session.masterPw:cur.characterId===d.session.characterId))return;
@@ -125,6 +138,10 @@
   try{var s=JSON.parse(sessionStorage.getItem('rpgSession')||'null');if(s&&s.role)return;}catch{}
   var g=document.getElementById('pwa-gate');
   g.style.display='flex';
+  _pwagCapChar=AuthUI.captcha(document.getElementById('pwag-char-cap'),{onEnter:pwagLoginChar});
+  _pwagCapDm=AuthUI.captcha(document.getElementById('pwag-dm-cap'),{onEnter:pwagLoginDM,lazy:true});
+  // Another console window on this device may already be logged in: ask it.
+  if(_consoleBC)_consoleBC.postMessage({type:'SESSION_REQUEST'});
   fetch('/api/characters').then(function(r){return r.ok?r.json():[];}).then(function(chars){
     var sel=document.getElementById('pwag-char-sel');
     var pcs=chars.filter(function(c){return c.char_type==='pc';});
@@ -133,6 +150,7 @@
 })();
 
 function pwagSwitch(tab){
+  if(tab==='dm'&&_pwagCapDm)_pwagCapDm.ensure();
   ['char','dm'].forEach(function(t){
     document.getElementById('pwag-tb-'+t).classList.toggle('active',t===tab);
     document.getElementById('pwag-pane-'+t).classList.toggle('active',t===tab);
@@ -144,7 +162,7 @@ function _pwagStore(sess){
   sessionStorage.setItem('rpgSession',JSON.stringify(sess));
   if(sess.role==='dm'){sessionStorage.setItem('tableMasterPw',sess.masterPw);sessionStorage.setItem('dmMasterPw',sess.masterPw);}
   else{sessionStorage.removeItem('tableMasterPw');sessionStorage.removeItem('dmMasterPw');}
-  navigator.sendBeacon('/api/console/event',new Blob([JSON.stringify({type:'SESSION_SYNC',session:sess})],{type:'application/json'}));
+  if(_consoleBC)_consoleBC.postMessage({type:'SESSION_SYNC',session:sess});   // same device only
   location.reload();
 }
 
@@ -158,18 +176,18 @@ async function pwagLoginChar(){
   if(!pw){err.textContent='Enter your password.';return;}
   btn.disabled=true;
   try{
-    var res=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'character',characterId:id,password:pw})});
-    var d=await res.json();
-    if(d.needsSetup){pwagShowSetup(d.characterId,d.characterName);return;}
-    if(!res.ok){err.textContent=d.error||'Login failed.';return;}
-    _pwagStore({role:'character',characterId:d.characterId,characterName:d.characterName,charPw:pw});
+    var r=await AuthUI.login({type:'character',characterId:id,password:pw},_pwagCapChar);
+    if(r.data.needsSetup){pwagShowSetup(r.data.characterId,r.data.characterName,r.data.setupTicket);return;}
+    if(!r.ok){err.textContent=r.message;return;}
+    _pwagStore({role:'character',characterId:r.data.characterId,characterName:r.data.characterName,charPw:r.data.token});
   }catch{err.textContent='Connection error.';}
   finally{btn.disabled=false;}
 }
 
 var _pwagSetupId=null;
-function pwagShowSetup(charId,charName){
+function pwagShowSetup(charId,charName,ticket){
   _pwagSetupId=charId;
+  _pwagTicket=ticket||null;
   document.getElementById('pwag-char-step').style.display='none';
   document.getElementById('pwag-setup-step').style.display='block';
   document.getElementById('pwag-setup-name').textContent=charName;
@@ -193,12 +211,9 @@ async function pwagSetupPw(){
   if(pw1.length<3){err.textContent='At least 3 characters.';return;}
   btn.disabled=true;
   try{
-    var sr=await fetch('/api/characters/'+_pwagSetupId+'/password',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({new_password:pw1})});
-    if(!sr.ok){err.textContent='Failed to set password.';return;}
-    var lr=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'character',characterId:_pwagSetupId,password:pw1})});
-    var ld=await lr.json();
-    if(!lr.ok){err.textContent=ld.error||'Login failed.';return;}
-    _pwagStore({role:'character',characterId:ld.characterId,characterName:ld.characterName,charPw:pw1});
+    var r=await AuthUI.setFirstPassword(_pwagSetupId,pw1,_pwagTicket);
+    if(!r.ok){err.textContent=r.message;return;}
+    _pwagStore({role:'character',characterId:r.data.characterId,characterName:r.data.characterName,charPw:r.data.token});
   }catch{err.textContent='Connection error.';}
   finally{btn.disabled=false;}
 }
@@ -209,10 +224,9 @@ async function pwagLoginDM(){
   err.textContent='';
   if(!pw){err.textContent='Enter the master password.';return;}
   try{
-    var res=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'dm',password:pw})});
-    var d=await res.json();
-    if(!res.ok){err.textContent=d.error||'Wrong password.';return;}
-    _pwagStore({role:'dm',masterPw:pw});
+    var r=await AuthUI.login({type:'dm',password:pw},_pwagCapDm);
+    if(!r.ok){err.textContent=r.message;return;}
+    _pwagStore({role:'dm',masterPw:r.data.token});
   }catch{err.textContent='Connection error.';}
 }
 </script>

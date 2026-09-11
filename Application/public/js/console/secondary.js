@@ -94,8 +94,11 @@ function sApplyBadges() {
   }
 }
 
+// Ends the session on the server, then tells the other console screens on THIS
+// device (BroadcastChannel — session messages never go through the server relay).
 function sLogout() {
-  navigator.sendBeacon('/api/console/event', new Blob([JSON.stringify({ type: 'SESSION_LOGOUT' })], { type: 'application/json' }));
+  if (typeof revokeStoredSession === 'function') revokeStoredSession();
+  try { new BroadcastChannel('rpg-console-session').postMessage({ type: 'SESSION_LOGOUT' }); } catch {}
   sessionStorage.removeItem('rpgSession');
   sessionStorage.removeItem('tableMasterPw');
   sessionStorage.removeItem('dmMasterPw');

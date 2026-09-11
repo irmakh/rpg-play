@@ -34,12 +34,14 @@
   </div>
 </div>
 
+<script src="/js/lib/auth-ui.js"></script>
 <!-- ── Screen: Password Prompt ─────────────────────────────────────────────── -->
 <div id="screen-password" class="screen">
   <div class="modal-card" style="max-width:380px;margin:auto;margin-top:20vh">
     <h2>🔒 Character Password</h2>
     <p id="pw-char-name" style="color:var(--gold);margin-bottom:16px"></p>
     <input type="password" id="pw-input" class="text-input" placeholder="Enter character password" autocomplete="current-password">
+    <div id="pw-cap" style="margin-top:12px"></div>
     <div id="pw-error" class="error-msg" style="display:none">Wrong password. Try again.</div>
     <div class="btn-row" style="margin-top:16px">
       <button class="btn-ghost" id="pw-cancel">Cancel</button>

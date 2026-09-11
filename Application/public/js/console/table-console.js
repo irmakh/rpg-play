@@ -86,9 +86,12 @@ setInterval(() => {
   if (_secondaryWin && _secondaryWin.closed) { _secondaryWin = null; _setDot('offline'); }
 }, 2000);
 
-// On logout: broadcast to other PWA apps, clear session, reload
+// On logout: end the session on the server, tell the other console screens on
+// THIS device (BroadcastChannel — session messages never go through the server
+// relay any more), clear it here and reload.
 window.logout = function() {
-  navigator.sendBeacon('/api/console/event', new Blob([JSON.stringify({ type: 'SESSION_LOGOUT' })], { type: 'application/json' }));
+  if (typeof revokeStoredSession === 'function') revokeStoredSession();
+  try { new BroadcastChannel('rpg-console-session').postMessage({ type: 'SESSION_LOGOUT' }); } catch {}
   sessionStorage.removeItem('rpgSession');
   sessionStorage.removeItem('tableMasterPw');
   sessionStorage.removeItem('dmMasterPw');

@@ -64,6 +64,7 @@ const NOTIF_ICONS = {
   'handout': '📜', 'your-turn': '⚔️', 'combat-started': '⚔️',
   'dice': '🎲', 'chat': '💬', 'music': '🎵', 'damage': '🩸', 'healing': '💚',
   'condition': '🌀', 'shop-open': '🛒', 'shop-closed': '🛒', 'calendar': '📅',
+  'security': '🛡️',
 };
 function notifIcon(kind) { return NOTIF_ICONS[kind] || '🔔'; }
 

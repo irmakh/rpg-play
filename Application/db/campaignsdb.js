@@ -13,7 +13,7 @@ import Database from 'better-sqlite3';
 import path from 'path';
 import crypto from 'crypto';
 import { fileURLToPath } from 'url';
-import { hashPassword, verifyPassword } from '../lib/passwords.js';
+import { hashPassword, verifyPasswordAsync } from '../lib/passwords.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
@@ -183,11 +183,14 @@ export function setDmPassword(id, plaintext) {
 }
 
 /**
- * True when `plaintext` is this campaign's DM password.
+ * Resolves true when `plaintext` is this campaign's DM password.
  * A campaign with no password set never authenticates — the super-admin
  * MASTER_PASSWORD is the recovery path, handled by the caller.
+ *
+ * ASYNC: scrypt runs off the event loop, so a wrong guess no longer freezes the
+ * server for everyone else. Always await it — a Promise is truthy.
  */
-export function verifyDmPassword(id, plaintext) {
+export async function verifyDmPassword(id, plaintext) {
   if (!id || !plaintext) return false;
   const key = pwCacheKey(id, plaintext);
   const hit = _pwCache.get(key);
@@ -195,7 +198,7 @@ export function verifyDmPassword(id, plaintext) {
 
   const row = db.prepare('SELECT dmPasswordHash FROM campaigns WHERE id = ?').get(id);
   if (!row || !row.dmPasswordHash) return false;
-  if (!verifyPassword(plaintext, row.dmPasswordHash)) return false;
+  if (!(await verifyPasswordAsync(plaintext, row.dmPasswordHash))) return false;
 
   _pwCache.set(key, { campaignId: id, expires: Date.now() + PW_CACHE_TTL_MS });
   pwCacheSweep();
@@ -210,6 +213,61 @@ export function touchCampaign(id) {
 export function deleteCampaign(id) {
   db.prepare('DELETE FROM campaigns WHERE id = ?').run(id);
   pwCacheDrop(id);
+}
+
+// ── Login audit ───────────────────────────────────────────────────────────────
+// Every login outcome — success, wrong password, wrong captcha answer, lockout,
+// logout, first password set — across every campaign. Read by the super-admin
+// on the maintenance page. Kept for 30 days and at most 5,000 rows.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS auth_events (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    ts         INTEGER NOT NULL,
+    campaignId TEXT DEFAULT '',
+    kind       TEXT NOT NULL,
+    role       TEXT DEFAULT '',
+    charId     TEXT DEFAULT '',
+    charName   TEXT DEFAULT '',
+    ip         TEXT DEFAULT '',
+    userAgent  TEXT DEFAULT ''
+  );
+`);
+db.exec('CREATE INDEX IF NOT EXISTS idx_auth_events_ts ON auth_events(ts)');
+
+const AUDIT_KEEP_MS   = 30 * 24 * 60 * 60 * 1000;
+const AUDIT_KEEP_ROWS = 5000;
+let _auditWrites = 0;
+
+/** Never throws: failing to log a login must not fail the login. */
+export function recordAuthEvent(ev = {}) {
+  try {
+    db.prepare(`INSERT INTO auth_events (ts, campaignId, kind, role, charId, charName, ip, userAgent)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)`).run(
+      Number(ev.ts) || Date.now(),
+      String(ev.campaignId || '').slice(0, 64),
+      String(ev.kind || '').slice(0, 32),
+      String(ev.role || '').slice(0, 16),
+      String(ev.charId || '').slice(0, 64),
+      String(ev.charName || '').slice(0, 128),
+      String(ev.ip || '').slice(0, 64),
+      String(ev.userAgent || '').slice(0, 256),
+    );
+    if (++_auditWrites % 50 === 0) pruneAuthEvents();
+  } catch (err) {
+    console.warn('[auth] could not record a login event:', err.message);
+  }
+}
+
+export function pruneAuthEvents(now = Date.now()) {
+  db.prepare('DELETE FROM auth_events WHERE ts < ?').run(now - AUDIT_KEEP_MS);
+  db.prepare('DELETE FROM auth_events WHERE id <= (SELECT id FROM auth_events ORDER BY id DESC LIMIT 1 OFFSET ?)')
+    .run(AUDIT_KEEP_ROWS);
+}
+
+/** Newest first. */
+export function listAuthEvents({ limit = 200 } = {}) {
+  const n = Math.max(1, Math.min(1000, Number(limit) || 200));
+  return db.prepare('SELECT * FROM auth_events ORDER BY id DESC LIMIT ?').all(n);
 }
 
 export const _db = db;

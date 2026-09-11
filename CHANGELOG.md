@@ -21,6 +21,48 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [226] — 2026-09-11 — A maths problem on every login, and real login sessions
+
+Every form that asks for a password now also asks a small sum, drawn as a
+picture. And logging in now gives the browser a session key: your password is no
+longer kept in the browser or sent with every click, so the login form is the only
+place a password is ever checked — behind the sum and a lockout.
+
+**Everyone logs in once more after this update.** Tabs that were open before it
+still hold the old password, which no longer opens anything; they go to the login
+page by themselves.
+
+- **Maths captcha** on every password form: the login page, the campaign picker
+  (log in, create, settings, delete), the three console screens, the DM panel,
+  Treasury, Monsters, Map Prep, Calendar, Playlists, the maintenance page, the
+  Stories pages, the AI DM and the sheet's unlock screen. One sum per attempt; a
+  wrong answer brings a new one. Built in-house — no captcha service, nothing new
+  installed.
+- **Lockout.** Five wrong passwords for one account from one address lock it for
+  a minute, doubling each time up to 30 minutes; one player mistyping does not
+  lock out the rest of the table. 25 wrong from one address, across accounts,
+  lock that address.
+- **The DM is told** when one account collects five wrong passwords, and when a
+  character's password is set, changed or removed.
+- **Sessions** last a day unused and a week at most. Logging out ends the session
+  on the server too. Changing a character's password logs that character out
+  everywhere else; changing the DM password logs every DM session out.
+- Choosing the first password for an unclaimed character follows straight on from
+  the login form's sum — it can no longer be done by a script.
+- The two console screens share a login only when they run on the **same
+  device**; a screen on another device logs in on its own. The old way passed the
+  whole session through a relay anyone could listen to.
+- **Maintenance page:** the admin password plus the sum, and a new **Login
+  activity** list covering every campaign for 30 days.
+- *(no frontend bump)* Server hardening in the same release: security headers on
+  every response; anonymous requests limited to 1 MB (uploads by a logged-in user
+  still up to 200 MB); password checks no longer freeze the server while they
+  run; **no built-in admin password** — without `MASTER_PASSWORD` in `.env` the
+  admin features are switched off; the campaign cookie is marked Secure over
+  HTTPS.
+
+---
+
 ## [225] — 2026-09-10 — A player can change their own password again
 
 Opening Set Password while signed in as a character showed only the new-password

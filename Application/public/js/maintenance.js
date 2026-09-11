@@ -1,13 +1,16 @@
 // ── Hidden maintenance dashboard ──────────────────────────────────────────────
-// DM-password gated. Polls /api/maintenance/clients and shows every connected
+// Super-admin gated. Polls /api/maintenance/clients and shows every connected
 // real-time client: identity (DM / character / anonymous), when they logged in,
-// the page they're currently viewing, IP and connection details.
+// the page they're currently viewing, IP and connection details — plus the
+// login activity of every campaign (/api/maintenance/auth-events).
 
-let _pw = null;            // DM master password, kept in memory only
+let _pw = null;            // super-admin SESSION TOKEN (never the password), memory only
 let _pollTimer = null;
+let _pollTick = 0;
 let _serverVersion = null; // current deployed frontend version
 let _outdatedCount = 0;
 const POLL_MS = 4000;
+const EVENTS_EVERY = 5;    // login activity refreshes every 5th poll (20 s)
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => (
@@ -15,36 +18,40 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => (
 ));
 
 // ── Login gate ────────────────────────────────────────────────────────────────
+// The admin password (MASTER_PASSWORD) plus the maths captcha buys a session.
+// The captcha's answer box sits inside the form, so Enter submits it natively.
+const _cap = AuthUI.captcha($('gate-cap'));
+
 $('gate-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const pw = $('gate-pw').value;
   const errEl = $('gate-err');
   errEl.textContent = '';
   if (!pw) { errEl.textContent = 'Enter a password.'; return; }
-  try {
-    const res = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: 'dm', password: pw }),
-    });
-    if (!res.ok) { errEl.textContent = 'Wrong password.'; return; }
-    _pw = pw;
-    $('gate').style.display = 'none';
-    $('panel').style.display = 'block';
-    startPolling();
-  } catch {
-    errEl.textContent = 'Connection error.';
-  }
+  const r = await AuthUI.adminLogin(pw, _cap);
+  if (!r.ok) { errEl.textContent = r.message; return; }
+  _pw = r.data.token;
+  $('gate-pw').value = '';
+  $('gate').style.display = 'none';
+  $('panel').style.display = 'block';
+  startPolling();
 });
 
-$('btn-refresh').addEventListener('click', () => loadClients());
-$('btn-logout').addEventListener('click', () => {
+function _toGate(message) {
   stopPolling();
   _pw = null;
   $('panel').style.display = 'none';
   $('gate').style.display = 'flex';
+  $('gate-err').textContent = message || '';
   $('gate-pw').value = '';
+  _cap.reload();
   $('gate-pw').focus();
+}
+
+$('btn-refresh').addEventListener('click', () => { loadClients(); loadAuthEvents(); });
+$('btn-logout').addEventListener('click', () => {
+  AuthUI.logout(_pw);   // end it on the server, not just here
+  _toGate('');
 });
 
 $('btn-reload-all').addEventListener('click', () => {
@@ -72,7 +79,12 @@ async function sendReload(mode) {
 // ── Polling ───────────────────────────────────────────────────────────────────
 function startPolling() {
   loadClients();
-  _pollTimer = setInterval(loadClients, POLL_MS);
+  loadAuthEvents();
+  _pollTick = 0;
+  _pollTimer = setInterval(() => {
+    loadClients();
+    if (++_pollTick % EVENTS_EVERY === 0) loadAuthEvents();
+  }, POLL_MS);
 }
 function stopPolling() {
   if (_pollTimer) { clearInterval(_pollTimer); _pollTimer = null; }
@@ -82,11 +94,8 @@ async function loadClients() {
   if (!_pw) return;
   try {
     const res = await fetch('/api/maintenance/clients', { headers: { 'X-Master-Password': _pw } });
-    if (res.status === 401) {   // password changed / invalid — bounce back to gate
-      stopPolling(); _pw = null;
-      $('panel').style.display = 'none';
-      $('gate').style.display = 'flex';
-      $('gate-err').textContent = 'Session expired — log in again.';
+    if (res.status === 401) {   // session expired or revoked — bounce back to gate
+      _toGate('Session expired — log in again.');
       return;
     }
     if (!res.ok) return;
@@ -111,6 +120,52 @@ function relTime(ts, now) {
 function absTime(ts) {
   if (!ts) return '';
   try { return new Date(ts).toLocaleString(); } catch { return ''; }
+}
+
+// ── Login activity ────────────────────────────────────────────────────────────
+const EVENT_LABELS = {
+  'login':                ['Logged in', 'ok'],
+  'login-as-dm':          ['DM opened a character', 'ok'],
+  'logout':               ['Logged out', ''],
+  'login-fail':           ['Wrong password', 'bad'],
+  'captcha-fail':         ['Wrong captcha answer', 'bad'],
+  'locked':               ['Locked out', 'bad'],
+  'setup-started':        ['Asked to choose a password', ''],
+  'password-set':         ['Password set', 'ok'],
+  'password-changed':     ['Password changed', 'ok'],
+  'password-removed':     ['Password removed', ''],
+  'password-change-fail': ['Wrong current password', 'bad'],
+};
+
+async function loadAuthEvents() {
+  if (!_pw) return;
+  try {
+    const res = await fetch('/api/maintenance/auth-events?limit=200', { headers: { 'X-Master-Password': _pw } });
+    if (!res.ok) return;
+    renderAuthEvents((await res.json()).events || []);
+  } catch { /* keep the last view */ }
+}
+
+function renderAuthEvents(events) {
+  const host = $('auth-events');
+  if (!events.length) { host.innerHTML = '<div class="muted" style="padding:14px">No login activity recorded yet.</div>'; return; }
+  const now = Date.now();
+  const who = e => e.role === 'admin' ? 'Admin'
+    : e.role === 'dm' ? 'DM'
+    : e.role === 'stories' ? 'Stories page'
+    : (e.charName || e.charId || 'Character');
+  host.innerHTML = `<table class="events">
+    <thead><tr><th>When</th><th>What</th><th>Who</th><th>Campaign</th><th>IP address</th></tr></thead>
+    <tbody>${events.map(e => {
+      const [label, tone] = EVENT_LABELS[e.kind] || [e.kind, ''];
+      return `<tr>
+        <td title="${esc(absTime(e.ts))}">${relTime(e.ts, now)}</td>
+        <td class="${tone ? 'ev-' + tone : ''}">${esc(label)}</td>
+        <td>${esc(who(e))}</td>
+        <td>${esc(e.campaignName || (e.campaignId ? e.campaignId.slice(0, 8) : '—'))}</td>
+        <td class="ip-v">${esc(e.ip || '—')}</td>
+      </tr>`;
+    }).join('')}</tbody></table>`;
 }
 
 function render(data) {

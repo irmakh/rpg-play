@@ -314,14 +314,62 @@ describe('PATCH /api/characters/:id', () => {
 
 // ── PUT /api/characters/:id/password ─────────────────────────────────────────
 describe('PUT /api/characters/:id/password', () => {
-  it('sets a password on a character that had none', async () => {
+  it('refuses a first password without the setup ticket the login form hands out', async () => {
     const { app, ldb } = makeApp();
     ldb.createCharacter('c1', { name: 'Monk', createdAt: new Date().toISOString() });
     const res = await request(app).put('/api/characters/c1/password')
       .send({ new_password: 'newpass' });
+    expect(res.status).toBe(403);
+    expect(res.body.code).toBe('SETUP_TICKET');
+    expect(ldb.getCharacter('c1').passwordHash || '').toBe('');
+  });
+
+  it('sets a first password with the setup ticket and returns a session', async () => {
+    const { app, ldb, setupTickets, sessions } = makeApp();
+    ldb.createCharacter('c1', { name: 'Monk', createdAt: new Date().toISOString() });
+    const setupTicket = setupTickets.issue('', 'c1');
+    const res = await request(app).put('/api/characters/c1/password')
+      .send({ new_password: 'newpass', setupTicket });
     expect(res.status).toBe(200);
     expect(res.body.has_password).toBe(true);
     expect(ldb.getCharacter('c1').passwordHash).not.toBe('');
+    expect(res.body.token).toMatch(/^rpgs_/);
+    expect(sessions.resolve(res.body.token)).toMatchObject({ role: 'character', charId: 'c1' });
+  });
+
+  it('accepts a setup ticket once, and only for the character it was issued to', async () => {
+    const { app, ldb, setupTickets } = makeApp();
+    ldb.createCharacter('c1', { name: 'Monk', createdAt: new Date().toISOString() });
+    ldb.createCharacter('c2', { name: 'Nun',  createdAt: new Date().toISOString() });
+    const ticket = setupTickets.issue('', 'c1');
+    const wrongChar = await request(app).put('/api/characters/c2/password').send({ new_password: 'x1', setupTicket: ticket });
+    expect(wrongChar.status).toBe(403);
+    // The mismatched attempt spent it.
+    const again = await request(app).put('/api/characters/c1/password').send({ new_password: 'x1', setupTicket: ticket });
+    expect(again.status).toBe(403);
+  });
+
+  it('lets a DM session set a first password without a ticket', async () => {
+    const { app, ldb, sessions } = makeApp();
+    ldb.createCharacter('c1', { name: 'Monk', createdAt: new Date().toISOString() });
+    const { token } = sessions.create({ campaignId: '', role: 'dm' });
+    const res = await request(app).put('/api/characters/c1/password')
+      .set('X-Master-Password', token).send({ new_password: 'newpass' });
+    expect(res.status).toBe(200);
+    expect(res.body.token).toBeUndefined();   // the DM keeps their own session
+  });
+
+  it("ends the character's other sessions but keeps the caller's", async () => {
+    const { app, ldb, sessions, hashPassword } = makeApp();
+    ldb.createCharacter('c1', { name: 'Monk', passwordHash: hashPassword('old'), createdAt: new Date().toISOString() });
+    const mine  = sessions.create({ campaignId: '', role: 'character', charId: 'c1' });
+    const other = sessions.create({ campaignId: '', role: 'character', charId: 'c1' });
+    const res = await request(app).put('/api/characters/c1/password')
+      .set('X-Character-Password', mine.token)
+      .send({ current_password: 'old', new_password: 'new' });
+    expect(res.status).toBe(200);
+    expect(sessions.resolve(mine.token)).not.toBeNull();
+    expect(sessions.resolve(other.token)).toBeNull();
   });
 
   it('clears a password when new_password is empty', async () => {

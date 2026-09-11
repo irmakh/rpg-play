@@ -60,6 +60,7 @@ html.lamplit .btn-launch:hover{background:var(--slate-hi)}
 <link rel="stylesheet" href="/css/fonts.css">
 <link rel="stylesheet" href="/css/base.css">
 <script src="/js/lib/icons.js"></script>
+<script src="/js/lib/auth-ui.js"></script>
 </head>
 <body>
 
@@ -92,6 +93,7 @@ html.lamplit .btn-launch:hover{background:var(--slate-hi)}
           <input type="password" id="char-pw" placeholder="Enter password…" autocomplete="current-password"
                  onkeydown="if(event.key==='Enter')cLoginChar()">
         </div>
+        <div id="char-cap"></div>
         <div class="err-msg" id="char-err"></div>
         <button class="login-btn" id="char-login-btn" onclick="cLoginChar()">Login</button>
       </div>
@@ -124,6 +126,7 @@ html.lamplit .btn-launch:hover{background:var(--slate-hi)}
         <input type="password" id="dm-pw" placeholder="Enter master password…" autocomplete="current-password"
                onkeydown="if(event.key==='Enter')cLoginDM()">
       </div>
+      <div id="dm-cap"></div>
       <div class="err-msg" id="dm-err"></div>
       <button class="login-btn" onclick="cLoginDM()">Login as DM</button>
     </div>
@@ -158,8 +161,18 @@ function _getSession() {
   try { return JSON.parse(sessionStorage.getItem('rpgSession') || 'null'); } catch { return null; }
 }
 
+// ── Maths captchas (js/lib/auth-ui.js) ───────────────────────────────────────
+// A login returns a SESSION TOKEN, stored where the password used to be
+// (masterPw / charPw) so every request header on the console pages carries it.
+let _capChar = null, _capDm = null, _setupTicket = null;
+function cMountCaptchas() {
+  if (!_capChar) _capChar = AuthUI.captcha(document.getElementById('char-cap'), { onEnter: cLoginChar });
+  if (!_capDm)   _capDm   = AuthUI.captcha(document.getElementById('dm-cap'), { onEnter: cLoginDM, lazy: true });
+}
+
 // ── Tab switcher ──────────────────────────────────────────────────────────────
 function cSwitch(tab) {
+  if (tab === 'dm') _capDm?.ensure();
   document.getElementById('tb-char').classList.toggle('active', tab === 'character');
   document.getElementById('tb-dm').classList.toggle('active', tab === 'dm');
   document.getElementById('pane-character').classList.toggle('active', tab === 'character');
@@ -200,25 +213,20 @@ async function cLoginChar() {
   const btn = document.getElementById('char-login-btn');
   btn.disabled = true;
   try {
-    const res  = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: 'character', characterId, password }),
-    });
-    const data = await res.json();
-    if (data.needsSetup) { cShowSetup(data.characterId, data.characterName); return; }
-    if (!res.ok) { errEl.textContent = data.error || 'Login failed.'; return; }
-    _storeSession({ role: 'character', characterId: data.characterId, characterName: data.characterName, charPw: password });
+    const r = await AuthUI.login({ type: 'character', characterId, password }, _capChar);
+    if (r.data.needsSetup) { cShowSetup(r.data.characterId, r.data.characterName, r.data.setupTicket); return; }
+    if (!r.ok) { errEl.textContent = r.message; return; }
+    _storeSession({ role: 'character', characterId: r.data.characterId, characterName: r.data.characterName, charPw: r.data.token });
     showLauncher(_getSession());
-  } catch { errEl.textContent = 'Connection error.'; }
-  finally { btn.disabled = false; }
+  } finally { btn.disabled = false; }
 }
 
 // ── Password setup ────────────────────────────────────────────────────────────
 let _setupCharId = null;
 
-function cShowSetup(charId, charName) {
+function cShowSetup(charId, charName, ticket) {
   _setupCharId = charId;
+  _setupTicket = ticket || null;
   document.getElementById('char-step-login').style.display = 'none';
   document.getElementById('char-step-setup').style.display = 'block';
   document.getElementById('setup-char-name').textContent   = charName;
@@ -247,23 +255,11 @@ async function cSetupPassword() {
   const btn = document.getElementById('setup-btn');
   btn.disabled = true;
   try {
-    const setRes = await fetch(`/api/characters/${_setupCharId}/password`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ new_password: pw1 }),
-    });
-    if (!setRes.ok) { errEl.textContent = 'Failed to set password.'; return; }
-    const loginRes  = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: 'character', characterId: _setupCharId, password: pw1 }),
-    });
-    const loginData = await loginRes.json();
-    if (!loginRes.ok) { errEl.textContent = loginData.error || 'Login failed after setup.'; return; }
-    _storeSession({ role: 'character', characterId: loginData.characterId, characterName: loginData.characterName, charPw: pw1 });
+    const r = await AuthUI.setFirstPassword(_setupCharId, pw1, _setupTicket);
+    if (!r.ok) { errEl.textContent = r.message; return; }
+    _storeSession({ role: 'character', characterId: r.data.characterId, characterName: r.data.characterName, charPw: r.data.token });
     showLauncher(_getSession());
-  } catch { errEl.textContent = 'Connection error.'; }
-  finally { btn.disabled = false; }
+  } finally { btn.disabled = false; }
 }
 
 // ── DM login ──────────────────────────────────────────────────────────────────
@@ -272,17 +268,10 @@ async function cLoginDM() {
   const errEl    = document.getElementById('dm-err');
   errEl.textContent = '';
   if (!password) { errEl.textContent = 'Enter the master password.'; return; }
-  try {
-    const res  = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: 'dm', password }),
-    });
-    const data = await res.json();
-    if (!res.ok) { errEl.textContent = data.error || 'Wrong password.'; return; }
-    _storeSession({ role: 'dm', masterPw: password });
-    showLauncher(_getSession());
-  } catch { errEl.textContent = 'Connection error.'; }
+  const r = await AuthUI.login({ type: 'dm', password }, _capDm);
+  if (!r.ok) { errEl.textContent = r.message; return; }
+  _storeSession({ role: 'dm', masterPw: r.data.token });
+  showLauncher(_getSession());
 }
 
 // ── Launcher ──────────────────────────────────────────────────────────────────
@@ -314,6 +303,8 @@ function showLauncher(sess) {
 }
 
 function cLogout() {
+  const s = _getSession();
+  if (s) AuthUI.logout(s.role === 'dm' ? s.masterPw : s.charPw);   // end it on the server too
   sessionStorage.removeItem('rpgSession');
   sessionStorage.removeItem('tableMasterPw');
   sessionStorage.removeItem('dmMasterPw');
@@ -321,17 +312,28 @@ function cLogout() {
   document.getElementById('view-login').style.display    = '';
   document.getElementById('char-pw').value = '';
   document.getElementById('dm-pw').value   = '';
+  cMountCaptchas();
   cSwitch('character');
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 (function() {
-  const sess = _getSession();
+  let sess = _getSession();
+  // A session holding a plain password (a tab from before v226) no longer
+  // opens anything — drop it and show the login form.
+  const tok = sess ? (sess.role === 'dm' ? sess.masterPw : sess.charPw) : '';
+  if (sess && sess.role && !String(tok || '').startsWith('rpgs_')) {
+    sessionStorage.removeItem('rpgSession');
+    sessionStorage.removeItem('tableMasterPw');
+    sessionStorage.removeItem('dmMasterPw');
+    sess = null;
+  }
   if (sess && sess.role) {
     document.getElementById('view-launcher').style.display = '';
     showLauncher(sess);
   } else {
     document.getElementById('view-login').style.display = '';
+    cMountCaptchas();
     cLoadChars();
     setTimeout(() => document.getElementById('char-pw')?.focus(), 100);
   }

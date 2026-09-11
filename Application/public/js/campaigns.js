@@ -18,6 +18,12 @@ function escJs(v) {
 let _campaigns = [];
 let _sel = null;          // the loaded detail object for the selected campaign
 let _setupCharId = null;  // character mid password-setup
+let _setupTicket = null;  // from the login answer: proves the login form's captcha was solved
+
+// Maths captchas (js/lib/auth-ui.js), one per password form. Every form here
+// logs in first and uses the SESSION TOKEN it gets back — no password is sent
+// as a credential header any more.
+let _capChar = null, _capDm = null, _capNew = null, _capMg = null, _capDel = null;
 
 // Where to go after login (honour ?next= so auth guards can bounce back).
 function _nextUrl() {
@@ -165,6 +171,7 @@ function renderDetail() {
             <input type="password" id="char-pw" placeholder="Enter password…" autocomplete="current-password"
                    onkeydown="if(event.key==='Enter')loginCharacter()">
           </div>
+          <div id="char-cap"></div>
           <div class="err-msg" id="char-err"></div>
           <button class="btn" id="char-login-btn" onclick="loginCharacter()"${chars.length ? '' : ' disabled'}>Login</button>
         </div>
@@ -194,6 +201,7 @@ function renderDetail() {
           <input type="password" id="dm-pw" placeholder="This campaign's DM password" autocomplete="current-password"
                  onkeydown="if(event.key==='Enter')loginDM()">
         </div>
+        <div id="dm-cap"></div>
         <div class="err-msg" id="dm-err"></div>
         <button class="btn" onclick="loginDM()">Login as DM</button>
         <div class="hint">Each campaign has its own DM password.</div>
@@ -204,6 +212,8 @@ function renderDetail() {
       <button class="btn btn-sm btn-ghost" onclick="openManage()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-gear"></use></svg> Campaign settings</button>
     </div>
   `;
+  _capChar = AuthUI.captcha(document.getElementById('char-cap'), { onEnter: loginCharacter });
+  _capDm   = AuthUI.captcha(document.getElementById('dm-cap'), { onEnter: loginDM, lazy: true });
 }
 
 function closeDetail() {
@@ -216,6 +226,7 @@ function switchTab(tab) {
   document.getElementById('tab-dm-btn').classList.toggle('active', !isChar);
   document.getElementById('pane-character').classList.toggle('active', isChar);
   document.getElementById('pane-dm').classList.toggle('active', !isChar);
+  if (!isChar) _capDm?.ensure();
   document.getElementById(isChar ? 'char-pw' : 'dm-pw')?.focus();
 }
 
@@ -248,22 +259,17 @@ async function loginCharacter() {
   const btn = document.getElementById('char-login-btn');
   btn.disabled = true;
   try {
-    const res = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Campaign-Id': _sel.id },
-      body: JSON.stringify({ type: 'character', characterId, password }),
-    });
-    const data = await res.json();
-    if (data.needsSetup) { showSetupStep(data.characterId, data.characterName); return; }
-    if (!res.ok) { errEl.textContent = data.error || 'Login failed.'; return; }
-    _storeSession({ role: 'character', characterId: data.characterId, characterName: data.characterName, charPw: password });
+    const r = await AuthUI.login({ type: 'character', characterId, password }, _capChar, { 'X-Campaign-Id': _sel.id });
+    if (r.data.needsSetup) { showSetupStep(r.data.characterId, r.data.characterName, r.data.setupTicket); return; }
+    if (!r.ok) { errEl.textContent = r.message; return; }
+    _storeSession({ role: 'character', characterId: r.data.characterId, characterName: r.data.characterName, charPw: r.data.token });
     location.replace(_nextUrl());
-  } catch { errEl.textContent = 'Connection error.'; }
-  finally { btn.disabled = false; }
+  } finally { btn.disabled = false; }
 }
 
-function showSetupStep(charId, charName) {
+function showSetupStep(charId, charName, ticket) {
   _setupCharId = charId;
+  _setupTicket = ticket || null;
   document.getElementById('char-login-step').style.display = 'none';
   document.getElementById('char-setup-step').style.display = 'block';
   document.getElementById('setup-char-name').textContent = charName;
@@ -272,6 +278,7 @@ function showSetupStep(charId, charName) {
 
 function cancelSetup() {
   _setupCharId = null;
+  _setupTicket = null;
   document.getElementById('char-setup-step').style.display = 'none';
   document.getElementById('char-login-step').style.display = 'block';
   document.getElementById('char-pw').value = '';
@@ -290,23 +297,11 @@ async function setupPassword() {
   const btn = document.getElementById('setup-btn');
   btn.disabled = true;
   try {
-    const res = await fetch(`/api/characters/${_setupCharId}/password`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json', 'X-Campaign-Id': _sel.id },
-      body: JSON.stringify({ new_password: pw1 }),
-    });
-    if (!res.ok) { errEl.textContent = 'Failed to set password.'; return; }
-    const loginRes = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Campaign-Id': _sel.id },
-      body: JSON.stringify({ type: 'character', characterId: _setupCharId, password: pw1 }),
-    });
-    const loginData = await loginRes.json();
-    if (!loginRes.ok) { errEl.textContent = loginData.error || 'Login failed after setup.'; return; }
-    _storeSession({ role: 'character', characterId: loginData.characterId, characterName: loginData.characterName, charPw: pw1 });
+    const r = await AuthUI.setFirstPassword(_setupCharId, pw1, _setupTicket, { 'X-Campaign-Id': _sel.id });
+    if (!r.ok) { errEl.textContent = r.message; return; }
+    _storeSession({ role: 'character', characterId: r.data.characterId, characterName: r.data.characterName, charPw: r.data.token });
     location.replace(_nextUrl());
-  } catch { errEl.textContent = 'Connection error.'; }
-  finally { btn.disabled = false; }
+  } finally { btn.disabled = false; }
 }
 
 async function loginDM() {
@@ -314,17 +309,10 @@ async function loginDM() {
   const errEl = document.getElementById('dm-err');
   errEl.textContent = '';
   if (!password) { errEl.textContent = "Enter this campaign's DM password."; return; }
-  try {
-    const res = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Campaign-Id': _sel.id },
-      body: JSON.stringify({ type: 'dm', password }),
-    });
-    const data = await res.json();
-    if (!res.ok) { errEl.textContent = data.error || 'Wrong password.'; return; }
-    _storeSession({ role: 'dm', masterPw: password });
-    location.replace(_nextUrl());
-  } catch { errEl.textContent = 'Connection error.'; }
+  const r = await AuthUI.login({ type: 'dm', password }, _capDm, { 'X-Campaign-Id': _sel.id });
+  if (!r.ok) { errEl.textContent = r.message; return; }
+  _storeSession({ role: 'dm', masterPw: r.data.token });
+  location.replace(_nextUrl());
 }
 
 // ── Modals ────────────────────────────────────────────────────────────────────
@@ -335,6 +323,7 @@ function closeModal(id) { document.getElementById(id).classList.remove('open'); 
 function openNewCampaign() {
   for (const id of ['new-name', 'new-desc', 'new-dmpw', 'new-adminpw']) document.getElementById(id).value = '';
   document.getElementById('new-err').textContent = '';
+  _capNew = AuthUI.captcha(document.getElementById('new-cap'), { onEnter: createCampaign });
   openModal('new-modal');
   setTimeout(() => document.getElementById('new-name').focus(), 30);
 }
@@ -352,19 +341,24 @@ async function createCampaign() {
 
   const btn = document.getElementById('new-btn');
   btn.disabled = true;
+  let token = '';
   try {
+    // The admin password buys a short-lived admin session, used once and ended.
+    const a = await AuthUI.adminLogin(adminPw, _capNew);
+    if (!a.ok) { errEl.textContent = a.message; return; }
+    token = a.data.token;
     const res = await fetch('/api/campaigns', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Master-Password': adminPw },
+      headers: { 'Content-Type': 'application/json', 'X-Master-Password': token },
       body: JSON.stringify({ name, description, dmPassword }),
     });
     const data = await res.json();
-    if (!res.ok) { errEl.textContent = data.error || 'Could not create the campaign.'; return; }
+    if (!res.ok) { errEl.textContent = data.error || 'Could not create the campaign.'; _capNew.reload(); return; }
     closeModal('new-modal');
     await loadCampaigns();
     selectCampaign(data.id);
   } catch { errEl.textContent = 'Connection error.'; }
-  finally { btn.disabled = false; }
+  finally { btn.disabled = false; AuthUI.logout(token); }
 }
 
 function openManage() {
@@ -376,6 +370,7 @@ function openManage() {
   document.getElementById('mg-cover').value = '';
   document.getElementById('mg-err').textContent = '';
   document.getElementById('mg-ok').textContent = '';
+  _capMg = AuthUI.captcha(document.getElementById('mg-cap'), { onEnter: saveCampaign });
   openModal('manage-modal');
   setTimeout(() => document.getElementById('mg-auth').focus(), 30);
 }
@@ -398,8 +393,14 @@ async function saveCampaign() {
 
   const btn = document.getElementById('mg-btn');
   btn.disabled = true;
-  const H = { 'Content-Type': 'application/json', 'X-Master-Password': auth, 'X-Campaign-Id': _sel.id };
+  let token = '';
   try {
+    // Log in as this campaign's DM (the admin password works too) and make
+    // the up-to-three calls below with that one session, then end it.
+    const a = await AuthUI.login({ type: 'dm', password: auth }, _capMg, { 'X-Campaign-Id': _sel.id });
+    if (!a.ok) { errEl.textContent = a.message; return; }
+    token = a.data.token;
+    const H = { 'Content-Type': 'application/json', 'X-Master-Password': token, 'X-Campaign-Id': _sel.id };
     const res = await fetch(`/api/campaigns/${encodeURIComponent(_sel.id)}`, {
       method: 'PUT', headers: H,
       body: JSON.stringify({
@@ -438,13 +439,19 @@ async function saveCampaign() {
     await loadCampaigns();
     await selectCampaign(_sel.id, { silent: true });
   } catch { errEl.textContent = 'Connection error.'; }
-  finally { btn.disabled = false; }
+  finally {
+    btn.disabled = false;
+    AuthUI.logout(token);
+    // Its sum is spent either way; a second Save needs a new one.
+    if (token) _capMg?.reload();
+  }
 }
 
 function openDelete() {
   document.getElementById('del-name').value = '';
   document.getElementById('del-adminpw').value = '';
   document.getElementById('del-err').textContent = '';
+  _capDel = AuthUI.captcha(document.getElementById('del-cap'), { onEnter: deleteCampaign });
   closeModal('manage-modal');
   openModal('del-modal');
 }
@@ -459,14 +466,18 @@ async function deleteCampaign() {
 
   const btn = document.getElementById('del-btn');
   btn.disabled = true;
+  let token = '';
   try {
+    const a = await AuthUI.adminLogin(adminPw, _capDel);
+    if (!a.ok) { errEl.textContent = a.message; return; }
+    token = a.data.token;
     const res = await fetch(`/api/campaigns/${encodeURIComponent(_sel.id)}`, {
       method: 'DELETE',
-      headers: { 'Content-Type': 'application/json', 'X-Master-Password': adminPw },
+      headers: { 'Content-Type': 'application/json', 'X-Master-Password': token },
       body: JSON.stringify({ confirmName }),
     });
     const data = await res.json();
-    if (!res.ok) { errEl.textContent = data.error || 'Delete failed.'; return; }
+    if (!res.ok) { errEl.textContent = data.error || 'Delete failed.'; _capDel.reload(); return; }
     closeModal('del-modal');
     _sel = null;
     document.body.classList.remove('detail-open');
@@ -474,7 +485,7 @@ async function deleteCampaign() {
       '<div class="detail-empty"><div class="big"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-map"></use></svg></div><div>Select a campaign to see its details and log in.</div></div>';
     await loadCampaigns();
   } catch { errEl.textContent = 'Connection error.'; }
-  finally { btn.disabled = false; }
+  finally { btn.disabled = false; AuthUI.logout(token); }
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────

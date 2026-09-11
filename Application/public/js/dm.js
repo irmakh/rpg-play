@@ -42,24 +42,21 @@ function handleUnauth() {
   document.getElementById('main-content').style.display = 'none';
 }
 
-async function authenticate() {
-  const pw = document.getElementById('gate-pw').value;
-  const errEl = document.getElementById('gate-err');
-  if (!pw) { errEl.textContent = 'Enter the master password.'; return; }
-  errEl.textContent = '';
-  try {
-    // Validate against an endpoint that requires master password
-    const res = await fetch('/api/treasury/all', { headers: { 'X-Master-Password': pw } });
-    if (res.status === 401) { errEl.textContent = 'Wrong password.'; return; }
-    if (!res.ok) { errEl.textContent = 'Server error.'; return; }
-    masterPw = pw;
-    sessionStorage.setItem('dmMasterPw', pw);
+// The shared DM gate (js/lib/auth-ui.js): maths captcha, lockout, and a session
+// token kept in masterPw where the typed password used to go.
+const _gate = AuthUI.dmGate({
+  capEl:   document.getElementById('gate-cap'),
+  pwInput: document.getElementById('gate-pw'),
+  errEl:   document.getElementById('gate-err'),
+  onUnlock: async (token) => {
+    masterPw = token;
     document.getElementById('gate').style.display = 'none';
     document.getElementById('main-content').style.display = '';
     await loadInitiative();
     loadDmMonsters(); // non-blocking — loads in background while page is already interactive
-  } catch { errEl.textContent = 'Connection error.'; }
-}
+  },
+});
+function authenticate() { return _gate.submit(); }
 
 async function loadInitiative() {
   try {
@@ -491,22 +488,18 @@ document.addEventListener('keydown', e => {
  * picker. Mirrors logout() on the table screen (js/table/table-auth.js).
  */
 function logout() {
+  // End the session on the server too (js/lib/realtime.js), so a copied token dies with it.
+  if (typeof revokeStoredSession === 'function') revokeStoredSession();
   sessionStorage.removeItem('rpgSession');
   sessionStorage.removeItem('dmMasterPw');
   sessionStorage.removeItem('tableMasterPw');
   location.replace('/');
 }
 
-// ── Auto-auth from stored session password ────────────────────────────────────
-(async function() {
-  // Prefer the unified rpgSession (set by login.html)
-  let stored = null;
-  try { stored = JSON.parse(sessionStorage.getItem('rpgSession') || 'null')?.masterPw; } catch {}
-  if (!stored) stored = sessionStorage.getItem('dmMasterPw');
-  if (!stored) return;
-  document.getElementById('gate-pw').value = stored;
-  await authenticate();
-})();
+// ── Auto-auth from the stored session ─────────────────────────────────────────
+// A tab already logged in as DM (login.html, or this gate earlier) unlocks
+// without asking again, once the server confirms the session is still live.
+_gate.start();
 
 // ── Media Share ───────────────────────────────────────────────────────────────
 let pendingMediaDataUrl = null;

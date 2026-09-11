@@ -26,11 +26,17 @@ import registerNotifs      from '../../server/routes/notifications.js';
 import registerMonsters    from '../../server/routes/monsters.js';
 import registerLoot        from '../../server/routes/loot.js';
 import makeNotify          from '../../server/notify.js';
+import Database            from 'better-sqlite3';
+import { createSessionStore, createSetupTickets } from '../../lib/sessions.js';
+import { createCaptchaStore } from '../../lib/captcha.js';
+import { createLoginGuard }   from '../../lib/login-guard.js';
+import { createAuth }         from '../../lib/auth.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
 
 export const TEST_MASTER_PW = 'test-master-pw-123';
+export const TEST_SUPER_PW  = 'test-super-admin-pw-456';
 const SHOP_CONFIG_ID = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
 
 // ── Shop/treasury helpers (mirror server.js implementations) ──────────────────
@@ -138,9 +144,26 @@ export function makeApp() {
   // Records every deleteUploadFile() call so image-cleanup can be asserted.
   const deletedFiles = [];
 
+  // Login plumbing — the real modules, on an in-memory registry database.
+  const sessions     = createSessionStore(new Database(':memory:'));
+  const setupTickets = createSetupTickets();
+  const captcha      = createCaptchaStore({ issueMaxPerIp: 100000 });
+  const loginGuard   = createLoginGuard();
+  const auditEvents  = [];
+  const audit = { record: (e) => { auditEvents.push(e); }, list: () => auditEvents.slice().reverse() };
+  const auth = createAuth({
+    sessions,
+    campaignIdFromReq: () => activeCampaignId,
+    getCharacter: (id) => ldb.getCharacter(id),
+  });
+
+  // Route suites authenticate with plain test passwords, which exercises the
+  // ROUTE logic without logging in first. A real session token is accepted as
+  // well, exactly as production accepts it, so login suites can use the token
+  // they get back. (Production accepts ONLY tokens — lib/auth.js.)
   function masterAuth(req) {
     const pw = req.headers['x-master-password'];
-    return pw === TEST_MASTER_PW;
+    return pw === TEST_MASTER_PW || auth.masterAuth(req);
   }
 
   async function charAuth(charId, req) {
@@ -148,7 +171,8 @@ export function makeApp() {
     if (!char) return 404;
     if (char.passwordHash) {
       const pw = req.headers['x-character-password'];
-      if (!pw || (!verifyPassword(pw, char.passwordHash) && !isMasterPassword(pw))) return 401;
+      if (pw && (verifyPassword(pw, char.passwordHash) || isMasterPassword(pw))) return 200;
+      return auth.charAuth(charId, req);
     }
     return 200;
   }
@@ -166,9 +190,14 @@ export function makeApp() {
     masterAuth,
     charAuth,
     getCharacter: (id) => ldb.getCharacter(id),
-    hashPassword,
-    verifyPassword,
-    isMasterPassword,
+    // The async names production uses; the sync mirrors above do the work.
+    hashPasswordAsync: async (pw) => hashPassword(pw),
+    verifyPasswordAsync: async (pw, stored) => verifyPassword(pw, stored),
+    checkDmPassword: async (pw) => isMasterPassword(pw) || pw === TEST_SUPER_PW,
+    isSuperAdminPassword: (pw) => pw === TEST_SUPER_PW,
+    superAdminEnabled: true,
+    auth, sessions, setupTickets, captcha, loginGuard, audit,
+    TRUST_PROXY: false,
     IMAGE_MIME,
     ALLOWED_MIME,
     SHARED_MEDIA_MIME,
@@ -214,5 +243,8 @@ export function makeApp() {
   registerMonsters(app, ctx);
   registerLoot(app, ctx);
 
-  return { app, ldb, ldbFor, masterPw: TEST_MASTER_PW, hashPassword, broadcasts, deletedFiles, parkedCampaigns };
+  return {
+    app, ldb, ldbFor, masterPw: TEST_MASTER_PW, hashPassword, broadcasts, deletedFiles, parkedCampaigns,
+    sessions, setupTickets, captcha, loginGuard, auditEvents,
+  };
 }

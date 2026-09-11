@@ -11,7 +11,12 @@ import { WebSocketServer } from 'ws';
 
 import * as cdb from './db/campaignsdb.js';
 import { bootstrapCampaigns, getCampaignData } from './db/campaign-store.js';
-import { hashPassword, verifyPassword } from './lib/passwords.js';
+import { hashPasswordAsync, verifyPasswordAsync } from './lib/passwords.js';
+import { createCaptchaStore } from './lib/captcha.js';
+import { createLoginGuard, clientIp } from './lib/login-guard.js';
+import { createSessionStore, createSetupTickets } from './lib/sessions.js';
+import { createAuth } from './lib/auth.js';
+import { securityHeaders, jsonBody, bodyErrors, sessionGate } from './lib/security-middleware.js';
 import {
   requestContext, currentCampaignId, currentCampaign,
   ldb as ldbProxy, sdb as sdbProxy, adb as adbProxy,
@@ -59,7 +64,10 @@ const ldb = ldbProxy;
 // Nothing to open here: db/campaign-store.js opens each campaign's files on
 // first use. Bootstrap creates the first campaign and migrates the
 // pre-multi-tenant databases into it (no-op once a campaign exists).
-bootstrapCampaigns({ defaultDmPassword: process.env.MASTER_PASSWORD || '15243' });
+// No default password: a fresh install without MASTER_PASSWORD gets a first
+// campaign with no DM password, which nobody can log into until one is set —
+// better than a password everyone who can read this file already knows.
+bootstrapCampaigns({ defaultDmPassword: process.env.MASTER_PASSWORD || '' });
 
 /**
  * Re-derive which campaigns are parked on a waiting screen.
@@ -221,28 +229,60 @@ const _mapUpsert = mapUpsertProxy;
 //                DM actually logs in with, and it grants nothing outside their
 //                own campaign.
 //
-// isMasterPassword() keeps its old name and signature so the ~100 masterAuth()
-// call sites across the route modules did not have to change; it now answers
-// "is this the DM of the campaign this request belongs to?".
-const MASTER_PASSWORD = process.env.MASTER_PASSWORD || '15243';
+// Passwords are checked ONLY at login (server/routes/auth.js — captcha, lockout,
+// async scrypt). Every other request carries a SESSION TOKEN in the same two
+// headers that used to carry the password, and masterAuth()/charAuth() accept
+// nothing else — see lib/auth.js. masterAuth keeps its name, signature and sync
+// return, so the ~100 call sites in the route modules did not change.
+//
+// No fallback: with MASTER_PASSWORD unset the super-admin is simply disabled.
+// A default baked into the source is a password everyone who reads it knows.
+const MASTER_PASSWORD = process.env.MASTER_PASSWORD || '';
+const SUPER_ADMIN_ENABLED = !!MASTER_PASSWORD;
+if (!SUPER_ADMIN_ENABLED) {
+  console.warn('[auth] MASTER_PASSWORD is not set - the super-admin is DISABLED '
+    + '(no creating or deleting campaigns, no maintenance page).');
+}
 
 function isSuperAdminPassword(pw) {
-  if (!MASTER_PASSWORD || !pw || pw.length !== MASTER_PASSWORD.length) return false;
+  if (!MASTER_PASSWORD || typeof pw !== 'string' || pw.length !== MASTER_PASSWORD.length) return false;
   try { return crypto.timingSafeEqual(Buffer.from(pw), Buffer.from(MASTER_PASSWORD)); }
   catch { return false; }
 }
 
-function isMasterPassword(pw, campaignId = currentCampaignId()) {
-  if (!pw) return false;
+/**
+ * Resolves true for this campaign's DM password or the super-admin's.
+ * ASYNC — always await it. It replaced the sync isMasterPassword under a NEW
+ * name on purpose: a forgotten `await` tests a Promise, which is truthy and lets
+ * anyone in; with the old name gone, a missed call site fails loudly instead.
+ */
+async function checkDmPassword(pw, campaignId = currentCampaignId()) {
+  if (!pw || typeof pw !== 'string') return false;
   if (isSuperAdminPassword(pw)) return true;
   if (!campaignId) return false;
   return cdb.verifyDmPassword(campaignId, pw);
 }
 
-function masterAuth(req) {
-  const pw = req.headers['x-master-password'];
-  return !!(pw && isMasterPassword(pw, campaignIdFromReq(req) || currentCampaignId()));
-}
+// ── Sessions, captcha, lockout ────────────────────────────────────────────────
+const sessions     = createSessionStore(cdb._db);   // table `sessions` in campaigns.db
+const setupTickets = createSetupTickets();
+const captcha      = createCaptchaStore();
+const loginGuard   = createLoginGuard();
+const audit = { record: cdb.recordAuthEvent, list: cdb.listAuthEvents };
+
+const auth = createAuth({
+  sessions,
+  campaignIdFromReq: req => campaignIdFromReq(req) || currentCampaignId(),
+  getCharacter: id => getCharacter(id),
+});
+const masterAuth = auth.masterAuth;
+const charAuth   = auth.charAuth;
+
+// Expired sessions, captchas, tickets and lock records go every few minutes.
+setInterval(() => {
+  try { sessions.sweep(); } catch (err) { console.warn('[auth] session sweep failed:', err.message); }
+  captcha.sweep(); loginGuard.sweep(); setupTickets.sweep();
+}, 5 * 60 * 1000).unref();
 
 // ── Campaign resolution ───────────────────────────────────────────────────────
 // Which campaign is this request for? Checked in order:
@@ -303,15 +343,7 @@ async function getCharacter(charId) {
   return ldb.getCharacter(charId);
 }
 
-async function charAuth(charId, req) {
-  const char = await getCharacter(charId);
-  if (!char) return 404;
-  if (char.passwordHash) {
-    const pw = req.headers['x-character-password'];
-    if (!pw || (!verifyPassword(pw, char.passwordHash) && !isMasterPassword(pw))) return 401;
-  }
-  return 200;
-}
+// charAuth() lives in lib/auth.js — created above, beside the session store.
 
 // ── SSE + WebSocket real-time broadcast ───────────────────────────────────────
 const sseClients     = new Set();
@@ -418,11 +450,22 @@ const MAX_MEDIA_BYTES = 25 * 1024 * 1024;
 // Bump this number whenever frontend JS or CSS files change.
 // Also bump CACHE in public/sw.js to the same value.
 // Both must always match. See deployment notes in CLAUDE.md.
-const FRONTEND_VERSION = 225;
+const FRONTEND_VERSION = 226;
 
 // ── Express app ───────────────────────────────────────────────────────────────
 const app = express();
-app.use(express.json({ limit: '200mb' }));
+app.disable('x-powered-by');
+
+// Headers on every response — lib/security-middleware.js says what each is for.
+// HSTS only when this process serves HTTPS itself, decided from the same env
+// vars the listener reads at the bottom of this file.
+app.use(securityHeaders({ hsts: !!(process.env.SSL_KEY && process.env.SSL_CERT) }));
+
+// Body size by caller: a live session — or one of the upload routes that has no
+// login today — may send up to 200 MB; anyone else gets 1 MB.
+const OPEN_UPLOAD_ROUTES = [/^\/api\/stories\//, /^\/api\/chat\/image$/];
+app.use(jsonBody({ bigPaths: OPEN_UPLOAD_ROUTES, hasSession: req => auth.hasAnySession(req) }));
+app.use(bodyErrors());
 
 // ── Campaign context ──────────────────────────────────────────────────────────
 // Every request runs inside an AsyncLocalStorage store carrying its campaign and
@@ -437,7 +480,8 @@ app.use(express.json({ limit: '200mb' }));
 const CAMPAIGN_EXEMPT = [
   /^\/api\/config$/,
   /^\/api\/campaigns(\/|$)/,
-  /^\/api\/maintenance\//,   // server-wide admin, gated by the super-admin password
+  /^\/api\/maintenance\//,   // server-wide admin, gated by a super-admin session
+  /^\/api\/auth\/(captcha|admin-login|logout)$/,   // login plumbing with no campaign of its own
 ];
 
 app.use((req, res, next) => {
@@ -455,6 +499,13 @@ app.use((req, res, next) => {
     next
   );
 });
+
+// A credential header holding anything but a live session for this campaign —
+// an expired token, another campaign's, or the plain password a tab opened
+// before v226 still keeps — gets 401 SESSION_EXPIRED, which the client's fetch
+// interceptor (js/lib/realtime.js) turns into a trip to the login page.
+// The login routes read no credential header, so they are left alone.
+app.use(sessionGate({ auth, exempt: [/^\/api\/auth\//] }));
 
 // ── Waiting screens: gate the table map's static URL ──────────────────────────
 // While a campaign is parked on a waiting screen its players must not reach the
@@ -588,8 +639,7 @@ function clientMetaFromReq(req, transport) {
     if (req.query && Object.keys(req.query).length) q = req.query;        // express (SSE)
     else { const u = new URL(req.url || '', 'http://x'); q = Object.fromEntries(u.searchParams); } // ws upgrade
   } catch {}
-  const xff = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
-  const ip  = (TRUST_PROXY && xff) ? xff : (req.socket?.remoteAddress || '');
+  const ip = clientIp(req, TRUST_PROXY);   // lib/login-guard.js — the same TRUST_PROXY rule
   const loginAt = q.loginAt ? (parseInt(q.loginAt) || null) : null;
   // Which campaign this client is watching — broadcast() only reaches matching clients.
   const campaign = resolveCampaignForReq(req);
@@ -625,12 +675,12 @@ app.get('/api/events', (req, res) => {
 });
 
 // ── Maintenance: list all connected real-time clients (DM-only) ───────────────
-// Backs the hidden maintenance.html page. Requires the DM master password on
-// every request — never trust the client gate alone.
+// Backs the hidden maintenance.html page. Requires a super-admin SESSION on
+// every request (POST /api/auth/admin-login) — never trust the client gate alone.
 // SUPER-ADMIN, not campaign DM: this page lists every connected client across
 // every campaign, so a single campaign's DM password must not open it.
 app.get('/api/maintenance/clients', (req, res) => {
-  if (!isSuperAdminPassword(req.headers['x-master-password'])) {
+  if (!auth.isAdmin(req)) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
   const clients = [];
@@ -645,12 +695,23 @@ app.get('/api/maintenance/clients', (req, res) => {
 // version differs from the current FRONTEND_VERSION (the client decides). DM-only.
 // Super-admin: a forced reload hits every campaign's clients at once.
 app.post('/api/maintenance/reload', (req, res) => {
-  if (!isSuperAdminPassword(req.headers['x-master-password'])) {
+  if (!auth.isAdmin(req)) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
   const mode = req.body && req.body.mode === 'outdated' ? 'outdated' : 'all';
   broadcastAll('force-reload', { mode, version: FRONTEND_VERSION });
   res.json({ ok: true, mode, version: FRONTEND_VERSION });
+});
+
+// Login activity across every campaign (super-admin): successes, wrong
+// passwords, wrong captcha answers, lockouts, logouts, passwords set.
+app.get('/api/maintenance/auth-events', (req, res) => {
+  if (!auth.isAdmin(req)) return res.status(401).json({ error: 'Unauthorized' });
+  const names = Object.fromEntries(cdb.listCampaigns({ includeInactive: true }).map(c => [c.id, c.name]));
+  const events = audit.list({ limit: req.query.limit })
+    .map(e => ({ ...e, campaignName: names[e.campaignId] || '' }));
+  res.set('Cache-Control', 'no-store');
+  res.json({ events });
 });
 
 // ── Console relay ─────────────────────────────────────────────────────────────
@@ -669,6 +730,11 @@ app.get('/api/console/events', (req, res) => {
 app.post('/api/console/event', (req, res) => {
   const d = req.body;
   if (!d || !d.type) return res.status(400).json({ error: 'missing type' });
+  // Credentials never travel through this relay: it needs no login and reaches
+  // every console listener in every campaign. It used to carry the whole
+  // session (once the plain DM password). The two console screens now share a
+  // login through the browser (BroadcastChannel) instead, same device only.
+  if (/^SESSION_/.test(String(d.type))) return res.status(400).json({ error: 'session messages are not relayed' });
   const msg = `data: ${JSON.stringify(d)}\n\n`;
   for (const client of [...consoleSseClients]) {
     try { client.write(msg); } catch { consoleSseClients.delete(client); }
@@ -682,9 +748,10 @@ const ctx = {
   ldb, genId,
   // Broadcast
   broadcast, sseClients, consoleSseClients, wsClients,
-  // Auth
-  masterAuth, charAuth, getCharacter,
-  isMasterPassword, hashPassword, verifyPassword,
+  // Auth — sessions, captcha and lockout; passwords are only checked at login
+  masterAuth, charAuth, getCharacter, auth,
+  checkDmPassword, hashPasswordAsync, verifyPasswordAsync,
+  sessions, setupTickets, captcha, loginGuard, audit, TRUST_PROXY,
   // File helpers
   processImageSizes, saveUploadFile, deleteUploadFile, readUploadAsBase64,
   mimeToExt, extToMime,
@@ -699,7 +766,8 @@ const ctx = {
   sdb: sdbProxy,
   // Campaigns
   cdb, campaignIdFromReq, currentCampaignId, currentCampaign,
-  isSuperAdminPassword, broadcastAll, CAMPAIGN_COOKIE, FRONTEND_VERSION,
+  isSuperAdminPassword, superAdminEnabled: SUPER_ADMIN_ENABLED,
+  broadcastAll, CAMPAIGN_COOKIE, FRONTEND_VERSION,
   // Waiting screens — the static-mount gate above reads this Set.
   parkedCampaigns,
   // Node modules

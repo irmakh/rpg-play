@@ -14,7 +14,7 @@
  */
 export default function register(app, ctx) {
   const {
-    cdb, isSuperAdminPassword, isMasterPassword, CAMPAIGN_COOKIE,
+    cdb, auth, sessions, CAMPAIGN_COOKIE,
     processImageSizes, deleteUploadFile, IMAGE_MIME, MAX_MEDIA_BYTES,
     genId, crypto,
   } = ctx;
@@ -24,16 +24,21 @@ export default function register(app, ctx) {
   let store;
   const getStore = async () => (store ||= await import('../../db/campaign-store.js'));
 
+  // Both take a SESSION token in X-Master-Password, never a password: the forms
+  // on the picker log in first (POST /api/auth/admin-login or /api/auth/login,
+  // captcha and all) and send the token they get back.
   function superAuth(req) {
-    const pw = req.headers['x-master-password'];
-    return !!(pw && isSuperAdminPassword(pw));
+    return auth.isAdmin(req);
   }
 
   // The DM of THIS campaign, or the super-admin.
   function campaignDmAuth(req, campaignId) {
-    const pw = req.headers['x-master-password'];
-    return !!(pw && isMasterPassword(pw, campaignId));
+    return auth.campaignDmAuth(req, campaignId);
   }
+
+  // Secure on HTTPS so the browser never sends it over plain HTTP; left off in
+  // local dev, where it would stop the cookie being set at all.
+  const cookieFlags = req => `Path=/; SameSite=Lax${req.secure ? '; Secure' : ''}`;
 
   // Public shape — never leaks a password hash.
   async function publicCampaign(c, { withDetail = false } = {}) {
@@ -94,7 +99,7 @@ export default function register(app, ctx) {
       // Not HttpOnly: the frontend reads it to show which campaign is active.
       // It carries no authority, so exposing it to script costs nothing.
       res.setHeader('Set-Cookie',
-        `${CAMPAIGN_COOKIE}=${encodeURIComponent(c.id)}; Path=/; Max-Age=31536000; SameSite=Lax`);
+        `${CAMPAIGN_COOKIE}=${encodeURIComponent(c.id)}; Max-Age=31536000; ${cookieFlags(req)}`);
       cdb.touchCampaign(c.id);
       res.json(await publicCampaign(c, { withDetail: true }));
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
@@ -102,7 +107,7 @@ export default function register(app, ctx) {
 
   // ── Leave ───────────────────────────────────────────────────────────────────
   app.post('/api/campaigns/leave', (req, res) => {
-    res.setHeader('Set-Cookie', `${CAMPAIGN_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax`);
+    res.setHeader('Set-Cookie', `${CAMPAIGN_COOKIE}=; Max-Age=0; ${cookieFlags(req)}`);
     res.json({ ok: true });
   });
 
@@ -142,8 +147,9 @@ export default function register(app, ctx) {
   });
 
   // ── Change DM password ──────────────────────────────────────────────────────
-  // The current DM password authorises the change; the super-admin password is
-  // the recovery path when it has been forgotten.
+  // A DM session for this campaign authorises the change; a super-admin session
+  // is the recovery path when the password has been forgotten. Every DM session
+  // of the campaign then ends — whoever knew the old password is out.
   app.put('/api/campaigns/:id/dm-password', (req, res) => {
     try {
       const c = cdb.resolveCampaign(req.params.id);
@@ -154,7 +160,8 @@ export default function register(app, ctx) {
         return res.status(400).json({ error: 'newPassword required (min 3 characters)' });
       }
       cdb.setDmPassword(c.id, String(newPassword));
-      res.json({ ok: true });
+      const ended = sessions.revokeCampaignRole(c.id, 'dm');
+      res.json({ ok: true, sessionsEnded: ended });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
   });
 
@@ -201,6 +208,7 @@ export default function register(app, ctx) {
       const cs = await getStore();
       cs.destroyCampaignData(c.id);
       cdb.deleteCampaign(c.id);
+      sessions.revokeCampaign(c.id);
       res.json({ ok: true, deleted: c.id });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
   });

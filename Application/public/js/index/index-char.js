@@ -9,6 +9,8 @@ function scheduleAutoSave() {
 }
 
 function indexLogout() {
+  // End the session on the server too (js/lib/realtime.js), so a copied token dies with it.
+  if (typeof revokeStoredSession === 'function') revokeStoredSession();
   sessionStorage.removeItem('rpgSession');
   sessionStorage.removeItem('dmMasterPw');
   location.replace('/');
@@ -347,10 +349,14 @@ async function _applyChar(char) {
 }
 
 // ── Inline unlock screen ───────────────────────────────────────────────────────
+// Unlocking is a character LOGIN (maths captcha and all, js/lib/auth-ui.js); the
+// session token it returns is what charPasswords[] holds from then on.
 let unlockPendingId = null;
+let _unlockCap = null;
 
 function showUnlockScreen(id, charName) {
   unlockPendingId = id;
+  _unlockCap = AuthUI.captcha(document.getElementById('unlock-cap'), { onEnter: unlockSubmit });
   clearSheet();
   showCharBody();
   document.getElementById('char-title').textContent = 'Character Sheet';
@@ -390,17 +396,18 @@ async function unlockSubmit() {
   if (!pw) { errEl.textContent = 'Enter a password.'; return; }
   errEl.textContent = '';
   try {
-    const res = await fetch(`/api/characters/${unlockPendingId}`, {
-      headers: { 'X-Character-Password': pw }
-    });
-    if (res.status === 401) {
-      errEl.textContent = 'Wrong password — try again.';
+    const r = await AuthUI.login({ type: 'character', characterId: unlockPendingId, password: pw }, _unlockCap);
+    if (!r.ok || !r.data.token) {
+      errEl.textContent = r.message || 'Wrong password — try again.';
       document.getElementById('unlock-pw-input').value = '';
       document.getElementById('unlock-pw-input').focus();
       return;
     }
+    const res = await fetch(`/api/characters/${unlockPendingId}`, {
+      headers: { 'X-Character-Password': r.data.token }
+    });
     if (!res.ok) { errEl.textContent = 'Server error.'; return; }
-    charPasswords[unlockPendingId] = pw;
+    charPasswords[unlockPendingId] = r.data.token;
     hideUnlockScreen();
     showLoading('Loading character…');
     try {
@@ -646,7 +653,8 @@ async function ncConfirm() {
     const char = await createRes.json();
     charHasPassword[char.id] = char.has_password;
     charTypes[char.id] = charType;
-    if (password) charPasswords[char.id] = password;
+    // Not remembered: a password is no longer a credential in a request header.
+    // Creating characters is a DM action, and the DM's session opens this one.
 
     if (!dataToApply && templateId) {
       const tplHeaders = {};
@@ -662,7 +670,7 @@ async function ncConfirm() {
 
     if (dataToApply) {
       const putHeaders = { 'Content-Type': 'application/json' };
-      if (password) putHeaders['X-Character-Password'] = password;
+      if (indexMasterPw()) putHeaders['X-Character-Password'] = indexMasterPw();
       await fetch(`/api/characters/${char.id}`, {
         method: 'PUT',
         headers: putHeaders,
@@ -727,10 +735,13 @@ async function _pwConfirmSet() {
     const body = {};
     if (curPw) body.current_password = curPw;
     if (newPw) body.new_password = newPw;
+    // Send who is asking: a DM session sets or changes any password without the
+    // current one, and a player's own session is kept alive across the change.
+    const headers = { 'Content-Type': 'application/json' };
+    if (indexMasterPw()) headers['X-Master-Password'] = indexMasterPw();
+    else if (charPasswords[id]) headers['X-Character-Password'] = charPasswords[id];
     const res = await fetch(`/api/characters/${id}/password`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
+      method: 'PUT', headers, body: JSON.stringify(body)
     });
     if (res.status === 401) {
       document.getElementById('pw-err').textContent = 'Wrong current password.';
@@ -738,16 +749,16 @@ async function _pwConfirmSet() {
       document.getElementById('pw-cur').focus();
       return;
     }
+    if (res.status === 429) { document.getElementById('pw-err').textContent = 'Too many attempts. Try again later.'; return; }
     if (!res.ok) { document.getElementById('pw-err').textContent = 'Failed to update password.'; return; }
     document.getElementById('pw-modal').style.display = 'none';
     pwMode = null;
-    if (newPw) {
-      charPasswords[id] = newPw;
-      charHasPassword[id] = true;
-    } else {
-      delete charPasswords[id];
-      charHasPassword[id] = false;
-    }
+    // The new password is never stored: the caller's session survives the change
+    // (the server ends only the OTHER sessions), and anyone without one is
+    // handed a fresh token here.
+    const data = await res.json().catch(() => ({}));
+    if (data.token) charPasswords[id] = data.token;
+    charHasPassword[id] = !!newPw;
     const opt = document.querySelector(`#char-select option[value="${id}"]`);
     if (opt) {
       const name = opt.textContent.replace(/^🔒\s*/, '').replace(/^\[NPC\]\s*/, '');

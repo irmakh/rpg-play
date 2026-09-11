@@ -22,6 +22,7 @@
 </head>
 <body>
 
+<script src="/js/lib/auth-ui.js"></script>
 <!-- Stories password gate -->
 <div class="gate" id="stories-gate" style="display:none">
   <div class="gate-box">
@@ -30,6 +31,7 @@
     <p>Enter your password to continue.</p>
     <input type="password" id="gate-pw" placeholder="Password…" autocomplete="off"
            onkeydown="if(event.key==='Enter')storiesGateSubmit()">
+    <div id="gate-cap" style="margin-top:12px;text-align:left"></div>
     <div id="gate-err" style="color:var(--blood);font-size:12px;min-height:16px;margin-top:6px"></div>
     <button class="btn primary" style="width:100%;margin-top:8px" onclick="storiesGateSubmit()">Enter</button>
   </div>
@@ -42,6 +44,7 @@
   } catch {}
   if (sessionStorage.getItem('storiesAuth') === '1') return;
   document.getElementById('stories-gate').style.display = 'flex';
+  window._storiesCap = AuthUI.captcha(document.getElementById('gate-cap'), { onEnter: storiesGateSubmit });
   setTimeout(function(){ var el = document.getElementById('gate-pw'); if(el) el.focus(); }, 50);
 })();
 async function storiesGateSubmit() {
@@ -49,16 +52,12 @@ async function storiesGateSubmit() {
   var errEl = document.getElementById('gate-err');
   errEl.textContent = '';
   if (!pw) { errEl.textContent = 'Enter a password.'; return; }
-  var r = await fetch('/api/auth/verify-any', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ password: pw })
-  });
+  var r = await AuthUI.verifyAny(pw, window._storiesCap);
   if (r.ok) {
     sessionStorage.setItem('storiesAuth', '1');
     document.getElementById('stories-gate').style.display = 'none';
   } else {
-    errEl.textContent = 'Wrong password.';
+    errEl.textContent = r.message;
     document.getElementById('gate-pw').value = '';
     document.getElementById('gate-pw').focus();
   }
