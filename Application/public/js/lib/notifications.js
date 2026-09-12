@@ -156,6 +156,14 @@ function notifRequestPermission() {
  * the same kind twice focuses the window you already have rather than stacking
  * a new one. A blocked popup falls back to navigating, which beats doing
  * nothing at all.
+ *
+ * In the desktop client that fallback has to be skipped. There, window.open is
+ * answered by the main process, which returns null whenever it handled the
+ * request itself — it focused the window already showing that screen, or sent
+ * an external link to the system browser. Treating that null as "the popup was
+ * blocked" navigated the window you were reading AS WELL as focusing the one
+ * you asked for. There are no blocked popups in the desktop app, so null there
+ * always means "already dealt with".
  */
 function notifFollow(data) {
   const href = data && data.href;
@@ -165,6 +173,7 @@ function notifFollow(data) {
       const win = window.open(href, String(data.window),
                               'width=440,height=620,resizable=yes,scrollbars=no');
       if (win) { try { win.focus(); } catch {} return; }
+      if (window.rpgDesktop && window.rpgDesktop.isDesktop) return;
     } catch {}
   }
   if (location.pathname !== href) location.href = href;

@@ -21,6 +21,26 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [231] — 2026-09-12 — A notification no longer drags the window you were reading
+
+Fixes a regression in v230. In the desktop app, clicking a notification whose screen
+was already open focused that window — and navigated the window you clicked from as
+well, so you lost the page you were on. When the screen was not already open, nothing
+was wrong.
+
+The desktop client answers `window.open` with null whenever its main process handled
+the request itself, which is what v230 taught it to do when it reuses an open window.
+The web page read that null as "the popup was blocked" and fell back to navigating
+itself. There are no blocked popups in the desktop app, so null there now means
+"already dealt with" and the fallback is skipped.
+
+Web-only — **no desktop rebuild needed**, the client loads this file from the server.
+
+- Covered by a new end-to-end test that drives a real Electron with real windows
+  against a real server (`Desktop/test/e2e-window-reuse.js`, `npm run test:e2e`). It
+  fails without the fix and passes with it, checking both halves: the target already
+  open, and not.
+
 ## [230] — 2026-09-12 — One connection per page, and ending a session from maintenance
 
 Three bugs behind the same symptom — the maintenance page showing the same person

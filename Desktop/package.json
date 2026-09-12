@@ -11,7 +11,8 @@
     "start": "electron .",
     "dev": "electron . --dev",
     "pack": "electron-builder --win --dir",
-    "build": "electron-builder --win"
+    "build": "electron-builder --win",
+    "test:e2e": "electron test/e2e-window-reuse.js"
   },
   "devDependencies": {
     "electron": "^44.2.0",
