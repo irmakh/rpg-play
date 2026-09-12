@@ -174,20 +174,59 @@ function focusWindow(win) {
  * name at all, so name matching alone would still have stacked a second one.
  */
 function openWindowFor(url, frameName) {
-  const wanted = pathOf(url);
-  if (wanted) {
-    for (const [role, win] of windows) {
-      if (win.isDestroyed()) continue;
-      const roleUrl = urlFor(role);
-      if (roleUrl && pathOf(roleUrl) === wanted) return win;
-    }
-  }
+  const showing = windowShowing(url);
+  if (showing) return showing;
   if (frameName) {
     const named = namedPopups.get(frameName);
     if (named && !named.isDestroyed()) return named;
     if (named) namedPopups.delete(frameName);
   }
   return null;
+}
+
+/**
+ * ANY window already showing this screen, whatever opened it.
+ *
+ * Two things made a window invisible to "is this screen open?", and each of
+ * them let a shortcut, menu item or tray entry stack a duplicate:
+ *
+ *   1. It was opened by the page, not by a role — clicking a notification, or
+ *      the Duplicate menu item. Those live in `popups`, a different registry
+ *      from the role map, and only the role map was ever consulted.
+ *   2. It IS a role window, but it has since navigated somewhere else. The web
+ *      app's own toolbars move a window in place (the character sheet's Map
+ *      button is a plain link), so the window under the "sheet" role can be
+ *      showing the table, and the window showing the table can be under no
+ *      role at all.
+ *
+ * So what a window is ACTUALLY showing is what counts, and the role's configured
+ * path is only a fallback for a window whose URL is not useful yet — still
+ * loading, or parked on the built-in error page. Matching on the path also keeps
+ * the two music roles (music and nowplaying are the same screen at different
+ * sizes) from both being open at once.
+ */
+function windowShowing(url) {
+  const wanted = pathOf(url);
+  if (!wanted) return null;
+  for (const win of all()) {                    // role windows first, then popups
+    if (screenOf(win) === wanted) return win;
+  }
+  return null;
+}
+
+/**
+ * Which screen a window was opened to show.
+ *
+ * Deliberately NOT its current URL. A window whose session has expired sits on
+ * the login page, and an unauthenticated one sits on the campaign picker, so
+ * matching live URLs would make every such window answer to the same screen -
+ * ask for the table and get someone's login window raised instead. What the
+ * window is FOR does not change when the server bounces it.
+ */
+function screenOf(win) {
+  if (win.rpgPath) return win.rpgPath;
+  const spec = ROLES[win.rpgRole];
+  return spec ? spec.path : '';
 }
 
 function applyNavigationPolicy(win) {
@@ -245,6 +284,10 @@ function applyNavigationPolicy(win) {
     // leaves for the system browser instead of stranding the panel.
     applyNavigationPolicy(child);
     popups.add(child);
+    // about:blank pop-out panels get no screen: they are a moved DOM node, not
+    // one of the app's screens, and must never answer "is the table open?".
+    const url = (details && details.url) || '';
+    child.rpgPath = (url && url !== 'about:blank') ? pathOf(url) : '';
     const name = details && details.frameName;
     if (name) namedPopups.set(name, child);
     child.on('closed', () => {
@@ -290,6 +333,7 @@ function createAppWindow(role) {
   });
 
   win.rpgRole = role;
+  win.rpgPath = (ROLES[role] || ROLES.main).path;
   windows.set(role, win);
 
   if (saved && saved.maximized) win.maximize();
@@ -330,10 +374,15 @@ function open(role) {
   if (!ROLES[role]) role = 'main';
   const existing = windows.get(role);
   if (existing && !existing.isDestroyed()) {
-    if (existing.isMinimized()) existing.restore();
-    existing.show();
-    existing.focus();
+    focusWindow(existing);
     return existing;
+  }
+  // Nothing under this role, but the screen may already be open as a window the
+  // page opened itself — raise that instead of stacking a second one.
+  const already = windowShowing(urlFor(role));
+  if (already) {
+    focusWindow(already);
+    return already;
   }
   return createAppWindow(role);
 }
@@ -369,6 +418,7 @@ function openExtra(role) {
     },
   });
   win.rpgRole = role;
+  win.rpgPath = spec.path;
   applyNavigationPolicy(win);
   win.once('ready-to-show', () => win.show());
   const url = urlFor(role);
@@ -503,4 +553,7 @@ module.exports = {
   clearCacheAndReload,
   showLoadError,
   get: (role) => windows.get(role),
+  // The window showing a role's screen, wherever it came from. Prefer this over
+  // get() anywhere the question is "is this screen open?".
+  showing: (role) => windowShowing(urlFor(role)),
 };

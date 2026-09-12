@@ -22,7 +22,10 @@ const ACTIONS = {
 // A second press of the same key gets out of the way again — useful when the
 // table is on the monitor you were just working on.
 function toggleRole(role) {
-  const existing = windows.get(role);
+  // showing(), not get(): the window on this screen may be one the page opened
+  // or a role window that has navigated here, and neither is in the role map.
+  // Using get() meant a second press opened a duplicate instead of toggling.
+  const existing = windows.showing(role);
   if (existing && !existing.isDestroyed() && existing.isFocused()) {
     existing.minimize();
     return;

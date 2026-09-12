@@ -171,6 +171,60 @@ app.whenReady().then(async () => {
     const afterSecond = appWindows().length;
     check('a named window opened by the page is reused too',
       afterSecond === beforeSecond, `${beforeSecond} -> ${afterSecond}`);
+
+    // ── Case 4: the shortcut must find a page-opened window ─────────────
+    // Ctrl+Alt+M and the tray and menu entries all land in windows.open(role).
+    // The music window standing open here was opened by the page, so it is not
+    // in the role map - and open('music') used to stack a second one.
+    const beforeShortcut = appWindows().length;
+    const musicWin = appWindows().find((w) => w !== opener);   // the one the page opened
+    const raised = windows.open(windows.musicRole());
+    await wait(400);
+    const afterShortcut = appWindows().length;
+    check('shortcut: a page-opened window is raised, not duplicated',
+      afterShortcut === beforeShortcut, `${beforeShortcut} -> ${afterShortcut}`);
+    // By identity, not by URL: unauthenticated, /music.html bounces to the
+    // campaign picker, so the URL says nothing about which window this is.
+    check('shortcut: it raised the window that was already there',
+      !!raised && raised === musicWin);
+
+    for (const w of appWindows()) if (w !== opener) w.destroy();
+    await wait(300);
+
+    // ── Case 5: every shortcut role, twice ────────────────────────
+    // Table, character sheet, DM panel: opening the same role twice must never
+    // give two windows, whichever route asked for it.
+    for (const role of ['table', 'sheet', 'dm']) {
+      const first = windows.open(role);
+      await settled(first, role);
+      const n1 = appWindows().length;
+      windows.open(role);
+      await wait(300);
+      const n2 = appWindows().length;
+      check(`shortcut: ${role} opened twice stays one window`, n2 === n1, `${n1} -> ${n2}`);
+    }
+
+    // ── Case 6: different screens must not collapse into one window ─────
+    // The counterpart to case 4. Every window here is unauthenticated, so the
+    // server bounces them all to the campaign picker: if "is this screen open?"
+    // were answered from the live URL, asking for the table would raise the
+    // character sheet's window, or someone's login screen. It is answered from
+    // what the window was opened FOR, so they stay distinct.
+    for (const w of appWindows()) if (w !== opener) w.destroy();
+    await wait(300);
+
+    const sheet = windows.open('sheet');
+    await settled(sheet, 'sheet');
+    const table = windows.open('table');
+    await settled(table, 'table');
+    await wait(300);
+    say(`  sheet is at ${pathOf(sheet.webContents.getURL())}, table is at ${pathOf(table.webContents.getURL())}`);
+
+    check('two screens bounced to the same page are still two windows',
+      sheet !== table && !sheet.isDestroyed() && !table.isDestroyed());
+    check('asking again for each raises its own window',
+      windows.open('sheet') === sheet && windows.open('table') === table);
+
   } catch (err) {
     check('harness ran without throwing', false, err && err.stack);
   }

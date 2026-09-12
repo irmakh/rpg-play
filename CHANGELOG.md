@@ -36,6 +36,22 @@ itself. There are no blocked popups in the desktop app, so null there now means
 
 Web-only — **no desktop rebuild needed**, the client loads this file from the server.
 
+### Desktop client 1.0.2 *(desktop only — no frontend bump)*
+
+**A shortcut no longer opens a screen you already have.** If the music window had
+been opened by clicking a notification, Ctrl+Alt+M opened a second one — and the
+same went for the table, the character sheet and every other screen with a shortcut,
+menu entry or tray entry.
+
+Windows the page opens and windows a role opens lived in two separate registries, and
+"is this screen already open?" only ever consulted the first. Both are now consulted,
+and the question is answered from the screen a window was **opened for** rather than
+the URL it currently shows — an expired session parks every window on the login page,
+and matching live URLs there would raise someone's login window when you asked for the
+table.
+
+Needs a fresh download; there is no auto-update.
+
 - Covered by a new end-to-end test that drives a real Electron with real windows
   against a real server (`Desktop/test/e2e-window-reuse.js`, `npm run test:e2e`). It
   fails without the fix and passes with it, checking both halves: the target already
