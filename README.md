@@ -77,7 +77,7 @@ Application/
 
 Nothing filters by a `campaign_id` column, so there is no `WHERE` clause to forget: a request simply never holds a database handle that reaches another campaign. Real-time events are filtered the same way — a token move in one campaign is never delivered to another campaign's table.
 
-Uploaded images and audio under `public/uploads/` are shared across campaigns. Their filenames are UUIDs so they never collide, but deleting a campaign leaves its uploads on disk as orphans.
+Uploaded images and audio are split the same way: new uploads land in `public/uploads/<campaignId>/<kind>/`. Files written before the split are still in the flat `public/uploads/<kind>/` and still resolve, because every stored reference is a full path — they were deliberately not migrated, since a shared file may belong to more than one campaign. Deleting a campaign removes its databases but **leaves its uploads on disk**: media is the part a DM cannot regenerate, and an unwanted folder is trivially removed by hand.
 
 ### Character Sheet (`/index.html`)
 
@@ -199,7 +199,9 @@ One catalogue for everything you hand out, replacing the separate Merchant and L
 - Lists every connected real-time client: IP, identity (DM or character name), login time, current page, transport (WebSocket / SSE), user agent
 - Shows the **frontend version each client has loaded** against the server's, highlighting anyone running stale assets
 - **Force reload** — push a refresh to every client, or only to the outdated ones, so a release reaches phones without chasing people
-- Connection identity is self-reported by the client and therefore spoofable: the page is informational, **not** an access control
+- **Blocked addresses** — every address currently locked out of logging in, described in words ("Aliyr in Icewind Dale", "DM of Icewind Dale", "Whole address"), with a live countdown and **Unblock** / **Unblock address** buttons so a player who mistyped five times does not have to sit out the timer
+- **Login activity** — the rolling 30-day audit of every login, failure, lockout and unblock, paged on the server (25 / 50 / 100 per page, remembered between visits; auto-refresh only on page 1)
+- Connection identity is self-reported by the client and therefore spoofable: the *connected clients* list is informational, **not** an access control. The blocked-address and login-activity data come from the server and are authoritative
 
 ### Map Prep (`/prepare-map.html`) — DM only
 
@@ -308,7 +310,9 @@ Covered in full at the top of this file — **[Play it as a desktop app &uarr;](
 
 ---
 
-## Authentication & Login
+## Authentication & Security
+
+### Who can log in as what
 
 - Login is always **scoped to a campaign**. The campaign picker at `/` is the front door; choosing a campaign sets a `campaign` cookie, and every later request is answered from that campaign only
 - **Character tab:** name + password (first-login setup for passwordless characters). **DM tab:** that campaign’s own DM password
@@ -316,9 +320,47 @@ Covered in full at the top of this file — **[Play it as a desktop app &uarr;](
 - The DM can also log in **as any character** by using a DM password in the character tab
 - `/login.html` still works and reads the campaign already selected; it redirects to the picker when there is none
 - An API call made with no campaign selected answers `409 NO_CAMPAIGN`, and the frontend bounces to the picker
-- Sessions live in `sessionStorage` — closing the tab logs out; HTML pages have auth guards that redirect unauthenticated access to login
 - **Stories** use a separate gate (`/api/auth/verify-any`) accepting the DM or any character password, auto-bypassed when already logged in
 - Token movement on the table is intentionally **open to all players** (DM retains full control); DM-only controls stay hidden until the master password is entered
+
+### Session tokens — the password is checked once
+
+Passwords used to travel as `X-Master-Password` / `X-Character-Password` headers on
+**every** API call, and sat in `sessionStorage` for as long as the tab was open. They
+no longer do. A password is now verified in exactly one place, `POST /api/auth/login`,
+which hands back an opaque session token. That token now travels in the same headers
+the password used to, so no call site changed — and a token is all the server will
+accept.
+
+- Tokens are `rpgs_` + 32 random bytes. Only their **SHA-256 is stored**, in a `sessions` table in `campaigns.db` — a stolen database yields no usable tokens
+- **24 hours idle** (sliding) and **7 days absolute**, whichever comes first
+- Still kept in `sessionStorage`, so closing the tab still logs out; HTML pages keep their auth guards. An expired token answers `401 SESSION_EXPIRED` and the page returns to login
+- **`MASTER_PASSWORD` has no fallback.** The old hardcoded default is gone: if the env var is unset, the super-admin is simply disabled
+
+### A maths problem on every login
+
+Every password form in the app is fronted by an **in-house captcha** — the campaign
+picker, both login tabs, campaign create / settings / delete, the mobile console's
+login, the stories gate, and the DM gates on `/dm.html`, `/treasury.html`,
+`/monsters.html`, `/events.html`, `/prepare-map.html`, `/playlists.html` and
+`/maintenance.html`. It is a small arithmetic problem drawn with hand-coded stroke
+glyphs, jittered and noised, rasterised to a PNG by `sharp`; single-use, and it expires
+after 5 minutes. No third-party service, no external request, no new dependency.
+
+### Lockout, hashing and headers
+
+- **Failed-login lockout** (`lib/login-guard.js`) — 5 failures for the same address + account within 15 minutes locks that pair for 60 seconds, doubling on each further round to a 30-minute ceiling; 25 failures from one address locks the whole address. A correct password is still refused while locked (`429` with `Retry-After`), and the DM gets one notification per window
+- **Async scrypt** (`lib/passwords.js`) — password hashing is deliberately slow (~50 ms), so it no longer runs on the synchronous path and blocks the event loop for everyone else
+- **Security headers** on every response (`lib/security-middleware.js`), and `X-Powered-By` is off
+- **Body limits by caller** — 1 MB for an anonymous request, the full 200 MB only once a session is proven, so an unauthenticated client cannot post a 200 MB body. An oversized body answers `413`
+- The campaign cookie is `Secure` when served over HTTPS
+- **Login audit** — every login, failure, lockout and unblock is recorded for 30 days and read back on the maintenance page
+
+> **Upgrading from before this?** Set `MASTER_PASSWORD` in `.env` before restarting —
+> there is no default any more — and expect every player to log in once, as
+> pre-token sessions are dropped. Leave `TRUST_PROXY` unset unless a real reverse
+> proxy sits in front of the server: with it on, a client can forge
+> `X-Forwarded-For` and walk around the per-address lockout.
 
 ---
 
@@ -499,12 +541,13 @@ plain Node and crash. A normal PowerShell window is unaffected.
 | `WS_URL` | No | auto | Override WebSocket URL (e.g. `wss://your-domain.com/ws`) |
 | `CAMPAIGNS_DB` | No | `Application/campaigns.db` | Override the campaign registry file |
 | `CAMPAIGN_DATA_DIR` | No | `Application/data/campaigns` | Override where per-campaign databases live |
+| `TRUST_PROXY` | No | off | Read the client IP from `X-Forwarded-For`. **Only enable behind a real reverse proxy** — with it on and no proxy, a client can forge the header and walk around the login lockout |
 
 ---
 
 ## Tech Stack
 
-- **Backend:** Node.js (ES modules), Express — split into 16 semantic route modules under `server/routes/`, with a lean `server.js` entry point
+- **Backend:** Node.js (ES modules), Express — split into 17 semantic route modules under `server/routes/`, with a lean `server.js` entry point
 - **Database:** SQLite (`better-sqlite3`). One cross-tenant registry (`campaigns.db`) plus four SQLite files per campaign under `data/campaigns/<id>/`
 - **Real-time:** WebSocket (`ws`), with a Server-Sent Events endpoint kept alongside it
 - **Frontend:** Vanilla JS, HTML, CSS — no build step, no framework, no bundler. The character sheet is 15 modules under `js/index/`, the table is 14 under `js/table/`, with shared helpers in `js/lib/`
@@ -512,6 +555,7 @@ plain Node and crash. A normal PowerShell window is unaffected.
 - **Image processing:** `sharp` — each upload generates `_thumb.webp` (80×80 crop) and `_medium.webp` (max 500 px); maps excluded
 - **PWA:** Service Worker (`sw.js`) — network-first for HTML, cache-first for versioned static assets
 - **Tests:** 1152 Vitest tests across 43 files (unit + API) covering the sheet, table, dice fairness, login security, and routes
+- **Security:** in-house, no new dependencies — maths captcha (`lib/captcha.js`, rendered by `sharp`), opaque session tokens stored as SHA-256 (`lib/sessions.js`), failed-login lockout (`lib/login-guard.js`), async scrypt (`lib/passwords.js`), response headers and caller-dependent body limits (`lib/security-middleware.js`)
 - **SSL:** Node.js native `https` with Let's Encrypt certificates
 
 ### Frontend cache-busting
@@ -532,7 +576,7 @@ char_sheet/
 ├── Application/            # The web app
 │   ├── server.js           #   Express entry point — loads route modules + shared context
 │   ├── server/routes/      #   15 Express route modules
-│   ├── lib/                #   Request context (campaign scoping) + password hashing
+│   ├── lib/                #   Campaign scoping, auth, sessions, captcha, lockout, hardening
 │   ├── db/                 #   SQLite layers (campaignsdb, campaign-store, localdb, mediadb, storiesdb)
 │   ├── aiDM/               #   AI Dungeon Master module (own DB + routes)
 │   ├── tests/              #   43 Vitest unit + API suites (1152 tests)
