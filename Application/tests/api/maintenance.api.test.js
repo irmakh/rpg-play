@@ -7,7 +7,7 @@ import { describe, it, expect } from 'vitest';
 import express from 'express';
 import request from 'supertest';
 import Database from 'better-sqlite3';
-import { createSessionStore } from '../../lib/sessions.js';
+import { createSessionStore, hashToken } from '../../lib/sessions.js';
 import { createLoginGuard } from '../../lib/login-guard.js';
 import { createAuth } from '../../lib/auth.js';
 import registerMaintenance from '../../server/routes/maintenance.js';
@@ -24,7 +24,7 @@ function setup() {
   // 57 logged events, newest first — as listAuthEvents returns them.
   const events = Array.from({ length: 57 }, (_, i) => ({ id: 57 - i, kind: 'login', campaignId: 'camp-1' }));
   const ctx = {
-    auth, loginGuard,
+    auth, loginGuard, sessions,
     audit: {
       list: ({ limit, offset = 0 }) => events.slice(offset, offset + limit),
       count: () => events.length,
@@ -38,7 +38,7 @@ function setup() {
   app.use(express.json());
   registerMaintenance(app, ctx);
   return {
-    app, loginGuard, recorded, nameLookups,
+    app, loginGuard, recorded, nameLookups, sessions,
     admin: sessions.create({ role: 'admin' }).token,
     dm: sessions.create({ role: 'dm', campaignId: 'camp-1' }).token,
   };
@@ -52,6 +52,9 @@ describe('who may use it', () => {
     expect((await request(app).get('/api/maintenance/blocked')).status).toBe(401);
     expect((await request(app).get('/api/maintenance/blocked').set('X-Master-Password', dm)).status).toBe(401);
     expect((await request(app).post('/api/maintenance/unblock').set('X-Master-Password', dm).send({ ip: IP })).status).toBe(401);
+    expect((await request(app).get('/api/maintenance/sessions')).status).toBe(401);
+    expect((await request(app).get('/api/maintenance/sessions').set('X-Master-Password', dm)).status).toBe(401);
+    expect((await request(app).post('/api/maintenance/end-session').set('X-Master-Password', dm).send({ all: true })).status).toBe(401);
   });
 });
 
@@ -174,5 +177,89 @@ describe('POST /api/maintenance/unblock', () => {
   it('needs an address', async () => {
     const { app, admin } = setup();
     expect((await request(app).post('/api/maintenance/unblock').set('X-Master-Password', admin).send({})).status).toBe(400);
+  });
+});
+
+
+// ── Active sessions ──────────────────────────────────────────────────────────
+describe('GET /api/maintenance/sessions', () => {
+  it('lists every live session in words, and marks the caller', async () => {
+    const { app, sessions, admin } = setup();
+    sessions.create({ role: 'dm', campaignId: 'camp-1' });
+    sessions.create({ role: 'character', campaignId: 'camp-1', charId: 'ch-1', charName: 'Aliyr' });
+
+    const res = await request(app).get('/api/maintenance/sessions').set('X-Master-Password', admin);
+    expect(res.status).toBe(200);
+    const scopes = res.body.sessions.map(s => s.scope);
+    expect(scopes).toContain('Super-admin');
+    expect(scopes).toContain('DM of Glory of Amn');
+    expect(scopes).toContain('Aliyr in Glory of Amn');
+    expect(res.body.sessions.filter(s => s.isMine)).toHaveLength(1);
+  });
+
+  it('never sends a usable credential — only the hash that names a row', async () => {
+    const { app, admin } = setup();
+    const res = await request(app).get('/api/maintenance/sessions').set('X-Master-Password', admin);
+    expect(JSON.stringify(res.body)).not.toContain(admin);
+    expect(res.body.sessions.every(s => /^[0-9a-f]{64}$/.test(s.id))).toBe(true);
+  });
+
+  it('names a campaign that has since been deleted rather than reopening it', async () => {
+    const { app, sessions, admin, nameLookups } = setup();
+    sessions.create({ role: 'character', campaignId: 'gone', charId: 'ch-9' });
+    const res = await request(app).get('/api/maintenance/sessions').set('X-Master-Password', admin);
+    expect(res.body.sessions.map(s => s.scope)).toContain('A character in a deleted campaign');
+    expect(nameLookups).not.toContain('gone');
+  });
+});
+
+describe('POST /api/maintenance/end-session', () => {
+  it('ends one session, so its token stops resolving', async () => {
+    const { app, sessions, admin } = setup();
+    const victim = sessions.create({ role: 'dm', campaignId: 'camp-1' }).token;
+    const list = await request(app).get('/api/maintenance/sessions').set('X-Master-Password', admin);
+    const id = list.body.sessions.find(s => s.id === hashToken(victim)).id;
+
+    const res = await request(app).post('/api/maintenance/end-session').set('X-Master-Password', admin).send({ id });
+    expect(res.status).toBe(200);
+    expect(sessions.resolve(victim)).toBeNull();
+  });
+
+  it('records who was ended, so the login activity says so', async () => {
+    const { app, sessions, admin, recorded } = setup();
+    sessions.create({ role: 'character', campaignId: 'camp-1', charId: 'ch-1', charName: 'Aliyr' });
+    const list = await request(app).get('/api/maintenance/sessions').set('X-Master-Password', admin);
+    const id = list.body.sessions.find(s => s.scope === 'Aliyr in Glory of Amn').id;
+
+    await request(app).post('/api/maintenance/end-session').set('X-Master-Password', admin).send({ id });
+    expect(recorded.at(-1)).toMatchObject({ kind: 'session-ended', role: 'admin', charName: 'Aliyr in Glory of Amn' });
+  });
+
+  it('refuses to end the caller’s own session', async () => {
+    const { app, admin } = setup();
+    const list = await request(app).get('/api/maintenance/sessions').set('X-Master-Password', admin);
+    const mine = list.body.sessions.find(s => s.isMine).id;
+    const res = await request(app).post('/api/maintenance/end-session').set('X-Master-Password', admin).send({ id: mine });
+    expect(res.status).toBe(400);
+  });
+
+  it('404s on a session that has already ended', async () => {
+    const { app, admin } = setup();
+    const res = await request(app).post('/api/maintenance/end-session')
+      .set('X-Master-Password', admin).send({ id: 'f'.repeat(64) });
+    expect(res.status).toBe(404);
+  });
+
+  it('{ all } ends everyone else and keeps the caller signed in', async () => {
+    const { app, sessions, admin } = setup();
+    const a = sessions.create({ role: 'dm', campaignId: 'camp-1' }).token;
+    const b = sessions.create({ role: 'character', campaignId: 'camp-1', charId: 'ch-1' }).token;
+
+    const res = await request(app).post('/api/maintenance/end-session').set('X-Master-Password', admin).send({ all: true });
+    expect(res.status).toBe(200);
+    expect(res.body.ended).toBe(3);   // a, b, and the campaign DM setup() signs in
+    expect(sessions.resolve(a)).toBeNull();
+    expect(sessions.resolve(b)).toBeNull();
+    expect(sessions.resolve(admin)).not.toBeNull();
   });
 });

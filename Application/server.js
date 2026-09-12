@@ -454,7 +454,7 @@ const MAX_MEDIA_BYTES = 25 * 1024 * 1024;
 // Bump this number whenever frontend JS or CSS files change.
 // Also bump CACHE in public/sw.js to the same value.
 // Both must always match. See deployment notes in CLAUDE.md.
-const FRONTEND_VERSION = 229;
+const FRONTEND_VERSION = 230;
 
 // ── Express app ───────────────────────────────────────────────────────────────
 const app = express();
@@ -821,10 +821,38 @@ if (useSSL) {
 const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
 wss.on('connection', (ws, req) => {
   ws._meta = clientMetaFromReq(req, 'ws');
+  ws._alive = true;
+  ws.on('pong', () => { ws._alive = true; });      // browsers answer ping automatically
   wsClients.add(ws);
   ws.on('close', () => wsClients.delete(ws));
   ws.on('error', () => wsClients.delete(ws));
 });
+
+// ── Reaping dead sockets ─────────────────────────────────────────────────────
+// A client that goes away without closing cleanly — a laptop that sleeps, a
+// phone that loses signal, a desktop window killed outright — leaves its socket
+// in wsClients until the OS gives up on the TCP connection, which can be hours.
+// Meanwhile the client reconnects after 3 seconds and is added again, so the
+// maintenance page showed the same person on the same page twice: one live row
+// and one that would never leave. Ping every 30s and drop anyone who has not
+// answered by the next round, so a zombie is gone within about a minute.
+const WS_PING_MS = 30000;
+const wsHeartbeat = setInterval(() => {
+  for (const ws of [...wsClients]) {
+    if (ws._alive === false) {
+      wsClients.delete(ws);
+      try { ws.terminate(); } catch {}
+      continue;
+    }
+    ws._alive = false;
+    try { ws.ping(); } catch {
+      wsClients.delete(ws);
+      try { ws.terminate(); } catch {}
+    }
+  }
+}, WS_PING_MS);
+wsHeartbeat.unref?.();                                   // never hold the process open
+wss.on('close', () => clearInterval(wsHeartbeat));
 
 httpServer.listen(PORT, () => {
   const proto = useSSL ? 'HTTPS' : 'HTTP';

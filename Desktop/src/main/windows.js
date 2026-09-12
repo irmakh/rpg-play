@@ -38,6 +38,7 @@ const ROLES = {
 
 const windows = new Map();   // role -> BrowserWindow (only for role-owned windows)
 const popups = new Set();    // windows the web app opened via window.open
+const namedPopups = new Map();   // window.open name -> BrowserWindow
 
 function serverUrl() {
   const raw = config.get('serverUrl');
@@ -145,11 +146,69 @@ function sizeFromFeatures(features) {
   return size;
 }
 
+/** The path part of a URL, for comparing "is this the same screen?". */
+function pathOf(target) {
+  try { return new URL(target).pathname; } catch { return ''; }
+}
+
+function focusWindow(win) {
+  if (!win || win.isDestroyed()) return false;
+  if (win.isMinimized()) win.restore();
+  win.show();
+  win.focus();
+  return true;
+}
+
+/**
+ * A window already showing this URL, or null.
+ *
+ * Electron does NOT implement the browser's named-window reuse: in a browser,
+ * window.open(url, 'rpg-music') twice focuses the one window, but every call
+ * through setWindowOpenHandler with action 'allow' builds a brand new
+ * BrowserWindow. So clicking a "now playing" notification opened another music
+ * window each time, and each one made its own realtime connection — which is
+ * what put the same page on the maintenance page twice.
+ *
+ * Role windows are checked first: the music notification opens /music.html by
+ * name, and the Music window the user already has open is a role window with no
+ * name at all, so name matching alone would still have stacked a second one.
+ */
+function openWindowFor(url, frameName) {
+  const wanted = pathOf(url);
+  if (wanted) {
+    for (const [role, win] of windows) {
+      if (win.isDestroyed()) continue;
+      const roleUrl = urlFor(role);
+      if (roleUrl && pathOf(roleUrl) === wanted) return win;
+    }
+  }
+  if (frameName) {
+    const named = namedPopups.get(frameName);
+    if (named && !named.isDestroyed()) return named;
+    if (named) namedPopups.delete(frameName);
+  }
+  return null;
+}
+
 function applyNavigationPolicy(win) {
   win.webContents.setWindowOpenHandler(({ url, frameName, features }) => {
     if (url !== 'about:blank' && !sameOrigin(url)) {
       shell.openExternal(url);
       return { action: 'deny' };
+    }
+    // about:blank is the pop-out panels (below): the opener writes DOM straight
+    // into the new window, so it must get a real window back, never a reused one.
+    if (url !== 'about:blank') {
+      const existing = openWindowFor(url, frameName);
+      if (existing) {
+        // Matching the browser: a named open both focuses the window and points
+        // it at the new URL. A role window already on this path just comes forward.
+        if (pathOf(existing.webContents.getURL()) !== pathOf(url)) {
+          existing.loadURL(url);
+        }
+        focusWindow(existing);
+        return { action: 'deny' };
+      }
     }
     // The web app's own pop-out panels (table-popout.js) open an about:blank
     // window and then move real DOM nodes into it, so they must stay as real,
@@ -181,12 +240,17 @@ function applyNavigationPolicy(win) {
     }
   });
 
-  win.webContents.on('did-create-window', (child) => {
+  win.webContents.on('did-create-window', (child, details) => {
     // A pop-out inherits the same policy, so a link clicked inside it still
     // leaves for the system browser instead of stranding the panel.
     applyNavigationPolicy(child);
     popups.add(child);
-    child.on('closed', () => popups.delete(child));
+    const name = details && details.frameName;
+    if (name) namedPopups.set(name, child);
+    child.on('closed', () => {
+      popups.delete(child);
+      if (name && namedPopups.get(name) === child) namedPopups.delete(name);
+    });
   });
 }
 

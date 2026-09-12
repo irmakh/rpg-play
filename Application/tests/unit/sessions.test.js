@@ -172,3 +172,53 @@ describe('setup tickets', () => {
     expect(st.consume(undefined, 'c1', 'a')).toBe(false);
   });
 });
+
+
+describe('listing and ending sessions (the maintenance page)', () => {
+  it('lists live sessions, most recently seen first', () => {
+    const { s, tick } = make();
+    s.create({ campaignId: 'c1', role: 'dm' });
+    tick(1000);
+    s.create({ campaignId: 'c1', role: 'character', charId: 'ch-1', charName: 'Aliyr' });
+    const rows = s.list();
+    expect(rows).toHaveLength(2);
+    expect(rows[0].charName).toBe('Aliyr');
+    expect(rows[0].lastSeenAt).toBeGreaterThan(rows[1].lastSeenAt);
+  });
+
+  it('hides sessions the sweep has not collected yet', () => {
+    const { s, tick } = make();
+    s.create({ campaignId: 'c1', role: 'dm' });
+    tick(25 * HOUR);                       // past the 24h idle cut-off
+    expect(s.count()).toBe(1);             // still in the table
+    expect(s.list()).toHaveLength(0);      // but never offered as endable
+  });
+
+  it('revokeAll ends everyone but the one hash it is given', () => {
+    const { s } = make();
+    const keep = s.create({ role: 'admin' });
+    const goneA = s.create({ campaignId: 'c1', role: 'dm' }).token;
+    const goneB = s.create({ campaignId: 'c1', role: 'character', charId: 'ch-1' }).token;
+
+    expect(s.revokeAll(keep.tokenHash)).toBe(2);
+    expect(s.resolve(goneA)).toBeNull();
+    expect(s.resolve(goneB)).toBeNull();
+    expect(s.resolve(keep.token)).not.toBeNull();
+  });
+
+  it('revokeAll with no exception ends every session', () => {
+    const { s } = make();
+    s.create({ role: 'admin' });
+    s.create({ campaignId: 'c1', role: 'dm' });
+    expect(s.revokeAll()).toBe(2);
+    expect(s.count()).toBe(0);
+  });
+
+  it('the listed hash is the one revokeHash takes', () => {
+    const { s } = make();
+    const token = s.create({ campaignId: 'c1', role: 'dm' }).token;
+    const [row] = s.list();
+    expect(s.revokeHash(row.tokenHash)).toBe(true);
+    expect(s.resolve(token)).toBeNull();
+  });
+});

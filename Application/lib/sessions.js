@@ -71,6 +71,13 @@ export function createSessionStore(db, {
     delCampaign: db.prepare('DELETE FROM sessions WHERE campaignId = ?'),
     sweep:  db.prepare('DELETE FROM sessions WHERE expiresAt <= ? OR lastSeenAt <= ?'),
     count:  db.prepare('SELECT COUNT(*) AS n FROM sessions'),
+    // Live sessions only: the sweep runs every few minutes, so the table can
+    // hold rows that are already dead and must not be offered to an admin as
+    // something to end.
+    list:   db.prepare(`SELECT tokenHash, campaignId, role, charId, charName, createdAt, lastSeenAt, expiresAt, ip, userAgent
+                        FROM sessions WHERE expiresAt > ? AND lastSeenAt > ?
+                        ORDER BY lastSeenAt DESC LIMIT ?`),
+    delAll: db.prepare('DELETE FROM sessions WHERE tokenHash <> ?'),
   };
 
   /**
@@ -113,6 +120,19 @@ export function createSessionStore(db, {
   const revoke = token => (isSessionToken(token) ? st.del.run(hashToken(token)).changes > 0 : false);
   const revokeHash = hash => st.del.run(String(hash || '')).changes > 0;
 
+  /**
+   * Every session still alive, newest activity first — what the maintenance
+   * page lists so a super-admin can end one. The tokenHash identifies a row and
+   * is safe to hand out: authenticating needs the token it was derived from.
+   */
+  function list({ limit = 500 } = {}) {
+    const t = now();
+    return st.list.all(t, t - idleMs, Math.max(1, Math.min(5000, limit)));
+  }
+
+  /** Ends every session but one — the admin doing it keeps theirs. */
+  const revokeAll = (exceptHash = '') => st.delAll.run(String(exceptHash || '')).changes;
+
   /** Every session of one character, except the one making the change. */
   const revokeCharacter = (campaignId, charId, exceptHash = '') =>
     st.delChar.run(String(campaignId || ''), String(charId || ''), String(exceptHash || '')).changes;
@@ -127,6 +147,7 @@ export function createSessionStore(db, {
 
   return {
     create, resolve, revoke, revokeHash, revokeCharacter, revokeCampaignRole, revokeCampaign, sweep,
+    list, revokeAll,
     count: () => st.count.get().n,
   };
 }

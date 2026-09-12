@@ -80,11 +80,13 @@ async function sendReload(mode) {
 function startPolling() {
   loadClients();
   loadBlocked();
+  loadSessions();
   loadAuthEvents();
   _pollTick = 0;
   _pollTimer = setInterval(() => {
     loadClients();
     loadBlocked();
+    loadSessions();
     // Only page 1 refreshes by itself: on an older page new events would push
     // the rows along while they are being read.
     if (++_pollTick % EVENTS_EVERY === 0 && _authPage === 1) loadAuthEvents();
@@ -223,6 +225,87 @@ $('blocked').addEventListener('click', async (e) => {
   } catch { alert('Unblock failed — network error.'); btn.disabled = false; }
 });
 
+// ── Active sessions ───────────────────────────────────────────────────────────
+// Who is signed in right now, and ending it. A lockout stops someone getting
+// in; this throws out someone already in — a lost phone, a shared password, a
+// player still signed in on a machine at work. The browser finds out at its
+// next request, which for an open page is within seconds.
+
+async function loadSessions() {
+  if (!_pw) return;
+  try {
+    const res = await fetch('/api/maintenance/sessions', { headers: { 'X-Master-Password': _pw } });
+    if (res.status === 401) { _toGate('Session expired — log in again.'); return; }
+    if (!res.ok) return;
+    const data = await res.json();
+    _clockOffset = Date.now() - (data.now || Date.now());
+    renderSessions(data.sessions || [], data.now || Date.now());
+  } catch { /* transient network error — keep last view */ }
+}
+
+function renderSessions(list, now) {
+  const host = $('sessions');
+  $('sessions-pill').textContent = list.length + ' signed in';
+  // Only other people's sessions can be ended here, so the button is pointless
+  // when there are none — ending your own is what Lock is for.
+  $('btn-end-all').disabled = !list.some(s => !s.isMine);
+  if (!list.length) { host.innerHTML = '<div class="muted" style="padding:14px">Nobody is signed in.</div>'; return; }
+
+  host.innerHTML = `<table class="events">
+    <thead><tr><th>Who</th><th>Campaign</th><th>Signed in</th><th>Last seen</th><th>Address</th><th>Browser</th><th></th></tr></thead>
+    <tbody>${list.map(s => `
+      <tr>
+        <td class="${s.isMine ? 'ev-ok' : ''}">${esc(s.scope)}${s.isMine ? ' <span class="muted">(you)</span>' : ''}</td>
+        <td>${esc(s.campaignName || '—')}</td>
+        <td title="${esc(absTime(s.createdAt))}">${relTime(s.createdAt, now)}</td>
+        <td title="${esc(absTime(s.lastSeenAt))}">${relTime(s.lastSeenAt, now)}</td>
+        <td class="ip-v">${esc(s.ip || '—')}</td>
+        <td class="ua-v" title="${esc(s.userAgent || '')}">${esc(shortBrowser(s.userAgent))}</td>
+        <td class="actions">${s.isMine
+          ? '<span class="muted">use Lock</span>'
+          : `<button data-session="${esc(s.id)}" data-label="${esc(s.scope)}">End session</button>`}</td>
+      </tr>`).join('')}</tbody></table>`;
+}
+
+// One listener for every End button; the id travels in a data-* attribute.
+$('sessions').addEventListener('click', async (e) => {
+  const btn = e.target.closest('button[data-session]');
+  if (!btn || !_pw) return;
+  const { session, label } = btn.dataset;
+  if (!confirm(`End the session for ${label}?\n\nThat browser is signed out and has to log in again.`)) return;
+  btn.disabled = true;
+  await endSessions({ id: session }, btn);
+});
+
+$('btn-end-all').addEventListener('click', async () => {
+  if (!_pw) return;
+  if (!confirm('End every session except your own?\n\nEveryone signed in anywhere has to log in again.')) return;
+  $('btn-end-all').disabled = true;
+  await endSessions({ all: true }, $('btn-end-all'));
+});
+
+async function endSessions(body, btn) {
+  try {
+    const res = await fetch('/api/maintenance/end-session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Master-Password': _pw },
+      body: JSON.stringify(body),
+    });
+    if (res.status === 401) { _toGate('Session expired — log in again.'); return; }
+    if (!res.ok) {
+      const msg = await res.json().catch(() => ({}));
+      alert(msg.error || 'Could not end the session.');
+      if (btn) btn.disabled = false;
+      return;
+    }
+    await loadSessions();
+    loadAuthEvents();
+  } catch {
+    alert('Could not end the session — network error.');
+    if (btn) btn.disabled = false;
+  }
+}
+
 // ── Login activity ────────────────────────────────────────────────────────────
 const EVENT_LABELS = {
   'login':                ['Logged in', 'ok'],
@@ -237,6 +320,7 @@ const EVENT_LABELS = {
   'password-removed':     ['Password removed', ''],
   'password-change-fail': ['Wrong current password', 'bad'],
   'unblocked':            ['Unblocked by admin', 'ok'],
+  'session-ended':        ['Session ended by admin', ''],
 };
 
 // Paged on the server (GET /api/maintenance/auth-events?page=&pageSize=).

@@ -188,7 +188,46 @@ function _onForceReload(d) {
   try { location.reload(); } catch {}
 }
 
+// ── One page, one connection ─────────────────────────────────────────────────
+// connectRealtime() is called more than once on some pages: the page registers
+// its own handlers, and a notification bell marked data-notif-bell="connect"
+// asks for a connection of its own. Every extra call used to open a SECOND
+// WebSocket, so events.html, monsters.html, prepare-map.html and playlists.html
+// each held two — and the maintenance page listed the same page twice for the
+// same person. Later calls now merge their handlers into the first call's
+// connection instead of opening another one.
+let _rtHandlers = null;   // event -> [fn]. Non-null from the first call onward.
+let _rtSource   = null;   // the EventSource, when SSE is the transport.
+
+function _rtOn(event, fn) {
+  if (typeof fn !== 'function') return;
+  const firstForEvent = !_rtHandlers[event];
+  (_rtHandlers[event] || (_rtHandlers[event] = [])).push(fn);
+  // SSE subscribes per event NAME, so a name first seen after the stream is
+  // already open needs its own listener added now.
+  if (firstForEvent && _rtSource) _rtSubscribe(event);
+}
+
+function _rtMerge(handlers) {
+  for (const [event, fn] of Object.entries(handlers || {})) _rtOn(event, fn);
+}
+
+// One handler throwing must not stop the others from being told.
+function _rtEmit(event, data) {
+  const fns = _rtHandlers && _rtHandlers[event];
+  if (!fns) return;
+  for (const fn of fns) { try { fn(data); } catch (err) { console.error(err); } }
+}
+
+function _rtSubscribe(event) {
+  _rtSource.addEventListener(event, e => _rtEmit(event, JSON.parse(e.data)));
+}
+
 async function connectRealtime(handlers) {
+  if (_rtHandlers) { _rtMerge(handlers); return; }   // already open, or opening
+  _rtHandlers = {};
+  _rtMerge(handlers);
+
   let provider = 'instantdb', wsUrl = null;
   try {
     const cfg = await fetch('/api/config').then(r => r.json());
@@ -202,17 +241,15 @@ async function connectRealtime(handlers) {
       ws.onmessage = e => {
         const { event, data } = JSON.parse(e.data);
         if (event === 'force-reload') return _onForceReload(data);   // handled for every page
-        if (handlers[event]) handlers[event](data);
+        _rtEmit(event, data);
       };
       ws.onclose = () => setTimeout(connect, 3000);
     }
     connect();
   } else {
-    const es = new EventSource('/api/events?' + _realtimeParams());
-    for (const [event, fn] of Object.entries(handlers)) {
-      es.addEventListener(event, e => fn(JSON.parse(e.data)));
-    }
-    es.addEventListener('force-reload', e => _onForceReload(JSON.parse(e.data)));   // handled for every page
-    es.onerror = () => {};
+    _rtSource = new EventSource('/api/events?' + _realtimeParams());
+    for (const event of Object.keys(_rtHandlers)) _rtSubscribe(event);
+    _rtSource.addEventListener('force-reload', e => _onForceReload(JSON.parse(e.data)));   // every page
+    _rtSource.onerror = () => {};
   }
 }

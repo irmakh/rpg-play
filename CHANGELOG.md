@@ -21,6 +21,37 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [230] — 2026-09-12 — One connection per page, and ending a session from maintenance
+
+Three bugs behind the same symptom — the maintenance page showing the same person
+on the same page twice — plus a way to sign someone out.
+
+**End a session (new).** The maintenance page now lists everyone signed in: who they
+are, which campaign, when they signed in, when they were last seen, their address and
+browser. **End session** signs that browser out; it finds out at its next request.
+**End all sessions** does it to everyone but you. Every ending is written to the login
+activity log. A lockout stops someone getting in — this throws out someone already in,
+for a lost phone or a shared password. Your own session is marked *(you)* and can only
+be ended with Lock.
+
+**Fixes**
+
+- Four pages held **two** WebSockets each — events, monsters, map prep and the music
+  library. Each has a notification bell that asks for a connection, and each also
+  opened its own, so they were listed twice and handled every event twice.
+  `connectRealtime()` now serves the second and later callers from the first
+  connection.
+- A client that vanished without closing cleanly — a laptop that sleeps, a phone that
+  loses signal, a window killed outright — stayed in the list until the operating
+  system gave up on the socket, which could be hours, while its reconnect appeared
+  alongside it. The server now pings every 30 seconds and drops anyone who does not
+  answer, so a dead row is gone within about a minute.
+- **Desktop client:** clicking a notification opened another window even when that
+  screen was already open, and each new window made its own connection. Electron does
+  not implement the browser's rule that `window.open` with a name reuses the window of
+  that name; it does now, and an already-open screen is brought forward instead.
+  *(Needs a desktop rebuild — the web fixes above reach the desktop app without one.)*
+
 ## [229] — 2026-09-12 — The character sheet's More menu opens on a phone
 
 On a narrow screen the character-sheet toolbar wraps, and the More button can end up
