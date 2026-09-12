@@ -196,10 +196,9 @@ td input[type=checkbox]{accent-color:var(--bone)}
 .slot-g .row input{width:42px;text-align:center}
 .slot-g .sub{font-size:9px;color:var(--ash);margin-bottom:2px}
 /* Character selector bar */
-.char-bar{display:flex;flex-wrap:wrap;gap:var(--s2);align-items:center;margin-bottom:var(--s4);padding:var(--s2) var(--s3);background:var(--slate);border:1px solid var(--rule);border-top-color:var(--rule-hi);border-radius:var(--r-md);box-shadow:inset 0 1px 0 var(--lift)}
+.char-bar{position:relative;display:flex;flex-wrap:wrap;gap:var(--s2);align-items:center;margin-bottom:var(--s4);padding:var(--s2) var(--s3);background:var(--slate);border:1px solid var(--rule);border-top-color:var(--rule-hi);border-radius:var(--r-md);box-shadow:inset 0 1px 0 var(--lift)}
 .cb-group{display:flex;gap:var(--s2);align-items:center;flex-wrap:wrap;min-width:0}
 .cb-nav{margin-left:auto}
-.cb-more{position:relative}
 .char-bar label{font-size:var(--t-sm);color:var(--ash);white-space:nowrap}
 .char-bar select{background:var(--sunken);border:1px solid var(--rule-hi);color:var(--bone);border-radius:var(--r-sm);padding:var(--s2) var(--s3);font-size:var(--t-base);min-height:36px;flex:1 1 160px;min-width:0;max-width:320px}
 
@@ -211,9 +210,15 @@ a.char-btn{display:inline-block;text-decoration:none;line-height:1.5}
 .char-btn.danger:hover{background:color-mix(in srgb, var(--blood) 18%, transparent)}
 
 /* Overflow menu. Everything rarely touched lives here, including the one
-   destructive action, which used to sit one tap from Export. */
+   destructive action, which used to sit one tap from Export.
+   It hangs off .char-bar, not off the More button: the bar wraps, so the
+   button can end up mid-row or alone at the left of a row of its own, and a
+   menu pinned to the button's right edge then opened off the left of the
+   screen and was simply not there. Pinned to the bar it lands in the same
+   place as before whenever the button is last in the row, and stays on
+   screen when it is not. */
 .cb-menu[hidden]{display:none}
-.cb-menu{position:absolute;top:calc(100% + 6px);right:0;z-index:40;min-width:220px;display:flex;flex-direction:column;padding:var(--s1);background:var(--slate);border:1px solid var(--rule-hi);border-radius:var(--r-md);box-shadow:inset 0 1px 0 var(--lift), var(--cast)}
+.cb-menu{position:absolute;top:calc(100% + 6px);right:var(--s3);z-index:40;min-width:220px;display:flex;flex-direction:column;padding:var(--s1);background:var(--slate);border:1px solid var(--rule-hi);border-radius:var(--r-md);box-shadow:inset 0 1px 0 var(--lift), var(--cast)}
 .cb-menu [role=menuitem]{display:block;width:100%;text-align:left;background:none;border:0;color:var(--bone);font:inherit;font-size:var(--t-sm);padding:var(--s2) var(--s3);min-height:38px;border-radius:var(--r-sm);cursor:pointer;text-decoration:none;line-height:22px}
 .cb-menu [role=menuitem]:hover{background:var(--slate-hi)}
 .cb-menu .danger{color:var(--blood)}
@@ -686,6 +691,10 @@ html.lamplit .sk-roll-btn:hover{opacity:1;background:var(--slate-hi)}
   .cb-identity{flex:1 1 auto;min-width:0}
   .char-bar select{flex:1 1 120px;max-width:none;min-width:0}
   .cb-more{order:2}
+  /* Full width of the bar on a phone, and scrollable rather than taller than
+     the screen. The bar's padding is --s2 here, not --s3. */
+  .cb-menu{left:var(--s2);right:var(--s2);min-width:0;
+           max-height:calc(100vh - 140px);overflow-y:auto;overscroll-behavior:contain}
   .cb-nav{order:3;flex:1 1 100%;margin-left:0}
 }
 

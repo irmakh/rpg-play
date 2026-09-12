@@ -21,6 +21,19 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [229] — 2026-09-12 — The character sheet's More menu opens on a phone
+
+On a narrow screen the character-sheet toolbar wraps, and the More button can end up
+in the middle of a row or alone at the left of one. The menu was pinned to the
+button's right edge, so from there it opened off the left side of the screen and
+looked like nothing had happened when you tapped it.
+
+- The menu now hangs off the toolbar rather than off the button, so it stays on
+  screen wherever the button has wrapped to. Where the button is last in its row —
+  every desktop layout — it lands exactly where it always did.
+- On a phone the menu spans the full width of the toolbar, and scrolls instead of
+  growing taller than the screen.
+
 ## [228] — 2026-09-11 — See and lift login lockouts; login activity in pages
 
 The maintenance page now lists every address that is locked out of logging in, and
