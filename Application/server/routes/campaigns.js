@@ -190,9 +190,14 @@ export default function register(app, ctx) {
   });
 
   // ── Delete (super-admin, name confirmation) ─────────────────────────────────
-  // Destroys every database file for the campaign. Uploaded images under
-  // public/uploads/ are shared across campaigns and are intentionally left
-  // alone — their filenames are UUIDs, so they are orphaned, never mixed up.
+  // Destroys every database file for the campaign. Its uploaded media under
+  // public/uploads/<campaignId>/ is intentionally LEFT ON DISK: images and
+  // audio are the part a DM cannot regenerate, and an unwanted folder is
+  // trivially removed by hand while a deleted one is gone for good. See
+  // destroyCampaignData() in db/campaign-store.js, which owns that decision.
+  // Anything still in the pre-v222 flat public/uploads/<kind>/ is untouched
+  // for the further reason that a file there may belong to more than one
+  // campaign — filenames are UUIDs, so they are orphaned, never mixed up.
   app.delete('/api/campaigns/:id', async (req, res) => {
     try {
       if (!superAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
