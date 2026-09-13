@@ -1,3 +1,4 @@
+// Written by Irmak Hakman in 2026.
 
 let masterPw = '';
 let lootItems = [];

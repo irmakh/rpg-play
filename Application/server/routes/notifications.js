@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 import { DM_RECIPIENT } from '../notify.js';
 
 /**

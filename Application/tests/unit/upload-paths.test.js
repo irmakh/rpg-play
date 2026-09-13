@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 /**
  * Tests for the two pieces of server.js that decide where an upload lives and
  * who is allowed to read a parked campaign's map.

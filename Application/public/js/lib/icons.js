@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 /* icons.js - one stroke icon set, replacing emoji used as UI iconography.
  *
  * WHY: the app used 647 emoji as icons. Emoji render differently on every OS

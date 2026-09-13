@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 'use strict';
 
 // Shared login state across windows.

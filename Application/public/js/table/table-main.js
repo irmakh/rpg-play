@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 // ── Theme ─────────────────────────────────────────────────────────────────────
 // The classic HUD has been retired — the modern HUD is the only theme now.
 function initTheme() {

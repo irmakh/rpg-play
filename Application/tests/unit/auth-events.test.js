@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 /**
  * The login audit's paging (db/campaignsdb.js listAuthEvents / countAuthEvents),
  * on a real registry database in a temp file.

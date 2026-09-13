@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 // ── Ability score helpers ─────────────────────────────────────────────────────
 function getMod(stat) {
   const score = parseInt(document.querySelector(`[data-key="${stat}"]`)?.value) || 10;

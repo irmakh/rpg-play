@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 'use strict';
 
 // Every channel the renderer side can reach. The web app itself gets none of

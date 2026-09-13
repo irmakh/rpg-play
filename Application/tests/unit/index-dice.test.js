@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 /**
  * Unit tests for parseDice and parseDiceCommand in lib/dice-engine.js.
  *

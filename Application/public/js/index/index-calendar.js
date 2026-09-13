@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 // ── Player Calendar ───────────────────────────────────────────────────────────
 let pcalView        = { type: 'month', month: 1, year: 1492 };
 let pcalCurrentDate = { frYear: 1492, frMonth: 1, frDay: 1, frFestival: '' };

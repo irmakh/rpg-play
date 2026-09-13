@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 // ── Modal dismissal guard ─────────────────────────────────────────────────────
 //
 // Stops a half-filled modal from being thrown away by an accidental gesture.

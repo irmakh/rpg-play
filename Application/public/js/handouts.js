@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 // ── Handout manager (DM) ──────────────────────────────────────────────────────
 // Master-detail: every handout on the left, the selected one's two bodies and
 // its recipient roster on the right.

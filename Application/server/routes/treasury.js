@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 /**
  * Treasury — the unified item catalogue that replaces the separate loot and
  * shop systems. One record per item; `mode` decides how players reach it:

@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 /**
  * Unit tests for collectData() and applyData() in index-char.js.
  *

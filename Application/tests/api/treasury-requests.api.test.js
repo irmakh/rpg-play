@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 /**
  * API integration tests for free-loot selection and DM approval.
  *

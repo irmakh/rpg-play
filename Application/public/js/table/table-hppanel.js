@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 // ── HP Panel ──────────────────────────────────────────────────────────────────
 async function openHpPanel(tok) {
   // Characters may only open the panel for their own token

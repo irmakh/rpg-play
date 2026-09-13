@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 /**
  * In-memory SQLite ldb factory for tests.
  * Mirrors the shape of db/localdb.js but uses :memory: — no disk state.

@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 // ── Monster stat rendering (same logic as monsters.js) ───────────────────────
 let _currentMonsterData = null;
 

@@ -1,4 +1,5 @@
 #!/bin/bash
+# Written by Irmak Hakman in 2026.
 # Docker development startup script
 
 echo "🐳 Starting Character Sheet Development Container..."

@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 // ── Parsing helpers ───────────────────────────────────────────────────────────
 function parseConditions(raw) {
   if (!raw) return [];

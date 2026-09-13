@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 // ── Initiative Tracker ────────────────────────────────────────────────────────
 let initDataMap        = {};
 let initEditId         = null;

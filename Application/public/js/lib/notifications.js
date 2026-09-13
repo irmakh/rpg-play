@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 // ── Notifications ─────────────────────────────────────────────────────────────
 // The bell, its panel, and the toasts that pop when something lands.
 //

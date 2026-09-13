@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 /**
  * Response headers, body limits and the session gate
  * (lib/security-middleware.js), each on a tiny express app.

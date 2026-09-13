@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 /**
  * API tests for logging in: the maths captcha, the lockout, the session token
  * every login now returns, the super-admin login, logout, the Stories gate and

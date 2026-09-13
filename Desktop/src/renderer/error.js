@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 'use strict';
 
 // Shown in place of a web-app screen when the server cannot be reached.

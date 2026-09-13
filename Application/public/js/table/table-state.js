@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 // ── Shared State ─────────────────────────────────────────────────────────────
 let masterPw = '';
 // Session — populated from sessionStorage on page load

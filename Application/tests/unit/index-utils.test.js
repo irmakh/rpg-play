@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 /**
  * Unit tests for pure helpers in index-utils.js and session helpers in index-state.js.
  *

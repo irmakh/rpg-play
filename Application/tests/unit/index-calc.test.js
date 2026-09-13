@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 /**
  * Unit tests for D&D 5e calculation formulas in index-calc.js.
  *

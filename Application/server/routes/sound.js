@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 export default function register(app, ctx) {
   const { ldb, masterAuth, saveUploadFile, broadcast, genId } = ctx;
   // Older harnesses register these routes without the campaign helper; then

@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 /**
  * Per-campaign shared-media store (chat images, the table map blob).
  *

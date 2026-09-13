@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 // ── Campaign picker ───────────────────────────────────────────────────────────
 // The app's front door. Lists every campaign, shows one in detail, and logs you
 // into it. Selecting a campaign sets the `campaign` cookie (via

@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 // ── Real-time updates (connectRealtime in js/lib/realtime.js) ─────────────────
 window.addEventListener('load', function startRealtime() {
   connectRealtime({

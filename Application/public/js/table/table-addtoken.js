@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 // ── Add Token Modal ───────────────────────────────────────────────────────────
 function openAddTokenModal() {
   if (_addTokenBusy) return;

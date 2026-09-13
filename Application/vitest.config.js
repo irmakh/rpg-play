@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({

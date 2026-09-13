@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 /**
  * Password hashing shared by the server, the campaign registry and the
  * campaign bootstrap. scrypt with a per-password salt, stored as "salt:hash".

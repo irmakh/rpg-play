@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 // ── 3D Dice Animation (engine in js/lib/dice-engine.js) ───────────────────────
 
 // `groups` (optional) carries a multi-type damage roll so every other client

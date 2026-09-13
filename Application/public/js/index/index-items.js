@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 // ── Equipment & Items ─────────────────────────────────────────────────────────
 const ITEM_WEAPON_PROPS = ['Ammunition','Finesse','Heavy','Light','Loading','Range','Reach','Thrown','Two-Handed','Versatile'];
 

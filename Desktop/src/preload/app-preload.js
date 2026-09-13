@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 'use strict';
 
 // Preload for windows showing the web app.

@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 /**
  * Unit tests for typed multi-part damage in lib/dice-engine.js —
  * parseDamageSpec (pure), rollDamageSpec (rolls), and the damage forms of

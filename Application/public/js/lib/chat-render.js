@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 // ── Shared chat rendering ─────────────────────────────────────────────────────
 function scrollChatLog() {
   const log = document.getElementById('chat-log');

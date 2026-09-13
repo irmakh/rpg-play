@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 /**
  * Request-level hardening: response headers, request body limits, and the gate
  * that turns a stale credential into a clean "log in again".

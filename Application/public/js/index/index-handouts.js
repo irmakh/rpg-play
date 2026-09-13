@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 // ── Handouts tab (player) ─────────────────────────────────────────────────────
 // Everything the DM has handed this character, newest first. The server has
 // already redacted each one to the outcome this character earned: a handout

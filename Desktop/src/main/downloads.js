@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 'use strict';
 
 // Native save dialogs for everything the web app hands to the browser as a

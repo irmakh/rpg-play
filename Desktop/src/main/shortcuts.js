@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 'use strict';
 
 // System-wide hotkeys: reach the table, the DM panel or your sheet without

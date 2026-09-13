@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 /**
  * Unit tests for the filtering + sorting logic inside renderInitiativeTracker
  * from public/js/index/index-initiative.js.

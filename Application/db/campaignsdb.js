@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 /**
  * Campaign registry — the only cross-tenant database.
  *

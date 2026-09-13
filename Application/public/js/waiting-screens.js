@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 // ── Waiting screen manager (DM) ───────────────────────────────────────────────
 // Create the images the DM parks the table on between scenes, and show or stop
 // showing one. While a screen is showing the server withholds the map and other

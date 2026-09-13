@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 /**
  * Unit tests for js/lib/music-sync.js — the audio-ownership election.
  *

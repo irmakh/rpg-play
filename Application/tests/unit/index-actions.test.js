@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 /**
  * Unit tests for the pure logic in index-actions.js:
  *   _actAttackRange — derives an attack's range from its item's weapon properties

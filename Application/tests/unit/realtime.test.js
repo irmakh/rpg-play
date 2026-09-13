@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 /**
  * Unit tests for js/lib/realtime.js — one page, one connection.
  *

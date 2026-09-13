@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 // ── Media ─────────────────────────────────────────────────────────────────────
 const ALLOWED_CLIENT_TYPES = new Set(['image/jpeg','image/png','image/gif','image/webp','video/mp4','video/webm']);
 const MAX_CLIENT_SIZE = 25 * 1024 * 1024; // 25 MB

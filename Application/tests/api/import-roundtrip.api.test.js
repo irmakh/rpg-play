@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 /**
  * Regression tests for two import paths that silently lost data.
  *

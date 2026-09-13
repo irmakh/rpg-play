@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 // ── Actions tab ───────────────────────────────────────────────────────────────
 // Aggregates weapon attacks (from the hidden #wpn-tbl, fed by Inventory weapons),
 // spells the user has flagged with an action type, and custom actions stored in the

@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 /**
  * Builds a fresh Express app wired to an in-memory SQLite database.
  * Returns { app, ldb, masterPw } — use masterPw as X-Master-Password header in tests.

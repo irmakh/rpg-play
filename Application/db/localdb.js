@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 /**
  * LocalDB adapter — SQLite-backed alternative to InstantDB.
  * All functions mirror the shape expected by server.js route handlers.

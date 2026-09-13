@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 // ── Shared weather UI helpers ─────────────────────────────────────────────────
 // Used by events.html (DM calendar), index.html (player calendar tab) and
 // table.html (toolbar widget). Provides: date keys, sprite-icon HTML, a summary

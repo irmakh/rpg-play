@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 /**
  * Statistical fairness tests for the dice engine (lib/dice-engine.js).
  *

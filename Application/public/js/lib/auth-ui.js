@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 /**
  * Login helpers shared by every page that asks for a password.
  *

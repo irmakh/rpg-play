@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 'use strict';
 
 // Application menu. Rebuilt whenever the monitor layout changes, because the

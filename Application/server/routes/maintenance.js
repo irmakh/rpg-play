@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 /**
  * Maintenance: who is locked out of logging in, and lifting a lock early.
  *

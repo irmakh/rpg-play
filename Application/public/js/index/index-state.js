@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 // ── Shared mutable state (SKILL_AB, SKILL_NAMES, AB_NAMES in js/lib/dnd-data.js) ──
 
 // Session (read once on page load from sessionStorage)

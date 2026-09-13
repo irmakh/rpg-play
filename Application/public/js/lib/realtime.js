@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 // ── Shared real-time transport ────────────────────────────────────────────────
 // Handles both WebSocket (localdb) and SSE (instantdb) connections.
 // Call with a handlers map: { eventName: fn(data) }

@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 import Database from 'better-sqlite3';
 import crypto from 'crypto';
 

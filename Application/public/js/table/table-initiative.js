@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 // ── Initiative panel ──────────────────────────────────────────────────────────
 
 function renderInitiativeTracker(showBadge) {

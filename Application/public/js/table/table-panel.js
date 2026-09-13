@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 // ── Side panel Quick Roll ─────────────────────────────────────────────────────
 let _sideCharId = null; // character ID currently displayed in the side panel
 let _sideAllSpells = []; // full parsed _spells of the displayed char (for action spell description posting)

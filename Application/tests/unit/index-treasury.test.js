@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 /**
  * Unit tests for the merged treasury helpers in index-treasury.js.
  *

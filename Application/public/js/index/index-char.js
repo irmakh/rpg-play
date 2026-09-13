@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 let _applyingData = false;
 
 function scheduleAutoSave() {

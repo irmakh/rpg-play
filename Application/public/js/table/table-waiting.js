@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 // ── Waiting screens ───────────────────────────────────────────────────────────
 // A waiting screen parks the table on a full-bleed image between scenes.
 //

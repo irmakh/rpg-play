@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 /**
  * Unit tests for characterToXML() in index-char.js — the per-character XML export.
  *

@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 import { clientIp } from '../../lib/login-guard.js';
 
 export default function register(app, ctx) {

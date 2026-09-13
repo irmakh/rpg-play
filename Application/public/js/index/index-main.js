@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 // ── Wire proficiency checkboxes + derived inputs to recalcAll ─────────────────
 document.querySelectorAll('[data-key^="sk-prof-"], [data-key^="sk-exp-"], [data-key^="save-prof-"]').forEach(el => {
   el.addEventListener('change', recalcAll);

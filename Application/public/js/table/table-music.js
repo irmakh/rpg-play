@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 // ── Music Player — table screen module ───────────────────────────────────────
 // The table screen is an audio SINK: it holds the page's <audio> element, plays
 // whatever the DM broadcasts over realtime, and shows the Now Playing bar.

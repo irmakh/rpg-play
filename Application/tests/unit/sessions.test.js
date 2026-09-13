@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 /**
  * Login sessions (lib/sessions.js) and first-password setup tickets.
  */

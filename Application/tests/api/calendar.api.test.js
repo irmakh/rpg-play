@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 /**
  * API integration tests for /api/calendar/events + /api/calendar/media.
  * Covers the journal visibility model (shared/private), author stamping,

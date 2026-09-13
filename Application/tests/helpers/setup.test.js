@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 /**
  * Smoke test — verifies the test infrastructure wires up correctly.
  * If this passes, all subsequent suites can rely on makeApp() + makeLdb().

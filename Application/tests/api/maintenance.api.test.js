@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 /**
  * Blocked addresses on the maintenance page: GET /api/maintenance/blocked and
  * POST /api/maintenance/unblock (server/routes/maintenance.js), on the real

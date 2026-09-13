@@ -1,3 +1,5 @@
+/* Written by Irmak Hakman in 2026. */
+
 /* Campaign picker — the app's front door.
    Master-detail: the campaign list on the left, the selected campaign and its
    login on the right. Below 900px it collapses to one column and the detail

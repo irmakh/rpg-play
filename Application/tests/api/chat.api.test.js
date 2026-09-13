@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 /**
  * API integration tests for /api/chat — a campaign's history is its own.
  *

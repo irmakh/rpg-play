@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 export default function register(app, ctx) {
   const { ldb, genId, masterAuth, charAuth, broadcast } = ctx;
 

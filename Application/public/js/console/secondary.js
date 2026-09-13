@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 // ── Secondary Screen (Screen 2 — Info Panel) ──────────────────────────────────
 // table-secondary.html only. Self-contained: own SSE, own state, own API calls.
 // Receives TOKEN_SELECTED from primary via the server-side SSE relay.

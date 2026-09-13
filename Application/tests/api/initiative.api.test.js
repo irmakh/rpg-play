@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 /**
  * API integration tests for /api/initiative routes (rewritten for new API).
  * Each test gets a fresh in-memory Express app + SQLite DB via makeApp().

@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 // ── Dice rolling (SKILL_NAMES, AB_NAMES in js/lib/dnd-data.js) ───────────────
 let toastTimer = null;
 let toastDismissHandler = null;

@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 /**
  * Tests for the selective import functions in db/localdb.js that back the
  * "restore one section" endpoints.

@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 // ── Auto-calculate proficiency bonus from level ───────────────────────────────
 function recalcProfBonus() {
   const level = parseInt(document.querySelector('[data-key="level"]')?.value) || 0;

@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 /**
  * API integration tests for /api/table routes.
  * Covers: table state, token CRUD, move tracking, HP sync, clear.

@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 'use strict';
 
 // Window manager. Every window has a "role" — which screen of the web app it

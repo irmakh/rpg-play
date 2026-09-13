@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 /**
  * Unit tests for the tar format used by the backup archives in
  * server/routes/backup.js — tarHeader() writes it, extractTar() reads it back.

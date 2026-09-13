@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 // ── Shared lightbox — images and videos ───────────────────────────────────────
 function lightboxOpen(src, mimeType) {
   const existing = document.getElementById('media-lightbox');

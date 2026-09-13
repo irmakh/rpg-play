@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 // Offers the Windows desktop client to browser users.
 //
 // The Electron client injects window.rpgDesktop before any page script runs, so

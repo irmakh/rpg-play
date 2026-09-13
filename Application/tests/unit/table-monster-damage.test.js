@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 /**
  * Unit tests for _monsterDamageStr in table-monsters.js — the 5etools stat-block
  * damage extractor.

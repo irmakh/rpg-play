@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 'use strict';
 
 // Persistent settings, stored as one JSON file in the Electron userData folder.

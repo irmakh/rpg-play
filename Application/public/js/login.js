@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 // ── Login page logic ──────────────────────────────────────────────────────────
 //
 // Logging in is always scoped to a campaign — the DM password and the character

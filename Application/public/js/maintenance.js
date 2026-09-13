@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 // ── Hidden maintenance dashboard ──────────────────────────────────────────────
 // Super-admin gated. Polls /api/maintenance/clients and shows every connected
 // real-time client: identity (DM / character / anonymous), when they logged in,

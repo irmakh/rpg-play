@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 // ── Console Mode Bridge (Screen 1 — Map) ─────────────────────────────────────
 // Loaded only by table-console.html. Opens the secondary info window and keeps
 // it in sync via server-side SSE relay so both screens can run in different

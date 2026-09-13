@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 // ── Table-screen weather widget ───────────────────────────────────────────────
 // Shows the weather for the current campaign date in the top toolbar. Reads the
 // calendar state (to know "today") + the public weather log, and refreshes when

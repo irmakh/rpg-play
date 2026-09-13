@@ -1,3 +1,5 @@
+# Written by Irmak Hakman in 2026.
+
 # Development Dockerfile for D&D Character Sheet App
 FROM node:20-alpine
 

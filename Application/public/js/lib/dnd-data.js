@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 // ── D&D 5e game data constants ────────────────────────────────────────────────
 
 // Skill list (index matches data-key sk-N)

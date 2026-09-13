@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 /**
  * Unit tests for the esc() HTML-escaping function in lib/esc.js.
  * Pure function — no DOM, no globals needed.

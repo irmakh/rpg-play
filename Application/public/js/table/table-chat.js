@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 // ── Chat image upload ─────────────────────────────────────────────────────────
 function _setChatUploading(thumbObjectUrl) {
   const bar   = document.getElementById('chat-upload-bar');

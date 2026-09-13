@@ -1,4 +1,5 @@
 #!/bin/bash
+# Written by Irmak Hakman in 2026.
 # SSL certificate renewal script for dnd.kimse.me
 # Stops the app (frees port 80), renews via certbot, restarts the app.
 

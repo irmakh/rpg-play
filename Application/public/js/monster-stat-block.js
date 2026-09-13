@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 // ── Shared monster stat block renderer ───────────────────────────────────────
 // Single source of truth used by dm.js, monsters.js, and table-monsters.js.
 // Depends on global `esc` (lib/esc.js or per-page definition).

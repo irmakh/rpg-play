@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 // ── Treasury tab (free loot + shop, one screen) ───────────────────────────────
 // Replaces the old separate Shop and Loot tabs. A single GET /api/treasury
 // feeds both segments; each keeps its own cart because one is free and the

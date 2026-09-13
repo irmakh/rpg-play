@@ -1,3 +1,5 @@
+/* Written by Irmak Hakman in 2026. */
+
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;overflow:hidden;font-family:'Segoe UI',sans-serif;background:var(--ink);color:var(--bone);font-size:13px}
 

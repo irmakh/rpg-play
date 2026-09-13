@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 /**
  * Treasury — DM manager for the unified loot + shop catalogue.
  * Master-detail: tag-grouped list on the left, inline editor on the right.

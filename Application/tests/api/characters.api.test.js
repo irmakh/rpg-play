@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 /**
  * HTTP integration tests for /api/characters endpoints.
  * Uses supertest + the real Express app wired to an in-memory SQLite database.

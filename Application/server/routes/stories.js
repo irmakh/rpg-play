@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 export default function register(app, ctx) {
   const { sdb, ldb, path, fs, __dirname, crypto } = ctx;
 

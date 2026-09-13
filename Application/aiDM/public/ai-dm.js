@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 /* ── AI Dungeon Master — Frontend ─────────────────────────────────────────── */
 
 // ── Game data constants ───────────────────────────────────────────────────────

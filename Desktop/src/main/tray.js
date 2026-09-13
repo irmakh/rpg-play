@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 'use strict';
 
 // System tray icon. Keeps the app reachable when every window is closed, which

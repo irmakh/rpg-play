@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 // ── Handouts on the table screen ──────────────────────────────────────────────
 // A handout pops up the moment the DM hands it out, and again when they confirm
 // the outcome — the second time is when the real body actually arrives.

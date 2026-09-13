@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 // ── Map loading overlay ───────────────────────────────────────────────────────
 function showMapLoadingOverlay() {
   const el = document.getElementById('map-loading-overlay');

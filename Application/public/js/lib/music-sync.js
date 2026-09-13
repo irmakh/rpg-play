@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 // ── Music audio ownership ─────────────────────────────────────────────────────
 // Every client plays the DM's music through its own <audio> element. That is
 // fine across machines, but on ONE machine several windows of the app can be

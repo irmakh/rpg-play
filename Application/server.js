@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 import 'dotenv/config';
 import express from 'express';
 import crypto from 'crypto';

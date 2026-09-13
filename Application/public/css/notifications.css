@@ -1,3 +1,5 @@
+/* Written by Irmak Hakman in 2026. */
+
 /* ── Notifications ───────────────────────────────────────────────────────────
    Bell, panel and toasts. Loaded by every page that shows notifications, so it
    inherits each page's own theme variables (--bg2/--ac/--tx …) rather than

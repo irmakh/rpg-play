@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 // ── Panel pop-out ───────────────────────────────────────────────────────────
 // Pops the left panel, right panel, or chat bar out into its own browser window.
 // The REAL panel DOM node is moved into the pop-out window (not a copy), so it

@@ -1,3 +1,5 @@
+// Written by Irmak Hakman in 2026.
+
 import { fileURLToPath } from 'url';
 import path from 'path';
 import crypto from 'crypto';
