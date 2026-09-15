@@ -1,6 +1,4 @@
-# Written by Irmak Hakman in 2026.
-
-version: '3.8'
+# Written by Irmak Hakman — 2026-09-15 18:08
 
 services:
   app:
@@ -14,11 +12,12 @@ services:
       - NODE_ENV=development
       - PORT=${PORT:-443}
       - MASTER_PASSWORD=${MASTER_PASSWORD:-15243}
-      - WS_URL=${WS_URL}
+      - WS_URL=${WS_URL:-}
     volumes:
       # Mount application code for hot reload (exclude node_modules)
       - ./Application:/app:delegated
-      # Use named volume for node_modules to preserve Linux-compiled binaries
+      # Anonymous volume for node_modules to preserve Linux-compiled binaries
+      # (survives the bind mount above; wiped by `docker-compose down -v`)
       - /app/node_modules
       # SQLite databases are covered by the ./Application mount above:
       #   Application/campaigns.db            the campaign registry
@@ -32,6 +31,3 @@ services:
     restart: unless-stopped
     stdin_open: true
     tty: true
-
-volumes:
-  node_modules:

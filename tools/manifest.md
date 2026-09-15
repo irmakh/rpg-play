@@ -12,6 +12,10 @@
 - **hybrid_search.py** - Combined keyword + semantic search for best results
 - **embed_memory.py** - Generate and manage embeddings for memory entries
 
+## Application Tools (`Application/scripts/`)
+
+- **seed_demo_data.py** - Seeds a fresh demo campaign (prompts for campaign name, DM password, player password) with 4 full player characters, 5 monster stat blocks and 8 treasury items; writes SQLite directly (Node-compatible scrypt hashing replicated in Python) since campaign/password creation is captcha-gated over HTTP. Must run inside the app container: `docker compose exec app python3 scripts/seed_demo_data.py`. See goals/new_dev_machine_setup.md.
+
 ## Application — Multi-Tenant Campaigns
 
 > Every campaign is a separate tenant with its own DM password and its own set of

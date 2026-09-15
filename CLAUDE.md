@@ -195,6 +195,23 @@ Every time frontend JS or CSS files change and are deployed to the server, two v
 
 ---
 
+### **6b. File Header Convention**
+
+Every file you create or edit that supports comments gets a first-line header (right after a shebang `#!` or `<!DOCTYPE html>`, if present):
+
+```
+Written by Irmak Hakman — YYYY-MM-DD HH:MM
+```
+
+using that file type's comment syntax (`//` for JS, `#` for Python/shell/YAML, `<!-- -->` for HTML, `/* */` for CSS).
+
+- **Creating a file:** add this line as the header.
+- **Editing a file that already has a "Written by Irmak Hakman..." header** (the older `in 2026.` form, or this dated form): replace it in place with the current date+time — the header always reflects the most recent edit, not the file's original creation date.
+- **Scope:** source/config files that support comments (JS, CSS, HTML, Python, shell, YAML/docker-compose). Does not apply to formats without comment support (JSON) or to prose documents (`*.md` including `CHANGELOG.md`, goal files, memory files) — those don't get this header.
+- Timestamp is local date+time, `YYYY-MM-DD HH:MM`, no seconds or timezone needed.
+
+---
+
 ### **7. First Run Initialization**
 
 **On first session in a new environment, check if memory infrastructure exists. If not, create it:**
@@ -301,11 +318,17 @@ The system has persistent memory across sessions. Use the correct tool at each s
 
 **SESSION START — mandatory before any work:**
 
+Development happens from two computers, so the local copy of `goals/`, `memory/`, `tools/manifest.md` and `data/memory.db` may be behind whatever the other machine last pushed. Sync before reading memory:
+
 ```bash
+git status   # confirm no uncommitted local changes would be clobbered; stash/commit first if there are
+git pull
 python tools/memory/memory_read.py --format markdown
 ```
 
-This loads MEMORY.md + today's log + yesterday's log in one call. Do not use `cat` on these files directly.
+If `git pull` reports local changes in the way, do NOT discard them — stash (`git stash -u`) or commit first, then pull. If `git pull` reports a merge conflict (most likely in `data/memory.db` or `memory/MEMORY.md` if both machines wrote memory before syncing), stop and resolve it before proceeding — do not guess which side to keep; ask the user if unclear.
+
+`memory_read.py` loads MEMORY.md + today's log + yesterday's log in one call. Do not use `cat` on these files directly.
 
 ---
 
