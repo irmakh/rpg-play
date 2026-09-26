@@ -21,6 +21,71 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [237] — 2026-09-26 — Live updates need a login
+
+- The live connection that keeps every page up to date now requires a login, and is
+  closed when a session ends. **A tab that is not logged in — for example a table left
+  open as a display screen — still loads, but no longer updates by itself.**
+- Hidden tokens, DM-only rolls, notifications and private messages are now delivered
+  only to the people meant to see them.
+- Monsters lined up before combat stay off the players' initiative list until combat
+  starts.
+- The two console screens now pair only with each other (the same login in the same
+  campaign), so two tables using consoles at once no longer interfere.
+- Security hardening.
+
+## [236] — 2026-09-26 — The AI DM is retired
+
+- The AI DM is removed from the app: its button on the character sheet is gone and its
+  pages no longer load. Its code is kept, unchanged, in `retired/aiDM/` at the top of the
+  repository, outside the deployed application.
+- Existing AI DM sessions are not deleted — each campaign's `aiDM.db` stays on disk and
+  is still included in the raw database backup.
+
+**On the production server:** uploading does not remove the old `Application/aiDM/`
+folder. It is no longer used; delete it by hand when convenient (keep `aiDM/aiDM.db` if
+you want the pre-campaigns rollback copy).
+
+## [235] — 2026-09-26 — Stories work again
+
+- **The Stories pages work again.** v233 left them unable to load or save anything. The
+  Stories password now logs you in properly, and a tab already logged in elsewhere goes
+  straight in. **Do not deploy v233 without this release.**
+- Restoring a single-monster export, or an old shop or loot backup, failed with an error.
+  Fixed.
+- Backup restore and export are stricter about the files they will read and write.
+- Formatted chat messages (spell cards, group rolls) are cleaned before they are shown;
+  spell links lose their two small icons as a result.
+- Security hardening.
+
+## [234] — 2026-09-26 — Private messages in chat
+
+Every chat box — the table, the character sheet, the DM panel and both console
+screens — now has a recipient picker next to the input. Leave it on **Everyone** and
+chat works exactly as before; pick the DM or another character and the message goes to
+them alone, shown with a lock and a coloured edge.
+
+- **Who can read one:** the sender, the recipient and the DM. The DM reads players'
+  messages to each other too, by the table's choice, but is not notified about each
+  one — only the recipient gets a bell entry.
+- **The picker goes back to Everyone after each private message**, so nobody keeps
+  whispering when they think they are talking to the room, or the other way round.
+- Sending a private message needs a login. Ordinary messages and dice rolls are
+  unchanged.
+- Chat history on every page now includes the private messages addressed to you, so
+  they are still there after a reload.
+
+## [233] — 2026-09-26 — Security fixes, and the console table screen starts fully
+
+- **Creating a character is now the DM's job.** A new player still needs no account
+  beforehand: the DM adds the character, and the player sets their own password on first
+  login.
+- **Sharing an image in chat needs a login**, and a player's image is always posted under
+  their own character's name. The DM can still post as the selected token.
+- **The console table screen was losing half its startup** — chat drag-and-drop,
+  resizable panels, draggable windows and the chat history did not load there. Fixed.
+- Security hardening.
+
 ## [232] — 2026-09-26 — The campaign login is visible again on the picker
 
 Selecting a campaign showed its name, description and stats but not the login form

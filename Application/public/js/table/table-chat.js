@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-09-26 16:25
 
 // ── Chat image upload ─────────────────────────────────────────────────────────
 function _setChatUploading(thumbObjectUrl) {
@@ -44,8 +44,10 @@ async function uploadChatImage(file, reveal = (typeof isDM === 'function' && isD
       reader.onerror = reject;
       reader.readAsDataURL(file);
     });
-    const headers = { 'Content-Type': 'application/json' };
-    if (reveal && masterPw) headers['X-Master-Password'] = masterPw;
+    // Always send our own credential. Before v233 only the DM's reveal sent one,
+    // so a player's inline image went up with no session at all — which the
+    // endpoint now refuses. authHeaders() picks the DM or character token for us.
+    const headers = authHeaders();
     const res = await fetch('/api/chat/image', {
       method: 'POST',
       headers,
@@ -236,9 +238,11 @@ function postChatInfoCard({ name, meta, text, html, sender } = {}) {
     ? html
     : (text ? esc(String(text)).replace(/\n/g, '<br>') : '');
   if (descHtml) body += `<div style="margin-top:4px">${descHtml}</div>`;
+  // The server keeps html:true only from a logged-in sender (v235), so the card
+  // carries our credential; without it the card would arrive as escaped text.
   return fetch('/api/chat', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: authHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ sender: sender || getChatSender(), type: 'text', message: body, html: true })
   }).catch(() => {});
 }
@@ -278,12 +282,22 @@ async function sendChatInput() {
     _pushRollToChar(getActiveCharLinkedId(), { label: lbl, type: 'norm', detail: `${count}d${sides}(${results.join(',')})${modifier !== 0 ? (modifier > 0 ? '+' : '') + modifier : ''}`, total, isCrit: false, isFail: false, isDamage: false, time: new Date().toISOString() });
     return;
   }
+  // A recipient turns this into a private message: the server needs a credential
+  // to know who it is from, and answers 401 without one. Everyone is the default.
+  const to = typeof chatPmTarget === 'function' ? chatPmTarget() : '';
   try {
-    await fetch('/api/chat', {
+    const res = await fetch('/api/chat', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sender: getChatSender(), type: 'text', message: text })
+      headers: to && typeof chatPmHeaders === 'function' ? chatPmHeaders() : { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sender: getChatSender(), type: 'text', message: text, ...(to ? { to } : {}) })
     });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      alert('Message not sent: ' + (err.error || res.status));
+      return;
+    }
+    // Back to Everyone, so nobody keeps whispering by accident.
+    if (to && typeof resetChatRecipient === 'function') resetChatRecipient();
   } catch {}
 }
 

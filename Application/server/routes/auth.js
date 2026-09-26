@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-09-26 16:25
 
 /**
  * Logging in.
@@ -230,20 +230,33 @@ export default function register(app, ctx) {
       if (lock.locked) return refuseLocked(res, lock.retryAfterSec);
       if (captchaRefused(req, res, account, ev)) return;
 
-      let ok = await checkDmPassword(password, campaignId);
-      if (!ok) {
+      // Whose password it is decides the session this starts. Until v235 this
+      // answered a bare { ok: true } and the page kept a flag in sessionStorage —
+      // which stopped being enough in v233, when /api/stories began requiring a
+      // real session, and left the Stories pages refused on every request.
+      const isDm = await checkDmPassword(password, campaignId);
+      let who = null;
+      if (!isDm) {
         for (const c of ldb.listCharacters()) {
-          if (c.passwordHash && await verifyPasswordAsync(password, c.passwordHash)) { ok = true; break; }
+          if (c.passwordHash && await verifyPasswordAsync(password, c.passwordHash)) { who = c; break; }
         }
       }
-      if (!ok) {
+      if (!isDm && !who) {
         const r = failed(req, account, { ...ev, kind: 'login-fail', alertWho: 'the Stories page' });
         if (r.locked) return refuseLocked(res, r.retryAfterSec);
         return res.status(401).json({ error: 'Wrong password' });
       }
       loginGuard.succeed(ip, account);
-      record(req, { ...ev, kind: 'login' });
-      return res.json({ ok: true });
+      record(req, { ...ev, kind: 'login', ...(who ? { charId: who.id, charName: who.name || '' } : {}) });
+      if (isDm) {
+        const s = startSession(req, { role: 'dm', campaignId });
+        return res.json({ ok: true, role: 'dm', token: s.token, expiresAt: s.expiresAt });
+      }
+      const s = startSession(req, { role: 'character', campaignId, charId: who.id, charName: who.name || '' });
+      return res.json({
+        ok: true, role: 'character', characterId: who.id, characterName: who.name,
+        token: s.token, expiresAt: s.expiresAt,
+      });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
   });
 }

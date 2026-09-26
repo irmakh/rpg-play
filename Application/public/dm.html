@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Written by Irmak Hakman in 2026. -->
+<!-- Written by Irmak Hakman — 2026-09-26 15:58 -->
 <html lang="en" class="lamplit">
 <head>
 <meta charset="UTF-8">
@@ -186,6 +186,7 @@
     <div class="cb">
       <div class="chat-log" id="chat-log"></div>
       <div class="chat-input-row">
+        <select id="chat-to" class="chat-to-sel" style="flex:0 0 auto;width:auto;max-width:118px;min-width:74px;font-size:11px;padding:4px 5px" title="Who can read this message" aria-label="Message recipient"><option value="">Everyone</option></select>
         <input type="text" id="chat-input" class="chat-input" placeholder="Message, /r 2d6+5 or /dmg 1d6 piercing, 2d8 fire…" autocomplete="off" onkeydown="if(event.key==='Enter')sendChatInput()">
         <button class="dice-btn chat-send-btn" onclick="sendChatInput()">Send</button>
       </div>
@@ -333,6 +334,7 @@
      dm.js loads after it and deliberately redefines appendChatEntry/scrollChatLog —
      the DM panel's chat rows carry a delete button the shared renderer has no. -->
 <script src="/js/lib/chat-render.js" defer></script>
+<script src="/js/lib/chat-pm.js" defer></script>
 <script src="/js/monster-stat-block.js" defer></script>
 <script src="/js/lib/realtime.js" defer></script>
 <script src="/js/lib/notifications.js" defer></script>

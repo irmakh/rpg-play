@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-09-26 16:38
 
 /**
  * Campaign data-file store.
@@ -10,7 +10,8 @@
  *       localdb.db     core campaign state (characters, table, treasury, ...)
  *       media.db       chat images + the table map blob
  *       stories.db     the comic/story builder
- *       aiDM.db        AI DM sessions
+ *       aiDM.db        AI DM sessions — retired in v236; existing files are kept
+ *                      (and still included in raw DB backups) but no longer opened
  *
  * Handles are opened lazily on first use and cached for the process lifetime —
  * better-sqlite3 connections are cheap and a campaign that is touched once is
@@ -23,7 +24,6 @@ import { fileURLToPath } from 'url';
 import { openCampaignDb } from './localdb.js';
 import { openMediaDb }    from './mediadb.js';
 import { openStoriesDb }  from './storiesdb.js';
-import { openAiDmDb }     from '../aiDM/db.js';
 import * as cdb           from './campaignsdb.js';
 import { LEGACY_CAMPAIGN_ID } from './campaignsdb.js';
 
@@ -38,7 +38,7 @@ export const DB_FILES = {
   local:   'localdb.db',
   media:   'media.db',
   stories: 'stories.db',
-  aidm:    'aiDM.db',
+  aidm:    'aiDM.db',   // retired module's file — kept so backups carry existing data
 };
 
 export function campaignDir(campaignId) {
@@ -50,7 +50,7 @@ export function campaignDir(campaignId) {
   return path.join(CAMPAIGNS_DIR, String(campaignId));
 }
 
-// campaignId -> { ldb, mdb, sdb, adb }
+// campaignId -> { ldb, mdb, sdb }
 const cache = new Map();
 
 /**
@@ -70,7 +70,6 @@ export function getCampaignData(campaignId) {
     ldb: openCampaignDb(path.join(dir, DB_FILES.local)),
     mdb: openMediaDb(path.join(dir, DB_FILES.media)),
     sdb: openStoriesDb(path.join(dir, DB_FILES.stories)),
-    adb: openAiDmDb(path.join(dir, DB_FILES.aidm)),
   };
   cache.set(campaignId, data);
   return data;
@@ -80,7 +79,7 @@ export function getCampaignData(campaignId) {
 export function releaseCampaign(campaignId) {
   const data = cache.get(campaignId);
   if (!data) return;
-  for (const key of ['ldb', 'mdb', 'sdb', 'adb']) { try { data[key].close(); } catch {} }
+  for (const key of ['ldb', 'mdb', 'sdb']) { try { data[key].close(); } catch {} }
   cache.delete(campaignId);
 }
 

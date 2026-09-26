@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-09-26 16:50
 
 // ── Console Mode Bridge (Screen 1 — Map) ─────────────────────────────────────
 // Loaded only by table-console.html. Opens the secondary info window and keeps
@@ -8,8 +8,16 @@
 let _secondaryWin = null;
 let _consoleEs    = null;
 
+// The console relay needs our session (v237) and only pairs screens held by the
+// same person. EventSource and sendBeacon cannot send headers, so the token
+// rides in the query — _storedSessionToken() is in js/lib/realtime.js.
+function _consoleUrl(path) {
+  const t = typeof _storedSessionToken === 'function' ? _storedSessionToken() : '';
+  return path + '?token=' + encodeURIComponent(t);
+}
+
 function _consolePost(msg) {
-  fetch('/api/console/event', {
+  fetch(_consoleUrl('/api/console/event'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(msg),
@@ -18,7 +26,8 @@ function _consolePost(msg) {
 
 function _consoleStartSSE() {
   if (_consoleEs) _consoleEs.close();
-  _consoleEs = new EventSource('/api/console/events');
+  if (!_storedSessionToken()) return;          // not logged in: the relay would refuse
+  _consoleEs = new EventSource(_consoleUrl('/api/console/events'));
   _consoleEs.onmessage = ev => {
     let d;
     try { d = JSON.parse(ev.data); } catch { return; }

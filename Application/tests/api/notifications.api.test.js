@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-09-26 16:50
 
 /**
  * API integration tests for notifications.
@@ -208,6 +208,15 @@ describe('notifications — emitted by the events themselves', () => {
     expect(sent).toHaveLength(1);
     expect(sent[0].payload.recipients).toEqual(['dm']);
     expect(sent[0].payload.priority).toBe('alert');
+  });
+
+  // v237: the list used to be the only filter — every connection received every
+  // notification and each page hid the ones not its own.
+  it('delivers it only to the recipients’ connections', async () => {
+    const { app, broadcasts } = setup();
+    await select(app, asAliyr, 'char-a');
+    const sent = broadcasts.filter(b => b.channel === 'notification');
+    expect(sent[0].opts).toEqual({ to: ['dm'] });
   });
 });
 

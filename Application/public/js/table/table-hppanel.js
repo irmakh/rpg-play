@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-09-26 16:25
 
 // ── HP Panel ──────────────────────────────────────────────────────────────────
 async function openHpPanel(tok) {
@@ -186,7 +186,8 @@ function _refreshHpPanel(tok) {
       assignRow.style.display = '';
       const currentAssign = tok.assignedCharId || (tok.type !== 'monster' ? tok.linkedId : '');
       assignSel.innerHTML = '<option value="">(Unassigned)</option>' +
-        _charList.map(c => `<option value="${c.id}"${currentAssign === c.id ? ' selected' : ''}>${c.name}</option>`).join('');
+        // Escaped (v235): names are typed by players, and this panel is the DM's.
+        _charList.map(c => `<option value="${esc(c.id)}"${currentAssign === c.id ? ' selected' : ''}>${esc(c.name)}</option>`).join('');
       if (unassignBtn) unassignBtn.style.display = tok.assignedCharId ? '' : 'none';
     } else {
       assignRow.style.display = 'none';
@@ -547,9 +548,10 @@ async function confirmGroupInitRoll() {
       + `<span><span style="font-size:10px;opacity:.55">${esc(r.detail)}</span> <strong style="color:${color};font-size:14px">${r.total}</strong></span></div>`;
   }
   html += `</div>`;
+  // Credential attached: html:true is honoured only from a logged-in sender (v235).
   fetch('/api/chat', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: authHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ sender: getChatSender(), type: 'text', message: html, html: true })
   }).catch(() => {});
 
@@ -945,9 +947,10 @@ async function confirmGroupCheckRoll() {
   }
   html += `</div>`;
 
+  // Credential attached: html:true is honoured only from a logged-in sender (v235).
   fetch('/api/chat', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: authHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ sender: getChatSender(), type: 'text', message: html, html: true })
   }).catch(() => {});
   showToast(`Rolled ${abLabel} ${kindLabel} for ${rows.length} token${rows.length !== 1 ? 's' : ''}.`);

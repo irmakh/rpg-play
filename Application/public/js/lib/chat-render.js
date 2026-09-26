@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-09-26 16:25
 
 // ── Shared chat rendering ─────────────────────────────────────────────────────
 function scrollChatLog() {
@@ -6,10 +6,97 @@ function scrollChatLog() {
   if (log) log.scrollTop = log.scrollHeight;
 }
 
+/**
+ * How a private message is labelled: "Gerion → DM", plus a lock.
+ *
+ * The server has already decided this entry may be read here, so there is no
+ * hiding to do — only making it unmistakable that it was not sent to the room.
+ */
+function _pmHeaderSuffix(e) {
+  if (!e.to) return '';
+  const who = e.toName || (e.to === 'dm' ? 'DM' : 'someone');
+  return `<span style="font-size:10px;color:var(--arc);font-weight:normal"> 🔒 → ${esc(who)}</span>`;
+}
+
+// ── HTML chat messages: what may survive ─────────────────────────────────────
+//
+// Some messages are posted as HTML (spell cards, group rolls). Until v235 their
+// body went into innerHTML exactly as received, and POST /api/chat needed no
+// login — so anyone who could reach the server could post
+// '<img src=x onerror=…>' and run script in every open tab, the DM's included,
+// where the session token sits in sessionStorage. The spell notes inside a card
+// come from the character sheet, which its player controls, so even a logged-in
+// sender's HTML is not trusted.
+//
+// Every HTML body now passes through sanitizeChatHtml(): an allowlist of
+// formatting tags and attributes, everything else unwrapped to its text or
+// dropped with its contents. It runs at RENDER time, so entries already stored
+// in the history are made harmless too. SVG is deliberately not allowed — it is
+// the classic way past a sanitiser — so spell links lose their two small icons.
+
+const CHAT_HTML_TAGS = new Set(['A', 'B', 'STRONG', 'I', 'EM', 'U', 'S', 'BR', 'P', 'DIV', 'SPAN',
+  'UL', 'OL', 'LI', 'SMALL', 'SUP', 'SUB', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'TABLE', 'THEAD',
+  'TBODY', 'TFOOT', 'TR', 'TD', 'TH', 'BLOCKQUOTE', 'CODE', 'PRE', 'HR']);
+// Removed together with everything inside them; any other unknown tag is
+// replaced by its (cleaned) children.
+const CHAT_HTML_DROP = new Set(['SCRIPT', 'STYLE', 'IFRAME', 'FRAME', 'OBJECT', 'EMBED', 'TEMPLATE',
+  'NOSCRIPT', 'SVG', 'MATH', 'TITLE', 'TEXTAREA', 'SELECT', 'OPTION', 'FORM', 'INPUT', 'BUTTON',
+  'LINK', 'META', 'BASE', 'AUDIO', 'VIDEO', 'SOURCE', 'IMG', 'PICTURE', 'CANVAS', 'XMP', 'PLAINTEXT']);
+
+/**
+ * The value an attribute may keep, or null to remove it. Pure, so it can be
+ * tested without a browser (tests/unit/chat-html.test.js).
+ */
+function chatHtmlAttr(tag, name, value) {
+  const n = String(name).toLowerCase();
+  const v = String(value ?? '');
+  if (n === 'class' || n === 'title') return v;
+  if (n === 'style') {
+    // Inline layout and colour only. url() fetches, and the rest are the old
+    // ways CSS could reach script.
+    return /url\s*\(|expression\s*\(|javascript:|@import|behavior\s*:|-moz-binding/i.test(v) ? null : v;
+  }
+  if ((n === 'colspan' || n === 'rowspan') && /^\d{1,3}$/.test(v)) return v;
+  if (tag === 'A' && n === 'href') {
+    const h = v.trim();
+    // http(s), mailto, an in-page anchor or a same-site path — never javascript:,
+    // data: or a protocol-relative '//elsewhere'.
+    return /^(https?:|mailto:|#|\/(?!\/))/i.test(h) ? h : null;
+  }
+  if (tag === 'A' && n === 'target') return v === '_blank' ? '_blank' : null;
+  return null;
+}
+
+/** An HTML message body with only safe formatting left. */
+function sanitizeChatHtml(html) {
+  const doc = new DOMParser().parseFromString(`<body>${String(html || '')}</body>`, 'text/html');
+  // DOMParser builds an inert document: nothing in it runs while it is cleaned.
+  (function clean(parent) {
+    for (const node of [...parent.childNodes]) {
+      if (node.nodeType === 3) continue;                          // text
+      if (node.nodeType !== 1) { node.remove(); continue; }       // comments etc.
+      const tag = node.tagName.toUpperCase();
+      if (CHAT_HTML_DROP.has(tag)) { node.remove(); continue; }
+      clean(node);
+      if (!CHAT_HTML_TAGS.has(tag)) { node.replaceWith(...node.childNodes); continue; }
+      for (const attr of [...node.attributes]) {
+        const keep = chatHtmlAttr(tag, attr.name, attr.value);
+        if (keep === null) node.removeAttribute(attr.name);
+        else if (keep !== attr.value) node.setAttribute(attr.name, keep);
+      }
+      if (tag === 'A' && node.getAttribute('target') === '_blank') node.setAttribute('rel', 'noopener noreferrer');
+    }
+  })(doc.body);
+  return doc.body.innerHTML;
+}
+
 function appendChatEntry(e) {
   if (e.dmOnly && (typeof isDM !== 'function' || !isDM())) return;
   const log = document.getElementById('chat-log');
   if (!log) return;
+  // One entry, once. A private message can arrive twice — the sender gets it back
+  // from its own POST and again on the 'chat-pm' knock.
+  if (e.id && log.querySelector(`[data-entry-id="${CSS.escape(String(e.id))}"]`)) return;
   const rawTs = e.timestamp || '';
   const dt = rawTs ? new Date(rawTs + (rawTs.endsWith('Z') ? '' : 'Z')) : new Date();
   const time = dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -19,16 +106,22 @@ function appendChatEntry(e) {
 
   if (e.type === 'text') {
     div.className = 'chat-entry chat-text';
+    if (e.to) {
+      // Inline rather than a class: five pages render chat and they do not share
+      // a stylesheet.
+      div.style.borderLeft = '2px solid var(--arc)';
+      div.style.paddingLeft = '6px';
+    }
     // Item 9: messages flagged html:true (e.g. spell descriptions with tool links)
     // render their body as raw HTML; all other text is escaped as before.
     // Both paths preserve line breaks: the escaped path via pre-wrap, the html
     // path by turning newlines in the message into <br> (the body is built as
     // single-line concatenated HTML, so the only newlines are content ones).
     const body = e.html
-      ? `<div class="chat-html" style="word-break:break-word;line-height:1.45">${String(e.message || '').replace(/\n/g, '<br>')}</div>`
+      ? `<div class="chat-html" style="word-break:break-word;line-height:1.45">${sanitizeChatHtml(String(e.message || '').replace(/\n/g, '<br>'))}</div>`
       : `<div style="word-break:break-word;white-space:pre-wrap">${esc(e.message || '')}</div>`;
     div.innerHTML = `<div style="display:flex;justify-content:space-between;margin-bottom:2px">
-      <span class="ce-sender">${esc(e.sender || '?')}</span>
+      <span class="ce-sender">${esc(e.sender || '?')}${_pmHeaderSuffix(e)}</span>
       <span style="color:var(--ash);font-size:10px">${time}</span>
     </div>${body}`;
     log.appendChild(div);

@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-09-26 16:38
 
 /**
  * Login helpers shared by every page that asks for a password.
@@ -12,7 +12,7 @@
  *
  * Self-contained on purpose — its own <style>, its own icon — because it is
  * loaded by pages that do not share a stylesheet or the icon sprite: the
- * console PWA, the AI DM and the Stories pages. Colours are the tokens.css
+ * console PWA and the Stories pages. Colours are the tokens.css
  * variables, with fallbacks for a page that does not link tokens.css.
  *
  * Every login answer carries a SESSION TOKEN. Pages store it exactly where they

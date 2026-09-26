@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-09-26 16:38
 
 /**
  * Campaign registry + multi-tenant isolation.
@@ -350,7 +350,8 @@ describe('campaign isolation', () => {
     expect(dataA.ldb._file).not.toBe(dataB.ldb._file);
     expect(dataA.mdb._file).not.toBe(dataB.mdb._file);
     expect(dataA.sdb._file).not.toBe(dataB.sdb._file);
-    expect(dataA.adb._file).not.toBe(dataB.adb._file);
+    // No AI DM handle since v236 — the module is retired and its file is not opened.
+    expect(dataA.adb).toBeUndefined();
   });
 
   it('answers 409 NO_CAMPAIGN when no campaign can be resolved', async () => {

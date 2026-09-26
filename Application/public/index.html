@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Written by Irmak Hakman in 2026. -->
+<!-- Written by Irmak Hakman — 2026-09-26 16:38 -->
 <html lang="en" class="lamplit">
 <head>
 <meta charset="UTF-8">
@@ -39,7 +39,6 @@
       <button class="char-btn char-btn-dm-only" type="button" onclick="location.href='/dm.html'">DM</button>
       <button class="char-btn" type="button" onclick="location.href='/table.html'">Map</button>
       <button class="char-btn" type="button" onclick="location.href='/stories.html'">Stories</button>
-      <button id="btn-ai-dm" class="char-btn" type="button" onclick="goToAIDM()" title="AI Dungeon Master - text adventure">AI DM</button>
     </nav>
 
     <div class="cb-group cb-more">
@@ -868,6 +867,7 @@
 <script src="/js/lib/weather-ui.js" defer></script>
 <script src="/js/lib/dice-engine.js" defer></script>
 <script src="/js/lib/chat-render.js" defer></script>
+<script src="/js/lib/chat-pm.js" defer></script>
 <script src="/js/lib/dnd-data.js" defer></script>
 <script src="/js/lib/realtime.js" defer></script>
 <script src="/js/lib/notifications.js" defer></script>
@@ -913,6 +913,7 @@
       <div class="chat-log" id="chat-log"></div>
       <div class="chat-roller">
         <div class="chat-input-row">
+          <select id="chat-to" class="chat-to-sel" style="flex:0 0 auto;width:auto;max-width:118px;min-width:74px;font-size:11px;padding:4px 5px" title="Who can read this message" aria-label="Message recipient"><option value="">Everyone</option></select>
           <input type="text" id="chat-input" class="chat-input" placeholder="Message, /r 2d6+5 or /dmg 1d6 piercing, 2d8 fire…" autocomplete="off" onkeydown="if(event.key==='Enter')sendChatInput()">
           <button class="dice-btn chat-send-btn" onclick="sendChatInput()">Send</button>
         </div>

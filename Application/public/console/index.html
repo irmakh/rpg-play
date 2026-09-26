@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Written by Irmak Hakman in 2026. -->
+<!-- Written by Irmak Hakman — 2026-09-26 16:25 -->
 <html lang="en" class="lamplit">
 <head>
 <meta charset="UTF-8">
@@ -198,7 +198,8 @@ async function cLoadChars() {
       sel.innerHTML = '<option value="">No characters found</option>';
       return;
     }
-    sel.innerHTML = pcs.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+    // textContent, not an HTML string — a player types their character's name (v235).
+    sel.replaceChildren(...pcs.map(c => { const o = document.createElement('option'); o.value = c.id; o.textContent = c.name; return o; }));
   } catch {
     document.getElementById('char-select').innerHTML = '<option value="">Error loading characters</option>';
   }
@@ -281,9 +282,11 @@ function showLauncher(sess) {
   document.getElementById('view-launcher').style.display = '';
 
   const isDM = sess.role === 'dm';
-  document.getElementById('session-badge').innerHTML = isDM
-    ? 'Logged in as <strong>Dungeon Master</strong>'
-    : `Logged in as <strong>${sess.characterName || 'Character'}</strong>`;
+  // The name goes in as text: it is the player's own choice of character name (v235).
+  const badge = document.getElementById('session-badge');
+  const who = document.createElement('strong');
+  who.textContent = isDM ? 'Dungeon Master' : (sess.characterName || 'Character');
+  badge.replaceChildren('Logged in as ', who);
 
   const btns = document.getElementById('launch-btns');
   btns.innerHTML = '';

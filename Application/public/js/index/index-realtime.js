@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-09-26 16:50
 
 // ── Real-time updates (connectRealtime in js/lib/realtime.js) ─────────────────
 window.addEventListener('load', function startRealtime() {
@@ -35,7 +35,7 @@ window.addEventListener('load', function startRealtime() {
     },
     initiative: async () => {
       try {
-        const res = await fetch('/api/initiative');
+        const res = await fetch('/api/initiative', { headers: indexMasterPw() ? { 'X-Master-Password': indexMasterPw() } : {} });
         if (!res.ok) return;
         initData = await res.json();
         renderInitiativeTracker(true);
@@ -46,10 +46,12 @@ window.addEventListener('load', function startRealtime() {
       scrollChatLog();
       if (!chatOpen) {
         chatUnread++;
-        const badge = document.getElementById('chat-badge');
-        if (badge) { badge.textContent = chatUnread > 9 ? '9+' : String(chatUnread); badge.style.display = ''; }
+        updateChatBadge();
       }
     },
+    // A private message arrives as an id only; chat-pm.js asks the server whether
+    // it is ours and renders it if so.
+    'chat-pm': (d) => { if (typeof onPrivateChatSignal === 'function') onPrivateChatSignal(d && d.id); },
     'chat-clear': () => {
       document.getElementById('chat-log').innerHTML = '';
     },

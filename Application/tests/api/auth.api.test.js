@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-09-26 16:25
 
 /**
  * API tests for logging in: the maths captcha, the lockout, the session token
@@ -257,6 +257,33 @@ describe('POST /api/auth/verify-any (Stories gate)', () => {
   it('needs the captcha', async () => {
     const res = await request(app).post('/api/auth/verify-any').send({ password: 'other' });
     expect(res.status).toBe(400);
+  });
+
+  // v235. Since v233 every /api/stories request needs a session, and the gate
+  // used to answer a bare { ok: true } — so the Stories pages were refused on
+  // every request. These walk the path the pages actually take: gate, then token.
+  it("starts that character's session, which the Stories API accepts", async () => {
+    const res = await verify('other');
+    expect(res.body).toMatchObject({ ok: true, role: 'character', characterId: 'c3', characterName: 'Gerion' });
+    expect(res.body.token).toMatch(/^rpgs_/);
+    expect(sessions.resolve(res.body.token)).toMatchObject({ role: 'character', charId: 'c3' });
+
+    const stories = await request(app).get('/api/stories').set('X-Character-Password', res.body.token);
+    expect(stories.status).toBe(200);
+  });
+
+  it('starts a DM session for the DM password', async () => {
+    const res = await verify(masterPw);
+    expect(res.body).toMatchObject({ ok: true, role: 'dm' });
+    expect(sessions.resolve(res.body.token)).toMatchObject({ role: 'dm' });
+
+    const stories = await request(app).get('/api/stories').set('X-Master-Password', res.body.token);
+    expect(stories.status).toBe(200);
+  });
+
+  it('hands out no token for a wrong password', async () => {
+    const res = await verify('nobody');
+    expect(res.body.token).toBeUndefined();
   });
 });
 

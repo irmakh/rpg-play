@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-09-26 16:38
 
 let _applyingData = false;
 
@@ -307,9 +307,6 @@ function _applySessionUI() {
   adminBtns.forEach(b => b.style.display = isChar ? 'none' : '');
   const sel = document.getElementById('char-select');
   if (sel) sel.style.display = isChar ? 'none' : '';
-  // Hide AI DM button for DM sessions (AI adventures are per-character, not for DM)
-  const aiDmBtn = document.getElementById('btn-ai-dm');
-  if (aiDmBtn) aiDmBtn.style.display = indexIsDM() ? 'none' : '';
   // Show logout button
   const logoutBtn = document.getElementById('char-logout-btn');
   if (logoutBtn) logoutBtn.style.display = '';
@@ -1220,20 +1217,11 @@ function openFeats5e() {
   });
 }
 
-// ── AI DM handoff ─────────────────────────────────────────────────────────────
-function goToAIDM() {
-  const charId   = currentCharId;
-  const password = charId ? (charPasswords[charId] || '') : '';
-  const charName = charId ? (document.getElementById('char-title')?.textContent || '') : '';
-  try {
-    if (charId) {
-      localStorage.setItem('aiDmHandoff', JSON.stringify({
-        charId, charName, password, ts: Date.now()
-      }));
-    }
-  } catch {}
-  location.href = '/ai-dm';
-}
+// ── AI DM (retired v236) ──────────────────────────────────────────────────────
+// The AI DM button handed the character over by writing its credential — since
+// v226 a live session token — into localStorage as 'aiDmHandoff', where it
+// outlived the tab. The feature is gone; clear any handoff an earlier visit left.
+try { localStorage.removeItem('aiDmHandoff'); } catch {}
 
 // ── Theme ─────────────────────────────────────────────────────────────────────
 function applyTheme() {

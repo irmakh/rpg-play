@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-09-26 16:50
 
 /**
  * Builds a fresh Express app wired to an in-memory SQLite database.
@@ -15,6 +15,7 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { makeLdb } from './make-ldb.js';
+import { openStoriesDb } from '../../db/storiesdb.js';
 
 import registerInitiative  from '../../server/routes/initiative.js';
 import registerTable       from '../../server/routes/table.js';
@@ -27,6 +28,7 @@ import registerChat        from '../../server/routes/chat.js';
 import registerNotifs      from '../../server/routes/notifications.js';
 import registerMonsters    from '../../server/routes/monsters.js';
 import registerLoot        from '../../server/routes/loot.js';
+import registerStories     from '../../server/routes/stories.js';
 import makeNotify          from '../../server/notify.js';
 import Database            from 'better-sqlite3';
 import { createSessionStore, createSetupTickets } from '../../lib/sessions.js';
@@ -137,12 +139,30 @@ export function makeApp() {
     },
   });
 
+  // The stories store, one per campaign, exactly as ldb above — the real module
+  // on an in-memory database rather than a stub, so the route talks to real SQL.
+  const storyStores = new Map();
+  const sdbFor = (campaignId = '') => {
+    let store = storyStores.get(campaignId);
+    if (!store) { store = openStoriesDb(':memory:'); storyStores.set(campaignId, store); }
+    return store;
+  };
+  const sdb = new Proxy(Object.create(null), {
+    get(_t, prop) {
+      const target = sdbFor(activeCampaignId);
+      const value = target[prop];
+      return typeof value === 'function' ? value.bind(target) : value;
+    },
+  });
+
   const broadcasts = [];
   // Records the campaign each event was sent to, so tests can prove an event
   // never leaked into another campaign's stream, and whether it was addressed
   // to DM clients only (waiting screens gate the table channel that way).
+  // opts is kept whole (v237): dmOnly / to / forOthers / alsoFor decide which
+  // connections receive an event (lib/realtime-audience.js), so tests assert on it.
   const broadcast = (channel, payload, _campaignId, opts) =>
-    { broadcasts.push({ channel, payload, campaignId: activeCampaignId, dmOnly: !!(opts && opts.dmOnly) }); };
+    { broadcasts.push({ channel, payload, campaignId: activeCampaignId, dmOnly: !!(opts && opts.dmOnly), opts: opts || {} }); };
   // Records every deleteUploadFile() call so image-cleanup can be asserted.
   const deletedFiles = [];
 
@@ -168,6 +188,17 @@ export function makeApp() {
     return pw === TEST_MASTER_PW || auth.masterAuth(req);
   }
 
+  // Anyone logged into the campaign. Same plain-password shortcut as masterAuth
+  // above, so route suites can exercise a session-gated route without logging
+  // in; a real token works too.
+  function sessionAuth(req) {
+    const m = req.headers['x-master-password'];
+    if (m === TEST_MASTER_PW || m === TEST_SUPER_PW) return true;
+    const c = req.headers['x-character-password'];
+    if (c && ldb.listCharacters().some(ch => ch.passwordHash && verifyPassword(c, ch.passwordHash))) return true;
+    return auth.sessionAuth(req);
+  }
+
   async function charAuth(charId, req) {
     const char = ldb.getCharacter(charId);
     if (!char) return 404;
@@ -185,11 +216,15 @@ export function makeApp() {
   const mediaDbStub = makeMediaDbStub();
   const _mediaGetStub = { get: () => null };
   const _mapUpsertStub = { run: () => {} };
+  // Every shared-media row a route writes, so image uploads can be asserted.
+  const sharedMedia = [];
 
   const ctx = {
     ldb,
+    sdb,
     genId: () => crypto.randomUUID(),
     masterAuth,
+    sessionAuth,
     charAuth,
     getCharacter: (id) => ldb.getCharacter(id),
     // The async names production uses; the sync mirrors above do the work.
@@ -218,6 +253,7 @@ export function makeApp() {
     mediaDb: mediaDbStub,
     _mediaGet: _mediaGetStub,
     _mapUpsert: _mapUpsertStub,
+    insertSharedMedia: (id, mimeType, data) => { sharedMedia.push({ id, mimeType, data: String(data) }); },
     broadcast,
     crypto,
     path,
@@ -244,9 +280,10 @@ export function makeApp() {
   registerNotifs(app, ctx);
   registerMonsters(app, ctx);
   registerLoot(app, ctx);
+  registerStories(app, ctx);
 
   return {
     app, ldb, ldbFor, masterPw: TEST_MASTER_PW, hashPassword, broadcasts, deletedFiles, parkedCampaigns,
-    sessions, setupTickets, captcha, loginGuard, auditEvents,
+    sessions, setupTickets, captcha, loginGuard, auditEvents, sharedMedia,
   };
 }

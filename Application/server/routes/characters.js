@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-09-26 14:53
 
 import { clientIp } from '../../lib/login-guard.js';
 
@@ -317,8 +317,15 @@ export default function register(app, ctx) {
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
   });
 
+  // DM-only. Until v233 this was the one write on a character that asked for
+  // nothing at all — its PUT/PATCH/DELETE neighbours have always used charAuth —
+  // so anyone who could reach the server could add characters to any campaign.
+  // A new player still needs no account: the DM creates the character and the
+  // player sets their own password on first login, through the existing
+  // no-password setup step on the campaign picker.
   app.post('/api/characters', async (req, res) => {
     try {
+      if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
       const { name, char_type, password } = req.body;
       if (!name || !name.trim()) return res.status(400).json({ error: 'Name required' });
       const type = char_type === 'npc' ? 'npc' : 'pc';

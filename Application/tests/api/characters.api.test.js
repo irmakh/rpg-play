@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-09-26 14:53
 
 /**
  * HTTP integration tests for /api/characters endpoints.
@@ -63,9 +63,30 @@ describe('GET /api/characters', () => {
 
 // ── POST /api/characters ──────────────────────────────────────────────────────
 describe('POST /api/characters', () => {
+  // Creating a character is DM-only since v233. It used to be the one write on a
+  // character that asked for nothing, so anyone who could reach the server could
+  // add characters to any campaign.
+  it('refuses to create a character without a credential', async () => {
+    const { app, ldb } = makeApp();
+    const res = await request(app).post('/api/characters').send({ name: 'Intruder' });
+    expect(res.status).toBe(401);
+    expect(ldb.listCharacters().some(c => c.name === 'Intruder')).toBe(false);
+  });
+
+  it('refuses to create a character for a player session', async () => {
+    const { app, ldb, hashPassword } = makeApp();
+    const mine = seedChar(ldb, hashPassword, { name: 'Mine', password: 'secret' });
+    const res = await request(app).post('/api/characters')
+      .set('X-Character-Id', mine.id)
+      .set('X-Character-Password', 'secret')
+      .send({ name: 'Smuggled' });
+    expect(res.status).toBe(401);
+    expect(ldb.listCharacters().some(c => c.name === 'Smuggled')).toBe(false);
+  });
+
   it('creates a PC character and returns its id and name', async () => {
     const { app } = makeApp();
-    const res = await request(app).post('/api/characters').send({ name: 'Aria' });
+    const res = await dm(request(app).post('/api/characters')).send({ name: 'Aria' });
     expect(res.status).toBe(200);
     expect(res.body.name).toBe('Aria');
     expect(res.body.id).toBeDefined();
@@ -75,33 +96,33 @@ describe('POST /api/characters', () => {
 
   it('creates an NPC character when char_type is npc', async () => {
     const { app } = makeApp();
-    const res = await request(app).post('/api/characters').send({ name: 'Innkeeper', char_type: 'npc' });
+    const res = await dm(request(app).post('/api/characters')).send({ name: 'Innkeeper', char_type: 'npc' });
     expect(res.status).toBe(200);
     expect(res.body.char_type).toBe('npc');
   });
 
   it('returns 400 when name is missing', async () => {
     const { app } = makeApp();
-    const res = await request(app).post('/api/characters').send({});
+    const res = await dm(request(app).post('/api/characters')).send({});
     expect(res.status).toBe(400);
   });
 
   it('returns 400 when name is only whitespace', async () => {
     const { app } = makeApp();
-    const res = await request(app).post('/api/characters').send({ name: '   ' });
+    const res = await dm(request(app).post('/api/characters')).send({ name: '   ' });
     expect(res.status).toBe(400);
   });
 
   it('creates a password-protected character when password is supplied', async () => {
     const { app } = makeApp();
-    const res = await request(app).post('/api/characters').send({ name: 'Rogue', password: 'secret' });
+    const res = await dm(request(app).post('/api/characters')).send({ name: 'Rogue', password: 'secret' });
     expect(res.status).toBe(200);
     expect(res.body.has_password).toBe(true);
   });
 
   it('persists the character in the database', async () => {
     const { app, ldb } = makeApp();
-    const res = await request(app).post('/api/characters').send({ name: 'Druid' });
+    const res = await dm(request(app).post('/api/characters')).send({ name: 'Druid' });
     expect(ldb.getCharacter(res.body.id)).not.toBeNull();
   });
 });
@@ -135,7 +156,7 @@ describe('GET /api/characters/:id', () => {
   it('returns 200 when the correct character password is supplied', async () => {
     const { app, ldb } = makeApp();
     // Create via API so password is properly hashed
-    const createRes = await request(app).post('/api/characters').send({ name: 'Rogue', password: 'mypassword' });
+    const createRes = await dm(request(app).post('/api/characters')).send({ name: 'Rogue', password: 'mypassword' });
     const id = createRes.body.id;
     const res = await request(app)
       .get(`/api/characters/${id}`)
@@ -145,7 +166,7 @@ describe('GET /api/characters/:id', () => {
 
   it('returns 200 when the master password is used instead of the character password', async () => {
     const { app } = makeApp();
-    const createRes = await request(app).post('/api/characters').send({ name: 'Wizard', password: 'charpass' });
+    const createRes = await dm(request(app).post('/api/characters')).send({ name: 'Wizard', password: 'charpass' });
     const id = createRes.body.id;
     const res = await request(app)
       .get(`/api/characters/${id}`)
@@ -155,7 +176,7 @@ describe('GET /api/characters/:id', () => {
 
   it('returns 401 when the wrong password is supplied', async () => {
     const { app } = makeApp();
-    const createRes = await request(app).post('/api/characters').send({ name: 'Bard', password: 'correct' });
+    const createRes = await dm(request(app).post('/api/characters')).send({ name: 'Bard', password: 'correct' });
     const id = createRes.body.id;
     const res = await request(app)
       .get(`/api/characters/${id}`)
@@ -220,7 +241,7 @@ describe('PUT /api/characters/:id', () => {
 
   it('requires correct password for a locked character', async () => {
     const { app } = makeApp();
-    const createRes = await request(app).post('/api/characters').send({ name: 'Paladin', password: 'holy' });
+    const createRes = await dm(request(app).post('/api/characters')).send({ name: 'Paladin', password: 'holy' });
     const id = createRes.body.id;
 
     // Without password
@@ -305,7 +326,7 @@ describe('PATCH /api/characters/:id', () => {
 
   it('requires correct password for a locked character', async () => {
     const { app } = makeApp();
-    const createRes = await request(app).post('/api/characters').send({ name: 'Paladin', password: 'holy' });
+    const createRes = await dm(request(app).post('/api/characters')).send({ name: 'Paladin', password: 'holy' });
     const id = createRes.body.id;
     const res1 = await request(app).patch(`/api/characters/${id}`).send({ patch: { str: '1' } });
     expect(res1.status).toBe(401);
@@ -376,7 +397,7 @@ describe('PUT /api/characters/:id/password', () => {
 
   it('clears a password when new_password is empty', async () => {
     const { app } = makeApp();
-    const createRes = await request(app).post('/api/characters').send({ name: 'Sorcerer', password: 'old' });
+    const createRes = await dm(request(app).post('/api/characters')).send({ name: 'Sorcerer', password: 'old' });
     const id = createRes.body.id;
     const res = await request(app).put(`/api/characters/${id}/password`)
       .set('X-Character-Password', 'old')
@@ -387,7 +408,7 @@ describe('PUT /api/characters/:id/password', () => {
 
   it('returns 401 when current_password is wrong', async () => {
     const { app } = makeApp();
-    const createRes = await request(app).post('/api/characters').send({ name: 'Ranger', password: 'correct' });
+    const createRes = await dm(request(app).post('/api/characters')).send({ name: 'Ranger', password: 'correct' });
     const id = createRes.body.id;
     const res = await request(app).put(`/api/characters/${id}/password`)
       .send({ current_password: 'wrong', new_password: 'new' });
@@ -396,7 +417,7 @@ describe('PUT /api/characters/:id/password', () => {
 
   it('master password bypasses current_password check', async () => {
     const { app } = makeApp();
-    const createRes = await request(app).post('/api/characters').send({ name: 'Cleric', password: 'old' });
+    const createRes = await dm(request(app).post('/api/characters')).send({ name: 'Cleric', password: 'old' });
     const id = createRes.body.id;
     const res = await request(app).put(`/api/characters/${id}/password`)
       .set('X-Character-Password', TEST_MASTER_PW)
@@ -429,14 +450,14 @@ describe('DELETE /api/characters/:id', () => {
 
   it('returns 401 when deleting a locked character without a password', async () => {
     const { app } = makeApp();
-    const createRes = await request(app).post('/api/characters').send({ name: 'Warlock', password: 'dark' });
+    const createRes = await dm(request(app).post('/api/characters')).send({ name: 'Warlock', password: 'dark' });
     const res = await request(app).delete(`/api/characters/${createRes.body.id}`);
     expect(res.status).toBe(401);
   });
 
   it('deletes a locked character when the correct password is supplied', async () => {
     const { app, ldb } = makeApp();
-    const createRes = await request(app).post('/api/characters').send({ name: 'Warlock', password: 'dark' });
+    const createRes = await dm(request(app).post('/api/characters')).send({ name: 'Warlock', password: 'dark' });
     const id = createRes.body.id;
     const res = await request(app)
       .delete(`/api/characters/${id}`)
@@ -447,7 +468,7 @@ describe('DELETE /api/characters/:id', () => {
 
   it('deletes a locked character when master password is supplied', async () => {
     const { app, ldb } = makeApp();
-    const createRes = await request(app).post('/api/characters').send({ name: 'Necromancer', password: 'bones' });
+    const createRes = await dm(request(app).post('/api/characters')).send({ name: 'Necromancer', password: 'bones' });
     const id = createRes.body.id;
     const res = await request(app)
       .delete(`/api/characters/${id}`)

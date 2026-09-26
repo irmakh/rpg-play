@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-09-26 16:50
 
 // ── Theme ─────────────────────────────────────────────────────────────────────
 // The classic HUD has been retired — the modern HUD is the only theme now.
@@ -183,7 +183,7 @@ window.addEventListener('load', async () => {
       // Authenticated so the server can decide what this caller may see while a
       // waiting screen is up — see fetchAll() in table-realtime.js.
       fetch('/api/table', { headers: authHeaders() }),
-      fetch('/api/initiative'),
+      fetch('/api/initiative', { headers: authHeaders() }),   // pre-combat monsters are the DM's (v237)
       fetch('/api/characters')
     ]);
 
@@ -223,17 +223,30 @@ window.addEventListener('load', async () => {
 
   fetchDrawings();
   startSSE();
-  loadTableWeather();
-  loadTableHandouts();
-  initMusicPlayer();
+  // Weather, handouts and music live in modules the console table screen
+  // deliberately does not load (console/table-console.html omits table-weather.js,
+  // table-handouts.js and table-music.js). Unguarded, the first of them threw a
+  // ReferenceError that aborted the rest of this function — so chat drag-and-drop,
+  // the panel/modal setup below and the chat history fetch never ran there.
+  // table-realtime.js guards the same call the same way.
+  if (typeof loadTableWeather === 'function') loadTableWeather();
+  if (typeof loadTableHandouts === 'function') loadTableHandouts();
+  if (typeof initMusicPlayer === 'function') initMusicPlayer();
   initChatDragDrop();
   initResizablePanels();
   initDraggableModals();
   initModalBackdrops();
 
   // Load chat history in background — non-blocking so map and SSE start immediately
-  fetch('/api/chat', { headers: isDM() ? { 'X-Master-Password': masterPw } : {} })
+  // Send our own credential whoever we are: the server decides which private
+  // messages belong in this history, and a player who sends nothing gets only the
+  // public ones back.
+  fetch('/api/chat', { headers: authHeaders() })
     .then(r => r.ok ? r.json() : [])
     .then(entries => { entries.forEach(appendChatEntry); scrollChatLog(); })
     .catch(() => {});
+
+  if (typeof initChatRecipients === 'function') {
+    initChatRecipients().then(() => bindChatRecipientPicker());
+  }
 });

@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-09-26 16:50
 
 /**
  * Notifications — the emitter.
@@ -98,7 +98,7 @@ export default function makeNotify(ctx) {
             id: prev.id, recipients,
             kind: prev.kind, priority: prev.priority, title, body,
             data: n.data || {}, actorName: prev.actorName, createdAt, count,
-          });
+          }, undefined, { to: recipients });
           return prev.id;
         }
       }
@@ -118,14 +118,16 @@ export default function makeNotify(ctx) {
       for (const r of recipients) ldb.addNotificationRecipient(genId(), id, r);
       ldb.pruneNotifications(KEEP_EVENTS);
 
-      // One event on the wire carrying its recipient list; each client keeps
-      // only what is addressed to it. Sending per-recipient events instead
-      // would put another client's business on everyone else's connection.
+      // One event, delivered only to the connections it is addressed to. The
+      // server knows who each connection is since v237 (lib/realtime-audience.js);
+      // before that this went to every socket in the campaign with its recipient
+      // list, and each page merely hid what was not its own — so anyone watching
+      // the socket read everyone's notifications.
       broadcast('notification', {
         id, recipients,
         kind: row.kind, priority: row.priority, title: row.title, body: row.body,
         data: n.data || {}, actorName: row.actorName, createdAt,
-      });
+      }, undefined, { to: recipients });
       return id;
     } catch (err) {
       // Never let announcing a thing break the thing.

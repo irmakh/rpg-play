@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-09-26 14:53
 
 /**
  * Token-based authorisation checks.
@@ -124,5 +124,22 @@ export function createAuth({ sessions, campaignIdFromReq, getCharacter }) {
     return !!sessionFromReq(req);
   }
 
-  return { sessionFromReq, masterAuth, campaignDmAuth, isAdmin, charAuth, callerFor, credentialsValid, hasAnySession };
+  /**
+   * Anyone logged into THIS campaign — its DM, any of its characters, or the
+   * super-admin. For features the whole table shares but a stranger may not
+   * touch.
+   *
+   * Ask for this explicitly. The session gate (lib/security-middleware.js) only
+   * validates a credential when one is actually sent, so a request carrying no
+   * header at all reaches the route unchallenged — a route that wants "logged
+   * in" has to say so itself.
+   */
+  function sessionAuth(req) {
+    const s = sessionFromReq(req);
+    if (!s) return false;
+    if (s.role === 'admin') return true;
+    return s.campaignId === String(campaignIdFromReq(req) || '');
+  }
+
+  return { sessionFromReq, masterAuth, campaignDmAuth, isAdmin, charAuth, callerFor, credentialsValid, hasAnySession, sessionAuth };
 }

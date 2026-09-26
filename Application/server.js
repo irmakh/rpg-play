@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-09-26 14:23
+// Written by Irmak Hakman — 2026-09-26 16:50
 
 import 'dotenv/config';
 import express from 'express';
@@ -21,7 +21,7 @@ import { createAuth } from './lib/auth.js';
 import { securityHeaders, jsonBody, bodyErrors, sessionGate } from './lib/security-middleware.js';
 import {
   requestContext, currentCampaignId, currentCampaign,
-  ldb as ldbProxy, sdb as sdbProxy, adb as adbProxy,
+  ldb as ldbProxy, sdb as sdbProxy,
   mediaDb as mediaDbProxy, mediaGet as mediaGetProxy,
   mapUpsert as mapUpsertProxy, insertSharedMedia,
 } from './lib/request-context.js';
@@ -44,7 +44,11 @@ import registerHandouts   from './server/routes/handouts.js';
 import registerNotifs     from './server/routes/notifications.js';
 import registerMaintenance from './server/routes/maintenance.js';
 import makeNotify         from './server/notify.js';
-import registerAiDM      from './aiDM/routes.js';
+// The AI DM was retired in v236 and its code moved, unchanged, to
+// retired/aiDM/ at the repo root — outside Application/, so it no longer
+// deploys. It is not registered: none of its /ai-dm or /api/ai-dm routes exist.
+import { resolveUploadPath, mimeToExt, safeFileId } from './lib/upload-paths.js';
+import { identityFromSession, payloadFor, tokenFromQuery } from './lib/realtime-audience.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -148,9 +152,23 @@ const STORY_IMAGES_DIR = path.join(__dirname, 'public', 'story-images');
 fs.mkdirSync(STORIES_DIR, { recursive: true });
 fs.mkdirSync(STORY_IMAGES_DIR, { recursive: true });
 
+/**
+ * The file behind an upload URL, if this campaign may touch it — see
+ * lib/upload-paths.js. Every read, write and delete below goes through this;
+ * a URL is data from a database or a backup, never a path to be trusted.
+ */
+function uploadPath(fileUrl, forWrite = false) {
+  let campaignId = '';
+  try { campaignId = String(currentCampaignId() || ''); } catch {}
+  return resolveUploadPath(UPLOADS_DIR, fileUrl, { campaignId, forWrite });
+}
+
+// Used by backup EXPORT. Unchecked, a record pointing at '/uploads/../../.env'
+// copied the server's secrets into the next backup the DM downloaded.
 function readUploadAsBase64(fileUrl) {
-  if (!fileUrl || !fileUrl.startsWith('/uploads/')) return null;
-  try { return fs.readFileSync(path.join(__dirname, 'public', fileUrl)).toString('base64'); } catch { return null; }
+  const abs = uploadPath(fileUrl);
+  if (!abs) return null;
+  try { return fs.readFileSync(abs).toString('base64'); } catch { return null; }
 }
 
 /**
@@ -176,10 +194,16 @@ function uploadSubPath(subdir) {
   return cid ? `${cid}/${subdir}` : subdir;
 }
 
-const MIME_TO_EXT = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/gif': 'gif', 'image/webp': 'webp', 'image/svg+xml': 'svg', 'audio/mpeg': 'mp3', 'audio/x-m4a': 'm4a', 'video/mpeg': 'mpeg' };
-function mimeToExt(mimeType) { return MIME_TO_EXT[mimeType] || mimeType.split('/')[1] || 'bin'; }
+// mimeToExt() lives in lib/upload-paths.js: a fixed table, 'bin' for anything
+// else. It used to fall back to the MIME type's own second half, so a restored
+// record claiming 'text/html' produced an .html file served from this origin.
+//
+// The id becomes the filename, so it is reduced to [A-Za-z0-9_-] first — a
+// restored backup supplies it, and '../../server' used to be a valid one.
 function saveUploadFile(subdir, id, mimeType, b64) {
-  const filename = `${id}.${mimeToExt(mimeType)}`;
+  const safeId = safeFileId(id);
+  if (!safeId) throw new Error('Invalid upload id');
+  const filename = `${safeId}.${mimeToExt(mimeType)}`;
   const rel = uploadSubPath(subdir);
   const dir = path.join(UPLOADS_DIR, rel);
   fs.mkdirSync(dir, { recursive: true });
@@ -187,8 +211,9 @@ function saveUploadFile(subdir, id, mimeType, b64) {
   return `/uploads/${rel}/${filename}`;
 }
 function deleteUploadFile(fileUrl) {
-  if (!fileUrl || !fileUrl.startsWith('/uploads/')) return;
-  try { fs.unlinkSync(path.join(__dirname, 'public', fileUrl)); } catch {}
+  const abs = uploadPath(fileUrl);
+  if (!abs) return;              // outside uploads, or another campaign's file
+  try { fs.unlinkSync(abs); } catch {}
 }
 
 const IMAGE_MIME = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp']);
@@ -197,7 +222,11 @@ function extToMime(fileUrl) {
   return EXT_TO_MIME[path.extname(fileUrl || '').slice(1).toLowerCase()] || 'image/jpeg';
 }
 
-async function processImageSizes(mimeType, buffer, subdir, baseId) {
+async function processImageSizes(mimeType, buffer, subdir, rawBaseId) {
+  // Restore derives the base id from a URL inside the backup; same rule as
+  // saveUploadFile — it becomes a filename, so nothing but [A-Za-z0-9_-].
+  const baseId = safeFileId(rawBaseId);
+  if (!baseId) throw new Error('Invalid upload id');
   const rel = uploadSubPath(subdir);          // per-campaign; see uploadSubPath
   const dir = path.join(UPLOADS_DIR, rel);
   fs.mkdirSync(dir, { recursive: true });
@@ -283,6 +312,7 @@ const auth = createAuth({
 });
 const masterAuth = auth.masterAuth;
 const charAuth   = auth.charAuth;
+const sessionAuth = auth.sessionAuth;
 
 // Expired sessions, captchas, tickets and lock records go every few minutes.
 setInterval(() => {
@@ -369,31 +399,35 @@ const consoleSseClients = new Set();
  * a missed refresh.
  */
 /**
- * @param {object}  [opts]
- * @param {boolean} [opts.dmOnly]  Deliver only to clients that connected as the
- *   DM. Used while a waiting screen is up, so the DM rearranging the map does
- *   not stream to the players being held on the image.
+ * @param {object}  [opts]  who receives it — see payloadFor() in
+ *   lib/realtime-audience.js, which decides per connection:
+ *   dmOnly     only this campaign's DM (or the super-admin)
+ *   to         only these notification keys ('dm' or character ids)
+ *   forOthers  what the connections left out by dmOnly get instead
+ *   alsoFor    one character let through dmOnly (a hidden token's owner)
  *
- *   Note what this is and is not: `role` comes from a query parameter the
- *   client supplies (clientMetaFromReq), so it routes honest clients and
- *   nothing more. The real guarantee is on the authenticated paths — the map
- *   and the table payload are gated on the DM password, so a crafted socket
- *   claiming role=dm still cannot fetch either.
+ * Every connection's identity comes from the session it presented (v237), so
+ * these filters are enforced here, on the server. Before, dmOnly trusted a role
+ * the page wrote into its own URL, and everything else went to everyone.
  */
 function broadcast(eventName, payload = {}, campaignId = currentCampaignId(), opts = {}) {
-  const dmOnly = !!opts.dmOnly;
-  const sseMsg = `event: ${eventName}\ndata: ${JSON.stringify(payload)}\n\n`;
+  // At most two distinct payloads (the event and forOthers), so serialise each once.
+  const sse = new Map(), wsm = new Map();
+  const sseOf = (p) => { if (!sse.has(p)) sse.set(p, `event: ${eventName}
+data: ${JSON.stringify(p)}
+
+`); return sse.get(p); };
+  const wsOf  = (p) => { if (!wsm.has(p)) wsm.set(p, JSON.stringify({ event: eventName, data: p })); return wsm.get(p); };
   for (const res of [...sseClients]) {
-    if (res._meta?.campaignId !== campaignId) continue;
-    if (dmOnly && res._meta?.role !== 'dm') continue;
-    try { res.write(sseMsg); } catch { sseClients.delete(res); }
+    const p = payloadFor(res._meta?.identity, campaignId, payload, opts);
+    if (p === null) continue;
+    try { res.write(sseOf(p)); } catch { sseClients.delete(res); }
   }
-  const wsMsg = JSON.stringify({ event: eventName, data: payload });
   for (const ws of [...wsClients]) {
     if (ws.readyState !== 1) { wsClients.delete(ws); continue; }
-    if (ws._meta?.campaignId !== campaignId) continue;
-    if (dmOnly && ws._meta?.role !== 'dm') continue;
-    ws.send(wsMsg);
+    const p = payloadFor(ws._meta?.identity, campaignId, payload, opts);
+    if (p === null) continue;
+    ws.send(wsOf(p));
   }
 }
 
@@ -456,7 +490,7 @@ const MAX_MEDIA_BYTES = 25 * 1024 * 1024;
 // Bump this number whenever frontend JS or CSS files change.
 // Also bump CACHE in public/sw.js to the same value.
 // Both must always match. See deployment notes in CLAUDE.md.
-const FRONTEND_VERSION = 232;
+const FRONTEND_VERSION = 237;
 
 // ── Express app ───────────────────────────────────────────────────────────────
 const app = express();
@@ -467,10 +501,13 @@ app.disable('x-powered-by');
 // vars the listener reads at the bottom of this file.
 app.use(securityHeaders({ hsts: !!(process.env.SSL_KEY && process.env.SSL_CERT) }));
 
-// Body size by caller: a live session — or one of the upload routes that has no
-// login today — may send up to 200 MB; anyone else gets 1 MB.
-const OPEN_UPLOAD_ROUTES = [/^\/api\/stories\//, /^\/api\/chat\/image$/];
-app.use(jsonBody({ bigPaths: OPEN_UPLOAD_ROUTES, hasSession: req => auth.hasAnySession(req) }));
+// Body size by caller: a live session may send up to 200 MB, anyone else 1 MB.
+//
+// There used to be a bigPaths exemption for /api/stories/ and /api/chat/image,
+// because neither had a login. As of v233 both do, so the exemption is gone —
+// an anonymous caller can no longer push a 200 MB body through the parser only
+// to be refused by the route afterwards.
+app.use(jsonBody({ hasSession: req => auth.hasAnySession(req) }));
 app.use(bodyErrors());
 
 // ── Campaign context ──────────────────────────────────────────────────────────
@@ -649,6 +686,13 @@ function clientMetaFromReq(req, transport) {
   const loginAt = q.loginAt ? (parseInt(q.loginAt) || null) : null;
   // Which campaign this client is watching — broadcast() only reaches matching clients.
   const campaign = resolveCampaignForReq(req);
+  // Who is listening comes from the SESSION the connection presents (v237), not
+  // from the role/charId the page puts in its own URL — those were typed by the
+  // client, and the dmOnly filter used to believe them. A connection without a
+  // live session for this campaign has identity null and is refused by its
+  // endpoint. (The token itself is kept on the connection, never in _meta,
+  // which the maintenance page lists.)
+  const identity = identityFromSession(sessions.resolve(tokenFromQuery(q)), campaign ? campaign.id : '');
   return {
     ip:        _cap(ip, 64),
     transport,
@@ -657,9 +701,10 @@ function clientMetaFromReq(req, transport) {
     connectedAt: Date.now(),
     loginAt,
     page:      _cap(q.page, 256),
-    role:      _cap(q.role || 'none', 16),  // 'dm' | 'character' | 'none'
-    charId:    _cap(q.charId, 64),
-    charName:  _cap(q.charName, 128),
+    identity,
+    role:      identity ? identity.role : 'none',    // 'dm' | 'admin' | 'character' | 'none'
+    charId:    identity ? identity.charId : '',
+    charName:  identity ? _cap(identity.charName, 128) : '',
     ver:       _cap(q.ver, 16),             // frontend version the client loaded
     userAgent: _cap(req.headers['user-agent'], 512),
   };
@@ -667,14 +712,28 @@ function clientMetaFromReq(req, transport) {
 
 // ── SSE endpoint ──────────────────────────────────────────────────────────────
 app.get('/api/events', (req, res) => {
+  // Login required (v237): the stream carries the table's state, and anyone
+  // could open it before. The code matches the fetch interceptor's, so a page
+  // whose session has lapsed goes to the login page.
+  const meta = clientMetaFromReq(req, 'sse');
+  if (!meta.identity) return res.status(401).json({ error: 'Your session has expired. Please log in again.', code: 'SESSION_EXPIRED' });
+  res._token = tokenFromQuery(req.query);
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
   res.flushHeaders();
   res.write(': connected\n\n');
-  res._meta = clientMetaFromReq(req, 'sse');
+  res._meta = meta;
   sseClients.add(res);
   const hb = setInterval(() => {
+    // A session ended on the maintenance page, logged out elsewhere or expired
+    // stops the stream too — it used to keep flowing to an open tab forever.
+    // (An open connection counts as activity for the session's idle timer.)
+    if (!sessions.resolve(res._token)) {
+      clearInterval(hb); sseClients.delete(res);
+      try { res.end(); } catch {}
+      return;
+    }
     try { res.write(': heartbeat\n\n'); } catch { clearInterval(hb); sseClients.delete(res); }
   }, 25000);
   req.on('close', () => { clearInterval(hb); sseClients.delete(res); });
@@ -713,7 +772,26 @@ app.post('/api/maintenance/reload', (req, res) => {
 // server/routes/maintenance.js, paged, beside the blocked-address routes.
 
 // ── Console relay ─────────────────────────────────────────────────────────────
+// ── Console relay ─────────────────────────────────────────────────────────────
+// Carries messages between the two console screens (table-console and
+// table-secondary): which token is selected, a snapshot of the table. Until
+// v237 it needed no login and every message reached every console listener in
+// EVERY campaign — so two campaigns' consoles overwrote each other's second
+// screen, and the DM's snapshot, hidden tokens included, went to anyone who
+// opened the stream. Now both ends present a session (?token=, since neither
+// EventSource nor sendBeacon can send headers) and a message reaches only the
+// listeners of the same campaign and the same person: the DM's screens, or one
+// character's.
+function consoleIdentity(req) {
+  const campaign = resolveCampaignForReq(req);
+  return identityFromSession(sessions.resolve(tokenFromQuery(req.query)), campaign ? campaign.id : '');
+}
+const sameConsoleOwner = (a, b) => !!a && !!b && a.campaignId === b.campaignId && a.key === b.key;
+
 app.get('/api/console/events', (req, res) => {
+  const identity = consoleIdentity(req);
+  if (!identity) return res.status(401).json({ error: 'Log in to use the console.', code: 'SESSION_EXPIRED' });
+  res._consoleId = identity;
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
@@ -726,15 +804,18 @@ app.get('/api/console/events', (req, res) => {
   req.on('close', () => { clearInterval(hb); consoleSseClients.delete(res); });
 });
 app.post('/api/console/event', (req, res) => {
+  const from = consoleIdentity(req);
+  if (!from) return res.status(401).json({ error: 'Log in to use the console.' });
   const d = req.body;
   if (!d || !d.type) return res.status(400).json({ error: 'missing type' });
-  // Credentials never travel through this relay: it needs no login and reaches
-  // every console listener in every campaign. It used to carry the whole
-  // session (once the plain DM password). The two console screens now share a
+  // Credentials never travel through this relay. It used to carry the whole
+  // session (once the plain DM password); the two console screens now share a
   // login through the browser (BroadcastChannel) instead, same device only.
+  // Session messages stay refused even though the relay is login-scoped now.
   if (/^SESSION_/.test(String(d.type))) return res.status(400).json({ error: 'session messages are not relayed' });
   const msg = `data: ${JSON.stringify(d)}\n\n`;
   for (const client of [...consoleSseClients]) {
+    if (!sameConsoleOwner(client._consoleId, from)) continue;
     try { client.write(msg); } catch { consoleSseClients.delete(client); }
   }
   res.json({ ok: true });
@@ -747,11 +828,11 @@ const ctx = {
   // Broadcast
   broadcast, sseClients, consoleSseClients, wsClients,
   // Auth — sessions, captcha and lockout; passwords are only checked at login
-  masterAuth, charAuth, getCharacter, auth,
+  masterAuth, charAuth, sessionAuth, getCharacter, auth,
   checkDmPassword, hashPasswordAsync, verifyPasswordAsync,
   sessions, setupTickets, captcha, loginGuard, audit, TRUST_PROXY,
   // File helpers
-  processImageSizes, saveUploadFile, deleteUploadFile, readUploadAsBase64,
+  processImageSizes, saveUploadFile, deleteUploadFile, readUploadAsBase64, uploadPath,
   mimeToExt, extToMime,
   // Media DB
   mediaDb, insertSharedMedia, _mediaGet, _mapUpsert,
@@ -802,7 +883,6 @@ registerStories(app, ctx);
 registerHandouts(app, ctx);
 registerNotifs(app, ctx);
 registerMaintenance(app, ctx);
-registerAiDM(app, ctx);
 
 // ── Server startup: HTTPS in production, plain HTTP for local dev ─────────────
 const SSL_KEY  = process.env.SSL_KEY;
@@ -823,6 +903,10 @@ if (useSSL) {
 const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
 wss.on('connection', (ws, req) => {
   ws._meta = clientMetaFromReq(req, 'ws');
+  // Login required (v237). 4401 tells the page its session is gone, so it
+  // sends the visitor to log in instead of reconnecting every 3 seconds.
+  if (!ws._meta.identity) { try { ws.close(4401, 'login required'); } catch {} return; }
+  try { ws._token = tokenFromQuery(Object.fromEntries(new URL(req.url || '', 'http://x').searchParams)); } catch { ws._token = ''; }
   ws._alive = true;
   ws.on('pong', () => { ws._alive = true; });      // browsers answer ping automatically
   wsClients.add(ws);
@@ -844,6 +928,12 @@ const wsHeartbeat = setInterval(() => {
     if (ws._alive === false) {
       wsClients.delete(ws);
       try { ws.terminate(); } catch {}
+      continue;
+    }
+    // Same rule as the SSE heartbeat: a session that has ended closes its socket.
+    if (!sessions.resolve(ws._token)) {
+      wsClients.delete(ws);
+      try { ws.close(4401, 'session ended'); } catch {}
       continue;
     }
     ws._alive = false;

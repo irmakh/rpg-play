@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-09-26 16:50
 
 export default function register(app, ctx) {
   const { ldb, genId, masterAuth, charAuth, broadcast } = ctx;
@@ -6,9 +6,21 @@ export default function register(app, ctx) {
   // GET /api/initiative — fetch all entries + current state
   app.get('/api/initiative', async (req, res) => {
     try {
-      const entries = ldb.listInitEntries();
+      const all     = ldb.listInitEntries();
       const state   = ldb.getInitState();
-      res.json({ entries, currentId: state?.currentId || '' });
+      const currentId = state?.currentId || '';
+      // Before combat starts, the monsters the DM is lining up are prep — the
+      // table page has always hidden them from players (table-initiative.js),
+      // but this returned them to anyone. The same rule now applies here (v237):
+      // a player sees monster entries once combat is running, or one assigned
+      // to a player; the DM sees everything.
+      let entries = all;
+      if (!masterAuth(req) && !currentId) {
+        const assigned = new Set(ldb.listTableTokens()
+          .filter(t => t.initiativeId && t.assignedCharId).map(t => t.initiativeId));
+        entries = all.filter(e => !e.monsterId || assigned.has(e.id));
+      }
+      res.json({ entries, currentId });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
   });
 

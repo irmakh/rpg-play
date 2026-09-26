@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-09-26 16:50
 
 // ── Secondary Screen (Screen 2 — Info Panel) ──────────────────────────────────
 // table-secondary.html only. Self-contained: own SSE, own state, own API calls.
@@ -30,8 +30,16 @@ let masterPw       = '';
 const _sTokQ = { _p: Promise.resolve(), run(fn) { this._p = this._p.then(() => fn(), () => fn()); } };
 let _sConsoleEs = null;
 
+// The console relay needs our session (v237) and only pairs screens held by the
+// same person. EventSource and sendBeacon cannot send headers, so the token
+// rides in the query — _storedSessionToken() is in js/lib/realtime.js.
+function _sConsoleUrl(path) {
+  const t = typeof _storedSessionToken === 'function' ? _storedSessionToken() : '';
+  return path + '?token=' + encodeURIComponent(t);
+}
+
 function _sConsolePost(msg) {
-  fetch('/api/console/event', {
+  fetch(_sConsoleUrl('/api/console/event'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(msg),
@@ -1041,9 +1049,21 @@ function sSendChat() {
   input.value = '';
   const rollMatch = msg.match(/^\/r\s+(.+)/i);
   if (rollMatch) { sRollDiceExpr(rollMatch[1]); return; }
+  // A recipient makes this a private message. sAuthHeaders() already carries our
+  // credential, which the server needs to know who a private message is from.
+  const to = typeof chatPmTarget === 'function' ? chatPmTarget('s-chat-to') : '';
   fetch('/api/chat', {
     method: 'POST', headers: sAuthHeaders(),
-    body: JSON.stringify({ type: 'text', message: msg, sender: sGetSender() }),
+    body: JSON.stringify({ type: 'text', message: msg, sender: sGetSender(), ...(to ? { to } : {}) }),
+  }).then(async res => {
+    if (!to) return;
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      alert('Message not sent: ' + (err.error || res.status));
+      return;
+    }
+    // Back to Everyone, so nobody keeps whispering by accident.
+    resetChatRecipient('s-chat-to', 's-chat-input');
   }).catch(() => {});
 }
 
@@ -1456,7 +1476,7 @@ function sStartSSE() {
         sRenderHpPanel(null);
         if (sCurrentTab === 'dm') sRenderDmHpList();
       } else if (d.action === 'map-updated' || d.action === 'state-updated') {
-        fetch('/api/table').then(r => r.json()).then(({ tokens, state }) => {
+        fetch('/api/table', { headers: sAuthHeaders() }).then(r => r.json()).then(({ tokens, state }) => {
           sTokens      = tokens || [];
           sFogRegions  = state?.fogRegions  || [];
           sHiddenItems = state?.hiddenItems || [];
@@ -1475,7 +1495,7 @@ function sStartSSE() {
       }
     },
     initiative: async () => {
-      try { const r = await fetch('/api/initiative'); if (r.ok) sInitData = await r.json(); } catch {}
+      try { const r = await fetch('/api/initiative', { headers: sAuthHeaders() }); if (r.ok) sInitData = await r.json(); } catch {}
       sRenderInitiative();
       if (sCurrentTab === 'dm') sRenderDmHpList();
     },
@@ -1489,6 +1509,21 @@ function sStartSSE() {
         if (dot) dot.classList.add('show');
       }
     },
+    // A private message arrives as an id only; chat-pm.js asks the server whether
+    // it is ours and renders it if so. The tab dot is this page's own unread mark.
+    'chat-pm': d => {
+      if (typeof onPrivateChatSignal !== 'function') return;
+      onPrivateChatSignal(d && d.id).then(shown => {
+        if (!shown) return;
+        const log = document.getElementById('chat-log');
+        if (log) log.scrollTop = log.scrollHeight;
+        if (sCurrentTab !== 'chat') {
+          sChatUnread++;
+          const dot = document.getElementById('s-chat-dot');
+          if (dot) dot.classList.add('show');
+        }
+      });
+    },
     'chat-clear':  () => { const log = document.getElementById('chat-log'); if (log) log.innerHTML = ''; },
     'chat-delete': d  => { const div = document.querySelector(`[data-entry-id="${CSS.escape(d.id)}"]`); if (div) div.remove(); },
     sound: d => { sHandleSoundEvent(d); },
@@ -1498,7 +1533,7 @@ function sStartSSE() {
 // ── Console relay SSE ─────────────────────────────────────────────────────────
 function _sStartConsoleSSE() {
   if (_sConsoleEs) _sConsoleEs.close();
-  _sConsoleEs = new EventSource('/api/console/events');
+  _sConsoleEs = new EventSource(_sConsoleUrl('/api/console/events'));
   // Send SECONDARY_READY only after the SSE connection is confirmed open.
   // Posting it immediately races with the EventSource GET — the server may
   // broadcast STATE_SNAPSHOT/TOKEN_SELECTED before this client is registered,
@@ -1554,8 +1589,9 @@ window.addEventListener('load', async () => {
 
   try {
     const [tableRes, initRes, charsRes] = await Promise.all([
-      fetch('/api/table'),
-      fetch('/api/initiative'),
+      // Our credential on both: hidden tokens and pre-combat monsters are the DM's (v237).
+      fetch('/api/table', { headers: sAuthHeaders() }),
+      fetch('/api/initiative', { headers: sAuthHeaders() }),
       fetch('/api/characters'),
     ]);
     if (tableRes.ok) {
@@ -1572,18 +1608,24 @@ window.addEventListener('load', async () => {
   if (sIsDM()) { sLoadPrepMaps(); sMusicInit(); }
   else { sMusicRestoreState(); }
 
-  fetch('/api/chat').then(r => r.ok ? r.json() : [])
+  // Send our own credential: the server decides which private messages belong in
+  // this history, and a caller who sends nothing gets only the public ones.
+  fetch('/api/chat', { headers: sAuthHeaders() }).then(r => r.ok ? r.json() : [])
     .then(entries => {
       entries.forEach(appendChatEntry);
       const log = document.getElementById('chat-log');
       if (log) log.scrollTop = log.scrollHeight;
     }).catch(() => {});
 
+  if (typeof initChatRecipients === 'function') {
+    initChatRecipients('s-chat-to', 's-chat-input').then(() => bindChatRecipientPicker('s-chat-to', 's-chat-input'));
+  }
+
   sStartSSE();
   _sStartConsoleSSE();
 
   window.addEventListener('beforeunload', () => {
-    navigator.sendBeacon('/api/console/event',
+    navigator.sendBeacon(_sConsoleUrl('/api/console/event'),
       new Blob([JSON.stringify({ type: 'SECONDARY_CLOSED' })], { type: 'application/json' }));
     if (_sConsoleEs) _sConsoleEs.close();
   });

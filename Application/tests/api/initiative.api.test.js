@@ -1,8 +1,10 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-09-26 16:50
 
 /**
  * API integration tests for /api/initiative routes (rewritten for new API).
  * Each test gets a fresh in-memory Express app + SQLite DB via makeApp().
+ * Reads go as the DM: since v237 anyone else is not shown monster entries
+ * before combat starts (tested separately at the end of this file).
  */
 import { describe, it, expect, beforeEach } from 'vitest';
 import request from 'supertest';
@@ -22,7 +24,7 @@ function seed(ldb, entries) {
 describe('GET /api/initiative', () => {
   it('returns empty entries and empty currentId on fresh db', async () => {
     const { app } = makeApp();
-    const res = await request(app).get('/api/initiative');
+    const res = await request(app).get('/api/initiative').set('X-Master-Password', TEST_MASTER_PW);
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({ entries: [], currentId: '' });
   });
@@ -33,7 +35,7 @@ describe('GET /api/initiative', () => {
       { id: 'e1', name: 'Aria', roll: 18 },
       { id: 'e2', name: 'Goblin', roll: 12, monsterId: 'mon-1' },
     ]);
-    const res = await request(app).get('/api/initiative');
+    const res = await request(app).get('/api/initiative').set('X-Master-Password', TEST_MASTER_PW);
     expect(res.status).toBe(200);
     expect(res.body.entries).toHaveLength(2);
   });
@@ -45,7 +47,7 @@ describe('GET /api/initiative', () => {
       { id: 'e2', name: 'High', roll: 20 },
       { id: 'e3', name: 'Mid',  roll: 12 },
     ]);
-    const res = await request(app).get('/api/initiative');
+    const res = await request(app).get('/api/initiative').set('X-Master-Password', TEST_MASTER_PW);
     const rolls = res.body.entries.map(e => e.roll);
     expect(rolls).toEqual([20, 12, 5]);
   });
@@ -54,7 +56,7 @@ describe('GET /api/initiative', () => {
     const { app, ldb } = makeApp();
     seed(ldb, [{ id: 'e1', name: 'Aria', roll: 15 }]);
     ldb.setInitState('e1');
-    const res = await request(app).get('/api/initiative');
+    const res = await request(app).get('/api/initiative').set('X-Master-Password', TEST_MASTER_PW);
     expect(res.body.currentId).toBe('e1');
   });
 });
@@ -74,7 +76,7 @@ describe('POST /api/initiative/entries', () => {
   it('the created entry appears in GET', async () => {
     const { app } = makeApp();
     await request(app).post('/api/initiative/entries').send({ name: 'Aria', roll: 14 });
-    const res = await request(app).get('/api/initiative');
+    const res = await request(app).get('/api/initiative').set('X-Master-Password', TEST_MASTER_PW);
     expect(res.body.entries).toHaveLength(1);
     expect(res.body.entries[0].name).toBe('Aria');
     expect(res.body.entries[0].roll).toBe(14);
@@ -91,7 +93,7 @@ describe('POST /api/initiative/entries', () => {
     expect(res.status).toBe(200);
     expect(res.body.id).toBe('e1'); // same id — was updated, not created
 
-    const list = await request(app).get('/api/initiative');
+    const list = await request(app).get('/api/initiative').set('X-Master-Password', TEST_MASTER_PW);
     expect(list.body.entries).toHaveLength(1);
     expect(list.body.entries[0].roll).toBe(19);
     expect(list.body.entries[0].name).toBe('Aria the Swift');
@@ -101,7 +103,7 @@ describe('POST /api/initiative/entries', () => {
     const { app } = makeApp();
     await request(app).post('/api/initiative/entries').send({ name: 'A', roll: 10 });
     await request(app).post('/api/initiative/entries').send({ name: 'B', roll: 12 });
-    const list = await request(app).get('/api/initiative');
+    const list = await request(app).get('/api/initiative').set('X-Master-Password', TEST_MASTER_PW);
     expect(list.body.entries).toHaveLength(2);
   });
 
@@ -113,7 +115,7 @@ describe('POST /api/initiative/entries', () => {
     seed(ldb, [{ id: 'eA', name: 'Aria', roll: 15, charId: 'char-A' }]);
     // Bron rolls — should ADD, not overwrite Aria
     await request(app).post('/api/initiative/entries').send({ name: 'Bron', roll: 9, charId: 'char-B' });
-    const list = await request(app).get('/api/initiative');
+    const list = await request(app).get('/api/initiative').set('X-Master-Password', TEST_MASTER_PW);
     expect(list.body.entries).toHaveLength(2);
     const aria = list.body.entries.find(e => e.charId === 'char-A');
     const bron = list.body.entries.find(e => e.charId === 'char-B');
@@ -133,7 +135,7 @@ describe('POST /api/initiative/entries', () => {
     // Bron re-rolls
     const res = await request(app).post('/api/initiative/entries').send({ name: 'Bron', roll: 20, charId: 'char-B' });
     expect(res.body.id).toBe('eB'); // updated existing, not created
-    const list = await request(app).get('/api/initiative');
+    const list = await request(app).get('/api/initiative').set('X-Master-Password', TEST_MASTER_PW);
     expect(list.body.entries).toHaveLength(2);
     expect(list.body.entries.find(e => e.charId === 'char-A').roll).toBe(15); // untouched
     expect(list.body.entries.find(e => e.charId === 'char-B').roll).toBe(20); // updated
@@ -146,7 +148,7 @@ describe('POST /api/initiative/entries', () => {
     seed(ldb, [{ id: 'eM', name: 'Goblin', roll: 12, monsterId: 'mon-1' }]);
     // Aria rolls with her charId — must ADD a new row, not hijack the goblin
     await request(app).post('/api/initiative/entries').send({ name: 'Aria', roll: 16, charId: 'char-A' });
-    const list = await request(app).get('/api/initiative');
+    const list = await request(app).get('/api/initiative').set('X-Master-Password', TEST_MASTER_PW);
     expect(list.body.entries).toHaveLength(2);
     expect(list.body.entries.find(e => e.monsterId === 'mon-1').name).toBe('Goblin'); // untouched
   });
@@ -156,7 +158,7 @@ describe('POST /api/initiative/entries', () => {
     const res = await dm(request(app).post('/api/initiative/entries'))
       .send({ name: 'Goblin A1', roll: 8, monsterId: 'mon-1' });
     expect(res.status).toBe(200);
-    const list = await request(app).get('/api/initiative');
+    const list = await request(app).get('/api/initiative').set('X-Master-Password', TEST_MASTER_PW);
     expect(list.body.entries[0].monsterId).toBe('mon-1');
   });
 
@@ -177,7 +179,7 @@ describe('POST /api/initiative/entries', () => {
     ldb.setInitState('e2'); // e2 is the active turn
     // Add a new entry with a higher roll
     await request(app).post('/api/initiative/entries').send({ name: 'Newcomer', roll: 18 });
-    const res = await request(app).get('/api/initiative');
+    const res = await request(app).get('/api/initiative').set('X-Master-Password', TEST_MASTER_PW);
     // currentId must still be e2 — mid-combat add keeps turn position
     expect(res.body.currentId).toBe('e2');
     expect(res.body.entries).toHaveLength(3);
@@ -281,7 +283,7 @@ describe('DELETE /api/initiative/entries/:id', () => {
     seed(ldb, [{ id: 'e1', name: 'Aria', roll: 14 }]);
     const res = await dm(request(app).delete('/api/initiative/entries/e1')).send({});
     expect(res.status).toBe(200);
-    expect(await request(app).get('/api/initiative').then(r => r.body.entries)).toHaveLength(0);
+    expect(await request(app).get('/api/initiative').set('X-Master-Password', TEST_MASTER_PW).then(r => r.body.entries)).toHaveLength(0);
   });
 
   it('returns 401 when entry has no charId and caller is not DM', async () => {
@@ -299,7 +301,7 @@ describe('DELETE /api/initiative/entries/:id', () => {
       .delete('/api/initiative/entries/e1')
       .send({});
     expect(res.status).toBe(200);
-    expect(await request(app).get('/api/initiative').then(r => r.body.entries)).toHaveLength(0);
+    expect(await request(app).get('/api/initiative').set('X-Master-Password', TEST_MASTER_PW).then(r => r.body.entries)).toHaveLength(0);
   });
 
   it('advances turn to next entry when current entry is deleted', async () => {
@@ -311,7 +313,7 @@ describe('DELETE /api/initiative/entries/:id', () => {
     ]);
     ldb.setInitState('e1');
     await dm(request(app).delete('/api/initiative/entries/e1')).send({});
-    const res = await request(app).get('/api/initiative');
+    const res = await request(app).get('/api/initiative').set('X-Master-Password', TEST_MASTER_PW);
     expect(res.body.currentId).toBe('e2');
   });
 
@@ -320,7 +322,7 @@ describe('DELETE /api/initiative/entries/:id', () => {
     seed(ldb, [{ id: 'e1', name: 'Aria', roll: 14 }]);
     ldb.setInitState('e1');
     await dm(request(app).delete('/api/initiative/entries/e1')).send({});
-    const res = await request(app).get('/api/initiative');
+    const res = await request(app).get('/api/initiative').set('X-Master-Password', TEST_MASTER_PW);
     expect(res.body.currentId).toBe('');
     expect(res.body.entries).toHaveLength(0);
   });
@@ -333,7 +335,7 @@ describe('DELETE /api/initiative/entries/:id', () => {
     ]);
     ldb.setInitState('e1');
     await dm(request(app).delete('/api/initiative/entries/e2')).send({});
-    const res = await request(app).get('/api/initiative');
+    const res = await request(app).get('/api/initiative').set('X-Master-Password', TEST_MASTER_PW);
     expect(res.body.currentId).toBe('e1');
     expect(res.body.entries).toHaveLength(1);
   });
@@ -361,7 +363,7 @@ describe('POST /api/initiative/start', () => {
       { id: 'e3', name: 'Mid',  roll: 12 },
     ]);
     await dm(request(app).post('/api/initiative/start'));
-    const res = await request(app).get('/api/initiative');
+    const res = await request(app).get('/api/initiative').set('X-Master-Password', TEST_MASTER_PW);
     expect(res.body.currentId).toBe('e2');
   });
 
@@ -369,7 +371,7 @@ describe('POST /api/initiative/start', () => {
     const { app, ldb } = makeApp();
     seed(ldb, [{ id: 'e1', name: 'Aria', roll: 14 }]);
     await dm(request(app).post('/api/initiative/start'));
-    const res = await request(app).get('/api/initiative');
+    const res = await request(app).get('/api/initiative').set('X-Master-Password', TEST_MASTER_PW);
     expect(res.body.currentId).toBe('e1');
   });
 });
@@ -391,7 +393,7 @@ describe('POST /api/initiative/next', () => {
     ]);
     ldb.setInitState('e1');
     await request(app).post('/api/initiative/next');
-    const res = await request(app).get('/api/initiative');
+    const res = await request(app).get('/api/initiative').set('X-Master-Password', TEST_MASTER_PW);
     expect(res.body.currentId).toBe('e2');
   });
 
@@ -403,7 +405,7 @@ describe('POST /api/initiative/next', () => {
     ]);
     ldb.setInitState('e2');
     await request(app).post('/api/initiative/next');
-    const res = await request(app).get('/api/initiative');
+    const res = await request(app).get('/api/initiative').set('X-Master-Password', TEST_MASTER_PW);
     expect(res.body.currentId).toBe('e1');
   });
 
@@ -414,7 +416,7 @@ describe('POST /api/initiative/next', () => {
       { id: 'e2', name: 'Low',  roll: 5 },
     ]);
     await request(app).post('/api/initiative/next');
-    const res = await request(app).get('/api/initiative');
+    const res = await request(app).get('/api/initiative').set('X-Master-Password', TEST_MASTER_PW);
     expect(res.body.currentId).toBe('e1');
   });
 
@@ -451,7 +453,7 @@ describe('POST /api/initiative/prev', () => {
     ]);
     ldb.setInitState('e2');
     await dm(request(app).post('/api/initiative/prev'));
-    const res = await request(app).get('/api/initiative');
+    const res = await request(app).get('/api/initiative').set('X-Master-Password', TEST_MASTER_PW);
     expect(res.body.currentId).toBe('e1');
   });
 
@@ -463,7 +465,7 @@ describe('POST /api/initiative/prev', () => {
     ]);
     ldb.setInitState('e1');
     await dm(request(app).post('/api/initiative/prev'));
-    const res = await request(app).get('/api/initiative');
+    const res = await request(app).get('/api/initiative').set('X-Master-Password', TEST_MASTER_PW);
     expect(res.body.currentId).toBe('e2');
   });
 });
@@ -481,7 +483,7 @@ describe('POST /api/initiative/end', () => {
     seed(ldb, [{ id: 'e1', name: 'Aria', roll: 14 }]);
     ldb.setInitState('e1');
     await dm(request(app).post('/api/initiative/end'));
-    const res = await request(app).get('/api/initiative');
+    const res = await request(app).get('/api/initiative').set('X-Master-Password', TEST_MASTER_PW);
     expect(res.body.currentId).toBe('');
   });
 
@@ -493,7 +495,7 @@ describe('POST /api/initiative/end', () => {
     ]);
     ldb.setInitState('e1');
     await dm(request(app).post('/api/initiative/end'));
-    const res = await request(app).get('/api/initiative');
+    const res = await request(app).get('/api/initiative').set('X-Master-Password', TEST_MASTER_PW);
     expect(res.body.entries).toHaveLength(2);
   });
 });
@@ -513,7 +515,7 @@ describe('POST /api/initiative/clear', () => {
       { id: 'e2', name: 'Goblin', roll: 8 },
     ]);
     await dm(request(app).post('/api/initiative/clear'));
-    const res = await request(app).get('/api/initiative');
+    const res = await request(app).get('/api/initiative').set('X-Master-Password', TEST_MASTER_PW);
     expect(res.body.entries).toHaveLength(0);
     expect(res.body.currentId).toBe('');
   });
@@ -533,7 +535,7 @@ describe('POST /api/initiative/cleanup', () => {
     const res = await dm(request(app).post('/api/initiative/cleanup'));
     expect(res.status).toBe(200);
     expect(res.body.removed).toBe(1);
-    const list = await request(app).get('/api/initiative');
+    const list = await request(app).get('/api/initiative').set('X-Master-Password', TEST_MASTER_PW);
     expect(list.body.entries).toHaveLength(0);
   });
 
@@ -543,7 +545,7 @@ describe('POST /api/initiative/cleanup', () => {
     ldb.createTableToken('tok-1', { name: 'Goblin', type: 'monster', initiativeId: 'e1' });
     const res = await dm(request(app).post('/api/initiative/cleanup'));
     expect(res.body.removed).toBe(0);
-    const list = await request(app).get('/api/initiative');
+    const list = await request(app).get('/api/initiative').set('X-Master-Password', TEST_MASTER_PW);
     expect(list.body.entries).toHaveLength(1);
   });
 
@@ -552,7 +554,30 @@ describe('POST /api/initiative/cleanup', () => {
     seed(ldb, [{ id: 'e1', name: 'Aria', roll: 14, charId: 'char-1' }]);
     const res = await dm(request(app).post('/api/initiative/cleanup'));
     expect(res.body.removed).toBe(0);
-    const list = await request(app).get('/api/initiative');
+    const list = await request(app).get('/api/initiative').set('X-Master-Password', TEST_MASTER_PW);
     expect(list.body.entries).toHaveLength(1);
+  });
+});
+
+// ── Pre-combat monsters are the DM's (v237) ───────────────────────────────────
+// The table page always hid them from players before combat; the API did not.
+describe('GET /api/initiative — before combat starts', () => {
+  it('leaves unassigned monster entries out for a non-DM, and keeps them for the DM', async () => {
+    const { app } = makeApp();
+    await request(app).post('/api/initiative/entries').set('X-Master-Password', TEST_MASTER_PW)
+      .send({ name: 'Ambusher', roll: 15, monsterId: 'm1' });
+    const anon = await request(app).get('/api/initiative');
+    expect(anon.body.entries.map(e => e.name)).not.toContain('Ambusher');
+    const asDm = await request(app).get('/api/initiative').set('X-Master-Password', TEST_MASTER_PW);
+    expect(asDm.body.entries.map(e => e.name)).toContain('Ambusher');
+  });
+
+  it('shows them to everyone once combat is running', async () => {
+    const { app } = makeApp();
+    await request(app).post('/api/initiative/entries').set('X-Master-Password', TEST_MASTER_PW)
+      .send({ name: 'Ambusher', roll: 15, monsterId: 'm1' });
+    await request(app).post('/api/initiative/start').set('X-Master-Password', TEST_MASTER_PW).send({});
+    const anon = await request(app).get('/api/initiative');
+    expect(anon.body.entries.map(e => e.name)).toContain('Ambusher');
   });
 });

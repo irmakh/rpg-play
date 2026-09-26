@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-09-26 16:50
 
 /**
  * DM handouts.
@@ -322,7 +322,10 @@ export default function register(app, ctx) {
           dmOnly: true, timestamp: new Date().toISOString(),
         };
         ldb.appendChatLog(entry);
-        broadcast('chat', entry);   // clients drop dmOnly entries for non-DMs
+        // DM connections only (v237). This used to reach every socket with the
+        // total in it and rely on the page to hide it — so the roller could read
+        // the result of their own blind check off the connection.
+        broadcast('chat', entry, undefined, { dmOnly: true });
       } catch (err) { console.error('handout roll chat log failed', err); }
 
       broadcast('handouts', { action: 'rolled', id: row.id, charId });

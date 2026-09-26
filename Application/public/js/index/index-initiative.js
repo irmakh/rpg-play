@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-09-26 16:50
 
 // ── Initiative Tracker ────────────────────────────────────────────────────────
 let initDataMap        = {};
@@ -22,7 +22,8 @@ function clearDmPw() { sessionStorage.removeItem('initDmPw'); }
 
 async function loadInitiativeTracker() {
   try {
-    const res = await fetch('/api/initiative');
+    // With our credential: the server hides pre-combat monsters (and hidden tokens) from anyone else (v237).
+    const res = await fetch('/api/initiative', { headers: indexMasterPw() ? { 'X-Master-Password': indexMasterPw() } : {} });
     if (!res.ok) return;
     initData = await res.json();
     _initDataLoaded = true;

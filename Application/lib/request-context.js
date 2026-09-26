@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-09-26 16:38
 
 /**
  * Per-request campaign context.
@@ -75,8 +75,6 @@ function scopedProxy(pick, label) {
 export const ldb = scopedProxy(d => d.ldb, 'ldb');
 /** Stories / comic builder. */
 export const sdb = scopedProxy(d => d.sdb, 'sdb');
-/** AI DM sessions. */
-export const adb = scopedProxy(d => d.adb, 'adb');
 /** Raw better-sqlite3 handle for the campaign's shared-media database. */
 export const mediaDb = scopedProxy(d => d.mdb.db, 'mediaDb');
 /** Prepared statement: fetch one shared-media row by id. */

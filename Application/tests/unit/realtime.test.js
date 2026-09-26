@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-09-26 16:50
 
 /**
  * Unit tests for js/lib/realtime.js — one page, one connection.
@@ -23,7 +23,13 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const SRC = readFileSync(resolve(__dirname, '../../public/js/lib/realtime.js'), 'utf-8');
 
 /** A page with the given transport available, and the sockets it opens. */
-function load({ dbProvider = 'localdb' } = {}) {
+// A logged-in character by default: since v237 the page only opens the live
+// stream with a session to present. Pass session: null for a signed-out tab.
+const CHAR_SESSION = { role: 'character', characterId: 'c1', charPw: 'rpgs_testtoken' };
+
+function load({ dbProvider = 'localdb', session = CHAR_SESSION } = {}) {
+  const store = new Map(session ? [['rpgSession', JSON.stringify(session)]] : []);
+  const replaced = [];
   const sockets = [];
   const sources = [];
 
@@ -59,8 +65,8 @@ function load({ dbProvider = 'localdb' } = {}) {
     WebSocket: FakeWebSocket,
     EventSource: FakeEventSource,
     fetch: async () => ({ json: async () => ({ dbProvider, wsUrl: null }) }),
-    location: { pathname: '/table.html', host: 'table.test', search: '', replace() {}, reload() {} },
-    sessionStorage: { getItem: () => null, removeItem() {} },
+    location: { pathname: '/table.html', host: 'table.test', search: '', replace(u) { replaced.push(u); }, reload() {} },
+    sessionStorage: { getItem: (k) => store.get(k) ?? null, removeItem: (k) => { store.delete(k); } },
     document: {
       cookie: 'campaign=camp-1',
       addEventListener() {},
@@ -70,7 +76,7 @@ function load({ dbProvider = 'localdb' } = {}) {
   });
   ctx.window = ctx;
   runInContext(SRC, ctx);
-  return { ctx, sockets, sources };
+  return { ctx, sockets, sources, store, replaced };
 }
 
 describe('connectRealtime — one connection per page', () => {
@@ -123,6 +129,30 @@ describe('connectRealtime — one connection per page', () => {
     const url = new URL(sockets[0].url.replace(/^ws:/, 'http:'));
     expect(url.searchParams.get('page')).toBe('/table.html');
     expect(url.searchParams.get('campaign')).toBe('camp-1');
+  });
+
+  // v237 — the live stream needs a login.
+  it('presents the session token, and no longer claims a role of its own', async () => {
+    const { ctx, sockets } = load();
+    await ctx.connectRealtime({});
+    const url = new URL(sockets[0].url.replace(/^ws:/, 'http:'));
+    expect(url.searchParams.get('token')).toBe('rpgs_testtoken');
+    expect(url.searchParams.has('role')).toBe(false);
+    expect(url.searchParams.has('charId')).toBe(false);
+  });
+
+  it('does not connect at all from a tab that is not logged in', async () => {
+    const { ctx, sockets } = load({ session: null });
+    await ctx.connectRealtime({ a: () => {} });
+    expect(sockets).toHaveLength(0);
+  });
+
+  it('goes to the login page when the server ends the session (close code 4401)', async () => {
+    const { ctx, sockets, store, replaced } = load();
+    await ctx.connectRealtime({});
+    sockets[0].onclose({ code: 4401 });
+    expect(store.has('rpgSession')).toBe(false);
+    expect(replaced[0]).toMatch(/^\/login\.html\?next=/);
   });
 });
 

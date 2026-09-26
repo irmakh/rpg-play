@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-09-26 16:50
 
 let masterPw = '';
 let initData = { entries: [], currentId: null };
@@ -61,7 +61,8 @@ function authenticate() { return _gate.submit(); }
 
 async function loadInitiative() {
   try {
-    const res = await fetch('/api/initiative');
+    // With our credential: the server hides pre-combat monsters (and hidden tokens) from anyone else (v237).
+    const res = await fetch('/api/initiative', { headers: { 'X-Master-Password': masterPw } });
     if (!res.ok) return;
     initData = await res.json();
     renderInitiative();
@@ -646,12 +647,20 @@ async function sendChatInput() {
     } catch { showStatus('Network error.', true); }
     return;
   }
+  // A recipient makes this a private message; Everyone is the default.
+  const to = typeof chatPmTarget === 'function' ? chatPmTarget() : '';
   try {
-    await fetch('/api/chat', {
+    const res = await fetch('/api/chat', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sender: 'DM', type: 'text', message: text })
+      headers: to && typeof chatPmHeaders === 'function' ? chatPmHeaders() : { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sender: 'DM', type: 'text', message: text, ...(to ? { to } : {}) })
     });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      showStatus('Message not sent: ' + (err.error || res.status), true);
+      return;
+    }
+    if (to && typeof resetChatRecipient === 'function') resetChatRecipient();
   } catch { showStatus('Network error.', true); }
 }
 
@@ -677,9 +686,15 @@ async function loadChat() {
   } catch {}
 }
 
+// This page has its own copy rather than the shared chat-render.js one, because
+// every entry here carries a delete button. Anything that changes how an entry
+// looks has to be done twice — private messages included.
 function appendChatEntry(e) {
   const log = document.getElementById('chat-log');
   if (!log) return;
+  // One entry, once: a private message can arrive from its own POST and again on
+  // the 'chat-pm' knock.
+  if (e.id && log.querySelector(`[data-entry-id="${CSS.escape(String(e.id))}"]`)) return;
   const rawTs = e.timestamp || '';
   const dt = rawTs ? new Date(rawTs + (rawTs.endsWith('Z') ? '' : 'Z')) : new Date();
   const time = dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -690,13 +705,19 @@ function appendChatEntry(e) {
 
   if (e.type === 'text') {
     div.className = 'chat-entry chat-text';
+    if (e.to) { div.style.borderLeft = '2px solid var(--arc)'; div.style.paddingLeft = '6px'; }
+    const pmTag = e.to
+      ? `<span style="font-size:10px;color:var(--arc);font-weight:normal"> 🔒 → ${esc(e.toName || (e.to === 'dm' ? 'DM' : 'someone'))}</span>`
+      : '';
     // Messages flagged html:true (e.g. spell descriptions with 5e.tools links)
-    // render their body as raw HTML; all other text stays escaped.
+    // render as HTML — but only what sanitizeChatHtml() (js/lib/chat-render.js)
+    // lets through. This page used to insert the body raw, which is exactly
+    // where a planted script would have found the DM's session.
     const body = e.html
-      ? `<div class="chat-html" style="word-break:break-word;line-height:1.45">${e.message || ''}</div>`
+      ? `<div class="chat-html" style="word-break:break-word;line-height:1.45">${sanitizeChatHtml(e.message || '')}</div>`
       : `<div style="word-break:break-word;white-space:pre-wrap">${esc(e.message || '')}</div>`;
     div.innerHTML = `<div style="display:flex;justify-content:space-between;margin-bottom:2px">
-      <span class="ce-sender">${esc(e.sender || '?')}</span>
+      <span class="ce-sender">${esc(e.sender || '?')}${pmTag}</span>
       ${timeCol}
     </div>${body}`;
     log.appendChild(div);
@@ -872,6 +893,8 @@ connectRealtime({
     appendChatEntry(entry);
     scrollChatLog();
   },
+  // A private message arrives as an id only — chat-pm.js fetches it if it is ours.
+  'chat-pm': (d) => { if (typeof onPrivateChatSignal === 'function') onPrivateChatSignal(d && d.id); },
   'chat-clear': () => {
     document.getElementById('chat-log').innerHTML = '';
   },
@@ -882,3 +905,8 @@ connectRealtime({
 });
 
 window.addEventListener('load', loadChat);
+window.addEventListener('load', () => {
+  if (typeof initChatRecipients === 'function') {
+    initChatRecipients().then(() => bindChatRecipientPicker());
+  }
+});

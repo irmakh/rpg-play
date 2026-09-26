@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-09-26 16:50
 
 import express from 'express';
 
@@ -28,8 +28,32 @@ export default function register(app, ctx) {
    */
   function broadcast(eventName, payload = {}, campaignId, opts = {}) {
     const gated = eventName === 'table' && !!activeWaitingId();
+    // While parked, players get nothing at all on this channel — not even the
+    // substitute a hidden token sends them, nor its owner's copy.
     return _rawBroadcast(eventName, payload, campaignId ?? currentCampaignId(),
-                         gated ? { ...opts, dmOnly: true } : opts);
+                         gated ? { ...opts, dmOnly: true, forOthers: undefined, alsoFor: undefined } : opts);
+  }
+
+  // ── Hidden tokens ─────────────────────────────────────────────────────────────
+  // A token the DM has hidden (visible false) is a secret: an ambush, a lurker.
+  // Until v237 every token event went to every connection and each page simply
+  // did not draw hidden ones, so a player watching the socket saw the monster's
+  // name and position anyway. Now the DM gets the event, the player the token is
+  // assigned to still sees their own, and everyone else is told 'token-removed'
+  // — which is also what makes a token the DM hides disappear from their map.
+  // Showing it again goes to everyone, and the page adds a token it has not seen.
+  const isHiddenToken = (t) => !!t && !t.visible;
+  const tokenOwner = (t) => (t && (t.assignedCharId || (t.type !== 'monster' ? t.linkedId : ''))) || '';
+  /** Tokens a non-DM may be sent: every visible one, plus their own. */
+  const tokensForPlayer = (list, charId) =>
+    list.filter(t => !isHiddenToken(t) || (charId && tokenOwner(t) === String(charId)));
+  function broadcastToken(tok, payload) {
+    if (!isHiddenToken(tok)) return broadcast('table', payload);
+    return broadcast('table', payload, undefined, {
+      dmOnly: true,
+      alsoFor: tokenOwner(tok) || undefined,
+      forOthers: { action: 'token-removed', id: tok.id },
+    });
   }
 
   const TABLE_STATE_ID = 'c8a04a12-4372-4c78-9abc-def012345601';
@@ -232,7 +256,14 @@ export default function register(app, ctx) {
       const parkedOn = state.waitingScreenId || '';
       syncParked(!!parkedOn);   // self-heals the static gate if it drifted
 
-      if (!parkedOn || masterAuth(req)) return res.json({ state, tokens });
+      if (masterAuth(req)) return res.json({ state, tokens });
+      if (!parkedOn) {
+        // Hidden tokens stay with the DM (v237) — this returned them to anyone,
+        // even with no login, and the page merely skipped drawing them.
+        const cid = String(req.headers['x-character-id'] || '');
+        const me = cid && (await charAuth(cid, req)) === 200 ? cid : '';
+        return res.json({ state, tokens: tokensForPlayer(tokens, me) });
+      }
 
       // A player: prove who they are before handing back even their own token.
       const charId = String(req.headers['x-character-id'] || '');
@@ -434,7 +465,7 @@ export default function register(app, ctx) {
         createdAt: new Date().toISOString()
       };
       ldb.createTableToken(newId, token);
-      broadcast('table', { action: 'token-added', token: { id: newId, ...token } });
+      broadcastToken({ id: newId, ...token }, { action: 'token-added', token: { id: newId, ...token } });
       res.json({ ok: true, id: newId });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
   });
@@ -455,10 +486,10 @@ export default function register(app, ctx) {
             const dist = Math.max(dx, dy) * 5;
             const newMovedFt = (tok.movedFt || 0) + dist;
             ldb.updateTableToken(req.params.id, { x: newX, y: newY, movedFt: newMovedFt });
-            broadcast('table', { action: 'token-moved', id: req.params.id, x: newX, y: newY, movedFt: newMovedFt });
+            broadcastToken(tok, { action: 'token-moved', id: req.params.id, x: newX, y: newY, movedFt: newMovedFt });
           } else {
             ldb.updateTableToken(req.params.id, { x: newX, y: newY });
-            broadcast('table', { action: 'token-moved', id: req.params.id, x: newX, y: newY, movedFt: tok.movedFt || 0 });
+            broadcastToken(tok, { action: 'token-moved', id: req.params.id, x: newX, y: newY, movedFt: tok.movedFt || 0 });
           }
           return res.json({ ok: true });
         }
@@ -483,7 +514,7 @@ export default function register(app, ctx) {
         if (assignedCharId !== undefined) update.assignedCharId = String(assignedCharId);
         ldb.updateTableToken(req.params.id, update);
         const updated = { ...tok, ...update };
-        broadcast('table', { action: 'token-updated', token: updated });
+        broadcastToken(updated, { action: 'token-updated', token: updated });
 
         // Conditions the DM put on a player's own token, named so they can see
         // what changed without hunting through the token panel.
@@ -545,7 +576,7 @@ export default function register(app, ctx) {
         if (body.conditions !== undefined && Object.keys(body).length === 1) {
           const condVal = Array.isArray(body.conditions) ? JSON.stringify(body.conditions) : String(body.conditions);
           ldb.updateTableToken(req.params.id, { conditions: condVal });
-          broadcast('table', { action: 'token-updated', token: { ...tok, conditions: condVal } });
+          broadcastToken(tok, { action: 'token-updated', token: { ...tok, conditions: condVal } });
           return res.json({ ok: true });
         }
         if ((body.hpCurrent !== undefined || body.hpTemp !== undefined) && (tok.type === 'character' || tok.type === 'npc')) {
@@ -554,7 +585,7 @@ export default function register(app, ctx) {
           if (body.hpTemp !== undefined)    update.hpTemp    = Math.max(0, parseInt(body.hpTemp) || 0);
           ldb.updateTableToken(req.params.id, update);
           const updated = { ...tok, ...update };
-          broadcast('table', { action: 'token-updated', token: updated });
+          broadcastToken(updated, { action: 'token-updated', token: updated });
           if (tok.linkedId) {
             try {
               const char = await getCharacter(tok.linkedId);
@@ -583,10 +614,10 @@ export default function register(app, ctx) {
           const dist = Math.max(dx, dy) * 5;
           const newMovedFt = (tok.movedFt || 0) + dist;
           ldb.updateTableToken(req.params.id, { x: newX, y: newY, movedFt: newMovedFt });
-          broadcast('table', { action: 'token-moved', id: req.params.id, x: newX, y: newY, movedFt: newMovedFt });
+          broadcastToken(tok, { action: 'token-moved', id: req.params.id, x: newX, y: newY, movedFt: newMovedFt });
         } else {
           ldb.updateTableToken(req.params.id, { x: newX, y: newY });
-          broadcast('table', { action: 'token-moved', id: req.params.id, x: newX, y: newY, movedFt: tok.movedFt || 0 });
+          broadcastToken(tok, { action: 'token-moved', id: req.params.id, x: newX, y: newY, movedFt: tok.movedFt || 0 });
         }
         res.json({ ok: true });
       }
@@ -665,7 +696,7 @@ export default function register(app, ctx) {
 
       const update = { portrait, portraitThumb, customPortrait };
       ldb.updateTableToken(req.params.id, update);
-      broadcast('table', { action: 'token-updated', token: { ...tok, ...update } });
+      broadcastToken(tok, { action: 'token-updated', token: { ...tok, ...update } });
       res.json({ ok: true, portrait, portraitThumb });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
   });
@@ -863,7 +894,7 @@ export default function register(app, ctx) {
           createdAt: new Date().toISOString(),
         };
         ldb.createTableToken(tokenId, token);
-        broadcast('table', { action: 'token-added', token: { id: tokenId, ...token } });
+        broadcastToken({ id: tokenId, ...token }, { action: 'token-added', token: { id: tokenId, ...token } });
       }
 
       res.json({ ok: true, tokensPlaced: preparedTokens.length });

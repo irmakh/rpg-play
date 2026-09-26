@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-09-26 16:50
 
 // ── Shared real-time transport ────────────────────────────────────────────────
 // Handles both WebSocket (localdb) and SSE (instantdb) connections.
@@ -18,21 +18,34 @@ function _clientVer() {
   return '';
 }
 
-// Identity + current page, attached as query params to the real-time URL so the
-// server can list connected clients on the maintenance page. Passwords are never
-// included — only role, character id/name, login time, current path and version.
-function _realtimeParams() {
-  let role = 'none', charId = '', charName = '', loginAt = '';
+/**
+ * The session token this tab holds — the DM's or the character's — or ''.
+ * Same places revokeStoredSession() looks: rpgSession, then the legacy DM key.
+ */
+function _storedSessionToken() {
   try {
     const s = JSON.parse(sessionStorage.getItem('rpgSession') || 'null');
-    if (s && s.role) {
-      role = s.role;
-      if (s.role === 'character') { charId = s.characterId || ''; charName = s.characterName || ''; }
-      if (s.loginAt) loginAt = String(s.loginAt);
-    }
+    const t = (s && (s.role === 'dm' ? s.masterPw : s.charPw))
+      || sessionStorage.getItem('dmMasterPw') || sessionStorage.getItem('tableMasterPw') || '';
+    return _isToken(t) ? t : '';
+  } catch { return ''; }
+}
+
+// The real-time URL's query. Since v237 the live stream needs a login: the
+// session TOKEN goes here, because a WebSocket or EventSource cannot send
+// headers, and the server takes who we are from it. The role / character the
+// page used to put here were believed as sent, which is how a crafted socket
+// could claim to be the DM; they are gone. The page, login time and version
+// remain for the maintenance page.
+function _realtimeParams() {
+  let loginAt = '';
+  try {
+    const s = JSON.parse(sessionStorage.getItem('rpgSession') || 'null');
+    if (s && s.loginAt) loginAt = String(s.loginAt);
   } catch {}
   return new URLSearchParams({
-    page: location.pathname, role, charId, charName, loginAt,
+    page: location.pathname, loginAt,
+    token: _storedSessionToken(),
     ver: _clientVer(),
     // Which campaign this connection is watching. The server only delivers a
     // campaign's events to its own clients, so a connection with no campaign
@@ -236,6 +249,12 @@ async function connectRealtime(handlers) {
     provider = cfg.dbProvider;
     wsUrl = cfg.wsUrl || null;
   } catch {}
+  // No login, no stream (v237) — the server would only refuse it. The page
+  // itself still works from its ordinary requests; it just is not live.
+  if (!_storedSessionToken()) {
+    console.info('[realtime] not connecting: this tab is not logged in');
+    return;
+  }
   if (provider === 'localdb') {
     function connect() {
       const base = wsUrl || `ws://${location.host}/ws`;
@@ -245,7 +264,13 @@ async function connectRealtime(handlers) {
         if (event === 'force-reload') return _onForceReload(data);   // handled for every page
         _rtEmit(event, data);
       };
-      ws.onclose = () => setTimeout(connect, 3000);
+      ws.onclose = (e) => {
+        // 4401: the server refused or ended our session (expired, logged out,
+        // ended on the maintenance page). Reconnecting would only be refused
+        // again every 3 seconds — go and log in, as a 401 from fetch() does.
+        if (e && e.code === 4401) { _dropStoredSession(); goToLogin(); return; }
+        setTimeout(connect, 3000);
+      };
     }
     connect();
   } else {

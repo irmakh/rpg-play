@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-09-26 16:25
 
 // ── Login page logic ──────────────────────────────────────────────────────────
 //
@@ -73,10 +73,12 @@ async function loadCharacters() {
       sel.innerHTML = '<option value="">No characters found</option>';
       return;
     }
-    sel.innerHTML = chars
+    // Built with textContent, not an HTML string: a character's name is typed by
+    // its player, and this page is where the DM types their password — a name
+    // like '<img onerror=…>' used to run here (fixed v235).
+    sel.replaceChildren(...chars
       .filter(c => c.char_type === 'pc')
-      .map(c => `<option value="${c.id}">${c.name}</option>`)
-      .join('');
+      .map(c => { const o = document.createElement('option'); o.value = c.id; o.textContent = c.name; return o; }));
     onCharSelect();
   } catch {
     document.getElementById('char-select').innerHTML = '<option value="">Error loading characters</option>';

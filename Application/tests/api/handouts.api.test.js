@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-09-26 16:50
 
 /**
  * Handouts — the redaction boundary above all.
@@ -64,7 +64,7 @@ beforeEach(() => {
   registerHandouts(app, {
     ldb,
     genId: () => crypto.randomUUID(),
-    broadcast: (event, payload) => broadcasts.push({ event, payload }),
+    broadcast: (event, payload, _campaignId, opts) => broadcasts.push({ event, payload, opts: opts || {} }),
     masterAuth: req => isMasterPassword(req.headers['x-master-password']),
     charAuth: async (charId, req) => {
       const c = ldb.getCharacter(charId);
@@ -152,6 +152,17 @@ describe('redaction — what reaches a player', () => {
     expect(raw).not.toContain('checkDc');
     expect(raw).not.toContain('rollTotal');
     expect(raw).not.toContain('checkSkill');
+  });
+
+  // v237: the chat entry carrying the total used to go to every connection and
+  // rely on the page to hide it — so the roller could read their own blind check.
+  it('sends the blind-check roll to DM connections only', async () => {
+    const h = await makeHandout();
+    await handTo(h.id, [ALIYR]);
+    await aliyr(request(app).post(`/api/handouts/${h.id}/roll`)).send({});
+    const chat = broadcasts.filter(b => b.event === 'chat');
+    expect(chat).toHaveLength(1);
+    expect(chat[0].opts).toEqual({ dmOnly: true });
   });
 
   it('still sends neither body after rolling, before the DM confirms', async () => {

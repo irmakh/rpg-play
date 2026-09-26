@@ -1,9 +1,9 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-09-26 16:50
 
 export default function register(app, ctx) {
   const {
     ldb, genId,
-    masterAuth,
+    masterAuth, sessionAuth, auth,
     processImageSizes, saveUploadFile,
     IMAGE_MIME, SHARED_MEDIA_MIME, MAX_MEDIA_BYTES,
     insertSharedMedia, _mediaGet,
@@ -56,10 +56,22 @@ export default function register(app, ctx) {
   });
 
   // ── Chat Image Upload (all users) ────────────────────────────────────────────
+  // Needs a session, and the sender is the server's to decide (v233). Until then
+  // this endpoint accepted a 10 MB image from anyone who could reach the server —
+  // no credential at all — wrote it to disk, appended it to the chat log and
+  // broadcast it to every client, under whatever `sender` the caller claimed.
   app.post('/api/chat/image', async (req, res) => {
     try {
+      if (!sessionAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
       const { dataUrl, sender, reveal } = req.body || {};
       if (!dataUrl || !sender) return res.status(400).json({ error: 'dataUrl and sender required' });
+      // A character always posts as itself, whatever name the page sent — the
+      // client falls back to a token name when it has no character name of its
+      // own, so this corrects rather than rejects. The DM may post as anyone,
+      // which is the point: they post as the token they have selected.
+      const from = masterAuth(req)
+        ? String(sender)
+        : (auth.sessionFromReq(req)?.charName || String(sender));
       const mimeMatch = dataUrl.match(/^data:([^;]+);base64,([A-Za-z0-9+/=]+)$/);
       if (!mimeMatch) return res.status(400).json({ error: 'Invalid data URL' });
       const mimeType = mimeMatch[1].toLowerCase();
@@ -78,7 +90,7 @@ export default function register(app, ctx) {
       }
       const entry = {
         id: genId(),
-        sender: String(sender).slice(0, 40),
+        sender: String(from).slice(0, 40),
         type: 'media',
         mediaId,
         mimeType,
@@ -92,11 +104,76 @@ export default function register(app, ctx) {
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
   });
 
+  // ── Private messages ─────────────────────────────────────────────────────────
+  /**
+   * Who the caller is, in the same key space server/notify.js addresses people
+   * by: 'dm' for this campaign's DM or the super-admin, a character id for a
+   * player, null for someone not logged in.
+   */
+  function whoIs(req) {
+    if (masterAuth(req)) return 'dm';
+    const s = auth.sessionFromReq(req);
+    return s && s.role === 'character' && s.charId ? String(s.charId) : null;
+  }
+
+  /**
+   * May this person read this entry?
+   *
+   * The DM reads everything at their table, players' notes to each other
+   * included — the table's own choice. Otherwise a private message belongs to
+   * the two people named on it, and a dmOnly roll to the DM alone.
+   */
+  function canRead(entry, me, isDm) {
+    if (isDm) return true;
+    if (entry.dmOnly) return false;
+    if (!entry.to) return true;                                   // public
+    return me != null && (entry.to === me || entry.fromId === me);
+  }
+
+  /**
+   * The `to`/`fromId`/`toName` fields for a private message, or null for a public
+   * one. Throws a {status, error} for a recipient that cannot be addressed.
+   *
+   * The sender is taken from the SESSION, never from the body: a private message
+   * nobody can forge is the whole point, and it is why sending one needs a login
+   * while an ordinary message does not.
+   */
+  function privateFields(to, req) {
+    if (!to) return null;
+    const me = whoIs(req);
+    if (!me) throw { status: 401, error: 'Log in to send a private message' };
+    const target = String(to);
+    if (target === me) throw { status: 400, error: 'That message would only reach you' };
+    if (target !== 'dm' && !ldb.getCharacter(target)) throw { status: 404, error: 'No such recipient' };
+    return {
+      to: target,
+      fromId: me,
+      toName: target === 'dm' ? 'DM' : (ldb.getCharacter(target).name || 'Unnamed'),
+    };
+  }
+
   // ── Chat / Dice ───────────────────────────────────────────────────────────────
   app.get('/api/chat', (req, res) => {
-    const isMaster = masterAuth(req);
-    const all = ldb.listChatLog();
-    res.json(isMaster ? all : all.filter(e => !e.dmOnly));
+    const isDm = masterAuth(req);
+    const me = isDm ? 'dm' : whoIs(req);
+    res.json(ldb.listChatLog().filter(e => canRead(e, me, isDm)));
+  });
+
+  /**
+   * One entry, if the caller may read it.
+   *
+   * A private message is never broadcast in the clear. Clients are told only that
+   * one has arrived and come here for it, so the server decides who sees the text
+   * — unlike the dmOnly rolls above, which are hidden by the receiving page and
+   * so are visible to anyone reading the socket.
+   */
+  app.get('/api/chat/entry/:id', (req, res) => {
+    const isDm = masterAuth(req);
+    const me = isDm ? 'dm' : whoIs(req);
+    const entry = ldb.listChatLog().find(e => e.id === req.params.id);
+    // A message they may not read is one that does not exist, as far as they know.
+    if (!entry || !canRead(entry, me, isDm)) return res.status(404).json({ error: 'Not found' });
+    res.json(entry);
   });
 
   /**
@@ -122,6 +199,24 @@ export default function register(app, ctx) {
         const me = ldb.listCharacters().find(c => (c.name || '') === sender);
         if (me) exclude = [me.id];
       } catch {}
+    }
+
+    // A private message rings for the person it is addressed to and nobody else.
+    // The DM can read players' notes in the log, but is not told about each one.
+    //
+    // The body says only that a message arrived, NEVER what it says: a
+    // notification goes out to every socket in the campaign with its recipient
+    // list, and each page keeps what is addressed to it — so the text here would
+    // be on everyone's wire, undoing the id-only 'chat-pm' broadcast.
+    if (entry.to) {
+      ctx.notify({
+        to: entry.to, exclude,
+        kind: 'chat', actorName: sender, priority: 'feed',
+        title: `${sender} (private)`,
+        body: 'Sent you a private message',
+        data: { href: '/table.html' },
+      });
+      return;
     }
 
     const isRoll = entry.type !== 'text';
@@ -153,20 +248,38 @@ export default function register(app, ctx) {
   }
 
   app.post('/api/chat', (req, res) => {
-    const { sender, dice, results, modifier, total, label, type, message, description, dmOnly, html, parts } = req.body;
+    const { sender, dice, results, modifier, total, label, type, message, description, dmOnly, html, parts, to } = req.body;
+    // `to` makes this a private message and requires a login; without it this is
+    // the open path every dice and HP caller already uses, unchanged.
+    let pm;
+    try { pm = privateFields(to, req); }
+    catch (e) { return res.status(e.status || 400).json({ error: e.error || 'Bad recipient' }); }
+    // Only a text line can be private; a roll carrying `to` would be stored in the
+    // open while being announced as private.
+    if (pm && type !== 'text') return res.status(400).json({ error: 'Only a text message can be private' });
     let entry;
     if (type === 'text') {
       if (!sender || !message)
         return res.status(400).json({ error: 'sender and message required' });
       // html:true marks a message whose body is pre-formatted HTML (e.g. a spell
       // description with embedded tool links — item 9). Allow a larger limit for these.
-      const isHtml = html === true;
+      // HTML only from someone logged in (v235). Without a session the body is
+      // kept as plain text, which every page escapes. The pages sanitise HTML
+      // bodies as well (sanitizeChatHtml) — this just stops a stranger's markup
+      // reaching them at all.
+      const isHtml = html === true && !!whoIs(req);
+      // A private message's name comes from the session, as a chat image's does:
+      // a character always writes as itself, the DM may speak as any token.
+      const name = pm && pm.fromId !== 'dm'
+        ? (auth.sessionFromReq(req)?.charName || sender)
+        : sender;
       entry = {
         id: genId(),
-        sender: String(sender).slice(0, 40),
+        sender: String(name).slice(0, 40),
         message: String(message).slice(0, isHtml ? 4000 : 500),
         type: 'text',
         ...(isHtml ? { html: true } : {}),
+        ...(pm || {}),
         timestamp: new Date().toISOString()
       };
     } else {
@@ -198,7 +311,16 @@ export default function register(app, ctx) {
       };
     }
     ldb.appendChatLog(entry);
-    broadcast('chat', entry);
+    // A private message goes out as a bare knock — an id and nothing else — and
+    // each client asks /api/chat/entry/:id whether it is theirs. Putting the text
+    // on the wire would hand it to every socket at the table.
+    //
+    // Since v237 the server also knows who each connection is, so the knock goes
+    // only to the two people on the message and the DM, and a dmOnly roll only to
+    // the DM. (dmOnly rolls used to be broadcast to everyone and hidden by the
+    // page — readable by anyone watching the socket.)
+    if (pm) broadcast('chat-pm', { id: entry.id }, undefined, { to: [entry.to, entry.fromId, 'dm'] });
+    else broadcast('chat', entry, undefined, entry.dmOnly ? { dmOnly: true } : {});
     notifyChat(entry);
     res.json(entry);
   });

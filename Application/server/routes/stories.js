@@ -1,7 +1,22 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-09-26 14:53
 
 export default function register(app, ctx) {
-  const { sdb, ldb, path, fs, __dirname, crypto } = ctx;
+  const { sdb, ldb, path, fs, __dirname, crypto, sessionAuth } = ctx;
+
+  // Everything under /api/stories needs someone logged into this campaign — its
+  // DM or any of its characters, which is exactly what the three story pages
+  // already ask for on the client (AuthUI.verifyAny).
+  //
+  // This is a prefix gate rather than a check per route on purpose. Until v233
+  // not one of these endpoints checked anything, and because the session gate in
+  // lib/security-middleware.js only validates a credential when one is SENT, a
+  // request with no header at all could create, rewrite or delete any story and
+  // upload or delete its images. Gating the prefix means a new endpoint added
+  // below is covered the moment it is written.
+  app.use('/api/stories', (req, res, next) => {
+    if (!sessionAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
+    next();
+  });
 
   function storyImgDir(storyId) {
     return path.join(__dirname, 'public', 'story-images', storyId);

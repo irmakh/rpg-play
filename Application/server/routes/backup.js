@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-09-26 16:25
 
 import express from 'express';
 import zlib from 'zlib';
@@ -29,6 +29,12 @@ export default function register(app, ctx) {
     ldb,
     masterAuth,
     processImageSizes, saveUploadFile, readUploadAsBase64,
+    // Every path built from a URL in a record goes through this (server.js /
+    // lib/upload-paths.js): inside uploads, this campaign's folder or a legacy
+    // shared one, and — for writes — a media extension. A backup is a file the
+    // DM uploads; until v235 its URLs, ids and MIME types were trusted as paths,
+    // which let a crafted one overwrite server code.
+    uploadPath,
     IMAGE_MIME, extToMime,
     mediaDb,
     broadcast,
@@ -467,8 +473,10 @@ export default function register(app, ctx) {
     const addUrl = (url) => {
       const rel = _stripSlash(url);
       if (!rel || !rel.startsWith('uploads/') || out.has(rel)) return;
-      const abs = path.join(__dirname, 'public', rel);
-      if (fs.existsSync(abs)) out.set(rel, { archivePath: rel, absPath: abs });
+      // A record could name '/uploads/../../.env' and have it packed into the
+      // archive the DM downloads; uploadPath() refuses anything outside.
+      const abs = uploadPath('/' + rel);
+      if (abs && fs.existsSync(abs)) out.set(rel, { archivePath: rel, absPath: abs });
     };
 
     // Every char_media row, including rows left behind by a deleted character —
@@ -640,9 +648,13 @@ export default function register(app, ctx) {
   // without the other still produces working records (images just render blank
   // until the matching images archive is restored too).
 
+  // The write that let a restore replace server.js: '/uploads/../../server.js'
+  // passed the old startsWith check. Silently skipped now, like a record with
+  // no bytes — the rest of the restore carries on.
   function _writeUploadFile(fileUrl, dataB64) {
-    if (!fileUrl || !dataB64 || !String(fileUrl).startsWith('/uploads/')) return;
-    const absPath = path.join(__dirname, 'public', fileUrl);
+    if (!fileUrl || !dataB64) return;
+    const absPath = uploadPath(String(fileUrl), true);
+    if (!absPath) { console.warn('restore: refused upload path', String(fileUrl).slice(0, 200)); return; }
     fs.mkdirSync(path.dirname(absPath), { recursive: true });
     fs.writeFileSync(absPath, Buffer.from(dataB64, 'base64'));
   }
@@ -653,7 +665,9 @@ export default function register(app, ctx) {
     if (dataB64) { try { return Buffer.from(dataB64, 'base64'); } catch { return null; } }
     const rel = _stripSlash(fileUrl);
     if (!rel.startsWith('uploads/')) return null;
-    try { return fs.readFileSync(path.join(__dirname, 'public', rel)); } catch { return null; }
+    const abs = uploadPath('/' + rel);
+    if (!abs) return null;
+    try { return fs.readFileSync(abs); } catch { return null; }
   }
 
   async function restoreTypedPart(backup) {
@@ -825,13 +839,21 @@ export default function register(app, ctx) {
     for (const r of rows) {
       if (!r || !r.id || !r.mime_type || checkMedia.get(r.id)) continue;
       if (r.dataB64) {
-        const subdir = r.id.startsWith('prep-map-') ? 'maps' : 'media';
-        const fileUrl = saveUploadFile(subdir, r.id, r.mime_type, r.dataB64);
+        const subdir = String(r.id).startsWith('prep-map-') ? 'maps' : 'media';
+        // saveUploadFile() now reduces the id to a safe filename and takes the
+        // extension from a fixed table, so neither a '../' id nor a 'text/html'
+        // MIME type can place a file anywhere but uploads. A row it refuses is
+        // skipped rather than failing the whole restore.
+        let fileUrl;
+        try { fileUrl = saveUploadFile(subdir, r.id, r.mime_type, r.dataB64); }
+        catch { continue; }
         insMedia.run(r.id, r.mime_type, Buffer.from('FILE:' + fileUrl), r.created_at || Date.now());
       } else if (r.file) {
-        // Bytes came from the images archive; point the row at that file.
+        // Bytes came from the images archive; point the row at that file — only
+        // if it is a path this campaign may use, since /api/shared-media/:id
+        // redirects to whatever the row names.
         const rel = _stripSlash(r.file);
-        if (!rel.startsWith('uploads/')) continue;
+        if (!rel.startsWith('uploads/') || !uploadPath('/' + rel)) continue;
         insMedia.run(r.id, r.mime_type, Buffer.from('FILE:/' + rel), r.created_at || Date.now());
       }
     }
@@ -843,14 +865,11 @@ export default function register(app, ctx) {
       const backup = req.body;
       if (!backup || !backup.version) return res.status(400).json({ error: 'Invalid backup file' });
 
-      function writeUploadFile(fileUrl, dataB64) {
-        if (!fileUrl || !dataB64 || !fileUrl.startsWith('/uploads/')) return;
-        const absPath = path.join(__dirname, 'public', fileUrl);
-        fs.mkdirSync(path.dirname(absPath), { recursive: true });
-        fs.writeFileSync(absPath, Buffer.from(dataB64, 'base64'));
-      }
-
-      if (backup.type && (BACKUP_PARTS.includes(backup.type) || backup.type === monster)) {
+      // 'monster' is a single-monster export (routes/monsters.js); 'shop' and
+      // 'loot' are the retired parts restoreTypedPart still reads. This line
+      // compared against a bare `monster` identifier that was never defined, so
+      // restoring any of those three threw "monster is not defined".
+      if (backup.type && (BACKUP_PARTS.includes(backup.type) || ['monster', 'shop', 'loot'].includes(backup.type))) {
         return res.json(await restoreTypedPart(backup));
       }
 
@@ -940,6 +959,13 @@ export default function register(app, ctx) {
     if (sink) await sink.end();
   }
 
+  // Ceilings for an uploaded archive. Generous next to real campaigns (the
+  // largest seen was ~80 MB of media and a ~33 MB characters.json) — they exist
+  // to stop a crafted archive exhausting memory or disk, not to limit a DM.
+  const RESTORE_MAX_JSON  = 256 * 1024 * 1024;        // one records part, parsed in memory
+  const RESTORE_MAX_FILE  = 200 * 1024 * 1024;        // one image/audio file
+  const RESTORE_MAX_TOTAL = 5 * 1024 * 1024 * 1024;   // the whole archive, uncompressed
+
   app.post('/api/admin/restore-archive', async (req, res) => {
     if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
 
@@ -951,11 +977,21 @@ export default function register(app, ctx) {
       const gunzip = zlib.createGunzip();
       req.pipe(gunzip);
 
+      const discard = () => ({ write: async () => {}, end: async () => {} });
+      let totalBytes = 0;
+
       await extractTar(gunzip, async (name, size) => {
         const clean = _stripSlash(name);
 
-        // Records archive: a small JSON per part.
+        // The declared size is what the reader will stream for this entry, so
+        // refusing on it keeps a crafted archive from filling memory or disk.
+        totalBytes += size;
+        if (totalBytes > RESTORE_MAX_TOTAL) throw new Error('Archive is larger than a restore accepts');
+
+        // Records archive: a small JSON per part — held in memory to parse, so
+        // it has a ceiling of its own.
         if (clean.endsWith('.json')) {
+          if (size > RESTORE_MAX_JSON) { skipped++; return discard(); }
           const chunks = [];
           return {
             write: async (c) => { chunks.push(Buffer.from(c)); },
@@ -964,12 +1000,14 @@ export default function register(app, ctx) {
         }
 
         // Images archive: uploads/... written straight to disk, never buffered.
-        // The prefix check is what keeps a crafted archive inside uploads/.
-        const abs = path.join(__dirname, 'public', clean);
-        const root = path.join(__dirname, 'public', 'uploads');
-        if (!clean.startsWith('uploads/') || !path.resolve(abs).startsWith(path.resolve(root))) {
+        // uploadPath() keeps it inside uploads AND inside this campaign's folder
+        // (or a legacy shared one) AND to a media extension. The old check only
+        // did the first, so one campaign's archive could overwrite another
+        // campaign's files, or plant an .html page on this origin.
+        const abs = clean.startsWith('uploads/') && size <= RESTORE_MAX_FILE ? uploadPath('/' + clean, true) : null;
+        if (!abs) {
           skipped++;
-          return { write: async () => {}, end: async () => {} };
+          return discard();
         }
         fs.mkdirSync(path.dirname(abs), { recursive: true });
         const out = fs.createWriteStream(abs);

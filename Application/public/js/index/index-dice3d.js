@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-09-26 15:58
 
 // ── 3D Dice Animation (engine in js/lib/dice-engine.js) ───────────────────────
 
@@ -47,7 +47,24 @@ async function sendChatInput() {
     await postToChat({ sender: getChatSender(), dice: `${count}d${sides}`, results, modifier, total, label: lbl });
     return;
   }
-  await postToChat({ sender: getChatSender(), type: 'text', message: text });
+  // A recipient turns this into a private message: the server needs a credential
+  // to know who it is from, and answers 401 without one. Everyone is the default.
+  const to = typeof chatPmTarget === 'function' ? chatPmTarget() : '';
+  if (!to) { await postToChat({ sender: getChatSender(), type: 'text', message: text }); return; }
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: chatPmHeaders(),
+      body: JSON.stringify({ sender: getChatSender(), type: 'text', message: text, to })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      alert('Message not sent: ' + (err.error || res.status));
+      return;
+    }
+    // Back to Everyone, so nobody keeps whispering by accident.
+    resetChatRecipient();
+  } catch {}
 }
 
 function rollDie(sides) { return Math.ceil(Math.random() * sides); }
@@ -71,10 +88,17 @@ function chatToggle() {
   if (chatOpen) {
     if (!initTrackerCollapsed) initTogglePanel();
     chatUnread = 0;
-    const badge = document.getElementById('chat-badge');
-    if (badge) badge.style.display = 'none';
+    updateChatBadge();
     scrollChatLog();
   }
+}
+
+/** Show chatUnread on the collapsed chat header, or hide the badge at zero. */
+function updateChatBadge() {
+  const badge = document.getElementById('chat-badge');
+  if (!badge) return;
+  if (chatUnread > 0) { badge.textContent = chatUnread > 9 ? '9+' : String(chatUnread); badge.style.display = ''; }
+  else badge.style.display = 'none';
 }
 
 function getChatSender() {
@@ -93,7 +117,9 @@ async function postToChat(payload) {
 
 async function loadChat() {
   try {
-    const res = await fetch('/api/chat');
+    // Send our own credential: the server decides which private messages belong
+    // in this history, and a caller who sends nothing gets only the public ones.
+    const res = await fetch('/api/chat', { headers: typeof chatPmHeaders === 'function' ? chatPmHeaders() : {} });
     if (!res.ok) return;
     const entries = await res.json();
     const log = document.getElementById('chat-log');
@@ -105,3 +131,8 @@ async function loadChat() {
 }
 
 window.addEventListener('load', loadChat);
+window.addEventListener('load', () => {
+  if (typeof initChatRecipients === 'function') {
+    initChatRecipients('chat-to', 'chat-input').then(() => bindChatRecipientPicker('chat-to', 'chat-input'));
+  }
+});

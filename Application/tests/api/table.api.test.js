@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-09-26 16:50
 
 /**
  * API integration tests for /api/table routes.
@@ -425,5 +425,58 @@ describe('POST /api/table/clear', () => {
     const init = await request(app).get('/api/initiative');
     expect(init.body.entries).toHaveLength(0);
     expect(init.body.currentId).toBe('');
+  });
+});
+
+// ── Hidden tokens stay with the DM (v237) ─────────────────────────────────────
+// Every token used to go to everyone — over GET /api/table and the live stream —
+// and the page simply did not draw hidden ones.
+describe('hidden tokens', () => {
+  async function hiddenToken(app, fields = {}) {
+    const id = await createToken(app, { name: 'Lurking Ghoul', type: 'monster', ...fields });
+    await dm(request(app).put(`/api/table/tokens/${id}`)).send({ visible: false });
+    return id;
+  }
+
+  it('are left out of GET /api/table for a caller with no login', async () => {
+    const { app } = makeApp();
+    await hiddenToken(app);
+    const res = await request(app).get('/api/table');
+    expect(res.body.tokens.map(t => t.name)).not.toContain('Lurking Ghoul');
+  });
+
+  it('are still returned to the DM', async () => {
+    const { app } = makeApp();
+    await hiddenToken(app);
+    const res = await dm(request(app).get('/api/table'));
+    expect(res.body.tokens.map(t => t.name)).toContain('Lurking Ghoul');
+  });
+
+  it("are returned to the player they are assigned to", async () => {
+    const { app, ldb, hashPassword } = makeApp();
+    ldb.createCharacter('c1', { name: 'Gerion', charType: 'pc', passwordHash: hashPassword('pw') });
+    await hiddenToken(app, { assignedCharId: 'c1' });
+    const res = await request(app).get('/api/table').set('X-Character-Id', 'c1').set('X-Character-Password', 'pw');
+    expect(res.body.tokens.map(t => t.name)).toContain('Lurking Ghoul');
+  });
+
+  it("go to DM connections in full and to everyone else as 'token-removed'", async () => {
+    const { app, broadcasts } = makeApp();
+    const id = await hiddenToken(app);
+    const hide = broadcasts.filter(b => b.channel === 'table' && b.payload.action === 'token-updated').pop();
+    expect(hide.opts).toMatchObject({ dmOnly: true, forOthers: { action: 'token-removed', id } });
+
+    broadcasts.length = 0;
+    await dm(request(app).put(`/api/table/tokens/${id}`)).send({ x: 3, y: 4 });
+    const move = broadcasts.find(b => b.payload.action === 'token-moved');
+    expect(move.opts).toMatchObject({ dmOnly: true, forOthers: { action: 'token-removed', id } });
+  });
+
+  it('go to everyone again once shown', async () => {
+    const { app, broadcasts } = makeApp();
+    const id = await hiddenToken(app);
+    broadcasts.length = 0;
+    await dm(request(app).put(`/api/table/tokens/${id}`)).send({ visible: true });
+    expect(broadcasts.find(b => b.payload.action === 'token-updated').opts).toEqual({});
   });
 });
