@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-09-26 14:53
 
 'use strict';
 
@@ -284,6 +284,22 @@ function register() {
             if (base) opened.loadURL(base + href);
           }
           return;
+        }
+
+        // If the screen this notification points at is already open in a window,
+        // raise THAT one. Navigating the window that raised the toast costs the
+        // reader whatever they were looking at — the same mistake the 1.0.2
+        // shortcut fix corrected, and windows.showing() is the helper it added
+        // for precisely this question.
+        if (href) {
+          const openRole = Object.keys(windows.ROLES).find(r => windows.ROLES[r].path === href);
+          const already = openRole ? windows.showing(openRole) : null;
+          if (already && !already.isDestroyed()) {
+            if (already.isMinimized()) already.restore();
+            already.show();
+            already.focus();
+            return;
+          }
         }
 
         const target = (win && !win.isDestroyed()) ? win : windows.focusAny();
