@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-09-26 14:23
 
 import 'dotenv/config';
 import express from 'express';
