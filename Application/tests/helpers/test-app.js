@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-09-26 16:50
+// Written by Irmak Hakman — 2026-09-26 17:55
 
 /**
  * Builds a fresh Express app wired to an in-memory SQLite database.
@@ -13,6 +13,7 @@ import express from 'express';
 import crypto from 'crypto';
 import path from 'path';
 import fs from 'fs';
+import os from 'os';
 import { fileURLToPath } from 'url';
 import { makeLdb } from './make-ldb.js';
 import { openStoriesDb } from '../../db/storiesdb.js';
@@ -97,8 +98,12 @@ function makeMediaDbStub() {
   };
 }
 
-export function makeApp() {
+export function makeApp({ maxStoryVideoBytes } = {}) {
   const app = express();
+
+  // Story panel media is written to disk, so each app gets its own scratch
+  // folder rather than the real public/story-images.
+  const storyImagesDir = fs.mkdtempSync(path.join(os.tmpdir(), 'story-media-'));
   app.use(express.json({ limit: '10mb' }));
 
   // Which campaign the in-flight request belongs to. Production resolves this
@@ -259,6 +264,8 @@ export function makeApp() {
     path,
     fs,
     __dirname: path.resolve(__dirname, '../..'),
+    STORY_IMAGES_DIR: storyImagesDir,
+    MAX_STORY_VIDEO_BYTES: maxStoryVideoBytes,
     readUploadAsBase64: () => null,
     extToMime: (p) => (String(p).endsWith('.png') ? 'image/png' : 'image/jpeg'),
     currentCampaignId: () => activeCampaignId,
@@ -284,6 +291,6 @@ export function makeApp() {
 
   return {
     app, ldb, ldbFor, masterPw: TEST_MASTER_PW, hashPassword, broadcasts, deletedFiles, parkedCampaigns,
-    sessions, setupTickets, captcha, loginGuard, auditEvents, sharedMedia,
+    sessions, setupTickets, captcha, loginGuard, auditEvents, sharedMedia, storyImagesDir,
   };
 }

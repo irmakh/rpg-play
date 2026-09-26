@@ -1,7 +1,16 @@
-// Written by Irmak Hakman — 2026-09-26 14:53
+// Written by Irmak Hakman — 2026-09-26 17:40
 
 export default function register(app, ctx) {
   const { sdb, ldb, path, fs, __dirname, crypto, sessionAuth } = ctx;
+
+  // Where panel media lives on disk. The server passes its STORY_IMAGES_DIR;
+  // the fallback is the same folder, for a caller that does not.
+  const STORY_MEDIA_DIR = ctx.STORY_IMAGES_DIR || path.join(__dirname, 'public', 'story-images');
+
+  // A panel video is sent as the raw file, not as base64 inside JSON like an
+  // image: 500 MB of base64 would be a 667 MB string held in memory on both
+  // ends. The body streams straight to disk instead, counted as it arrives.
+  const MAX_STORY_VIDEO_BYTES = ctx.MAX_STORY_VIDEO_BYTES || 500 * 1024 * 1024;   // tests pass a smaller one
 
   // Everything under /api/stories needs someone logged into this campaign — its
   // DM or any of its characters, which is exactly what the three story pages
@@ -19,7 +28,23 @@ export default function register(app, ctx) {
   });
 
   function storyImgDir(storyId) {
-    return path.join(__dirname, 'public', 'story-images', storyId);
+    return path.join(STORY_MEDIA_DIR, storyId);
+  }
+
+  // The file behind a panel's stored web path (/story-images/<story>/<file>).
+  // Only the last two segments are used, so a stored path can never point
+  // outside the story media folder.
+  function mediaFileFor(webPath) {
+    const parts = String(webPath || '').split('/').filter(Boolean);
+    if (parts.length < 2) return null;
+    const [storyId, file] = parts.slice(-2);
+    if (storyId.includes('..') || file.includes('..')) return null;
+    return path.join(STORY_MEDIA_DIR, storyId, file);
+  }
+
+  function removeMediaFile(webPath) {
+    const abs = mediaFileFor(webPath);
+    if (abs) { try { fs.unlinkSync(abs); } catch {} }
   }
 
   function parseCharIds(raw) {
@@ -131,9 +156,7 @@ export default function register(app, ctx) {
     if (!story) return res.status(404).json({ error: 'Story not found' });
     const seq = sdb.getSequence(req.params.seqId);
     if (!seq || seq.story_id !== story.id) return res.status(404).json({ error: 'Sequence not found' });
-    if (seq.image_path) {
-      try { fs.unlinkSync(path.join(__dirname, 'public', seq.image_path)); } catch {}
-    }
+    if (seq.image_path) removeMediaFile(seq.image_path);
     sdb.deleteSequence(seq.id);
     res.json({ ok: true });
   });
@@ -154,9 +177,7 @@ export default function register(app, ctx) {
     const dir  = storyImgDir(story.id);
     fs.mkdirSync(dir, { recursive: true });
 
-    if (seq.image_path) {
-      try { fs.unlinkSync(path.join(__dirname, 'public', seq.image_path)); } catch {}
-    }
+    if (seq.image_path) removeMediaFile(seq.image_path);
 
     // Use seq ID as filename so reordering never conflicts
     const filename = `${seq.id}.${ext}`;
@@ -166,14 +187,94 @@ export default function register(app, ctx) {
     res.json({ ok: true, imagePath: webPath });
   });
 
+  // ── Video upload ─────────────────────────────────────────────────────────────
+  // The body is the raw MP4 (Content-Type: video/mp4). It lands in a .part file
+  // first and is renamed into place only once complete and checked, so a broken
+  // or refused upload never replaces the panel's current media.
+  //
+  // A video shares the panel's image_path column with images — a panel holds one
+  // or the other, and the .mp4 extension is how the pages tell them apart.
+  app.post('/api/stories/:id/sequences/:seqId/video', (req, res) => {
+    const story = sdb.getStory(req.params.id);
+    if (!story) return res.status(404).json({ error: 'Story not found' });
+    const seq = sdb.getSequence(req.params.seqId);
+    if (!seq || seq.story_id !== story.id) return res.status(404).json({ error: 'Sequence not found' });
+
+    // A refusal sent before the body is read closes the connection too, so the
+    // client stops streaming a file nobody will keep.
+    const type = String(req.headers['content-type'] || '').split(';')[0].trim().toLowerCase();
+    if (type !== 'video/mp4') {
+      return res.set('Connection', 'close').status(415).json({ error: 'Only MP4 videos can be uploaded.' });
+    }
+
+    // Refuse on the declared size before reading a byte of it.
+    const declared = Number(req.headers['content-length']);
+    if (declared > MAX_STORY_VIDEO_BYTES) {
+      return res.set('Connection', 'close').status(413).json({ error: 'Videos can be at most 500 MB.', code: 'TOO_LARGE' });
+    }
+
+    const dir = storyImgDir(story.id);
+    fs.mkdirSync(dir, { recursive: true });
+    const filename = `${seq.id}.mp4`;
+    const partPath = path.join(dir, `${filename}.part`);
+    const out = fs.createWriteStream(partPath);
+
+    let received = 0;
+    let head = Buffer.alloc(0);   // first bytes, for the MP4 signature check
+    let failed = false;
+
+    const fail = (status, error) => {
+      if (failed) return;
+      failed = true;
+      req.unpipe(out);
+      out.destroy();
+      try { fs.unlinkSync(partPath); } catch {}
+      if (!res.headersSent) {
+        // The client may still be sending; closing the connection after the
+        // reply stops it streaming the rest of a refused file.
+        res.set('Connection', 'close');
+        res.status(status).json(status === 413
+          ? { error: 'Videos can be at most 500 MB.', code: 'TOO_LARGE' }
+          : { error });
+      }
+    };
+
+    req.on('data', chunk => {
+      if (failed) return;
+      received += chunk.length;
+      // Content-Length can be absent (chunked) or wrong, so the count is the real limit.
+      if (received > MAX_STORY_VIDEO_BYTES) return fail(413);
+      if (head.length < 12) head = Buffer.concat([head, chunk.subarray(0, 12 - head.length)]);
+    });
+    req.on('close', () => { if (!req.complete) fail(400, 'Upload interrupted.'); });
+    out.on('error', () => fail(500, 'Could not save the video.'));
+
+    out.on('finish', () => {
+      if (failed) return;
+      // Every MP4 starts with a box whose type, at bytes 4–8, is 'ftyp'.
+      if (received === 0 || head.length < 12 || head.subarray(4, 8).toString('latin1') !== 'ftyp') {
+        return fail(415, 'That file is not an MP4 video.');
+      }
+      if (seq.image_path) removeMediaFile(seq.image_path);
+      try {
+        fs.renameSync(partPath, path.join(dir, filename));
+      } catch {
+        return fail(500, 'Could not save the video.');
+      }
+      const webPath = `/story-images/${story.id}/${filename}`;
+      sdb.updateSequenceImage(seq.id, webPath);
+      res.json({ ok: true, imagePath: webPath, bytes: received });
+    });
+
+    req.pipe(out);
+  });
+
   app.delete('/api/stories/:id/sequences/:seqId/image', (req, res) => {
     const story = sdb.getStory(req.params.id);
     if (!story) return res.status(404).json({ error: 'Story not found' });
     const seq = sdb.getSequence(req.params.seqId);
     if (!seq || seq.story_id !== story.id) return res.status(404).json({ error: 'Sequence not found' });
-    if (seq.image_path) {
-      try { fs.unlinkSync(path.join(__dirname, 'public', seq.image_path)); } catch {}
-    }
+    if (seq.image_path) removeMediaFile(seq.image_path);
     sdb.updateSequenceImage(seq.id, '');
     res.json({ ok: true });
   });

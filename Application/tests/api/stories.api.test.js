@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-09-26 15:10
+// Written by Irmak Hakman — 2026-09-26 17:55
 
 /**
  * API integration tests for /api/stories — the login it never had.
@@ -14,6 +14,8 @@
  * whole prefix, not just the handlers named below.
  */
 import { describe, it, expect } from 'vitest';
+import fs from 'fs';
+import path from 'path';
 import request from 'supertest';
 import { makeApp, TEST_MASTER_PW } from '../helpers/test-app.js';
 
@@ -83,5 +85,106 @@ describe('/api/stories — the prefix gate', () => {
     const res = await request(app).get('/api/stories').set('X-Character-Password', 'secret');
     expect(res.status).toBe(200);
     expect(res.body).toEqual([]);
+  });
+});
+
+// ── Panel videos ──────────────────────────────────────────────────────────────
+// A video goes up as the raw MP4 body (not base64 JSON), streams to a .part file
+// and is renamed into place only when complete and recognisably an MP4.
+
+// The smallest thing the route accepts as an MP4: a box whose type is 'ftyp'.
+const fakeMp4 = (extra = 64) =>
+  Buffer.concat([Buffer.from([0, 0, 0, 0x18]), Buffer.from('ftypisom'), Buffer.alloc(extra, 7)]);
+
+async function panel(app) {
+  const story = await asDM(request(app).post('/api/stories')).send({ title: 'Moving pictures' });
+  const seq   = await asDM(request(app).post(`/api/stories/${story.body.id}/sequences`)).send({ caption: 'one' });
+  return { storyId: story.body.id, seqId: seq.body.id };
+}
+
+const filesIn = (dir) => fs.existsSync(dir) ? fs.readdirSync(dir) : [];
+
+describe('/api/stories — panel video upload', () => {
+  it('saves an MP4 and records it as the panel media', async () => {
+    const { app, storyImagesDir } = setup();
+    const { storyId, seqId } = await panel(app);
+    const body = fakeMp4(1000);
+
+    const res = await asDM(request(app).post(`/api/stories/${storyId}/sequences/${seqId}/video`))
+      .set('Content-Type', 'video/mp4').send(body);
+    expect(res.status).toBe(200);
+    expect(res.body.imagePath).toBe(`/story-images/${storyId}/${seqId}.mp4`);
+
+    const onDisk = path.join(storyImagesDir, storyId, `${seqId}.mp4`);
+    expect(fs.readFileSync(onDisk).equals(body)).toBe(true);
+    expect(filesIn(path.join(storyImagesDir, storyId))).toEqual([`${seqId}.mp4`]);   // no .part left
+
+    const story = await asDM(request(app).get(`/api/stories/${storyId}`));
+    expect(story.body.sequences[0].image_path).toBe(res.body.imagePath);
+  });
+
+  it('replaces an image the panel already had', async () => {
+    const { app, storyImagesDir } = setup();
+    const { storyId, seqId } = await panel(app);
+    await asDM(request(app).post(`/api/stories/${storyId}/sequences/${seqId}/image`))
+      .send({ dataUrl: 'data:image/png;base64,aGVsbG8=' });
+    expect(filesIn(path.join(storyImagesDir, storyId))).toEqual([`${seqId}.png`]);
+
+    const res = await asDM(request(app).post(`/api/stories/${storyId}/sequences/${seqId}/video`))
+      .set('Content-Type', 'video/mp4').send(fakeMp4());
+    expect(res.status).toBe(200);
+    expect(filesIn(path.join(storyImagesDir, storyId))).toEqual([`${seqId}.mp4`]);
+  });
+
+  it('refuses a body that is not labelled video/mp4', async () => {
+    const { app, storyImagesDir } = setup();
+    const { storyId, seqId } = await panel(app);
+    const res = await asDM(request(app).post(`/api/stories/${storyId}/sequences/${seqId}/video`))
+      .set('Content-Type', 'video/webm').send(fakeMp4());
+    expect(res.status).toBe(415);
+    expect(filesIn(path.join(storyImagesDir, storyId))).toEqual([]);
+  });
+
+  it('refuses a file that is labelled MP4 but is not one, and keeps the old media', async () => {
+    const { app, storyImagesDir } = setup();
+    const { storyId, seqId } = await panel(app);
+    await asDM(request(app).post(`/api/stories/${storyId}/sequences/${seqId}/image`))
+      .send({ dataUrl: 'data:image/png;base64,aGVsbG8=' });
+
+    const res = await asDM(request(app).post(`/api/stories/${storyId}/sequences/${seqId}/video`))
+      .set('Content-Type', 'video/mp4').send(Buffer.from('<html><script>alert(1)</script></html>'));
+    expect(res.status).toBe(415);
+    expect(filesIn(path.join(storyImagesDir, storyId))).toEqual([`${seqId}.png`]);
+
+    const story = await asDM(request(app).get(`/api/stories/${storyId}`));
+    expect(story.body.sequences[0].image_path).toMatch(/\.png$/);
+  });
+
+  it('refuses a video over the size limit and leaves nothing on disk', async () => {
+    const { app, storyImagesDir } = makeApp({ maxStoryVideoBytes: 100 });
+    const { storyId, seqId } = await panel(app);
+    const res = await asDM(request(app).post(`/api/stories/${storyId}/sequences/${seqId}/video`))
+      .set('Content-Type', 'video/mp4').send(fakeMp4(500));
+    expect(res.status).toBe(413);
+    expect(filesIn(path.join(storyImagesDir, storyId))).toEqual([]);
+  });
+
+  it('refuses a video upload with no credential', async () => {
+    const { app, storyImagesDir } = setup();
+    const { storyId, seqId } = await panel(app);
+    const res = await anonymous(request(app).post(`/api/stories/${storyId}/sequences/${seqId}/video`))
+      .set('Content-Type', 'video/mp4').send(fakeMp4());
+    expect(res.status).toBe(401);
+    expect(filesIn(path.join(storyImagesDir, storyId))).toEqual([]);
+  });
+
+  it('deleting the panel deletes its video', async () => {
+    const { app, storyImagesDir } = setup();
+    const { storyId, seqId } = await panel(app);
+    await asDM(request(app).post(`/api/stories/${storyId}/sequences/${seqId}/video`))
+      .set('Content-Type', 'video/mp4').send(fakeMp4());
+    const del = await asDM(request(app).delete(`/api/stories/${storyId}/sequences/${seqId}`));
+    expect(del.status).toBe(200);
+    expect(filesIn(path.join(storyImagesDir, storyId))).toEqual([]);
   });
 });

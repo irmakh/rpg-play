@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Written by Irmak Hakman — 2026-09-26 16:25 -->
+<!-- Written by Irmak Hakman — 2026-09-26 17:50 -->
 <html lang="en" class="lamplit">
 <head>
 <meta charset="UTF-8">
@@ -113,7 +113,7 @@ async function storiesGateSubmit() {
   <div class="modal-box" style="max-width:340px;width:96%">
     <div class="ct">Delete Panel</div>
     <div class="modal-body">
-      <p style="font-size:13px;color:var(--bone)">Delete this panel and its image? This cannot be undone.</p>
+      <p style="font-size:13px;color:var(--bone)">Delete this panel and its image or video? This cannot be undone.</p>
     </div>
     <div class="modal-btns">
       <button class="btn" onclick="closeDelPanel()">Cancel</button>
@@ -130,6 +130,13 @@ let saveTimer       = null;
 let delTarget       = null;
 let allChars        = [];         // [{id, name, thumb, species, cls, subclass}]
 let selectedCharIds = new Set();  // currently selected character IDs
+let uploading       = new Map();  // seqId -> percent, while a video is uploading
+
+const MAX_VIDEO_BYTES = 500 * 1024 * 1024;   // matches the server's limit
+// Videos keep one cache-buster per page load (or per upload), not Date.now()
+// per render like images: a new URL on every re-render would re-fetch the video.
+const pageLoadVer = Date.now();
+function isVideoPath(p) { return /\.mp4$/i.test(p || ''); }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 async function init() {
@@ -248,20 +255,35 @@ function renderPanels() {
     const num     = String(s.seq_number).padStart(3, '0');
     const isFirst = i === 0;
     const isLast  = i === sequences.length - 1;
-    const imgHtml = s.image_path
+    const pct     = uploading.get(s.id);
+    // A video has its own playback controls, so clicking it plays rather than
+    // replaces — it gets a Replace button instead.
+    const isVideo = isVideoPath(s.image_path);
+    const imgHtml = pct != null
+      ? `<div class="panel-img-empty panel-uploading">
+           <span class="panel-upload-pct">${pct}%</span>
+           <span>Uploading video…</span>
+           <div class="panel-upload-bar"><div style="width:${pct}%"></div></div>
+         </div>`
+      : isVideo
+      ? `<video class="panel-img panel-video" src="${esc(s.image_path)}?v=${s.mediaVer || pageLoadVer}"
+                preload="metadata" controls playsinline></video>`
+      : s.image_path
       ? `<img class="panel-img" src="${esc(s.image_path)}?v=${Date.now()}" alt=""
               onclick="triggerUpload('${escJs(s.id)}')" title="Click to replace image">`
       : `<div class="panel-img-empty" onclick="triggerUpload('${escJs(s.id)}')">
            <span style="font-size:24px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-image"></use></svg> </span>
-           <span>Upload image</span>
+           <span>Upload image or MP4 video</span>
          </div>`;
+    const busy = pct != null;
     return `<div class="panel-card" id="pc-${escAttr(s.id)}">
       <div class="panel-num">${num}</div>
       <div class="panel-img-area">
         ${imgHtml}
-        <input type="file" accept="image/*" id="fi-${escAttr(s.id)}" style="display:none"
+        <input type="file" accept="image/*,video/mp4" id="fi-${escAttr(s.id)}" style="display:none"
                onchange="uploadImage('${escJs(s.id)}', this)">
-        ${s.image_path ? `<button class="panel-img-clear" onclick="clearImage('${escJs(s.id)}')" title="Remove image"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg> Remove</button>` : ''}
+        ${isVideo && !busy ? `<button class="panel-img-clear" onclick="triggerUpload('${escJs(s.id)}')" title="Replace video">Replace</button>` : ''}
+        ${s.image_path && !busy ? `<button class="panel-img-clear" onclick="clearImage('${escJs(s.id)}')" title="Remove ${isVideo ? 'video' : 'image'}"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg> Remove</button>` : ''}
       </div>
       <div class="panel-caption-wrap">
         <textarea class="panel-caption" rows="4"
@@ -385,6 +407,9 @@ async function uploadImage(seqId, input) {
     if (placeholder) placeholder.style.opacity = '0.4';
   }
 
+  if (file.type === 'video/mp4' || /\.mp4$/i.test(file.name)) return uploadVideo(seq, file);
+  if (!file.type.startsWith('image/')) { showStatus('Choose an image or an MP4 video.', true); renderPanels(); return; }
+
   const dataUrl = await fileToDataUrl(file);
   const r = await storiesFetch(`/api/stories/${storyId}/sequences/${seqId}/image`, {
     method: 'POST',
@@ -396,6 +421,67 @@ async function uploadImage(seqId, input) {
   seq.image_path = d.imagePath;
   renderPanels();
 }
+
+// ── Video upload ──────────────────────────────────────────────────────────────
+// Videos go up as the raw file rather than a base64 data URL, which for 500 MB
+// would mean a 667 MB string in memory. XMLHttpRequest rather than fetch,
+// because only XHR reports upload progress.
+function uploadVideo(seq, file) {
+  if (file.size > MAX_VIDEO_BYTES) {
+    showStatus(`That video is ${(file.size / 1048576).toFixed(0)} MB — the limit is 500 MB.`, true);
+    renderPanels();
+    return;
+  }
+  uploading.set(seq.id, 0);
+  renderPanels();
+
+  const xhr = new XMLHttpRequest();
+  xhr.open('POST', `/api/stories/${storyId}/sequences/${seq.id}/video`);
+  const headers = storiesHeaders({ 'Content-Type': 'video/mp4' });
+  for (const [k, v] of Object.entries(headers)) xhr.setRequestHeader(k, v);
+
+  // Update the bar in place: re-rendering every panel on each progress event
+  // would restart any video playing in another panel.
+  xhr.upload.onprogress = e => {
+    if (!e.lengthComputable) return;
+    const pct = Math.min(99, Math.floor(e.loaded / e.total * 100));
+    uploading.set(seq.id, pct);
+    const card = document.getElementById('pc-' + seq.id);
+    const label = card?.querySelector('.panel-upload-pct');
+    const bar   = card?.querySelector('.panel-upload-bar > div');
+    if (label) label.textContent = pct + '%';
+    if (bar) bar.style.width = pct + '%';
+  };
+
+  const done = (msg) => {
+    uploading.delete(seq.id);
+    if (msg) showStatus(msg, true);
+    renderPanels();
+  };
+
+  xhr.onload = () => {
+    let d = {};
+    try { d = JSON.parse(xhr.responseText); } catch {}
+    if (xhr.status === 401) {
+      // Same as storiesFetch: the session has gone, ask for the password again.
+      try { sessionStorage.removeItem('rpgSession'); } catch {}
+      if (typeof storiesShowGate === 'function') storiesShowGate();
+      return done('Your session ended — log in and upload again.');
+    }
+    if (xhr.status < 200 || xhr.status >= 300) return done(d.error || 'Video upload failed.');
+    seq.image_path = d.imagePath;
+    seq.mediaVer   = Date.now();
+    done();
+  };
+  xhr.onerror = () => done('Video upload failed — the connection dropped.');
+  xhr.onabort = () => done('Video upload cancelled.');
+  xhr.send(file);
+}
+
+// Leaving the page would abort an upload in progress, so ask first.
+window.addEventListener('beforeunload', e => {
+  if (uploading.size) { e.preventDefault(); e.returnValue = ''; }
+});
 
 async function clearImage(seqId) {
   const r = await storiesFetch(`/api/stories/${storyId}/sequences/${seqId}/image`, { method: 'DELETE' });

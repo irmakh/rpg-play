@@ -21,6 +21,22 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [238] — 2026-09-26 — Videos in Stories
+
+A story panel can now hold an MP4 video instead of an image.
+
+- **Upload an MP4 of up to 500 MB** to any panel in the story editor. The panel shows the
+  upload's progress, and the page asks before you leave while an upload is running.
+- **Videos play in place** in the story viewer, in both grid and strip layouts, with
+  their own controls and fullscreen button. Only the first frame loads until you press play.
+- **A video panel can be the story's cover** on the Stories list, where it shows its first frame.
+- Replacing or removing a panel's video, or deleting the panel, also deletes the file.
+- The offline cache now skips video and audio files.
+- *(no frontend bump)* The server now allows up to an hour to receive a request, so a
+  large video upload over a slow connection isn't cut off. This needs a server restart.
+
+---
+
 ## [237] — 2026-09-26 — Live updates need a login
 
 - The live connection that keeps every page up to date now requires a login, and is

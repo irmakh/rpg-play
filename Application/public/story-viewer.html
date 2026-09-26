@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Written by Irmak Hakman — 2026-09-26 16:25 -->
+<!-- Written by Irmak Hakman — 2026-09-26 17:50 -->
 <html lang="en" class="lamplit">
 <head>
 <meta charset="UTF-8">
@@ -98,6 +98,9 @@ async function storiesGateSubmit() {
 <script>
 let story     = null;
 let layout    = 'grid';
+// Videos get one cache-buster per page load: Date.now() on every render (as
+// images use) would make switching layout re-fetch each video.
+const pageLoadVer = Date.now();
 let portraits = {};  // charId <svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-arrow-right"></use></svg> {name, thumb, species, cls, subclass}
 
 async function init() {
@@ -178,13 +181,25 @@ function renderStrip(seqs) {
   setBody(`<div class="viewer-strip">${seqs.map((s, i) => panelStrip(s, i)).join('')}</div>`);
 }
 
+// A panel's picture: an image opens the lightbox on click; a video plays in
+// place with its own controls (fullscreen included), so it needs no lightbox.
+// preload="metadata" fetches only enough to show the first frame and duration —
+// a story with several large videos does not download them all on open.
+function panelMedia(s, idx, num) {
+  if (/\.mp4$/i.test(s.image_path)) {
+    return `<video class="viewer-video" src="${esc(s.image_path)}?v=${pageLoadVer}"
+                   preload="metadata" controls playsinline></video>`;
+  }
+  return `<img src="${esc(s.image_path)}?v=${Date.now()}" alt="Panel ${num}" loading="lazy"
+               onclick="openLightbox(${idx})">`;
+}
+
 function panelCard(s, idx) {
   const num = String(s.seq_number).padStart(3, '0');
   const cap = (s.caption || s.prompt || '').trim();
   if (s.image_path) {
     return `<div class="viewer-card">
-      <img src="${esc(s.image_path)}?v=${Date.now()}" alt="Panel ${num}" loading="lazy"
-           onclick="openLightbox(${idx})">
+      ${panelMedia(s, idx, num)}
       <div class="viewer-card-cap">
         <div class="viewer-panel-num">Panel ${num}</div>
         ${cap ? `<div class="viewer-caption">${esc(cap)}</div>` : ''}
@@ -205,8 +220,7 @@ function panelStrip(s, idx) {
   const cap = (s.caption || s.prompt || '').trim();
   return `<div class="viewer-strip-panel">
     ${s.image_path
-      ? `<img src="${esc(s.image_path)}?v=${Date.now()}" alt="Panel ${num}" loading="lazy"
-              onclick="openLightbox(${idx})">`
+      ? panelMedia(s, idx, num)
       : `<div class="viewer-strip-placeholder">No image</div>`}
     <div class="viewer-strip-cap">
       <div class="viewer-panel-num">Panel ${num}</div>
@@ -224,7 +238,7 @@ function setLayout(l) {
 // ── Lightbox ──────────────────────────────────────────────────────────────────
 function openLightbox(idx) {
   const s = (story.sequences || [])[idx];
-  if (!s || !s.image_path) return;
+  if (!s || !s.image_path || /\.mp4$/i.test(s.image_path)) return;
   document.getElementById('lb-img').src = s.image_path + '?v=' + Date.now();
   document.getElementById('lb-img').alt = (s.caption || s.prompt || '');
   document.getElementById('lightbox').style.display = 'flex';

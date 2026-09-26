@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-09-26 16:50
+// Written by Irmak Hakman — 2026-09-26 17:45
 
 import 'dotenv/config';
 import express from 'express';
@@ -490,7 +490,7 @@ const MAX_MEDIA_BYTES = 25 * 1024 * 1024;
 // Bump this number whenever frontend JS or CSS files change.
 // Also bump CACHE in public/sw.js to the same value.
 // Both must always match. See deployment notes in CLAUDE.md.
-const FRONTEND_VERSION = 237;
+const FRONTEND_VERSION = 238;
 
 // ── Express app ───────────────────────────────────────────────────────────────
 const app = express();
@@ -899,6 +899,12 @@ if (useSSL) {
 } else {
   httpServer = createHttpServer(app);
 }
+
+// Node gives a whole request five minutes by default, headers and body together.
+// A 500 MB story video over a home connection takes longer than that, so the
+// body gets an hour. Headers keep their own short limit (headersTimeout, 60 s),
+// which is what guards against connections that dribble a request in slowly.
+httpServer.requestTimeout = 60 * 60 * 1000;
 
 const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
 wss.on('connection', (ws, req) => {

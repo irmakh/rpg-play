@@ -1,4 +1,4 @@
-/* Written by Irmak Hakman in 2026. */
+/* Written by Irmak Hakman — 2026-09-26 17:55 */
 
 /* ── Shared layout ───────────────────────────────────────────────────────────── */
 .stories-wrap,
@@ -206,6 +206,24 @@
   transition: border-color .15s;
 }
 .panel-img:hover { border-color: var(--bone); }
+/* A video panel plays on click rather than opening the file picker. */
+.panel-video { cursor: default; background: #000; }
+
+/* Progress while a video uploads — the percentage and bar are updated in place. */
+.panel-uploading { cursor: default; border-style: solid; }
+.panel-upload-pct { font-size: 18px; color: var(--bone); }
+.panel-upload-bar {
+  width: 80%;
+  height: 4px;
+  background: var(--rule-hi);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.panel-upload-bar > div {
+  height: 100%;
+  background: var(--bone);
+  transition: width .2s;
+}
 
 .panel-img-empty {
   width: 130px;
@@ -343,6 +361,16 @@
   width: 100%;
   display: block;
   cursor: zoom-in;
+}
+/* Panel videos, in both layouts. No zoom cursor: a video plays in place. */
+.viewer-video {
+  width: 100%;
+  display: block;
+  background: #000;
+}
+.viewer-strip-panel .viewer-video {
+  border-radius: 6px;
+  border: 1px solid var(--rule-hi);
 }
 .viewer-card-placeholder {
   aspect-ratio: 4 / 3;

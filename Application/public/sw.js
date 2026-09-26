@@ -1,6 +1,6 @@
-// Written by Irmak Hakman — 2026-09-26 16:50
+// Written by Irmak Hakman — 2026-09-26 17:45
 
-const CACHE = 'rpg-v237';
+const CACHE = 'rpg-v238';
 
 const STATIC = [
   // Core pages
@@ -97,6 +97,12 @@ self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
   // Always network for API, SSE, WebSocket
   if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/ws')) return;
+  // Always network for video and audio. The browser asks for them in byte
+  // ranges, and a partial (206) response cannot go in the cache; a whole one
+  // could be a 500 MB story video, far too large to keep offline.
+  if (e.request.headers.has('range')
+      || e.request.destination === 'video' || e.request.destination === 'audio'
+      || /\.(mp4|webm|mp3|ogg|wav|m4a)$/i.test(url.pathname)) return;
 
   const cacheGet = () =>
     fetch(e.request).then(res => {
