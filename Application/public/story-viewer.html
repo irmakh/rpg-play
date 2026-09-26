@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Written by Irmak Hakman — 2026-09-26 17:50 -->
+<!-- Written by Irmak Hakman — 2026-09-26 18:30 -->
 <html lang="en" class="lamplit">
 <head>
 <meta charset="UTF-8">
@@ -186,7 +186,7 @@ function renderStrip(seqs) {
 // preload="metadata" fetches only enough to show the first frame and duration —
 // a story with several large videos does not download them all on open.
 function panelMedia(s, idx, num) {
-  if (/\.mp4$/i.test(s.image_path)) {
+  if (/\.(mp4|webm)$/i.test(s.image_path)) {
     return `<video class="viewer-video" src="${esc(s.image_path)}?v=${pageLoadVer}"
                    preload="metadata" controls playsinline></video>`;
   }
@@ -238,7 +238,7 @@ function setLayout(l) {
 // ── Lightbox ──────────────────────────────────────────────────────────────────
 function openLightbox(idx) {
   const s = (story.sequences || [])[idx];
-  if (!s || !s.image_path || /\.mp4$/i.test(s.image_path)) return;
+  if (!s || !s.image_path || /\.(mp4|webm)$/i.test(s.image_path)) return;
   document.getElementById('lb-img').src = s.image_path + '?v=' + Date.now();
   document.getElementById('lb-img').alt = (s.caption || s.prompt || '');
   document.getElementById('lightbox').style.display = 'flex';

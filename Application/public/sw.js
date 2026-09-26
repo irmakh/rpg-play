@@ -1,6 +1,6 @@
-// Written by Irmak Hakman — 2026-09-26 17:45
+// Written by Irmak Hakman — 2026-09-26 18:30
 
-const CACHE = 'rpg-v238';
+const CACHE = 'rpg-v239';
 
 const STATIC = [
   // Core pages

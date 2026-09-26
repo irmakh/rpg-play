@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-09-26 17:45
+// Written by Irmak Hakman — 2026-09-26 18:30
 
 import 'dotenv/config';
 import express from 'express';
@@ -490,7 +490,7 @@ const MAX_MEDIA_BYTES = 25 * 1024 * 1024;
 // Bump this number whenever frontend JS or CSS files change.
 // Also bump CACHE in public/sw.js to the same value.
 // Both must always match. See deployment notes in CLAUDE.md.
-const FRONTEND_VERSION = 238;
+const FRONTEND_VERSION = 239;
 
 // ── Express app ───────────────────────────────────────────────────────────────
 const app = express();

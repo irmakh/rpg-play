@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Written by Irmak Hakman — 2026-09-26 17:50 -->
+<!-- Written by Irmak Hakman — 2026-09-26 18:30 -->
 <html lang="en" class="lamplit">
 <head>
 <meta charset="UTF-8">
@@ -136,7 +136,7 @@ const MAX_VIDEO_BYTES = 500 * 1024 * 1024;   // matches the server's limit
 // Videos keep one cache-buster per page load (or per upload), not Date.now()
 // per render like images: a new URL on every re-render would re-fetch the video.
 const pageLoadVer = Date.now();
-function isVideoPath(p) { return /\.mp4$/i.test(p || ''); }
+function isVideoPath(p) { return /\.(mp4|webm)$/i.test(p || ''); }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 async function init() {
@@ -273,14 +273,14 @@ function renderPanels() {
               onclick="triggerUpload('${escJs(s.id)}')" title="Click to replace image">`
       : `<div class="panel-img-empty" onclick="triggerUpload('${escJs(s.id)}')">
            <span style="font-size:24px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-image"></use></svg> </span>
-           <span>Upload image or MP4 video</span>
+           <span>Upload image or video (MP4, WebM)</span>
          </div>`;
     const busy = pct != null;
     return `<div class="panel-card" id="pc-${escAttr(s.id)}">
       <div class="panel-num">${num}</div>
       <div class="panel-img-area">
         ${imgHtml}
-        <input type="file" accept="image/*,video/mp4" id="fi-${escAttr(s.id)}" style="display:none"
+        <input type="file" accept="image/*,video/mp4,video/webm" id="fi-${escAttr(s.id)}" style="display:none"
                onchange="uploadImage('${escJs(s.id)}', this)">
         ${isVideo && !busy ? `<button class="panel-img-clear" onclick="triggerUpload('${escJs(s.id)}')" title="Replace video">Replace</button>` : ''}
         ${s.image_path && !busy ? `<button class="panel-img-clear" onclick="clearImage('${escJs(s.id)}')" title="Remove ${isVideo ? 'video' : 'image'}"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg> Remove</button>` : ''}
@@ -407,8 +407,9 @@ async function uploadImage(seqId, input) {
     if (placeholder) placeholder.style.opacity = '0.4';
   }
 
-  if (file.type === 'video/mp4' || /\.mp4$/i.test(file.name)) return uploadVideo(seq, file);
-  if (!file.type.startsWith('image/')) { showStatus('Choose an image or an MP4 video.', true); renderPanels(); return; }
+  const videoType = videoTypeOf(file);
+  if (videoType) return uploadVideo(seq, file, videoType);
+  if (!file.type.startsWith('image/')) { showStatus('Choose an image, or an MP4 or WebM video.', true); renderPanels(); return; }
 
   const dataUrl = await fileToDataUrl(file);
   const r = await storiesFetch(`/api/stories/${storyId}/sequences/${seqId}/image`, {
@@ -426,7 +427,16 @@ async function uploadImage(seqId, input) {
 // Videos go up as the raw file rather than a base64 data URL, which for 500 MB
 // would mean a 667 MB string in memory. XMLHttpRequest rather than fetch,
 // because only XHR reports upload progress.
-function uploadVideo(seq, file) {
+// The upload's Content-Type. Some systems leave file.type empty, so the
+// extension is the fallback.
+function videoTypeOf(file) {
+  if (file.type === 'video/mp4' || file.type === 'video/webm') return file.type;
+  if (/\.mp4$/i.test(file.name))  return 'video/mp4';
+  if (/\.webm$/i.test(file.name)) return 'video/webm';
+  return null;
+}
+
+function uploadVideo(seq, file, videoType) {
   if (file.size > MAX_VIDEO_BYTES) {
     showStatus(`That video is ${(file.size / 1048576).toFixed(0)} MB — the limit is 500 MB.`, true);
     renderPanels();
@@ -437,7 +447,7 @@ function uploadVideo(seq, file) {
 
   const xhr = new XMLHttpRequest();
   xhr.open('POST', `/api/stories/${storyId}/sequences/${seq.id}/video`);
-  const headers = storiesHeaders({ 'Content-Type': 'video/mp4' });
+  const headers = storiesHeaders({ 'Content-Type': videoType });
   for (const [k, v] of Object.entries(headers)) xhr.setRequestHeader(k, v);
 
   // Update the bar in place: re-rendering every panel on each progress event

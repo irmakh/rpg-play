@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-09-26 17:55
+// Written by Irmak Hakman — 2026-09-26 18:25
 
 /**
  * API integration tests for /api/stories — the login it never had.
@@ -102,6 +102,10 @@ async function panel(app) {
   return { storyId: story.body.id, seqId: seq.body.id };
 }
 
+// A WebM (Matroska) file opens with the EBML magic number 1A 45 DF A3.
+const fakeWebm = (extra = 64) =>
+  Buffer.concat([Buffer.from([0x1a, 0x45, 0xdf, 0xa3]), Buffer.from('B', 'latin1'), Buffer.alloc(extra, 7)]);
+
 const filesIn = (dir) => fs.existsSync(dir) ? fs.readdirSync(dir) : [];
 
 describe('/api/stories — panel video upload', () => {
@@ -136,11 +140,11 @@ describe('/api/stories — panel video upload', () => {
     expect(filesIn(path.join(storyImagesDir, storyId))).toEqual([`${seqId}.mp4`]);
   });
 
-  it('refuses a body that is not labelled video/mp4', async () => {
+  it('refuses a body that is not labelled video/mp4 or video/webm', async () => {
     const { app, storyImagesDir } = setup();
     const { storyId, seqId } = await panel(app);
     const res = await asDM(request(app).post(`/api/stories/${storyId}/sequences/${seqId}/video`))
-      .set('Content-Type', 'video/webm').send(fakeMp4());
+      .set('Content-Type', 'video/quicktime').send(fakeMp4());
     expect(res.status).toBe(415);
     expect(filesIn(path.join(storyImagesDir, storyId))).toEqual([]);
   });
@@ -158,6 +162,37 @@ describe('/api/stories — panel video upload', () => {
 
     const story = await asDM(request(app).get(`/api/stories/${storyId}`));
     expect(story.body.sequences[0].image_path).toMatch(/\.png$/);
+  });
+
+  it('saves a WebM as .webm', async () => {
+    const { app, storyImagesDir } = setup();
+    const { storyId, seqId } = await panel(app);
+    const body = fakeWebm(1000);
+    const res = await asDM(request(app).post(`/api/stories/${storyId}/sequences/${seqId}/video`))
+      .set('Content-Type', 'video/webm').send(body);
+    expect(res.status).toBe(200);
+    expect(res.body.imagePath).toBe(`/story-images/${storyId}/${seqId}.webm`);
+    expect(fs.readFileSync(path.join(storyImagesDir, storyId, `${seqId}.webm`)).equals(body)).toBe(true);
+  });
+
+  it('replacing an MP4 with a WebM leaves only the WebM', async () => {
+    const { app, storyImagesDir } = setup();
+    const { storyId, seqId } = await panel(app);
+    await asDM(request(app).post(`/api/stories/${storyId}/sequences/${seqId}/video`))
+      .set('Content-Type', 'video/mp4').send(fakeMp4());
+    const res = await asDM(request(app).post(`/api/stories/${storyId}/sequences/${seqId}/video`))
+      .set('Content-Type', 'video/webm').send(fakeWebm());
+    expect(res.status).toBe(200);
+    expect(filesIn(path.join(storyImagesDir, storyId))).toEqual([`${seqId}.webm`]);
+  });
+
+  it('refuses MP4 bytes labelled as WebM — the file must match its label', async () => {
+    const { app, storyImagesDir } = setup();
+    const { storyId, seqId } = await panel(app);
+    const res = await asDM(request(app).post(`/api/stories/${storyId}/sequences/${seqId}/video`))
+      .set('Content-Type', 'video/webm').send(fakeMp4());
+    expect(res.status).toBe(415);
+    expect(filesIn(path.join(storyImagesDir, storyId))).toEqual([]);
   });
 
   it('refuses a video over the size limit and leaves nothing on disk', async () => {

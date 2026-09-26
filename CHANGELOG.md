@@ -21,6 +21,13 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [239] — 2026-09-26 — WebM videos in Stories
+
+- Story panels now accept **WebM** videos as well as MP4, with the same 500 MB limit.
+  Each file is checked to make sure it really is the format it claims to be.
+
+---
+
 ## [238] — 2026-09-26 — Videos in Stories
 
 A story panel can now hold an MP4 video instead of an image.

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Written by Irmak Hakman — 2026-09-26 17:50 -->
+<!-- Written by Irmak Hakman — 2026-09-26 18:30 -->
 <html lang="en" class="lamplit">
 <head>
 <meta charset="UTF-8">
@@ -170,7 +170,7 @@ function renderGrid() {
   grid.innerHTML = list.map(s => {
     // A video cover shows its first frame: preload=metadata plus the #t fragment
     // makes the browser fetch just enough to paint it, not the whole file.
-    const cover = /\.mp4$/i.test(s.cover_image || '')
+    const cover = /\.(mp4|webm)$/i.test(s.cover_image || '')
       ? `<video class="story-cover" src="${esc(s.cover_image)}#t=0.1" preload="metadata" muted playsinline></video>`
       : s.cover_image
       ? `<img class="story-cover" src="${esc(s.cover_image)}?v=${Date.now()}" alt="" loading="lazy">`

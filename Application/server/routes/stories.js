@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-09-26 18:10
+// Written by Irmak Hakman — 2026-09-26 18:25
 
 import { AsyncLocalStorage } from 'async_hooks';
 
@@ -13,6 +13,16 @@ export default function register(app, ctx) {
   // image: 500 MB of base64 would be a 667 MB string held in memory on both
   // ends. The body streams straight to disk instead, counted as it arrives.
   const MAX_STORY_VIDEO_BYTES = ctx.MAX_STORY_VIDEO_BYTES || 500 * 1024 * 1024;   // tests pass a smaller one
+
+  // The video formats a panel accepts. Each is checked against its file
+  // signature, not just its label, so the saved extension always matches what
+  // is really in the file.
+  const STORY_VIDEO_TYPES = {
+    // An MP4 starts with a box whose type, at bytes 4–8, is 'ftyp'.
+    'video/mp4':  { ext: 'mp4',  name: 'MP4',  matches: h => h.subarray(4, 8).toString('latin1') === 'ftyp' },
+    // A WebM (Matroska) starts with the EBML magic number 1A 45 DF A3.
+    'video/webm': { ext: 'webm', name: 'WebM', matches: h => h[0] === 0x1a && h[1] === 0x45 && h[2] === 0xdf && h[3] === 0xa3 },
+  };
 
   // Everything under /api/stories needs someone logged into this campaign — its
   // DM or any of its characters, which is exactly what the three story pages
@@ -190,12 +200,12 @@ export default function register(app, ctx) {
   });
 
   // ── Video upload ─────────────────────────────────────────────────────────────
-  // The body is the raw MP4 (Content-Type: video/mp4). It lands in a .part file
+  // The body is the raw file (Content-Type: video/mp4 or video/webm). It lands in a .part file
   // first and is renamed into place only once complete and checked, so a broken
   // or refused upload never replaces the panel's current media.
   //
   // A video shares the panel's image_path column with images — a panel holds one
-  // or the other, and the .mp4 extension is how the pages tell them apart.
+  // or the other, and the .mp4/.webm extension is how the pages tell them apart.
   app.post('/api/stories/:id/sequences/:seqId/video', (req, res) => {
     const story = sdb.getStory(req.params.id);
     if (!story) return res.status(404).json({ error: 'Story not found' });
@@ -205,8 +215,9 @@ export default function register(app, ctx) {
     // A refusal sent before the body is read closes the connection too, so the
     // client stops streaming a file nobody will keep.
     const type = String(req.headers['content-type'] || '').split(';')[0].trim().toLowerCase();
-    if (type !== 'video/mp4') {
-      return res.set('Connection', 'close').status(415).json({ error: 'Only MP4 videos can be uploaded.' });
+    const format = STORY_VIDEO_TYPES[type];
+    if (!format) {
+      return res.set('Connection', 'close').status(415).json({ error: 'Only MP4 and WebM videos can be uploaded.' });
     }
 
     // Refuse on the declared size before reading a byte of it.
@@ -217,12 +228,12 @@ export default function register(app, ctx) {
 
     const dir = storyImgDir(story.id);
     fs.mkdirSync(dir, { recursive: true });
-    const filename = `${seq.id}.mp4`;
+    const filename = `${seq.id}.${format.ext}`;
     const partPath = path.join(dir, `${filename}.part`);
     const out = fs.createWriteStream(partPath);
 
     let received = 0;
-    let head = Buffer.alloc(0);   // first bytes, for the MP4 signature check
+    let head = Buffer.alloc(0);   // first bytes, for the signature check
     let failed = false;
 
     const fail = (status, error) => {
@@ -258,9 +269,8 @@ export default function register(app, ctx) {
     // throw was uncaught and took the whole server down (v238).
     out.on('finish', AsyncLocalStorage.bind(() => {
       if (failed) return;
-      // Every MP4 starts with a box whose type, at bytes 4–8, is 'ftyp'.
-      if (received === 0 || head.length < 12 || head.subarray(4, 8).toString('latin1') !== 'ftyp') {
-        return fail(415, 'That file is not an MP4 video.');
+      if (head.length < 12 || !format.matches(head)) {
+        return fail(415, `That file is not a ${format.name} video.`);
       }
       // Stream callbacks are outside express's error handling, so anything that
       // throws here must be caught and answered, never left to crash the process.
