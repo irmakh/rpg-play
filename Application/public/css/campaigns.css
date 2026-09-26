@@ -23,8 +23,12 @@ body{
 
 /* ── Layout ───────────────────────────────────────────────────────────────── */
 .main{flex:1 1 auto;display:flex;min-height:0}
+/* min-width:0 on both panes is load-bearing, not tidiness. A flex item's automatic
+   minimum size is its min-content width, and .camp-desc is white-space:nowrap — so a
+   single long campaign description stretches this pane far past its 380px basis and
+   shoves the detail pane, login and all, off the right edge of the window. */
 .list-pane{
-  flex:0 0 380px;display:flex;flex-direction:column;min-height:0;
+  flex:0 0 380px;display:flex;flex-direction:column;min-height:0;min-width:0;
   border-right:1px solid var(--rule);background:var(--ink);
 }
 .list-hdr{
@@ -33,7 +37,7 @@ body{
 }
 .list-hdr .lbl{font-size:10px;color:var(--bone);flex:1}
 .list-body{flex:1 1 auto;overflow-y:auto;padding:10px}
-.detail-pane{flex:1 1 auto;overflow-y:auto;padding:22px 26px;min-height:0}
+.detail-pane{flex:1 1 auto;overflow-y:auto;padding:22px 26px;min-height:0;min-width:0}
 
 /* ── Campaign cards ───────────────────────────────────────────────────────── */
 .camp-card{

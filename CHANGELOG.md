@@ -21,6 +21,23 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [232] — 2026-09-26 — The campaign login is visible again on the picker
+
+Selecting a campaign showed its name, description and stats but not the login form
+beside them: the campaign list stretched across the whole window and pushed the detail
+pane, login and all, off the right edge. It affected every window size, and it started
+when a campaign with a long description was added.
+
+The list pane is a flex item sized `flex:0 0 380px`, but a flex item cannot shrink below
+its min-content width unless it is given `min-width:0`, and the description line inside
+each card is `white-space:nowrap`. One 279-character description therefore demanded a
+single 1400px line, the pane grew to 1508px to hold it, and the detail pane was left
+with 52px off the edge of the screen. Both panes now set `min-width:0`, so the pane
+keeps its 380px and the description ellipsises as it was always meant to.
+
+The handouts screen is built from the same master-detail pair and had the same latent
+bug waiting on a long enough handout title, so it is fixed there too.
+
 ## [231] — 2026-09-12 — A notification no longer drags the window you were reading
 
 Fixes a regression in v230. In the desktop app, clicking a notification whose screen
