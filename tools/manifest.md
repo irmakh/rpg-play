@@ -92,6 +92,18 @@
 
 **Frontend** — `public/js/lib/auth-ui.js`: `AuthUI.captcha(el, {onEnter, lazy})`, `login`, `adminLogin`, `verifyAny`, `setFirstPassword`, `logout(token)`, `dmGate({capEl, pwInput, errEl, onUnlock})` (the DM tool pages' gate: unlocks from a live stored session or mounts the captcha), `storedDmToken()`. Self-contained styles (works on the console, AI DM and Stories pages). `js/lib/realtime.js` gained `revokeStoredSession()`, `goToLogin()`, a load-time drop of any pre-v226 plain-password session, and a fetch interceptor for `401 SESSION_EXPIRED`. Console screens share a login through `BroadcastChannel('rpg-console-session')` (SESSION_REQUEST / SESSION_SYNC / SESSION_LOGOUT), same device only.
 
+## Application — Uploads, live delivery, private messages (v234–v237)
+
+**`Application/lib/upload-paths.js`** — the single rule for where an uploaded file may live. `resolveUploadPath(uploadsDir, url, {campaignId, forWrite})` -> absolute path or null (inside uploads, this campaign's folder or a legacy shared folder, media extensions only when writing); `mimeToExt(mime)` (fixed table, else `'bin'`); `safeFileId(id)`. server.js wraps it as `uploadPath(url, forWrite)` (in ctx); every upload read/write/delete and backup restore/export goes through it.
+
+**`Application/lib/realtime-audience.js`** — who a live event reaches. `identityFromSession(session, campaignId)` -> `{campaignId, role, key, charId, charName}`; `payloadFor(identity, campaignId, payload, {dmOnly, to, forOthers, alsoFor})` -> payload / substitute / null; `tokenFromQuery(q)`. server.js `broadcast()` calls it per connection; SSE/WS/console relay take identity from `?token=`.
+
+**`Application/public/js/lib/stories-auth.js`** — the Stories pages' session: `storiesSession()`, `storiesHeaders()`, `storiesFetch()` (re-shows the gate on 401), `storiesStoreSession(data)`.
+
+**`Application/public/js/lib/chat-pm.js`** — private messages on all five chat pages: `initChatRecipients(selectId, inputId)`, `bindChatRecipientPicker`, `chatPmTarget`, `resetChatRecipient`, `chatPmHeaders`, `onPrivateChatSignal(id)` (fetches `/api/chat/entry/:id`; resolves true when shown).
+
+`public/js/lib/chat-render.js` gained `sanitizeChatHtml(html)` / `chatHtmlAttr(tag, name, value)` — HTML chat bodies are rendered through an allowlist.
+
 ## Application — Handouts
 
 > DM-authored handouts. Each carries TWO bodies — what a player reads on a
