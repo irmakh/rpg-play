@@ -34,6 +34,8 @@ A story panel can now hold an MP4 video instead of an image.
 - The offline cache now skips video and audio files.
 - *(no frontend bump)* The server now allows up to an hour to receive a request, so a
   large video upload over a slow connection isn't cut off. This needs a server restart.
+- *(no frontend bump)* Fixed: a video upload could stop the server just as it
+  finished. The video is now saved and the upload completes normally.
 
 ---
 

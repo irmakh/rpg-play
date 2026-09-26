@@ -1,4 +1,6 @@
-// Written by Irmak Hakman — 2026-09-26 17:40
+// Written by Irmak Hakman — 2026-09-26 18:10
+
+import { AsyncLocalStorage } from 'async_hooks';
 
 export default function register(app, ctx) {
   const { sdb, ldb, path, fs, __dirname, crypto, sessionAuth } = ctx;
@@ -249,22 +251,30 @@ export default function register(app, ctx) {
     req.on('close', () => { if (!req.complete) fail(400, 'Upload interrupted.'); });
     out.on('error', () => fail(500, 'Could not save the video.'));
 
-    out.on('finish', () => {
+    // AsyncLocalStorage.bind ties this callback to the request's campaign context
+    // now, while we still have it. Without it, 'finish' fires from the socket's
+    // reads once the body arrives in pieces (any real upload), outside the
+    // request's store — and sdb, a campaign-scoped proxy, throws there. That
+    // throw was uncaught and took the whole server down (v238).
+    out.on('finish', AsyncLocalStorage.bind(() => {
       if (failed) return;
       // Every MP4 starts with a box whose type, at bytes 4–8, is 'ftyp'.
       if (received === 0 || head.length < 12 || head.subarray(4, 8).toString('latin1') !== 'ftyp') {
         return fail(415, 'That file is not an MP4 video.');
       }
-      if (seq.image_path) removeMediaFile(seq.image_path);
+      // Stream callbacks are outside express's error handling, so anything that
+      // throws here must be caught and answered, never left to crash the process.
       try {
+        if (seq.image_path) removeMediaFile(seq.image_path);
         fs.renameSync(partPath, path.join(dir, filename));
-      } catch {
-        return fail(500, 'Could not save the video.');
+        const webPath = `/story-images/${story.id}/${filename}`;
+        sdb.updateSequenceImage(seq.id, webPath);
+        res.json({ ok: true, imagePath: webPath, bytes: received });
+      } catch (err) {
+        console.error('[stories] video save failed:', err);
+        fail(500, 'Could not save the video.');
       }
-      const webPath = `/story-images/${story.id}/${filename}`;
-      sdb.updateSequenceImage(seq.id, webPath);
-      res.json({ ok: true, imagePath: webPath, bytes: received });
-    });
+    }));
 
     req.pipe(out);
   });
