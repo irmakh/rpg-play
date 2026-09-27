@@ -90,7 +90,7 @@ export function startTelemetry(deps, { env = process.env, log = console.log, fet
                                        firstDelayMs = 60 * 1000, intervalMs = DAY_MS } = {}) {
   if (!telemetryEnabled(env)) return null;
   const url = String(env.TELEMETRY_URL || DEFAULT_TELEMETRY_URL).trim();
-  log(`Install report: sending anonymous usage counts to ${url} once a day (set TELEMETRY=off to disable)`);
+  //log(`Install report: sending anonymous usage counts to ${url} once a day (set TELEMETRY=off to disable)`);
 
   const run = () => { sendReport(url, buildPayload(deps), { fetchImpl }).catch(() => {}); };
   const first = setTimeout(run, firstDelayMs);
