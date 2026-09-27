@@ -6,10 +6,10 @@
 [![Electron](https://img.shields.io/badge/Electron-44-47848F?style=flat-square&logo=electron&logoColor=white)](https://www.electronjs.org)
 [![JavaScript](https://img.shields.io/badge/Vanilla_JS-no_build_step-F7DF1E?style=flat-square&logo=javascript&logoColor=black)](#tech-stack)
 [![PWA](https://img.shields.io/badge/PWA-installable-5A0FC8?style=flat-square&logo=pwa&logoColor=white)](#mobile-companion-pwa-console)
-[![Vitest](https://img.shields.io/badge/Vitest-1152_passing-6E9F18?style=flat-square&logo=vitest&logoColor=white)](#tech-stack)
+[![Vitest](https://img.shields.io/badge/Vitest-1341_passing-6E9F18?style=flat-square&logo=vitest&logoColor=white)](#tech-stack)
 [![Docker](https://img.shields.io/badge/Docker-compose-2496ED?style=flat-square&logo=docker&logoColor=white)](#option-a--docker-recommended-for-local--lan-play)
 
-A self-hosted web app for running D&D 5e sessions. It hosts any number of **campaigns**, each a fully separate world with its own DM password and its own data. Every campaign bundles a full character sheet, a shared virtual battle map, a real-time initiative tracker, a monster library, a treasury for loot and shop items, a synced music player, an AI Dungeon Master, a comic-style story builder, and a mobile companion — all kept live across every connected browser with no external cloud required.
+A self-hosted web app for running D&D 5e sessions. It hosts any number of **campaigns**, each a fully separate world with its own DM password and its own data. Every campaign bundles a full character sheet, a shared virtual battle map, a real-time initiative tracker, a monster library, a treasury for loot and shop items, a synced music player, handouts with blind skill checks, a comic-style story builder with image and video panels, and a mobile companion — all kept live across every connected browser with no external cloud required.
 
 Vanilla JS, no build step, no framework. Runs on SQLite by default; nothing to provision.
 
@@ -53,7 +53,7 @@ client itself.
 
 ![The campaign picker — every campaign on the left, the selected one's cover, stats and login on the right](docs/screenshots/campaigns.webp)
 
-The server hosts any number of **campaigns**, and each one is a fully separate tenant: its own characters, table, initiative, monsters, treasury, calendar, weather, maps, sounds, chat, stories and AI DM sessions — and its own DM password.
+The server hosts any number of **campaigns**, and each one is a fully separate tenant: its own characters, table, initiative, monsters, treasury, calendar, weather, maps, sounds, chat and stories — and its own DM password.
 
 - `/` opens the **campaign picker**: a list of every campaign on the left, the selected campaign's cover, description and stats on the right
 - Selecting a campaign shows its detail and its login (Character tab / DM tab). Logging in scopes the whole app to that campaign
@@ -72,7 +72,7 @@ Application/
     ├── localdb.db                    # characters, table, treasury, monsters, calendar…
     ├── media.db                      # chat images + the table map blob
     ├── stories.db                    # the comic/story builder
-    └── aiDM.db                       # AI DM sessions
+    └── aiDM.db                       # only if the campaign used the retired AI DM — no longer opened, still in raw backups
 ```
 
 Nothing filters by a `campaign_id` column, so there is no `WHERE` clause to forget: a request simply never holds a database handle that reaches another campaign. Real-time events are filtered the same way — a token move in one campaign is never delivered to another campaign's table.
@@ -84,7 +84,7 @@ Uploaded images and audio are split the same way: new uploads land in `public/up
 ![The character sheet — persistent vitals bar with damage/heal, tabbed sections, auto-calculated ability scores and combat block](docs/screenshots/character-sheet.webp)
 
 - Full D&D 5e sheet: ability scores, skills, saving throws, HP, AC, speed, initiative — all auto-calculated
-- Proficiency bonus auto-derived from level; spell slot tracking with per-level counters and prepared-spell count
+- Proficiency bonus auto-derived from level; spell slot tracking for spell levels **1–9** with per-level counters and prepared-spell count
 - **Actions tab** — aggregates weapon attacks, action-flagged spells, and freeform **custom actions** into one combat panel. Custom actions carry a category (action / bonus / reaction / other), description, dice, and limited-use tracking with short/long-rest recharge
 - Weapon attacks table with custom dice rolls; weapon notes shown in the damage chat message
 - Equipment / magic items panel: equipped items feed AC, initiative, and speed auto-calc; spell-bonus items supported
@@ -96,6 +96,7 @@ Uploaded images and audio are split the same way: new uploads land in `public/up
 - Per-character password protection (set / change / remove); multiple characters selectable from a list
 - Player-facing tabs: **Treasury** (one tab with a Free Loot / Shop switch — claim dropped items for free or buy with in-character currency; item images, and unidentified items shown as such), **Initiative** (slide-out tracker with roll submission), **Calendar** (Calendar of Harptos — DM events plus your own journals with media)
 - Real-time chat: free text or `/r NdS+M [label]` dice rolls (e.g. `/r 2d6+3`, `/r d20 Stealth`)
+- **Private messages** — every chat box (sheet, table, DM panel, both console screens) has a recipient picker. *Everyone* is the default; pick the DM or a character and only the sender, the recipient and the DM can read it. The picker returns to *Everyone* after each private message
 - Three themes: Dark Gold, Parchment, Midnight; quick-nav buttons to the Table and Stories
 
 ### Virtual Table (`/table.html`)
@@ -137,7 +138,7 @@ Uploaded images and audio are split the same way: new uploads land in `public/up
 - Media sharing: drag-and-drop image / video → shared instantly to the table
 - DM chat: free text or `/r` rolls (broadcasts the 3D animation to all screens); **per-message delete** removes it from every client live
 - Data backup / restore: per-section JSON export (characters, monsters, treasury, maps), non-destructive merge import; treasury backups carry item images, and older `shop` / `loot` backup files still restore
-- **Raw database backup:** one-click download of all SQLite databases (`localdb`, `media`, `stories`, `aiDM`) as-is, bundled into a single streamed `.tar.gz` for full off-site backup (uploaded media under `uploads/` is stored separately and not yet included)
+- **Raw database backup:** one-click download of all SQLite databases (`localdb`, `media`, `stories`, plus any old `aiDM` file) as-is, bundled into a single streamed `.tar.gz` for full off-site backup (uploaded media under `uploads/` is stored separately and not yet included)
 - Multiple themes
 
 ### DM Calendar (`/events.html`) — DM only
@@ -201,7 +202,8 @@ One catalogue for everything you hand out, replacing the separate Merchant and L
 - **Force reload** — push a refresh to every client, or only to the outdated ones, so a release reaches phones without chasing people
 - **Blocked addresses** — every address currently locked out of logging in, described in words ("Aliyr in Icewind Dale", "DM of Icewind Dale", "Whole address"), with a live countdown and **Unblock** / **Unblock address** buttons so a player who mistyped five times does not have to sit out the timer
 - **Login activity** — the rolling 30-day audit of every login, failure, lockout and unblock, paged on the server (25 / 50 / 100 per page, remembered between visits; auto-refresh only on page 1)
-- Connection identity is self-reported by the client and therefore spoofable: the *connected clients* list is informational, **not** an access control. The blocked-address and login-activity data come from the server and are authoritative
+- **Active sessions** — everyone signed in: who, which campaign, when they signed in and were last seen, address and browser. **End session** signs one browser out; **End all sessions** does it to everyone but you. Every ending is written to the login activity log
+- Since v237 a connection's identity comes from its session token, not from what the page says about itself, so the connected-clients list shows who is really there
 
 ### Map Prep (`/prepare-map.html`) — DM only
 
@@ -209,6 +211,7 @@ One catalogue for everything you hand out, replacing the separate Merchant and L
 
 - Upload a map and set grid size; draw fog regions; **place tokens** (with portrait and visible/hidden state) and hidden items on the prep canvas
 - Save named presets and load any to the live table instantly; export / import a map as `.map.json`; delete saved maps; load warning before overwriting the live map
+- Prepared maps — the list and their images — are readable by the DM only; players see a map once it is loaded onto the table
 
 ### Waiting Screens (`/waiting-screens.html`) — DM only
 
@@ -232,10 +235,10 @@ static `/uploads/maps/` URL, and the DM's own client fetches it with the DM
 password and renders it from a blob, which an `<img src>` cannot do. Token
 movement is not broadcast to players while parked.
 
-> One limit worth knowing: the realtime connection identifies its role with a
-> query parameter, so that filter routes honest clients rather than enforcing
-> anything. The authenticated paths — the table payload and the map image, both
-> gated on the DM password — are the real guarantee.
+> The live connection needs a login too (v237): the server knows who each
+> connection is from its session token and delivers each event only to those
+> meant to see it, so hidden tokens and DM-only rolls never reach a player's
+> socket.
 
 ### Monster Library (`/monsters.html`) — DM only
 
@@ -256,20 +259,13 @@ movement is not broadcast to players while parked.
 - All clients hear audio in real time; **now-playing bar** with track name, state, and duration; clients joining mid-track start from the current position
 - Pop-out music popup; loading / playing / paused notifications broadcast to all clients
 
-### AI Dungeon Master (`/ai-dm`) — players only
+### AI Dungeon Master — retired
 
-![The AI Dungeon Master — pick the character who is playing, then run a text adventure in the Forgotten Realms](docs/screenshots/ai-dm.webp)
-
-- Text-based D&D 5e adventure in the Forgotten Realms, powered by a local LM Studio model, OpenRouter, or OpenAI (ChatGPT)
-- Pick your existing character — the full stat block is fed to the AI as context
-- Built-in or custom scenarios (manual or AI-generated from keywords); **streaming** token-by-token responses with a blocking overlay
-- **Dice rolls embedded in DM text** — click to roll with your real modifiers (advantage/disadvantage); old roll buttons disable on resume
-- **Option buttons** for numbered choices, plus a "Write my own" option
-- **Short rest** (spend hit dice) and **long rest** (restore HP, slots, hit dice, death saves; class-appropriate spell prep screen)
-- **Adventure summary** — manual or automatic (at 20 exchanges) compression of history into AI context
-- Session management (view / continue / delete ended logs), mid-session model switching, retry / stop buttons
-- **Turkish language support** — per-session language selector injected into the system prompt
-- Seamless entry from the sheet ("⚔ AI DM" button, hidden for DM sessions; auth passed automatically); sessions persist in a separate SQLite DB (`aiDM/aiDM.db`)
+The AI DM was removed from the app in v236 (September 2026): its button and pages are
+gone. Its code is kept, unchanged, in `retired/aiDM/` at the top of the repository,
+outside the deployed application — see that folder's README before thinking of reviving
+it. Existing `aiDM.db` files are not deleted and are still included in the raw database
+backup.
 
 ### Stories (`/stories.html`) — password protected
 
@@ -280,8 +276,9 @@ movement is not broadcast to players while parked.
 - Comic-book story system for session recaps and campaign moments
 - **Dashboard** — card grid (cover = first panel, title, cast, panel count, date) with character filter
 - **Builder** (`/story-builder.html`) — title/description with debounced auto-save, **character cast multiselect by portrait**, per-panel image upload and caption, reorder ▲/▼, delete with confirm; images stored under `/story-images/{storyId}/{seqId}.ext`
+- **Video panels** — a panel can hold an **MP4 or WebM video of up to 500 MB** instead of an image. The upload streams to disk with a progress bar, and each file is checked to be the format it claims. Videos play in place in the viewer (grid and strip) and can be a story's cover, where they show their first frame
 - **Viewer** (`/story-viewer.html`) — grid or vertical strip layout, fullscreen lightbox, and a cast strip showing portrait / name / species / class
-- Password gate on all three screens accepts the DM password or any character password (`POST /api/auth/verify-any`); bypassed if already logged in
+- Password gate on all three screens accepts the DM password or any character password (`POST /api/auth/verify-any`), which starts a real session just like the normal login; bypassed if already logged in
 
 ### Mobile Companion PWA (`/console/`)
 
@@ -320,8 +317,20 @@ Covered in full at the top of this file — **[Play it as a desktop app &uarr;](
 - The DM can also log in **as any character** by using a DM password in the character tab
 - `/login.html` still works and reads the campaign already selected; it redirects to the picker when there is none
 - An API call made with no campaign selected answers `409 NO_CAMPAIGN`, and the frontend bounces to the picker
-- **Stories** use a separate gate (`/api/auth/verify-any`) accepting the DM or any character password, auto-bypassed when already logged in
+- **Stories** use a separate gate (`/api/auth/verify-any`) accepting the DM or any character password; it starts the same kind of session as the normal login, and is bypassed when already logged in
+- **Creating a character is the DM's job**; the player sets their own password on first login
 - Token movement on the table is intentionally **open to all players** (DM retains full control); DM-only controls stay hidden until the master password is entered
+
+### What needs a login
+
+A page can still be opened without logging in, but it cannot change anything or
+follow the table live:
+
+- **Live updates** (the WebSocket / event stream) need a session. Each event goes only to the people meant to see it — hidden tokens, DM-only rolls, notifications and private messages are filtered on the server
+- **Anyone logged into the campaign** (the DM or any of its characters) may post to chat, share a chat image, roll the 3D dice, draw on the map or clear drawings, ping, move to the next / previous turn, add to a roll history and read the quick-roll stats the table shows for a token
+- **DM only:** prepared maps (list and images), and everything on the DM pages
+- Characters with no password stay open to view, as before
+- Everything a player writes on their sheet, and everything in an imported stat block, is shown as plain text on every other screen — never as markup
 
 ### Session tokens — the password is checked once
 
@@ -384,7 +393,6 @@ after 5 minutes. No third-party service, no external request, no new dependency.
 | Stories | `/stories.html` | Any (password gated) |
 | Story Builder | `/story-builder.html` | Any (password gated) |
 | Story Viewer | `/story-viewer.html` | Any (password gated) |
-| AI Dungeon Master | `/ai-dm` | Players |
 | Mobile Companion | `/console/` | All users |
 
 ---
@@ -550,11 +558,11 @@ plain Node and crash. A normal PowerShell window is unaffected.
 - **Backend:** Node.js (ES modules), Express — split into 17 semantic route modules under `server/routes/`, with a lean `server.js` entry point
 - **Database:** SQLite (`better-sqlite3`). One cross-tenant registry (`campaigns.db`) plus four SQLite files per campaign under `data/campaigns/<id>/`
 - **Real-time:** WebSocket (`ws`), with a Server-Sent Events endpoint kept alongside it
-- **Frontend:** Vanilla JS, HTML, CSS — no build step, no framework, no bundler. The character sheet is 15 modules under `js/index/`, the table is 14 under `js/table/`, with shared helpers in `js/lib/`
+- **Frontend:** Vanilla JS, HTML, CSS — no build step, no framework, no bundler. The character sheet is 15 modules under `js/index/`, the table is 17 under `js/table/`, with shared helpers in `js/lib/`
 - **Dice:** 3D CSS dice (icosahedron d20, pentagonal-trapezohedron d10) driven by a shared `dice-engine.js`
 - **Image processing:** `sharp` — each upload generates `_thumb.webp` (80×80 crop) and `_medium.webp` (max 500 px); maps excluded
 - **PWA:** Service Worker (`sw.js`) — network-first for HTML, cache-first for versioned static assets
-- **Tests:** 1152 Vitest tests across 43 files (unit + API) covering the sheet, table, dice fairness, login security, and routes
+- **Tests:** 1341 Vitest tests across 51 files (unit + API) covering the sheet, table, dice fairness, login security, per-route login rules, escaping of user text in the page renderers, and routes
 - **Security:** in-house, no new dependencies — maths captcha (`lib/captcha.js`, rendered by `sharp`), opaque session tokens stored as SHA-256 (`lib/sessions.js`), failed-login lockout (`lib/login-guard.js`), async scrypt (`lib/passwords.js`), response headers and caller-dependent body limits (`lib/security-middleware.js`)
 - **SSL:** Node.js native `https` with Let's Encrypt certificates
 
@@ -575,15 +583,14 @@ High-level layout — see **[structure.md](structure.md)** for the complete, ann
 char_sheet/
 ├── Application/            # The web app
 │   ├── server.js           #   Express entry point — loads route modules + shared context
-│   ├── server/routes/      #   15 Express route modules
-│   ├── lib/                #   Campaign scoping, auth, sessions, captcha, lockout, hardening
+│   ├── server/routes/      #   17 Express route modules
+│   ├── lib/                #   Campaign scoping, auth, sessions, captcha, lockout, hardening, upload paths, live-event audience
 │   ├── db/                 #   SQLite layers (campaignsdb, campaign-store, localdb, mediadb, storiesdb)
-│   ├── aiDM/               #   AI Dungeon Master module (own DB + routes)
-│   ├── tests/              #   43 Vitest unit + API suites (1152 tests)
+│   ├── tests/              #   51 Vitest unit + API suites (1341 tests)
 │   └── public/             #   Served frontend
 │       ├── *.html          #     Page entry points (campaigns, index, table, dm, treasury, events, …)
-│       ├── js/index/       #     14 character-sheet modules
-│       ├── js/table/       #     15 virtual-table modules
+│       ├── js/index/       #     15 character-sheet modules
+│       ├── js/table/       #     17 virtual-table modules
 │       ├── js/lib/         #     Shared utilities (dice engine, chat render, calendar, …)
 │       ├── console/        #     Mobile companion PWA
 │       ├── css/  img/      #     Styles and static images
@@ -594,6 +601,7 @@ char_sheet/
 │   ├── src/preload/        #   Preloads — cross-window session mirror + settings bridge
 │   ├── src/renderer/       #   Its own pages — first-run setup, settings, offline screen
 │   └── assets/             #   App and tray icons
+├── retired/aiDM/          # The retired AI DM, kept unchanged and not deployed
 ├── goals/ tools/ context/ args/ hardprompts/   # GOTCHA framework layers (see CLAUDE.md)
 ├── memory/  data/          # Persistent cross-session memory (Application/data/ holds campaign DBs)
 ├── docker-compose.yml  Dockerfile.dev  docker-*.sh   # Docker deployment
