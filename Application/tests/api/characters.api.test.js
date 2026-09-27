@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-09-26 14:53
+// Written by Irmak Hakman — 2026-09-27 11:13
 
 /**
  * HTTP integration tests for /api/characters endpoints.
@@ -480,9 +480,28 @@ describe('DELETE /api/characters/:id', () => {
 
 // ── GET /api/characters/:id/qroll ────────────────────────────────────────────
 describe('GET /api/characters/:id/qroll', () => {
+  // A login to the campaign is needed since v240 — any login, since the table
+  // shows other characters' quick rolls too.
+  it('refuses a caller who is not logged in', async () => {
+    const { app, ldb } = makeApp();
+    ldb.createCharacter('c1', { name: 'Aria', dataJson: JSON.stringify({ ac: '15' }), createdAt: new Date().toISOString() });
+    const res = await request(app).get('/api/characters/c1/qroll');
+    expect(res.status).toBe(401);
+    expect(res.body.data).toBeUndefined();
+  });
+
+  it('lets a player read the quick rolls of another character', async () => {
+    const { app, ldb, hashPassword } = makeApp();
+    ldb.createCharacter('c1', { name: 'Aria', dataJson: JSON.stringify({ ac: '15' }), createdAt: new Date().toISOString() });
+    ldb.createCharacter('c2', { name: 'Brom', passwordHash: hashPassword('pw2'), createdAt: new Date().toISOString() });
+    const res = await request(app).get('/api/characters/c1/qroll').set('X-Character-Password', 'pw2');
+    expect(res.status).toBe(200);
+    expect(res.body.data.ac).toBe('15');
+  });
+
   it('returns 404 for a non-existent character', async () => {
     const { app } = makeApp();
-    const res = await request(app).get('/api/characters/ghost/qroll');
+    const res = await dm(request(app).get('/api/characters/ghost/qroll'));
     expect(res.status).toBe(404);
   });
 
@@ -497,7 +516,7 @@ describe('GET /api/characters/:id/qroll', () => {
       'secretField': 'yes', // not whitelisted — excluded
     };
     ldb.createCharacter('c1', { name: 'Aria', dataJson: JSON.stringify(data), createdAt: new Date().toISOString() });
-    const res = await request(app).get('/api/characters/c1/qroll');
+    const res = await dm(request(app).get('/api/characters/c1/qroll'));
     expect(res.status).toBe(200);
     expect(res.body.data['sk-0']).toBe('+3');
     expect(res.body.data['save-str']).toBe('+2');
@@ -511,7 +530,7 @@ describe('GET /api/characters/:id/qroll', () => {
     const data = {};
     for (let i = 0; i < 18; i++) data[`sk-${i}`] = `+${i}`;
     ldb.createCharacter('c1', { name: 'Hero', dataJson: JSON.stringify(data), createdAt: new Date().toISOString() });
-    const res = await request(app).get('/api/characters/c1/qroll');
+    const res = await dm(request(app).get('/api/characters/c1/qroll'));
     for (let i = 0; i < 18; i++) {
       expect(res.body.data[`sk-${i}`]).toBe(`+${i}`);
     }
@@ -525,7 +544,7 @@ describe('GET /api/characters/:id/qroll', () => {
       dataJson: JSON.stringify({ _weapons: weapons }),
       createdAt: new Date().toISOString(),
     });
-    const res = await request(app).get('/api/characters/c1/qroll');
+    const res = await dm(request(app).get('/api/characters/c1/qroll'));
     expect(res.body.data._weapons).toEqual(weapons);
   });
 
@@ -537,30 +556,46 @@ describe('GET /api/characters/:id/qroll', () => {
       dataJson: JSON.stringify({ _actions: actions }),
       createdAt: new Date().toISOString(),
     });
-    const res = await request(app).get('/api/characters/c1/qroll');
+    const res = await dm(request(app).get('/api/characters/c1/qroll'));
     expect(res.body.data._actions).toBe(actions);
   });
 });
 
 // ── POST /api/characters/:id/roll ─────────────────────────────────────────────
 describe('POST /api/characters/:id/roll', () => {
+  // A login to the campaign is needed since v240.
+  it('refuses a caller who is not logged in, and stores nothing', async () => {
+    const { app, ldb } = makeApp();
+    ldb.createCharacter('c1', { name: 'Aria', createdAt: new Date().toISOString() });
+    const res = await request(app).post('/api/characters/c1/roll').send({ total: 1, label: 'Forged' });
+    expect(res.status).toBe(401);
+    expect(JSON.parse(ldb.getCharacter('c1').dataJson || '{}')._rollHistory).toBeUndefined();
+  });
+
+  it('lets a player record a roll', async () => {
+    const { app, ldb, hashPassword } = makeApp();
+    ldb.createCharacter('c1', { name: 'Aria', passwordHash: hashPassword('pw1'), createdAt: new Date().toISOString() });
+    const res = await request(app).post('/api/characters/c1/roll').set('X-Character-Password', 'pw1').send({ total: 12 });
+    expect(res.status).toBe(200);
+  });
+
   it('returns 404 for a non-existent character', async () => {
     const { app } = makeApp();
-    const res = await request(app).post('/api/characters/ghost/roll').send({ total: 15 });
+    const res = await dm(request(app).post('/api/characters/ghost/roll')).send({ total: 15 });
     expect(res.status).toBe(404);
   });
 
   it('returns 400 when total is missing', async () => {
     const { app, ldb } = makeApp();
     ldb.createCharacter('c1', { name: 'Aria', createdAt: new Date().toISOString() });
-    const res = await request(app).post('/api/characters/c1/roll').send({ label: 'Attack' });
+    const res = await dm(request(app).post('/api/characters/c1/roll')).send({ label: 'Attack' });
     expect(res.status).toBe(400);
   });
 
   it('saves a roll entry to the character roll history', async () => {
     const { app, ldb } = makeApp();
     ldb.createCharacter('c1', { name: 'Aria', createdAt: new Date().toISOString() });
-    const res = await request(app).post('/api/characters/c1/roll').send({
+    const res = await dm(request(app).post('/api/characters/c1/roll')).send({
       label: 'Sneak Attack', type: 'norm', detail: '2d6(4,3)', total: 22
     });
     expect(res.status).toBe(200);
@@ -573,8 +608,8 @@ describe('POST /api/characters/:id/roll', () => {
   it('prepends new rolls (most recent first)', async () => {
     const { app, ldb } = makeApp();
     ldb.createCharacter('c1', { name: 'Archer', createdAt: new Date().toISOString() });
-    await request(app).post('/api/characters/c1/roll').send({ total: 10, label: 'First' });
-    await request(app).post('/api/characters/c1/roll').send({ total: 20, label: 'Second' });
+    await dm(request(app).post('/api/characters/c1/roll')).send({ total: 10, label: 'First' });
+    await dm(request(app).post('/api/characters/c1/roll')).send({ total: 20, label: 'Second' });
     const stored = JSON.parse(ldb.getCharacter('c1').dataJson);
     const hist = JSON.parse(stored._rollHistory);
     expect(hist[0].label).toBe('Second');
@@ -590,7 +625,7 @@ describe('POST /api/characters/:id/roll', () => {
       dataJson: JSON.stringify({ _rollHistory: JSON.stringify(existing) }),
       createdAt: new Date().toISOString(),
     });
-    await request(app).post('/api/characters/c1/roll').send({ total: 99, label: 'Overflow' });
+    await dm(request(app).post('/api/characters/c1/roll')).send({ total: 99, label: 'Overflow' });
     const stored = JSON.parse(ldb.getCharacter('c1').dataJson);
     const hist = JSON.parse(stored._rollHistory);
     expect(hist.length).toBe(100);
@@ -820,4 +855,31 @@ describe('PATCH /api/characters/:id/equip', () => {
     const res = await request(app).patch('/api/characters/c1/equip').send({ itemId: 1, equipped: true });
     expect(res.status).toBe(401);
   });
+});
+
+// ── PATCH /api/characters/:id/spell-slot ─────────────────────────────────────
+describe('PATCH /api/characters/:id/spell-slot', () => {
+  function withCaster() {
+    const made = makeApp();
+    made.ldb.createCharacter('c1', { name: 'Elminster', dataJson: JSON.stringify({ 'slot-9-total': '1', 'slot-9-used': '0' }), createdAt: new Date().toISOString() });
+    return made;
+  }
+
+  it('marks a 9th-level slot used', async () => {
+    const { app, ldb } = withCaster();
+    const res = await dm(request(app).patch('/api/characters/c1/spell-slot')).send({ level: 9, used: 1 });
+    expect(res.status).toBe(200);
+    expect(JSON.parse(ldb.getCharacter('c1').dataJson)['slot-9-used']).toBe(1);
+  });
+
+  // The level names the stored key, so only 1–9 is accepted.
+  for (const bad of [0, 10, 'x', '1-total']) {
+    it(`refuses level ${JSON.stringify(bad)} and writes nothing`, async () => {
+      const { app, ldb } = withCaster();
+      const before = ldb.getCharacter('c1').dataJson;
+      const res = await dm(request(app).patch('/api/characters/c1/spell-slot')).send({ level: bad, used: 1 });
+      expect(res.status).toBe(400);
+      expect(ldb.getCharacter('c1').dataJson).toBe(before);
+    });
+  }
 });

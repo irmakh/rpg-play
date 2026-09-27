@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-09-26 16:50
+// Written by Irmak Hakman — 2026-09-27 11:13
 
 /**
  * API integration tests for notifications.
@@ -300,10 +300,12 @@ describe('notifications — ambient and character changes', () => {
 });
 
 describe('notifications — chat and dice, folded', () => {
+  // Posting needs a login since v240. Who is told is worked out from the sender
+  // NAME, not from the login, so any credential serves here.
   const say = (app, sender, message) =>
-    request(app).post('/api/chat').send({ type: 'text', sender, message });
+    asDM(request(app).post('/api/chat')).send({ type: 'text', sender, message });
   const roll = (app, sender, total, extra = {}) =>
-    request(app).post('/api/chat').send({ sender, dice: '1d20', results: [total], total, ...extra });
+    asDM(request(app).post('/api/chat')).send({ sender, dice: '1d20', results: [total], total, ...extra });
 
   it('reports a roll to everyone but the roller', async () => {
     const { app } = setup();

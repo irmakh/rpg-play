@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-09-27 11:13
 
 // ── Shared mutable state (SKILL_AB, SKILL_NAMES, AB_NAMES in js/lib/dnd-data.js) ──
 
@@ -12,9 +12,26 @@ function indexMasterPw() { return _indexSession?.role === 'dm' ? _indexSession.m
 
 // Character
 let currentCharId    = null;
-let charPasswords    = {};   // { id: plaintext password for this session }
+let charPasswords    = {};   // { id: session token for that character }
 let charHasPassword  = {};   // { id: bool }
 let charTypes        = {};   // { id: 'pc'|'npc' }
+
+/**
+ * The credential this sheet holds, as request headers: the open character's
+ * session token (from login, or from the unlock screen, which keeps it only in
+ * charPasswords), else the DM's token when a DM is looking at the sheet, else
+ * the logged-in character's own. Empty when nobody is logged in.
+ *
+ * Posting to chat, the 3D dice and turn control all need a login since v240, so
+ * every such call sends this.
+ */
+function sheetAuthHeaders(extra) {
+  const h = { 'Content-Type': 'application/json' };
+  if (currentCharId) h['X-Character-Id'] = currentCharId;
+  const token = (currentCharId && charPasswords[currentCharId]) || indexMasterPw() || indexCharPw();
+  if (token) h['X-Character-Password'] = token;
+  return { ...h, ...extra };
+}
 
 // Dice / rolls
 let rollPending = null;

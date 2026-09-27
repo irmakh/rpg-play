@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-09-27 11:13
 
 // ── Handouts tab (player) ─────────────────────────────────────────────────────
 // Everything the DM has handed this character, newest first. The server has
@@ -9,13 +9,9 @@ let _handouts = [];
 let _handoutsLoading = false;
 
 function handoutAuthHeaders() {
-  // Same idiom as loadMedia(): the character's own password, falling back to the
-  // master password when a DM is looking at the sheet (charAuth accepts either).
-  const h = { 'Content-Type': 'application/json' };
-  if (currentCharId) h['X-Character-Id'] = currentCharId;
-  if (charPasswords[currentCharId]) h['X-Character-Password'] = charPasswords[currentCharId];
-  else if (indexMasterPw()) h['X-Character-Password'] = indexMasterPw();
-  return h;
+  // The character's own token, falling back to the DM's when a DM is looking at
+  // the sheet (charAuth accepts either) — see sheetAuthHeaders() in index-state.js.
+  return sheetAuthHeaders();
 }
 
 async function loadHandouts() {

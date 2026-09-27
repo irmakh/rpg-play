@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Written by Irmak Hakman — 2026-09-26 15:58 -->
+<!-- Written by Irmak Hakman — 2026-09-27 12:28 -->
 <html lang="en" class="lamplit">
 <head>
 <meta charset="UTF-8">
@@ -149,7 +149,11 @@ var _pwagCapChar,_pwagCapDm,_pwagTicket,_consoleBC;
   fetch('/api/characters').then(function(r){return r.ok?r.json():[];}).then(function(chars){
     var sel=document.getElementById('pwag-char-sel');
     var pcs=chars.filter(function(c){return c.char_type==='pc';});
-    sel.innerHTML=pcs.length?pcs.map(function(c){return'<option value="'+c.id+'">'+c.name+'</option>';}).join(''):'<option value="">No characters found</option>';
+    // Built with DOM calls, not markup: a character's name is the player's own
+    // text, and esc.js (deferred) may not have loaded yet when this runs.
+    sel.innerHTML='';
+    if(pcs.length)pcs.forEach(function(c){sel.appendChild(new Option(c.name||'',c.id));});
+    else sel.innerHTML='<option value="">No characters found</option>';
   }).catch(function(){document.getElementById('pwag-char-sel').innerHTML='<option value="">Error loading</option>';});
 })();
 

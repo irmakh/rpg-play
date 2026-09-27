@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-09-26 16:25
+// Written by Irmak Hakman — 2026-09-27 11:13
 
 // ── Chat image upload ─────────────────────────────────────────────────────────
 function _setChatUploading(thumbObjectUrl) {
@@ -181,11 +181,13 @@ function getActiveCharLinkedId() {
   return tok.linkedId || null;
 }
 
+// Every write below carries this tab's login (authHeaders(), table-auth.js):
+// the roll history, the 3D dice and the chat all refuse a stranger since v240.
 function _pushRollToChar(charId, entry) {
   if (!charId) return;
   fetch(`/api/characters/${charId}/roll`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: authHeaders(),
     body: JSON.stringify(entry)
   }).catch(() => {});
 }
@@ -196,7 +198,7 @@ function _pushRollToChar(charId, entry) {
 function _broadcastDiceRoll(rollId, sides, dieResults, modifier, total, label, duration, usedIdx = -1, groups = null) {
   fetch('/api/dice/broadcast', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: authHeaders(),
     body: JSON.stringify({ rollId, sides, dieResults: Array.isArray(dieResults) ? dieResults : [dieResults], modifier, total, label, duration, usedIdx, ...(groups ? { groups } : {}), sender: getChatSender() })
   }).catch(() => {});
 }
@@ -205,7 +207,7 @@ async function postToChat(payload) {
   try {
     await fetch('/api/chat', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders(),
       body: JSON.stringify({ ...payload, type: 'roll' })
     });
   } catch {}
@@ -282,13 +284,13 @@ async function sendChatInput() {
     _pushRollToChar(getActiveCharLinkedId(), { label: lbl, type: 'norm', detail: `${count}d${sides}(${results.join(',')})${modifier !== 0 ? (modifier > 0 ? '+' : '') + modifier : ''}`, total, isCrit: false, isFail: false, isDamage: false, time: new Date().toISOString() });
     return;
   }
-  // A recipient turns this into a private message: the server needs a credential
-  // to know who it is from, and answers 401 without one. Everyone is the default.
+  // A recipient turns this into a private message. Either way the post carries
+  // our login — the chat refuses a stranger since v240. Everyone is the default.
   const to = typeof chatPmTarget === 'function' ? chatPmTarget() : '';
   try {
     const res = await fetch('/api/chat', {
       method: 'POST',
-      headers: to && typeof chatPmHeaders === 'function' ? chatPmHeaders() : { 'Content-Type': 'application/json' },
+      headers: to && typeof chatPmHeaders === 'function' ? chatPmHeaders() : authHeaders(),
       body: JSON.stringify({ sender: getChatSender(), type: 'text', message: text, ...(to ? { to } : {}) })
     });
     if (!res.ok) {

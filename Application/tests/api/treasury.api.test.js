@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-09-27 12:10
 
 /**
  * API integration tests for the unified /api/treasury routes.
@@ -548,6 +548,21 @@ describe('POST /api/treasury/purchase', () => {
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/stock/i);
   });
+
+  // A quantity must be a whole number from 1 to 1000. A negative one used to make
+  // the total negative — the "purchase" paid the buyer — and text was stored as is.
+  for (const bad of [-5, 0, 1.5, 'lots', 1001]) {
+    it(`refuses a quantity of ${JSON.stringify(bad)} and changes nothing`, async () => {
+      const { app, ldb } = setup();
+      const id = seed(ldb, { name: 'Potion', mode: 'shop', valueCp: 5000, quantity: 3 });
+      const before = charData(ldb);
+      const res = await buy(app, id, bad);
+      expect(res.status).toBe(400);
+      expect(ldb.getTreasuryItem(id).quantity).toBe(3);
+      expect(charData(ldb)).toEqual(before);
+      expect(ldb.listPurchaseLogs()).toEqual([]);
+    });
+  }
 
   it('never decrements unlimited stock', async () => {
     const { app, ldb } = setup();

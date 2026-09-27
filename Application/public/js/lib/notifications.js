@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-09-27 12:20
 
 // ── Notifications ─────────────────────────────────────────────────────────────
 // The bell, its panel, and the toasts that pop when something lands.
@@ -255,7 +255,7 @@ function _notifRenderPanel() {
   } else {
     list.innerHTML = _notifItems.map(n => `
       <div class="notif-row${n.seen ? '' : ' unread'}" data-row="${_notifEsc(n.rowId)}"
-           onclick="notifOpenItem('${_notifEsc(n.rowId)}')">
+           onclick="notifOpenItem(${_notifEsc(JSON.stringify(String(n.rowId)))})">
         <span class="notif-row-icon">${notifIcon(n.kind)}</span>
         <div class="notif-row-text">
           <div class="notif-row-title">${_notifEsc(n.title)}${

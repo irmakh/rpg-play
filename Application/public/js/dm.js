@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-09-26 16:50
+// Written by Irmak Hakman — 2026-09-27 12:03
 
 let masterPw = '';
 let initData = { entries: [], currentId: null };
@@ -7,8 +7,10 @@ let initDataMap = {};
 let dmMonsters = [];
 let pendingInitMonsterId = null;
 
+// null/undefined/false give ''; 0 stays '0' (the old s||'' dropped it). Single
+// quotes are escaped too, so a value is safe in either kind of attribute quote.
 function esc(s) {
-  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  return (s == null || s === false ? '' : String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
 // Escape a value embedded in a single-quoted JS string inside an HTML attribute,
@@ -368,11 +370,17 @@ async function submitAddNpc() {
   } catch { errEl.textContent = 'Network error.'; }
 }
 
+// The DM's credential as JSON request headers. Turn control, the 3D dice and
+// posting to chat all need a login since v240; these calls used to send none.
+function dmJsonHeaders() {
+  return { 'Content-Type': 'application/json', 'X-Master-Password': masterPw };
+}
+
 // ── Next / Prev turn ──────────────────────────────────────────────────────────
 async function nextTurn() {
   try {
     const res = await fetch('/api/initiative/next', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }
+      method: 'POST', headers: dmJsonHeaders()
     });
     if (!res.ok) showStatus('Failed to advance turn.', true);
   } catch { showStatus('Network error.', true); }
@@ -381,7 +389,7 @@ async function nextTurn() {
 async function prevTurn() {
   try {
     const res = await fetch('/api/initiative/prev', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }
+      method: 'POST', headers: dmJsonHeaders()
     });
     if (!res.ok) showStatus('Failed to go to previous turn.', true);
   } catch { showStatus('Network error.', true); }
@@ -611,7 +619,7 @@ async function sendChatInput() {
       try {
         await fetch('/api/dice/broadcast', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: dmJsonHeaders(),
           body: JSON.stringify({
             rollId, sides: first.sides || 6,
             dieResults: first.rolls.length ? first.rolls : [first.total],
@@ -621,7 +629,7 @@ async function sendChatInput() {
         });
         await fetch('/api/chat', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: dmJsonHeaders(),
           body: JSON.stringify({ sender: 'DM', ...dmgChatPayload(dmg, lbl) })
         });
       } catch { showStatus('Network error.', true); }
@@ -636,12 +644,12 @@ async function sendChatInput() {
     try {
       await fetch('/api/dice/broadcast', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: dmJsonHeaders(),
         body: JSON.stringify({ rollId, sides, dieResults: results, modifier, total, label: lbl, duration, sender: 'DM' })
       });
       await fetch('/api/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: dmJsonHeaders(),
         body: JSON.stringify({ sender: 'DM', dice: `${count}d${sides}`, results, modifier, total, label: lbl })
       });
     } catch { showStatus('Network error.', true); }
@@ -652,7 +660,7 @@ async function sendChatInput() {
   try {
     const res = await fetch('/api/chat', {
       method: 'POST',
-      headers: to && typeof chatPmHeaders === 'function' ? chatPmHeaders() : { 'Content-Type': 'application/json' },
+      headers: to && typeof chatPmHeaders === 'function' ? chatPmHeaders() : dmJsonHeaders(),
       body: JSON.stringify({ sender: 'DM', type: 'text', message: text, ...(to ? { to } : {}) })
     });
     if (!res.ok) {
@@ -725,15 +733,17 @@ function appendChatEntry(e) {
   }
 
   if (e.type === 'media') {
-    const url = `/api/shared-media/${e.mediaId}`;
+    // The server builds these entries, but the ids and URLs still go through
+    // escaping like any other value put into markup.
+    const url = `/api/shared-media/${encodeURIComponent(e.mediaId)}`;
     let mediaEl = '';
     if (e.mimeType.startsWith('image/')) {
       const inlineUrl = (e.mediumUrl && e.mimeType.startsWith('image/')) ? e.mediumUrl : url;
-      mediaEl = `<img class="chat-media-img" loading="lazy" src="${inlineUrl}" style="max-height:220px;object-fit:contain" onclick="window.open('${escJs(url)}','_blank')" title="Click to open full size">`;
+      mediaEl = `<img class="chat-media-img" loading="lazy" src="${esc(inlineUrl)}" style="max-height:220px;object-fit:contain" onclick="window.open('${escJs(url)}','_blank')" title="Click to open full size">`;
     } else if (e.mimeType.startsWith('video/')) {
-      mediaEl = `<video class="chat-media-video" src="${url}" controls style="max-height:220px"></video>`;
+      mediaEl = `<video class="chat-media-video" src="${esc(url)}" controls style="max-height:220px"></video>`;
     } else {
-      mediaEl = `<audio class="chat-media-audio" src="${url}" controls></audio>`;
+      mediaEl = `<audio class="chat-media-audio" src="${esc(url)}" controls></audio>`;
     }
     const cap = e.caption ? `<div style="font-size:11px;color:var(--ash);margin-top:4px">${esc(e.caption)}</div>` : '';
     div.className = 'chat-entry';

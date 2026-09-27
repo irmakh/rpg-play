@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-09-26 16:25
+// Written by Irmak Hakman — 2026-09-27 11:13
 
 // ── HP Panel ──────────────────────────────────────────────────────────────────
 async function openHpPanel(tok) {
@@ -37,8 +37,9 @@ async function openHpPanel(tok) {
           }
         }
       } else if (tok.type !== 'monster') {
-        // Characters/NPCs: always fetch real-time via public qroll endpoint (AC can change)
-        const r = await fetch(`/api/characters/${tok.linkedId}/qroll`);
+        // Characters/NPCs: always fetch real-time via the qroll endpoint (AC can
+        // change). It needs a login since v240, hence authHeaders().
+        const r = await fetch(`/api/characters/${tok.linkedId}/qroll`, { headers: authHeaders() });
         if (r.ok) {
           const c = await r.json();
           const ac = (c.data || {}).ac;
@@ -895,7 +896,7 @@ async function _tokenCheckBonus(tok, abIdx, kind) {
   }
   if (!tok.linkedId) return null;
   try {
-    const res = await fetch(`/api/characters/${tok.linkedId}/qroll`);
+    const res = await fetch(`/api/characters/${tok.linkedId}/qroll`, { headers: authHeaders() });
     if (!res.ok) return null;
     const j = await res.json();
     const d = j.data || {};

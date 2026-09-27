@@ -1,11 +1,11 @@
-// Written by Irmak Hakman — 2026-09-26 14:53
+// Written by Irmak Hakman — 2026-09-27 12:55
 
 import { clientIp } from '../../lib/login-guard.js';
 
 export default function register(app, ctx) {
   const {
     ldb, genId,
-    masterAuth, charAuth, getCharacter,
+    masterAuth, charAuth, sessionAuth, getCharacter,
     hashPasswordAsync, verifyPasswordAsync, checkDmPassword,
     sessions, setupTickets, loginGuard, audit, auth, currentCampaignId, TRUST_PROXY,
     processImageSizes, saveUploadFile, deleteUploadFile,
@@ -21,7 +21,12 @@ export default function register(app, ctx) {
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
   });
 
+  // The quick-roll stats the table and console show for any token's character
+  // (skills, saves, attacks, HP). Players read other characters' through this,
+  // so it is not limited to the character itself — but since v240 it needs a
+  // login to this campaign.
   app.get('/api/characters/:id/qroll', async (req, res) => {
+    if (!sessionAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
     try {
       const char = await getCharacter(req.params.id);
       if (!char) return res.status(404).json({ error: 'Not found' });
@@ -57,6 +62,8 @@ export default function register(app, ctx) {
       }
       const { level, used } = req.body || {};
       if (!level || used === undefined) return res.status(400).json({ error: 'level and used required' });
+      // A spell level is 1–9; anything else would write an arbitrary slot-…-used key.
+      if (!/^[1-9]$/.test(String(level))) return res.status(400).json({ error: 'level must be 1–9' });
       const char = await getCharacter(charId);
       if (!char) return res.status(404).json({ error: 'Not found' });
       let data = {};
@@ -286,7 +293,11 @@ export default function register(app, ctx) {
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
   });
 
+  // Adds a roll to a character's roll history. The table records a roll for
+  // whichever character has the turn, which may not be the roller's own, so any
+  // login to this campaign may write it (v240) — not a stranger.
   app.post('/api/characters/:id/roll', async (req, res) => {
+    if (!sessionAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
     try {
       const { label, type, detail, total, isCrit, isFail, isDamage, time } = req.body || {};
       if (total === undefined) return res.status(400).json({ error: 'total required' });

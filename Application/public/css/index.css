@@ -1,4 +1,4 @@
-/* Written by Irmak Hakman in 2026. */
+/* Written by Irmak Hakman — 2026-09-27 13:05 */
 
 *{box-sizing:border-box;margin:0;padding:0}
 
@@ -181,6 +181,9 @@ table{width:100%;border-collapse:collapse}
 th{color:var(--bone);font-size:10px;padding:4px;border-bottom:1px solid var(--rule-hi);text-align:left}
 #spell-tbl th.sp-sortable{cursor:pointer;user-select:none}
 #spell-tbl th.sp-sortable:hover{color:var(--bone)}
+/* The spell level box. It was 28px wide with the usual 6–7px side padding, which
+   left one digit barely any room, so the level was clipped or hidden. */
+#spell-tbl input.spell-lvl{width:40px;padding:3px 2px;text-align:center}
 .sort-ind{margin-left:2px;font-size:9px}
 td{padding:3px 4px;border-bottom:1px solid var(--rule);vertical-align:middle}
 td input[type=checkbox]{accent-color:var(--bone)}
@@ -638,7 +641,8 @@ html.lamplit .sk-roll-btn:hover{opacity:1;background:var(--slate-hi)}
   #spell-tbl tr{display:flex;flex-wrap:wrap;align-items:center;gap:4px;padding:5px 2px;border-bottom:1px solid var(--rule)}
   #spell-tbl td{display:flex;align-items:center;padding:2px}
   #spell-tbl td:nth-child(1){flex:0 0 auto}
-  #spell-tbl td:nth-child(2){flex:0 0 36px}
+  #spell-tbl td:nth-child(2){flex:0 0 44px}
+  #spell-tbl input.spell-lvl{width:40px;padding:5px 2px}
   #spell-tbl td:nth-child(3){flex:1;min-width:0}
   #spell-tbl td:nth-child(n+4){display:none}
   #spell-tbl tr.spell-expanded td:nth-child(n+4){display:flex;align-items:center;gap:3px;background:var(--wash);border-radius:3px;padding:2px 6px;font-size:11px;margin:1px 0}

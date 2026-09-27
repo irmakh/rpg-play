@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-09-26 16:50
+// Written by Irmak Hakman — 2026-09-27 11:13
 
 // ── Real-time updates (connectRealtime in js/lib/realtime.js) ────────────────
 function startSSE() {
@@ -304,7 +304,8 @@ async function _fetchInitCharData() {
     const charId = e.charId || tok?.linkedId || '';
     if (!charId || tok?.type === 'monster') return;
     try {
-      const r = await fetch(`/api/characters/${charId}/qroll`);
+      // qroll needs a login since v240.
+      const r = await fetch(`/api/characters/${charId}/qroll`, { headers: authHeaders() });
       if (!r.ok) return;
       const c = await r.json();
       const d = c.data || {};

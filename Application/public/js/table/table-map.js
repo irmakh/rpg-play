@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-09-27 12:25
 
 // ── Map loading overlay ───────────────────────────────────────────────────────
 function showMapLoadingOverlay() {
@@ -425,7 +425,7 @@ function renderTokens() {
     if (conds.length > 0) {
       condDiv = document.createElement('div');
       condDiv.className = 'token-conditions';
-      condDiv.innerHTML = conds.map(c => `<span title="${c}">${COND_ABBREV[c] || c.slice(0,3).toUpperCase()}</span>`).join('');
+      condDiv.innerHTML = conds.map(c => `<span title="${esc(c)}">${esc(COND_ABBREV[c] || String(c).slice(0,3).toUpperCase())}</span>`).join('');
     }
 
     attachTokenEvents(div, tok);
@@ -884,11 +884,13 @@ function renderShapeSelection() {
 }
 
 // ── Shape save/update/delete ──────────────────────────────────────────────────
+// Drawing, pinging and clearing need a login since v240, so each write sends
+// this tab's credential (authHeaders(), table-auth.js). Reading stays open.
 async function patchDrawing(shape) {
   try {
     await fetch(`/api/drawings/${shape.id}`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders(),
       body: JSON.stringify(shape)
     });
   } catch {}
@@ -903,7 +905,7 @@ async function deleteSelectedShape() {
   renderDrawings();
   oCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
   updateDrawSelectionUI();
-  try { await fetch(`/api/drawings/${id}`, { method: 'DELETE' }); } catch {}
+  try { await fetch(`/api/drawings/${id}`, { method: 'DELETE', headers: authHeaders() }); } catch {}
 }
 
 function renderShape(ctx, s, alpha = 1) {
@@ -956,7 +958,7 @@ async function saveDrawing(shape) {
   try {
     await fetch('/api/drawings', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders(),
       body: JSON.stringify(shape)
     });
   } catch {}
@@ -965,7 +967,7 @@ async function saveDrawing(shape) {
 async function clearDrawings() {
   drawings = [];
   renderDrawings();
-  try { await fetch('/api/drawings', { method: 'DELETE' }); } catch {}
+  try { await fetch('/api/drawings', { method: 'DELETE', headers: authHeaders() }); } catch {}
 }
 
 async function fetchDrawings() {
@@ -1020,7 +1022,7 @@ async function sendPing(gridX, gridY) {
   try {
     await fetch('/api/table/ping', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders(),
       body: JSON.stringify({ x: gridX, y: gridY, color: '#ffdd00' })
     });
   } catch {}
@@ -1149,7 +1151,7 @@ overlayCanvas.addEventListener('mousemove', e => {
           _drawPreviewTimer = null;
           fetch('/api/drawings/preview', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: authHeaders(),
             body: JSON.stringify({ shape: preview })
           }).catch(() => {});
         }, 50);

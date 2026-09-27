@@ -1,11 +1,11 @@
-// Written by Irmak Hakman — 2026-09-26 16:50
+// Written by Irmak Hakman — 2026-09-27 11:13
 
 import express from 'express';
 
 export default function register(app, ctx) {
   const {
     ldb, genId,
-    masterAuth, charAuth,
+    masterAuth, charAuth, sessionAuth,
     getCharacter,
     processImageSizes, saveUploadFile, deleteUploadFile,
     mediaDb, _mediaGet, _mapUpsert,
@@ -701,7 +701,10 @@ export default function register(app, ctx) {
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
   });
 
+  // A ping flashes on every screen at the table; since v240 only someone
+  // logged into this campaign can send one.
   app.post('/api/table/ping', async (req, res) => {
+    if (!sessionAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
     try {
       const { x, y, color = '#ffff00' } = req.body || {};
       if (x === undefined || y === undefined) return res.status(400).json({ error: 'x and y required' });
@@ -723,7 +726,11 @@ export default function register(app, ctx) {
   });
 
   // ── Prepared Maps ─────────────────────────────────────────────────────────────
+  // Maps the DM prepares ahead of a session — hidden rooms, secret tokens, fog
+  // still to lift. Reading them is DM-only as well as writing (v240); players
+  // see a map only once it is loaded onto the table.
   app.get('/api/prepared-maps', async (req, res) => {
+    if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
     try {
       const maps = ldb.listPreparedMaps().map(m => ({
         ...m,
@@ -780,7 +787,10 @@ export default function register(app, ctx) {
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
   });
 
+  // DM-only, so prepare-map.js fetches this with its credential and shows the
+  // result as a blob: URL — a bare <img src> cannot send a header.
   app.get('/api/prepared-maps/:id/image', (req, res) => {
+    if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
     const item = _mediaGet.get('prep-map-' + req.params.id);
     if (!item) return res.status(404).send('No image uploaded');
     const dataStr = item.data.toString();
@@ -794,7 +804,7 @@ export default function register(app, ctx) {
     const etag = `"${crypto.createHash('md5').update(item.data).digest('hex')}"`;
     if (req.headers['if-none-match'] === etag) return res.status(304).end();
     res.set('Content-Type', item.mime_type);
-    res.set('Cache-Control', 'public, max-age=300');
+    res.set('Cache-Control', 'private, max-age=300');
     res.set('ETag', etag);
     res.send(item.data);
   });

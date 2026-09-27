@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-09-26 16:38
+// Written by Irmak Hakman — 2026-09-27 12:52
 
 let _applyingData = false;
 
@@ -137,7 +137,7 @@ function _applyLists(d, which) {
       const dur = r[14] || '';
       const schoolOpts = ['','Abj','Conj','Div','Ench','Evoc','Illu','Necro','Trans'].map(o => `<option value="${o}" ${school===o?'selected':''}>${o||'—'}</option>`).join('');
       const actOpts = [['','— not an action —'],['action','▸ Action'],['bonus','▸ Bonus Action'],['reaction','▸ Reaction']].map(([v,l]) => `<option value="${v}" ${act===v?'selected':''}>${l}</option>`).join('');
-      tr.innerHTML = `<td style="text-align:center"><input type="checkbox" onchange="recalcPreparedCount()" ${r[7]?'checked':''}></td><td><input type="text" value="${esc(r[0])}" style="width:28px"></td><td><div style="display:flex;align-items:center;gap:3px"><span class="spell-tog" onclick="toggleSpellExpand(this)"></span><input type="text" value="${esc(r[1])}" style="font-weight:${bold}"><a href="#" class="tools-link" onclick="openSpell5e(this);return false" title="Open in 5e.tools"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-external"></use></svg></a></div></td><td><input type="text" value="${esc(r[2])}" style="width:70px"></td><td><input type="text" value="${esc(r[3])}" style="width:65px"></td><td><input type="text" class="spell-duration" value="${esc(dur)}" placeholder="Duration" style="width:75px"></td><td style="text-align:center"><input type="checkbox" ${r[4]?'checked':''}></td><td style="text-align:center"><input type="checkbox" ${r[5]?'checked':''}></td><td><select class="spell-school" style="width:60px;font-size:11px;padding:1px 2px">${schoolOpts}</select></td><td style="white-space:nowrap"><div style="display:flex;align-items:center;gap:3px"><label style="font-size:10px;display:flex;align-items:center;gap:1px;cursor:pointer"><input type="checkbox" class="spell-v" style="width:11px;height:11px" ${rv?'checked':''}>V</label><label style="font-size:10px;display:flex;align-items:center;gap:1px;cursor:pointer"><input type="checkbox" class="spell-s" style="width:11px;height:11px" ${rs?'checked':''}>S</label><label style="font-size:10px;display:flex;align-items:center;gap:1px;cursor:pointer"><input type="checkbox" class="spell-m" style="width:11px;height:11px" onchange="spellMChange(this)" ${rm?'checked':''}>M</label></div></td><td><input type="text" class="spell-notes" value="${esc(r[6]||'')}"><input type="text" class="spell-mat" placeholder="Material…" value="${esc(rmat)}" style="display:${rm?'block':'none'};width:100%;font-size:10px;margin-top:2px"><select class="spell-action" onchange="scheduleAutoSave()" title="Show this spell in the Actions tab" style="width:100%;font-size:10px;margin-top:2px">${actOpts}</select></td><td><button class="del-btn" onclick="delRow(this)"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg></button></td>`;
+      tr.innerHTML = `<td style="text-align:center"><input type="checkbox" onchange="recalcPreparedCount()" ${r[7]?'checked':''}></td><td><input type="text" class="spell-lvl" value="${esc(r[0])}"></td><td><div style="display:flex;align-items:center;gap:3px"><span class="spell-tog" onclick="toggleSpellExpand(this)"></span><input type="text" value="${esc(r[1])}" style="font-weight:${bold}"><a href="#" class="tools-link" onclick="openSpell5e(this);return false" title="Open in 5e.tools"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-external"></use></svg></a></div></td><td><input type="text" value="${esc(r[2])}" style="width:70px"></td><td><input type="text" value="${esc(r[3])}" style="width:65px"></td><td><input type="text" class="spell-duration" value="${esc(dur)}" placeholder="Duration" style="width:75px"></td><td style="text-align:center"><input type="checkbox" ${r[4]?'checked':''}></td><td style="text-align:center"><input type="checkbox" ${r[5]?'checked':''}></td><td><select class="spell-school" style="width:60px;font-size:11px;padding:1px 2px">${schoolOpts}</select></td><td style="white-space:nowrap"><div style="display:flex;align-items:center;gap:3px"><label style="font-size:10px;display:flex;align-items:center;gap:1px;cursor:pointer"><input type="checkbox" class="spell-v" style="width:11px;height:11px" ${rv?'checked':''}>V</label><label style="font-size:10px;display:flex;align-items:center;gap:1px;cursor:pointer"><input type="checkbox" class="spell-s" style="width:11px;height:11px" ${rs?'checked':''}>S</label><label style="font-size:10px;display:flex;align-items:center;gap:1px;cursor:pointer"><input type="checkbox" class="spell-m" style="width:11px;height:11px" onchange="spellMChange(this)" ${rm?'checked':''}>M</label></div></td><td><input type="text" class="spell-notes" value="${esc(r[6]||'')}"><input type="text" class="spell-mat" placeholder="Material…" value="${esc(rmat)}" style="display:${rm?'block':'none'};width:100%;font-size:10px;margin-top:2px"><select class="spell-action" onchange="scheduleAutoSave()" title="Show this spell in the Actions tab" style="width:100%;font-size:10px;margin-top:2px">${actOpts}</select></td><td><button class="del-btn" onclick="delRow(this)"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg></button></td>`;
       tbl.appendChild(tr);
     });
   }
@@ -288,7 +288,7 @@ async function loadCharacterList(skipAutoLoad = false, skipLoad = false) {
     chars.forEach(c => { charHasPassword[c.id] = c.has_password; charTypes[c.id] = c.char_type || 'pc'; });
     const sel = document.getElementById('char-select');
     sel.innerHTML = '<option value="">— Select character —</option>' + chars.map(c =>
-      `<option value="${c.id}">${c.has_password ? '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-lock"></use></svg> ' : ''}${c.char_type === 'npc' ? '[NPC] ' : ''}${esc(c.name)}</option>`
+      `<option value="${esc(c.id)}">${c.has_password ? '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-lock"></use></svg> ' : ''}${c.char_type === 'npc' ? '[NPC] ' : ''}${esc(c.name)}</option>`
     ).join('');
     if (currentCharId) sel.value = currentCharId;
     if (!skipAutoLoad && chars.length > 0) await loadCharacter(chars[0].id);
@@ -552,7 +552,7 @@ async function newCharacter() {
     const chars = await res.json();
     const tplSel = document.getElementById('nc-template');
     tplSel.innerHTML = '<option value="">— Blank NPC —</option>' +
-      chars.map(c => `<option value="${c.id}">${esc(c.name)}${c.char_type === 'npc' ? ' [NPC]' : ''}</option>`).join('');
+      chars.map(c => `<option value="${esc(c.id)}">${esc(c.name)}${c.char_type === 'npc' ? ' [NPC]' : ''}</option>`).join('');
   } catch(e) {}
   document.getElementById('nc-modal').style.display = 'flex';
   setTimeout(() => document.getElementById('nc-name').focus(), 50);
@@ -868,7 +868,7 @@ function characterToXML(d) {
   p(`    <spell_attack_bonus>${xe(d['sp-atk'])}</spell_attack_bonus>`);
   p(`    <spell_modifier>${xe(d['sp-mod'])}</spell_modifier>`);
   p('    <spell_slots>');
-  for (let i = 1; i <= 6; i++)
+  for (let i = 1; i <= 9; i++)
     p(`      <slot level="${i}" total="${xe(d['slot-'+i+'-total'])}" used="${xe(d['slot-'+i+'-used'])}"/>`);
   p('    </spell_slots>');
   let spells = []; try { spells = JSON.parse(d._spells||'[]'); } catch {}
@@ -989,15 +989,17 @@ function parseCreatorFormat(doc) {
     'Ranger':'Wisdom','Artificer':'Intelligence'};
   d['sp-ability'] = SP_AB[d.class] || '';
 
+  // Full-caster spell slots by character level, spell levels 1–9 (PHB table).
+  // This used to stop at 6th level, so a level 13+ caster got no 7th–9th slots.
   const FC = [null,
-    [2,0,0,0,0,0],[3,0,0,0,0,0],[4,2,0,0,0,0],[4,3,0,0,0,0],[4,3,2,0,0,0],
-    [4,3,3,0,0,0],[4,3,3,1,0,0],[4,3,3,2,0,0],[4,3,3,3,1,0],[4,3,3,3,2,0],
-    [4,3,3,3,2,1],[4,3,3,3,2,1],[4,3,3,3,2,1],[4,3,3,3,2,1],[4,3,3,3,2,1],
-    [4,3,3,3,2,1],[4,3,3,3,2,1],[4,3,3,3,3,1],[4,3,3,3,3,2],[4,3,3,3,3,2]
+    [2,0,0,0,0,0,0,0,0],[3,0,0,0,0,0,0,0,0],[4,2,0,0,0,0,0,0,0],[4,3,0,0,0,0,0,0,0],[4,3,2,0,0,0,0,0,0],
+    [4,3,3,0,0,0,0,0,0],[4,3,3,1,0,0,0,0,0],[4,3,3,2,0,0,0,0,0],[4,3,3,3,1,0,0,0,0],[4,3,3,3,2,0,0,0,0],
+    [4,3,3,3,2,1,0,0,0],[4,3,3,3,2,1,0,0,0],[4,3,3,3,2,1,1,0,0],[4,3,3,3,2,1,1,0,0],[4,3,3,3,2,1,1,1,0],
+    [4,3,3,3,2,1,1,1,0],[4,3,3,3,2,1,1,1,1],[4,3,3,3,3,1,1,1,1],[4,3,3,3,3,2,1,1,1],[4,3,3,3,3,2,2,1,1]
   ];
   const FULL = new Set(['Wizard','Sorcerer','Cleric','Druid','Bard']);
-  const slots = (FULL.has(d.class) ? FC[Math.min(lvl,20)] : null) || [0,0,0,0,0,0];
-  for (let i = 1; i <= 6; i++) {
+  const slots = (FULL.has(d.class) ? FC[Math.min(lvl,20)] : null) || [0,0,0,0,0,0,0,0,0];
+  for (let i = 1; i <= 9; i++) {
     d['slot-'+i+'-total'] = String(slots[i-1]||0); d['slot-'+i+'-used'] = '0';
   }
 

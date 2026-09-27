@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-09-27 11:50
 
 // ── Side panel Quick Roll ─────────────────────────────────────────────────────
 let _sideCharId = null; // character ID currently displayed in the side panel
@@ -162,7 +162,8 @@ function renderSideCharacter() {
     }
     spellListHtml = `<div class="rp-flat-hdr">Prepared Spells</div>`;
     for (const lvl of Object.keys(byLevel).sort((a, b) => Number(a) - Number(b))) {
-      const lvlName = lvl === '0' ? 'Cantrips' : `Level ${lvl}`;
+      // The level is whatever the sheet's spell row holds, so it is escaped.
+      const lvlName = lvl === '0' ? 'Cantrips' : `Level ${esc(lvl)}`;
       spellListHtml += `<div style="font-size:9px;color:var(--ash);padding:3px 10px 1px;text-transform:uppercase;letter-spacing:.5px">${lvlName}</div>`;
       for (const s of byLevel[lvl]) {
         const idx = preparedSpells.indexOf(s);
@@ -329,7 +330,9 @@ function _buildSidePanelItems(d, canEdit) {
   const cells = its.map(it => {
     const worn = !!it.equipped;
     const attrs = canEdit
-      ? ` onclick="clickEquipItem(${it.id})" style="cursor:pointer" title="${worn ? 'Worn — click to remove' : 'Click to wear'}"`
+      // The id comes from the sheet's own item list: written as a JSON literal
+      // (number or string, as stored) and HTML-escaped for the attribute.
+      ? ` onclick="clickEquipItem(${esc(JSON.stringify(it.id))})" style="cursor:pointer" title="${worn ? 'Worn — click to remove' : 'Click to wear'}"`
       : '';
     return `<div class="rp-item-cell${worn ? ' worn' : ''}"${attrs}>`
       + `<span class="rp-item-box${worn ? ' on' : ''}"></span>`
@@ -452,7 +455,8 @@ function _renderSidePanelCustom(a, canEdit) {
   if (uses > 0) {
     let boxes = '';
     for (let i = 0; i < uses; i++) {
-      const click = canEdit ? ` onclick="clickActionBox(${a.id},${i})" style="cursor:pointer"` : '';
+      // a.id as a JSON literal, HTML-escaped — see clickEquipItem above.
+      const click = canEdit ? ` onclick="clickActionBox(${esc(JSON.stringify(a.id))},${i})" style="cursor:pointer"` : '';
       boxes += `<span class="rp-act-box${i < used ? ' used' : ''}"${click} title="${i < used ? 'Used' : 'Available'}"></span>`;
     }
     const rl = a.recharge === 'short' ? 'Short Rest' : a.recharge === 'long' ? 'Long Rest' : '';

@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-09-27 11:40
 
 // ── Monster stat rendering (same logic as monsters.js) ───────────────────────
 let _currentMonsterData = null;
@@ -160,7 +160,8 @@ function renderMonsterFullStats(data, tok) {
   const hpFrac=(tok.hpMax>0)?(tok.hpCurrent||0)/tok.hpMax:0;
   const dexMod=Math.floor(((data.dex||10)-10)/2);
   const initProfBonus=(data.initiative&&data.initiative.proficiency===true)?getMonsterProfBonus(data.cr):0;
-  const initTotal=dexMod+initProfBonus+(data.initBonus||0);
+  // parseInt: a text initBonus would otherwise turn the sum into that text.
+  const initTotal=dexMod+initProfBonus+(parseInt(data.initBonus)||0);
   const initStr=(initTotal>=0?'+':'')+initTotal;
   function rEntries(entries){return(entries||[]).map(e=>{if(typeof e==='string')return'<p style="margin:2px 0 3px;white-space:pre-wrap">'+parseEntry(e)+'</p>';if(e&&e.type==='list'&&Array.isArray(e.items))return'<ul style="margin:2px 0 3px;padding-left:14px">'+e.items.map(i=>'<li>'+parseEntry(typeof i==='string'?i:(i.name||''))+'</li>').join('')+'</ul>';return'';}).join('');}
 
@@ -200,7 +201,7 @@ function renderMonsterFullStats(data, tok) {
       return `<div class="rp-ability-block rp-ability-clickable" onclick="qroll('${snames[i]} Check','${ms}')" title="${snames[i]} Check (d20${ms})">`
         +`<div class="rp-ability-name">${snames[i]}</div>`
         +`<div class="rp-ability-mod">${ms}</div>`
-        +`<div class="rp-ability-score">${val}</div></div>`;
+        +`<div class="rp-ability-score">${esc(val)}</div></div>`;
     }).join('')+`</div>`;
 
     // Save grid — rp-save-grid with proficient saves highlighted
@@ -209,8 +210,8 @@ function renderMonsterFullStats(data, tok) {
       const rawMod=Math.floor(((data[sc]||10)-10)/2);
       const val=profVal||(rawMod>=0?'+'+rawMod:''+rawMod);
       const prof=!!profVal;
-      return `<div class="rp-save-cell${prof?' rp-save-prof':''}" onclick="qroll('${snames[i]} Save','${val}')" title="${snames[i]} Saving Throw${prof?' (proficient)':''}">`
-        +`<div class="rp-save-val">${val}</div>`
+      return `<div class="rp-save-cell${prof?' rp-save-prof':''}" onclick="qroll('${snames[i]} Save','${escJs(val)}')" title="${snames[i]} Saving Throw${prof?' (proficient)':''}">`
+        +`<div class="rp-save-val">${esc(val)}</div>`
         +`<div class="rp-save-name">${snames[i]}${prof?'<span class="rp-save-star"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-star"></use></svg></span>':''}</div></div>`;
     }).join('')+`</div>`;
 
@@ -220,7 +221,7 @@ function renderMonsterFullStats(data, tok) {
       const rows=Object.entries(data.skill).map(([k,v])=>{
         const lbl=k.charAt(0).toUpperCase()+k.slice(1);
         return `<div class="qroll-row" onclick="qroll('${escJs(lbl)}','${escJs(v)}')">`
-          +`<span>${lbl}</span><span class="qroll-val">${v}</span></div>`;
+          +`<span>${esc(lbl)}</span><span class="qroll-val">${esc(v)}</span></div>`;
       }).join('');
       skillsHtml=`<div class="rp-flat-hdr">Skills</div><div class="rp-skill-grid">${rows}</div>`;
     }
@@ -232,7 +233,8 @@ function renderMonsterFullStats(data, tok) {
         const entryText=[].concat(item.entries||[]).join(' ');
         const atkMatch=entryText.match(/\{@hit\s([+-]?\d+)\}/i);
         const dmgStr=_monsterDamageStr(entryText);
-        const sn=(item.name||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+        // escJs, not a bare quote escape: a " in the name would end the onclick attribute.
+        const sn=escJs(item.name||'');
         const useBtn=`<span class="rp-mon-use-btn" onclick="useMonsterAction('${section}',${idx})" title="Send to chat">Use</span>`;
         if(atkMatch){
           const bonus=parseInt(atkMatch[1]);
@@ -296,7 +298,7 @@ function renderMonsterFullStats(data, tok) {
   // ── Classic path (unchanged) ─────────────────────────────────────────────────
   const HR='<hr style="border:none;border-top:1px solid var(--rule-hi);margin:6px 0">';
   function rSection(items,title){if(!items||!items.length)return'';return HR+'<div style="font-size:10px;color:var(--bone);text-transform:uppercase;font-weight:bold;letter-spacing:.5px;margin-bottom:3px">'+title+'</div>'+items.map(item=>'<div style="margin:4px 0"><span style="color:var(--bone);font-weight:bold;font-style:italic">'+parseEntry(item.name||'')+'</span> '+rEntries(item.entries)+'</div>').join('');}
-  function rSectionRollable(items,title){if(!items||!items.length)return'';const HR2=HR+'<div style="font-size:10px;color:var(--bone);text-transform:uppercase;font-weight:bold;letter-spacing:.5px;margin-bottom:3px">'+title+'</div>';return HR2+items.map(item=>{const entryText=[].concat(item.entries||[]).join(' ');const atkMatch=entryText.match(/\{@hit\s([+-]?\d+)\}|([+-]\d+)\s+to\s+hit/i);if(atkMatch){const bonus=parseInt(atkMatch[1]||atkMatch[2]);const dmgStr=_monsterDamageStr(entryText);const sn=item.name.replace(/'/g,"\\'");const dmgRow=dmgStr?'<div class="qroll-row" onclick="rollDamageStr(\''+sn+' Dmg\',\''+escJs(dmgStr)+'\')" style="padding-left:20px;background:rgba(0,0,0,.15)"><span style="font-size:11px;color:var(--ash)">↳ Damage</span><span class="qroll-val" style="color:#ff9966;font-size:13px">'+esc(dmgStr)+'</span></div>':'';return'<div class="qroll-row" onclick="qroll(\''+sn+' atk\',\''+bonus+'\')" title="'+esc(entryText.slice(0,120))+'">'+'<span>'+parseEntry(item.name||'')+'</span>'+'<span class="qroll-val">'+(bonus>=0?'+':'')+bonus+'</span></div>'+dmgRow;}return'<div style="margin:4px 0"><span style="color:var(--bone);font-weight:bold;font-style:italic">'+parseEntry(item.name||'')+'</span> '+rEntries(item.entries)+'</div>';}).join('');}
+  function rSectionRollable(items,title){if(!items||!items.length)return'';const HR2=HR+'<div style="font-size:10px;color:var(--bone);text-transform:uppercase;font-weight:bold;letter-spacing:.5px;margin-bottom:3px">'+title+'</div>';return HR2+items.map(item=>{const entryText=[].concat(item.entries||[]).join(' ');const atkMatch=entryText.match(/\{@hit\s([+-]?\d+)\}|([+-]\d+)\s+to\s+hit/i);if(atkMatch){const bonus=parseInt(atkMatch[1]||atkMatch[2]);const dmgStr=_monsterDamageStr(entryText);const sn=escJs(item.name||'');const dmgRow=dmgStr?'<div class="qroll-row" onclick="rollDamageStr(\''+sn+' Dmg\',\''+escJs(dmgStr)+'\')" style="padding-left:20px;background:rgba(0,0,0,.15)"><span style="font-size:11px;color:var(--ash)">↳ Damage</span><span class="qroll-val" style="color:#ff9966;font-size:13px">'+esc(dmgStr)+'</span></div>':'';return'<div class="qroll-row" onclick="qroll(\''+sn+' atk\',\''+bonus+'\')" title="'+esc(entryText.slice(0,120))+'">'+'<span>'+parseEntry(item.name||'')+'</span>'+'<span class="qroll-val">'+(bonus>=0?'+':'')+bonus+'</span></div>'+dmgRow;}return'<div style="margin:4px 0"><span style="color:var(--bone);font-weight:bold;font-style:italic">'+parseEntry(item.name||'')+'</span> '+rEntries(item.entries)+'</div>';}).join('');}
 
   const actionsPanel = renderMonsterActionsPanel(data, tok);
   let html='<div style="font-size:11px;line-height:1.5">';
@@ -307,11 +309,11 @@ function renderMonsterFullStats(data, tok) {
   html+='<div><span style="color:var(--bone);font-weight:bold">Speed</span> '+esc(speedStr)+'</div>';
   html+='<div><span style="color:var(--bone);font-weight:bold">CR</span> '+esc(String(cr))+'</div>';
   html+=HR+'<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:2px;text-align:center;margin:4px 0">';
-  for(let i=0;i<6;i++){const sc=scores[i];const val=data[sc]||10;const m=Math.floor((val-10)/2);const ms=(m>=0?'+':'')+m;html+='<div onclick="qroll(\''+snames[i]+' Check\',\''+ms+'\')" title="'+snames[i]+' ability check" style="background:var(--slate-hi);border-radius:3px;padding:3px 1px;cursor:pointer"><div style="font-size:8px;color:var(--bone);font-weight:bold">'+snames[i]+'</div><div style="font-size:12px;font-weight:bold">'+val+'</div><div style="font-size:9px;color:var(--ash)">'+ms+'</div></div>';}
+  for(let i=0;i<6;i++){const sc=scores[i];const val=data[sc]||10;const m=Math.floor((val-10)/2);const ms=(m>=0?'+':'')+m;html+='<div onclick="qroll(\''+snames[i]+' Check\',\''+ms+'\')" title="'+snames[i]+' ability check" style="background:var(--slate-hi);border-radius:3px;padding:3px 1px;cursor:pointer"><div style="font-size:8px;color:var(--bone);font-weight:bold">'+snames[i]+'</div><div style="font-size:12px;font-weight:bold">'+esc(val)+'</div><div style="font-size:9px;color:var(--ash)">'+ms+'</div></div>';}
   html+='</div>'+HR;
   html+=HR+'<div style="font-size:10px;color:var(--bone);text-transform:uppercase;font-weight:bold;letter-spacing:.5px;margin-bottom:3px">Saves</div>';
-  html+=scores.map((sc,i)=>{const profVal=data.save&&data.save[sc];const rawMod=Math.floor(((data[sc]||10)-10)/2);const val=profVal||(rawMod>=0?'+'+rawMod:''+rawMod);const prof=!!profVal;return'<div class="qroll-row" onclick="qroll(\''+snames[i]+' Save\',\''+val+'\')" title="'+snames[i]+' Saving Throw'+(prof?' (proficient)':'')+'" style="'+(prof?'':'opacity:0.75')+'"><span>'+snames[i]+(prof?' ★':'')+'</span><span class="qroll-val">'+val+'</span></div>';}).join('');
-  if(data.skill&&Object.keys(data.skill).length){html+=HR+'<div style="font-size:10px;color:var(--bone);text-transform:uppercase;font-weight:bold;letter-spacing:.5px;margin-bottom:3px">Skills</div>';html+=Object.entries(data.skill).map(([key,val])=>{const label=key.charAt(0).toUpperCase()+key.slice(1);return'<div class="qroll-row" onclick="qroll(\''+label+'\',\''+val+'\')" title="'+label+'"><span>'+label+'</span><span class="qroll-val">'+val+'</span></div>';}).join('');}
+  html+=scores.map((sc,i)=>{const profVal=data.save&&data.save[sc];const rawMod=Math.floor(((data[sc]||10)-10)/2);const val=profVal||(rawMod>=0?'+'+rawMod:''+rawMod);const prof=!!profVal;return'<div class="qroll-row" onclick="qroll(\''+snames[i]+' Save\',\''+escJs(val)+'\')" title="'+snames[i]+' Saving Throw'+(prof?' (proficient)':'')+'" style="'+(prof?'':'opacity:0.75')+'"><span>'+snames[i]+(prof?' ★':'')+'</span><span class="qroll-val">'+esc(val)+'</span></div>';}).join('');
+  if(data.skill&&Object.keys(data.skill).length){html+=HR+'<div style="font-size:10px;color:var(--bone);text-transform:uppercase;font-weight:bold;letter-spacing:.5px;margin-bottom:3px">Skills</div>';html+=Object.entries(data.skill).map(([key,val])=>{const label=key.charAt(0).toUpperCase()+key.slice(1);return'<div class="qroll-row" onclick="qroll(\''+escJs(label)+'\',\''+escJs(val)+'\')" title="'+esc(label)+'"><span>'+esc(label)+'</span><span class="qroll-val">'+esc(val)+'</span></div>';}).join('');}
   if(immuneStr)html+='<div><span style="color:var(--bone);font-weight:bold">Immune</span> '+esc(immuneStr)+'</div>';
   if(resistStr)html+='<div><span style="color:var(--bone);font-weight:bold">Resist</span> '+esc(resistStr)+'</div>';
   if(condImmStr)html+='<div><span style="color:var(--bone);font-weight:bold">Cond. Immune</span> '+esc(condImmStr)+'</div>';

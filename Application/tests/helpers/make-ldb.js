@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-09-27 11:13
 
 /**
  * In-memory SQLite ldb factory for tests.
@@ -516,7 +516,8 @@ export function makeLdb() {
   function deleteChatMessage(id) { const i = _chat.findIndex(e => e.id === id); if (i !== -1) _chat.splice(i, 1); }
   function clearChatLog() { _chat.length = 0; }
   function listDrawings() { return _drawings.slice(); }
-  function addDrawing(shape) { _drawings.push(shape); }
+  // Same (id, fields) signature as db/localdb.js.
+  function addDrawing(id, shape) { _drawings.push({ ...shape, id }); }
   function updateDrawing(id, shape) {
     const i = _drawings.findIndex(s => s.id === id);
     if (i !== -1) _drawings[i] = { ..._drawings[i], ...shape };
@@ -526,6 +527,11 @@ export function makeLdb() {
     if (i !== -1) _drawings.splice(i, 1);
   }
   function clearDrawings() { _drawings.length = 0; }
+
+  // ── Prepared maps (in memory; only listing and creating are exercised) ──────
+  const _preparedMaps = [];
+  function listPreparedMaps() { return _preparedMaps.slice(); }
+  function createPreparedMap(id, fields) { _preparedMaps.push({ id, ...fields }); }
 
   // ── Notifications (mirror db/localdb.js) ────────────────────────────────────
   function createNotification(id, f) {
@@ -713,6 +719,7 @@ export function makeLdb() {
     // chat + drawings
     listChatLog, appendChatLog, deleteChatMessage, clearChatLog,
     listDrawings, addDrawing, updateDrawing, deleteDrawing, clearDrawings,
+    listPreparedMaps, createPreparedMap,
     // notifications
     createNotification, addNotificationRecipient, listNotificationsFor, unreadNotificationCount,
     markNotificationSeen, markAllNotificationsSeen, clearNotificationsFor, pruneNotifications,

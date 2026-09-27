@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-09-26 15:58
+// Written by Irmak Hakman — 2026-09-27 11:13
 
 // ── 3D Dice Animation (engine in js/lib/dice-engine.js) ───────────────────────
 
@@ -8,7 +8,8 @@
 function _broadcastDiceRoll(rollId, sides, dieResults, modifier, total, label, duration, usedIdx = -1, groups = null) {
   fetch('/api/dice/broadcast', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    // A login is needed to roll for the table (v240) — sheetAuthHeaders(), index-state.js.
+    headers: sheetAuthHeaders(),
     body: JSON.stringify({ rollId, sides, dieResults, modifier, total, label, duration, ...(groups ? { groups } : {}), sender: getChatSender() })
   }).catch(() => {});
 }
@@ -47,8 +48,8 @@ async function sendChatInput() {
     await postToChat({ sender: getChatSender(), dice: `${count}d${sides}`, results, modifier, total, label: lbl });
     return;
   }
-  // A recipient turns this into a private message: the server needs a credential
-  // to know who it is from, and answers 401 without one. Everyone is the default.
+  // A recipient turns this into a private message, sent with the tab's own login
+  // so the server knows who it is from. Everyone is the default.
   const to = typeof chatPmTarget === 'function' ? chatPmTarget() : '';
   if (!to) { await postToChat({ sender: getChatSender(), type: 'text', message: text }); return; }
   try {
@@ -109,7 +110,8 @@ async function postToChat(payload) {
   try {
     await fetch('/api/chat', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      // Posting to the chat needs a login since v240.
+      headers: sheetAuthHeaders(),
       body: JSON.stringify(payload)
     });
   } catch {}

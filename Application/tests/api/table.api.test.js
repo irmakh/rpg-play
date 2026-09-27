@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-09-26 16:50
+// Written by Irmak Hakman — 2026-09-27 11:13
 
 /**
  * API integration tests for /api/table routes.
@@ -478,5 +478,67 @@ describe('hidden tokens', () => {
     broadcasts.length = 0;
     await dm(request(app).put(`/api/table/tokens/${id}`)).send({ visible: true });
     expect(broadcasts.find(b => b.payload.action === 'token-updated').opts).toEqual({});
+  });
+});
+
+// ── Login needed (v240) ───────────────────────────────────────────────────────
+// A ping flashes on every screen: any login to the campaign may send one, a
+// stranger may not. Prepared maps are the DM's session prep (secret rooms,
+// hidden tokens), so reading them — the list and the image — is DM-only.
+describe('POST /api/table/ping', () => {
+  it('refuses a caller who is not logged in, and broadcasts nothing', async () => {
+    const { app, broadcasts } = makeApp();
+    const res = await request(app).post('/api/table/ping').send({ x: 1, y: 2 });
+    expect(res.status).toBe(401);
+    expect(broadcasts).toEqual([]);
+  });
+
+  it('lets a player ping', async () => {
+    const { app, ldb, hashPassword, broadcasts } = makeApp();
+    ldb.createCharacter('c1', { name: 'Gerion', charType: 'pc', passwordHash: hashPassword('pw1') });
+    const res = await request(app).post('/api/table/ping').set('X-Character-Password', 'pw1').send({ x: 1, y: 2 });
+    expect(res.status).toBe(200);
+    expect(broadcasts.some(b => b.channel === 'table' && b.payload.action === 'ping')).toBe(true);
+  });
+});
+
+describe('prepared maps are DM-only to read', () => {
+  function withMap() {
+    const made = makeApp();
+    made.ldb.createPreparedMap('m1', { name: 'Secret Vault', createdAt: new Date().toISOString() });
+    made.ldb.createCharacter('c1', { name: 'Gerion', charType: 'pc', passwordHash: made.hashPassword('pw1') });
+    return made;
+  }
+
+  it('refuses the list to a stranger', async () => {
+    const { app } = withMap();
+    const res = await request(app).get('/api/prepared-maps');
+    expect(res.status).toBe(401);
+    expect(JSON.stringify(res.body)).not.toContain('Secret Vault');
+  });
+
+  it('refuses the list to a logged-in player', async () => {
+    const { app } = withMap();
+    const res = await request(app).get('/api/prepared-maps').set('X-Character-Password', 'pw1');
+    expect(res.status).toBe(401);
+  });
+
+  it('gives the DM the list', async () => {
+    const { app } = withMap();
+    const res = await dm(request(app).get('/api/prepared-maps'));
+    expect(res.status).toBe(200);
+    expect(res.body.map(m => m.name)).toEqual(['Secret Vault']);
+  });
+
+  it('refuses the image to a stranger and to a player', async () => {
+    const { app } = withMap();
+    expect((await request(app).get('/api/prepared-maps/m1/image')).status).toBe(401);
+    expect((await request(app).get('/api/prepared-maps/m1/image').set('X-Character-Password', 'pw1')).status).toBe(401);
+  });
+
+  it('lets the DM through to the image lookup', async () => {
+    const { app } = withMap();
+    // No image stored in the test media stub, so the DM gets the 404 behind the gate.
+    expect((await dm(request(app).get('/api/prepared-maps/m1/image'))).status).toBe(404);
   });
 });

@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-09-27 12:15
 
 // ── Initiative panel ──────────────────────────────────────────────────────────
 
@@ -33,7 +33,7 @@ function renderInitiativeTracker(showBadge) {
       : esc(eDisplayName);
     const canEdit  = isDM() || !e.monsterId;
     const rollHtml = canEdit
-      ? `<input type="number" class="init-roll-input" value="${e.roll}" data-id="${e.id}" data-monster="${e.monsterId ? '1' : ''}"
+      ? `<input type="number" class="init-roll-input" value="${esc(e.roll)}" data-id="${esc(e.id)}" data-monster="${e.monsterId ? '1' : ''}"
            style="width:36px;background:var(--slate-hi);border:1px solid var(--rule-hi);color:var(--bone);border-radius:3px;padding:2px 3px;font-size:11px;font-weight:bold;text-align:center"
            onchange="updateInitRoll(this)" onclick="event.stopPropagation()">`
       : `<span class="init-row-roll">${e.roll}</span>`;
@@ -63,7 +63,7 @@ function renderInitiativeTracker(showBadge) {
       const statsHtml   = statParts.length ? `<div class="init-meta-stats">${statParts.join(' · ')}</div>` : '';
       const curBorder   = isCur ? ' init-cur-portrait' : '';
       const avatarHtml  = portrait
-        ? `<img class="init-avatar${curBorder}" src="${portrait}" alt="">`
+        ? `<img class="init-avatar${curBorder}" src="${esc(portrait)}" alt="">`
         : `<div class="init-avatar-ph${curBorder}">${e.monsterId ? '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-swords"></use></svg>' : '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-swords"></use></svg>'}</div>`;
       return `<div class="init-row${isCur ? ' init-cur' : ''}${isViewing ? ' init-viewing' : ''}" ${clickAttr}>
         ${avatarHtml}
@@ -187,11 +187,11 @@ async function rollMyInitiative() {
 
 // ── Combat controls ───────────────────────────────────────────────────────────
 
+// Turn control needs a login since v240 — the DM's or a player's, so both
+// send their credential through authHeaders() (table-auth.js).
 async function initSkipTurn() {
   try {
-    const headers = {};
-    if (isDM()) headers['X-Master-Password'] = masterPw;
-    await fetch('/api/initiative/next', { method: 'POST', headers });
+    await fetch('/api/initiative/next', { method: 'POST', headers: authHeaders() });
   } catch {}
 }
 
@@ -201,9 +201,7 @@ async function dmNextTurn() {
 
 async function dmPrevTurn() {
   try {
-    const headers = {};
-    if (isDM()) headers['X-Master-Password'] = masterPw;
-    await fetch('/api/initiative/prev', { method: 'POST', headers });
+    await fetch('/api/initiative/prev', { method: 'POST', headers: authHeaders() });
   } catch {}
 }
 

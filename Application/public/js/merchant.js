@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-09-27 12:12
 
 let masterPw = '';
 let shopItems = [];
@@ -257,7 +257,7 @@ async function loadLogs() {
         <td style="white-space:nowrap;color:var(--ash);font-size:11px">${dateStr} ${timeStr}</td>
         <td><strong>${esc(l.charName)}</strong></td>
         <td>${esc(l.itemName)}</td>
-        <td style="text-align:center">${l.qty}</td>
+        <td style="text-align:center">${esc(l.qty)}</td>
         <td style="color:var(--arc);white-space:nowrap">${cpToGp(l.totalCp)}</td>
       </tr>`;
     }).join('');

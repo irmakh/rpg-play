@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-09-26 16:50
+// Written by Irmak Hakman — 2026-09-27 11:13
 
 export default function register(app, ctx) {
   const {
@@ -247,10 +247,15 @@ export default function register(app, ctx) {
     }
   }
 
+  // Posting to the chat needs a login (any DM or character of this campaign)
+  // since v240. Every page that has a chat box is reached after logging in, and
+  // sends its session with the post; a stranger with only the address cannot
+  // write into the table's chat.
   app.post('/api/chat', (req, res) => {
+    if (!sessionAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
     const { sender, dice, results, modifier, total, label, type, message, description, dmOnly, html, parts, to } = req.body;
-    // `to` makes this a private message and requires a login; without it this is
-    // the open path every dice and HP caller already uses, unchanged.
+    // `to` makes this a private message (checked below against who is sending);
+    // without it the line goes to the whole table.
     let pm;
     try { pm = privateFields(to, req); }
     catch (e) { return res.status(e.status || 400).json({ error: e.error || 'Bad recipient' }); }
@@ -341,7 +346,9 @@ export default function register(app, ctx) {
   });
 
   // ── Dice broadcast ────────────────────────────────────────────────────────────
+  // The 3D dice every screen replays. Same rule as the chat post it goes with.
   app.post('/api/dice/broadcast', (req, res) => {
+    if (!sessionAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
     const { rollId, sides, dieResults, modifier, total, label, duration, sender, usedIdx, groups } = req.body || {};
     if (!sides || !Array.isArray(dieResults) || dieResults.length === 0)
       return res.status(400).json({ error: 'sides and dieResults[] required' });
@@ -368,6 +375,14 @@ export default function register(app, ctx) {
   });
 
   // ── Map Drawings ──────────────────────────────────────────────────────────────
+  // Anyone at the table may draw on the map, but only someone logged into this
+  // campaign (v240) — reading them stays open, every write below checks.
+  const drawingDenied = (req, res) => {
+    if (sessionAuth(req)) return false;
+    res.status(401).json({ error: 'Unauthorized' });
+    return true;
+  };
+
   app.get('/api/drawings', (_req, res) => {
     try {
       const drawings = ldb.listDrawings();
@@ -376,6 +391,7 @@ export default function register(app, ctx) {
   });
 
   app.post('/api/drawings', (req, res) => {
+    if (drawingDenied(req, res)) return;
     try {
       const { id, type, x1, y1, x2, y2, color, thickness } = req.body || {};
       if (!id || !type) return res.status(400).json({ error: 'id and type required' });
@@ -387,6 +403,7 @@ export default function register(app, ctx) {
   });
 
   app.post('/api/drawings/preview', (req, res) => {
+    if (drawingDenied(req, res)) return;
     try {
       const { shape } = req.body || {};
       if (shape) broadcast('drawing', { action: 'preview', shape });
@@ -394,7 +411,8 @@ export default function register(app, ctx) {
     } catch (err) { res.status(500).json({ error: 'Server error' }); }
   });
 
-  app.delete('/api/drawings', (_req, res) => {
+  app.delete('/api/drawings', (req, res) => {
+    if (drawingDenied(req, res)) return;
     try {
       ldb.clearDrawings();
       broadcast('drawing', { action: 'clear' });
@@ -403,6 +421,7 @@ export default function register(app, ctx) {
   });
 
   app.patch('/api/drawings/:id', (req, res) => {
+    if (drawingDenied(req, res)) return;
     try {
       const { type, x1, y1, x2, y2, color, thickness } = req.body || {};
       const shape = { id: req.params.id, type: String(type||'line'), x1: +x1||0, y1: +y1||0, x2: +x2||0, y2: +y2||0, color: String(color||'#ff4444').slice(0,20), thickness: Math.max(1, Math.min(20, +thickness||2)) };
@@ -413,6 +432,7 @@ export default function register(app, ctx) {
   });
 
   app.delete('/api/drawings/:id', (req, res) => {
+    if (drawingDenied(req, res)) return;
     try {
       ldb.deleteDrawing(req.params.id);
       broadcast('drawing', { action: 'remove', id: req.params.id });

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Written by Irmak Hakman — 2026-09-26 18:30 -->
+<!-- Written by Irmak Hakman — 2026-09-27 12:18 -->
 <html lang="en" class="lamplit">
 <head>
 <meta charset="UTF-8">
@@ -162,7 +162,7 @@ function renderCast() {
 function render() {
   const seqs = story.sequences || [];
   if (!seqs.length) {
-    setBody('<div class="empty-hint">This story has no panels yet.<br><a href="/story-builder.html?id=' + story.id + '" style="color:var(--bone)">Add panels <svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-arrow-right"></use></svg> </a></div>');
+    setBody('<div class="empty-hint">This story has no panels yet.<br><a href="/story-builder.html?id=' + encodeURIComponent(story.id) + '" style="color:var(--bone)">Add panels <svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-arrow-right"></use></svg> </a></div>');
     return;
   }
 

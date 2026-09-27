@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-09-27 12:15
 
 'use strict';
 
@@ -138,7 +138,8 @@ _gate.start();
 // ── Map list ──
 async function loadMaps() {
   try {
-    const res = await fetch('/api/prepared-maps');
+    // Prepared maps are DM-only to read as well as write since v240.
+    const res = await fetch('/api/prepared-maps', { headers: { 'X-Master-Password': masterPw } });
     if (!res.ok) return;
     maps = await res.json();
     renderMapList();
@@ -247,7 +248,7 @@ function renderEditor() {
   _syncDrawInteractive();
 
   if (prepState.mapWidth && prepState.mapHeight) {
-    prepImg.src = `/api/prepared-maps/${currentMapId}/image?t=${Date.now()}`;
+    loadPrepImage(currentMapId);
     prepImg.style.display = '';
   } else {
     prepImg.style.display = 'none';
@@ -257,6 +258,29 @@ function renderEditor() {
   renderFogList();
   renderItemList();
   renderTokenList();
+}
+
+/**
+ * Show a prepared map's image. The image is DM-only since v240 and an <img src>
+ * cannot send the DM's credential, so it is fetched with the header and shown
+ * as a blob: URL instead. The layout sizes itself from prepState, not from the
+ * image, so it does not wait for this.
+ */
+let _prepImgUrl = null;
+async function loadPrepImage(mapId) {
+  try {
+    // no-store: re-uploading overwrites the same map, as the old ?t= did.
+    const res = await fetch(`/api/prepared-maps/${mapId}/image`, {
+      headers: { 'X-Master-Password': masterPw }, cache: 'no-store',
+    });
+    if (!res.ok) return;
+    const blob = await res.blob();
+    // The DM may have picked another map while this was loading.
+    if (mapId !== currentMapId) return;
+    if (_prepImgUrl) URL.revokeObjectURL(_prepImgUrl);
+    _prepImgUrl = URL.createObjectURL(blob);
+    prepImg.src = _prepImgUrl;
+  } catch { showStatus('Could not load the map image', true); }
 }
 
 // Compute fit scale and resize canvases to fill the canvas area.
@@ -465,7 +489,7 @@ function renderFogList() {
     <div class="fog-row">
       <input type="text" value="${esc(r.label)}" onchange="updateFogLabel(${i}, this.value)"
         style="flex:1;padding:2px 5px;font-size:11px;background:var(--slate-hi);border:1px solid var(--rule-hi);color:var(--bone);border-radius:3px">
-      <span style="font-size:10px;color:var(--ash);white-space:nowrap">${r.w}×${r.h} cells</span>
+      <span style="font-size:10px;color:var(--ash);white-space:nowrap">${esc(r.w)}×${esc(r.h)} cells</span>
       <button class="btn danger sm" onclick="deleteFogRegion(${i})"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg></button>
     </div>`);
   if (_lastDeleted && _lastDeleted.type === 'fog') {
@@ -975,7 +999,7 @@ async function exportMap() {
   showStatus('Exporting…', false);
   let imageDataUrl = null;
   try {
-    const imgRes = await fetch(`/api/prepared-maps/${currentMapId}/image`);
+    const imgRes = await fetch(`/api/prepared-maps/${currentMapId}/image`, { headers: { 'X-Master-Password': masterPw } });
     if (imgRes.ok) {
       const blob = await imgRes.blob();
       imageDataUrl = await new Promise(resolve => {

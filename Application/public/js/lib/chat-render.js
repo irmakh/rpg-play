@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-09-26 16:25
+// Written by Irmak Hakman — 2026-09-27 12:05
 
 // ── Shared chat rendering ─────────────────────────────────────────────────────
 function scrollChatLog() {
@@ -129,17 +129,18 @@ function appendChatEntry(e) {
   }
 
   if (e.type === 'media') {
-    const url = `/api/shared-media/${e.mediaId}`;
+    // Server-built, but escaped like any other value that meets markup.
+    const url = `/api/shared-media/${encodeURIComponent(e.mediaId)}`;
     let mediaEl = '';
     if (e.mimeType && e.mimeType.startsWith('image/')) {
       const displayUrl = e.mediumUrl || url;
       mediaEl = `<img loading="lazy" src="${esc(displayUrl)}" style="max-width:100%;max-height:200px;width:auto;object-fit:contain;border-radius:4px;margin-top:4px;display:block;cursor:pointer" onclick="lightboxOpen('${escJs(url)}','${escJs(e.mimeType || '')}')">`;
     } else if (e.mimeType && e.mimeType.startsWith('video/')) {
-      mediaEl = `<div style="position:relative;max-width:100%;cursor:pointer;overflow:hidden;background:#000;border-radius:4px;margin-top:4px;display:inline-block" onclick="lightboxOpen('${escJs(url)}','${escJs(e.mimeType || '')}')"><video src="${url}" preload="metadata" muted playsinline style="max-width:100%;max-height:200px;display:block;pointer-events:none"></video><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:28px;text-shadow:0 2px 8px #000;pointer-events:none">&#9654;</div></div>`;
+      mediaEl = `<div style="position:relative;max-width:100%;cursor:pointer;overflow:hidden;background:#000;border-radius:4px;margin-top:4px;display:inline-block" onclick="lightboxOpen('${escJs(url)}','${escJs(e.mimeType || '')}')"><video src="${esc(url)}" preload="metadata" muted playsinline style="max-width:100%;max-height:200px;display:block;pointer-events:none"></video><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:28px;text-shadow:0 2px 8px #000;pointer-events:none">&#9654;</div></div>`;
     } else if (e.mimeType && e.mimeType.startsWith('audio/')) {
-      mediaEl = `<audio src="${url}" controls style="max-width:100%;margin-top:6px;display:block"></audio>`;
+      mediaEl = `<audio src="${esc(url)}" controls style="max-width:100%;margin-top:6px;display:block"></audio>`;
     } else {
-      mediaEl = `<a href="${url}" target="_blank" style="display:inline-block;margin-top:6px;padding:4px 8px;background:var(--slate-hi);border-radius:4px;color:var(--bone);font-size:11px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-paperclip"></use></svg> Open file</a>`;
+      mediaEl = `<a href="${esc(url)}" target="_blank" style="display:inline-block;margin-top:6px;padding:4px 8px;background:var(--slate-hi);border-radius:4px;color:var(--bone);font-size:11px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-paperclip"></use></svg> Open file</a>`;
     }
     const cap = e.caption ? `<div style="font-size:10px;color:var(--ash);margin-top:4px">${esc(e.caption)}</div>` : '';
     div.className = 'chat-entry';

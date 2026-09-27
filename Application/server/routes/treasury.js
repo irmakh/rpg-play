@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-09-27 12:10
 
 /**
  * Treasury — the unified item catalogue that replaces the separate loot and
@@ -834,7 +834,11 @@ export default function register(app, ctx) {
 
       let totalCp = 0;
       const resolved = [];
-      for (const { itemId, qty = 1 } of cart) {
+      for (const { itemId, qty: rawQty = 1 } of cart) {
+        // A whole number of copies, 1–1000. Anything else — text, a fraction, zero
+        // or a negative count, which would turn the price negative — is refused.
+        const qty = Number(rawQty);
+        if (!Number.isInteger(qty) || qty < 1 || qty > 1000) return res.status(400).json({ error: 'Invalid quantity' });
         const item = await getOne(itemId);
         if (!item) return res.status(400).json({ error: `Item ${itemId} not found` });
         if (item.mode !== 'shop') return res.status(400).json({ error: `"${item.name}" is not for sale` });

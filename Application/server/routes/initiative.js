@@ -1,7 +1,7 @@
-// Written by Irmak Hakman — 2026-09-26 16:50
+// Written by Irmak Hakman — 2026-09-27 11:13
 
 export default function register(app, ctx) {
-  const { ldb, genId, masterAuth, charAuth, broadcast } = ctx;
+  const { ldb, genId, masterAuth, charAuth, sessionAuth, broadcast } = ctx;
 
   // GET /api/initiative — fetch all entries + current state
   app.get('/api/initiative', async (req, res) => {
@@ -156,8 +156,11 @@ export default function register(app, ctx) {
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
   });
 
-  // POST /api/initiative/next — advance to next turn; resets movedFt for incoming token
+  // POST /api/initiative/next — advance to next turn; resets movedFt for incoming token.
+  // Players end their own turn with this, so it is not DM-only — but since v240
+  // it takes a login (DM or any character of this campaign).
   app.post('/api/initiative/next', async (req, res) => {
+    if (!sessionAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
     try {
       const entries = ldb.listInitEntries();
       const state   = ldb.getInitState();
@@ -174,9 +177,10 @@ export default function register(app, ctx) {
 
   // POST /api/initiative/prev — go to previous turn; resets movedFt for incoming token
   app.post('/api/initiative/prev', async (req, res) => {
+    // Symmetric with /next: any logged-in player may step back a turn, not only
+    // the DM (item 8 — Prev previously 401'd for non-DM while Next worked).
+    if (!sessionAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
     try {
-      // Symmetric with /next: turn control is usable during combat without master
-      // auth (item 8 — Prev previously 401'd for non-DM while Next worked).
       const entries = ldb.listInitEntries();
       const state   = ldb.getInitState();
       if (entries.length === 0) return res.json({ ok: true });

@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-09-27 11:52
 
 // ── Actions tab ───────────────────────────────────────────────────────────────
 // Aggregates weapon attacks (from the hidden #wpn-tbl, fed by Inventory weapons),
@@ -166,6 +166,8 @@ function _actRenderCustom(a) {
   const used = Math.min(parseInt(a.used) || 0, uses);
   const dice = (a.dice || '').trim();
   const tag = ACT_CAT_LABEL[a.category] || 'Action';
+  // a.id is written into onclick as a JSON literal, HTML-escaped: the DM opens
+  // players' sheets too, so nothing from the sheet goes into markup raw.
   const diceBtn = dice
     ? `<button class="roll-btn" data-name="${n}" data-val="${esc(dice)}" onclick="rollDamage(this.dataset.name, this.dataset.val)" title="Roll ${esc(dice)}"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg> ${esc(dice)}</button>`
     : '';
@@ -173,7 +175,7 @@ function _actRenderCustom(a) {
   if (uses > 0) {
     let boxes = '';
     for (let i = 0; i < uses; i++) {
-      boxes += `<span class="act-box${i < used ? ' used' : ''}" onclick="toggleActionBox(${a.id},${i})" title="${i < used ? 'Restore use' : 'Use'}"></span>`;
+      boxes += `<span class="act-box${i < used ? ' used' : ''}" onclick="toggleActionBox(${esc(JSON.stringify(a.id))},${i})" title="${i < used ? 'Restore use' : 'Use'}"></span>`;
     }
     const rechargeLbl = a.recharge === 'short' ? 'Short Rest' : a.recharge === 'long' ? 'Long Rest' : '';
     usesHtml = `<div class="act-uses">${boxes}${rechargeLbl ? `<span class="act-recharge">/ ${rechargeLbl}</span>` : ''}</div>`;
@@ -181,7 +183,7 @@ function _actRenderCustom(a) {
   return `<div class="act-item">
     <div class="act-head">
       <span class="act-name">${n}</span> <span class="act-tag">${esc(tag)}</span>
-      <span class="act-controls">${diceBtn}<button class="act-edit-btn" onclick="openActionModal(${a.id})" title="Edit"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-pencil"></use></svg></button></span>
+      <span class="act-controls">${diceBtn}<button class="act-edit-btn" onclick="openActionModal(${esc(JSON.stringify(a.id))})" title="Edit"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-pencil"></use></svg></button></span>
     </div>
     ${a.description ? `<div class="act-desc">${esc(a.description)}</div>` : ''}
     ${usesHtml}

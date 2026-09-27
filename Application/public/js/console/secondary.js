@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-09-26 16:50
+// Written by Irmak Hakman — 2026-09-27 11:45
 
 // ── Secondary Screen (Screen 2 — Info Panel) ──────────────────────────────────
 // table-secondary.html only. Self-contained: own SSE, own state, own API calls.
@@ -279,7 +279,7 @@ function sRenderHpPanel(tok) {
     if (assignSel) {
       const pcs = sCharList.filter(c => c.char_type === 'pc');
       assignSel.innerHTML = '<option value="">— Select character —</option>' +
-        pcs.map(c => `<option value="${c.id}"${tok.assignedCharId === c.id ? ' selected' : ''}>${esc(c.name)}</option>`).join('');
+        pcs.map(c => `<option value="${esc(c.id)}"${tok.assignedCharId === c.id ? ' selected' : ''}>${esc(c.name)}</option>`).join('');
     }
     const unassignBtn = document.getElementById('s-unassign-btn');
     if (unassignBtn) unassignBtn.style.display = tok.assignedCharId ? '' : 'none';
@@ -486,7 +486,8 @@ function sRenderCharStats(tok) {
 
   if (spAtk != null && spAtk !== '') {
     const spStr = parseInt(spAtk) >= 0 ? `+${spAtk}` : `${spAtk}`;
-    atkRows += `<div class="s-qroll-row" onclick="sQrollRoll('Spell Attack','${spStr}')">
+    // spStr is the sheet's own text (sp-atk), so it is escaped for the onclick.
+    atkRows += `<div class="s-qroll-row" onclick="sQrollRoll('Spell Attack','${escJs(spStr)}')">
       <span class="s-qroll-label">Spell Atk</span><span class="s-qroll-val">${esc(spStr)}</span>
     </div>`;
   }
@@ -755,7 +756,7 @@ function sRenderMonsterStatBlock(data, tok) {
     const sc = scores[i], val = data[sc] || 10, m = Math.floor((val - 10) / 2), ms = (m >= 0 ? '+' : '') + m;
     html += `<div onclick="sQrollRoll('${snames[i]} Check','${ms}')" style="background:var(--slate-hi);border-radius:3px;padding:3px 1px;cursor:pointer">
       <div style="font-size:8px;color:var(--bone);font-weight:bold">${snames[i]}</div>
-      <div style="font-size:12px;font-weight:bold">${val}</div>
+      <div style="font-size:12px;font-weight:bold">${esc(val)}</div>
       <div style="font-size:9px;color:var(--ash)">${ms}</div>
     </div>`;
   }
@@ -765,15 +766,15 @@ function sRenderMonsterStatBlock(data, tok) {
     const profVal = data.save && data.save[sc];
     const rawMod  = Math.floor(((data[sc] || 10) - 10) / 2);
     const val     = profVal || (rawMod >= 0 ? '+' + rawMod : '' + rawMod);
-    return `<div class="s-qroll-row" onclick="sQrollRoll('${snames[i]} Save','${val}')" style="${profVal ? '' : 'opacity:.7'}">
-      <span>${snames[i]}${profVal ? ' <svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-star"></use></svg>' : ''}</span><span class="s-qroll-val">${val}</span>
+    return `<div class="s-qroll-row" onclick="sQrollRoll('${snames[i]} Save','${escJs(val)}')" style="${profVal ? '' : 'opacity:.7'}">
+      <span>${snames[i]}${profVal ? ' <svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-star"></use></svg>' : ''}</span><span class="s-qroll-val">${esc(val)}</span>
     </div>`;
   }).join('');
   if (data.skill && Object.keys(data.skill).length) {
     html += '<div style="font-size:10px;color:var(--bone);text-transform:uppercase;font-weight:bold;letter-spacing:.5px;margin:4px 0 2px">Skills</div>';
     html += Object.entries(data.skill).map(([key, val]) => {
       const label = key.charAt(0).toUpperCase() + key.slice(1);
-      return `<div class="s-qroll-row" onclick="sQrollRoll('${escJs(label)}','${escJs(val)}')"><span>${label}</span><span class="s-qroll-val">${val}</span></div>`;
+      return `<div class="s-qroll-row" onclick="sQrollRoll('${escJs(label)}','${escJs(val)}')"><span>${esc(label)}</span><span class="s-qroll-val">${esc(val)}</span></div>`;
     }).join('');
   }
   if (immuneStr)  html += `<div style="margin:2px 0"><span style="color:var(--bone);font-weight:bold">Immune</span> ${esc(immuneStr)}</div>`;
@@ -901,7 +902,8 @@ function sSelectToken(id) {
   sRenderHpPanel(tok);
   sFetchCharStats(tok);
   if (tok.linkedId && tok.type !== 'monster') {
-    fetch(`/api/characters/${tok.linkedId}/qroll`)
+    // qroll needs a login since v240.
+    fetch(`/api/characters/${tok.linkedId}/qroll`, { headers: sAuthHeaders() })
       .then(r => r.ok ? r.json() : null)
       .then(c => {
         if (!c) return;
@@ -957,7 +959,7 @@ function sRenderItemsSection() {
           ? `<button class="s-btn s-btn-success" onclick="event.stopPropagation();sRevealItem('${escJs(item.id)}')" style="flex:none;padding:4px 8px;min-height:30px;font-size:11px">Reveal</button>`
           : `<button class="s-btn"               onclick="event.stopPropagation();sHideItem('${escJs(item.id)}')"   style="flex:none;padding:4px 8px;min-height:30px;font-size:11px">Hide</button>`}
       </div>
-      <div id="s-item-body-${item.id}" class="s-item-body" style="display:none">
+      <div id="s-item-body-${esc(item.id)}" class="s-item-body" style="display:none">
         ${item.description
           ? `<div style="font-size:11px;color:var(--ash);white-space:pre-wrap">${esc(item.description)}</div>`
           : '<div style="font-size:11px;color:var(--rule-hi);font-style:italic">No description.</div>'}
@@ -977,11 +979,12 @@ async function sHideItem(id) {
 }
 
 // ── Initiative Actions ────────────────────────────────────────────────────────
+// Turn control needs a login since v240 — the DM's or a player's.
 async function sNextTurn() {
-  try { const h = sIsDM() ? { 'X-Master-Password': masterPw } : {}; await fetch('/api/initiative/next', { method: 'POST', headers: h }); } catch {}
+  try { await fetch('/api/initiative/next', { method: 'POST', headers: sAuthHeaders() }); } catch {}
 }
 async function sPrevTurn() {
-  try { const h = sIsDM() ? { 'X-Master-Password': masterPw } : {}; await fetch('/api/initiative/prev', { method: 'POST', headers: h }); } catch {}
+  try { await fetch('/api/initiative/prev', { method: 'POST', headers: sAuthHeaders() }); } catch {}
 }
 async function sToggleInitiative() {
   if (!sIsDM()) return;
@@ -1096,7 +1099,7 @@ async function sLoadPrepMaps() {
     const sel = document.getElementById('s-map-sel');
     if (!sel) return;
     sel.innerHTML = '<option value="">— Select Map —</option>' +
-      sPrepMaps.map(m => `<option value="${m.id}">${esc(m.name)}</option>`).join('');
+      sPrepMaps.map(m => `<option value="${esc(m.id)}">${esc(m.name)}</option>`).join('');
   } catch {}
 }
 async function sLoadMap() {
@@ -1293,7 +1296,7 @@ function sMusicPopulateSel() {
   if (!sel) return;
   const cur = sel.value;
   sel.innerHTML = '<option value="">— Select Playlist —</option>' +
-    _sMusicPlaylists.map(pl => `<option value="${pl.id}">${sEscHtml(pl.name)} (${pl.sounds?.length || 0})</option>`).join('');
+    _sMusicPlaylists.map(pl => `<option value="${sEscHtml(pl.id)}">${sEscHtml(pl.name)} (${pl.sounds?.length || 0})</option>`).join('');
   if (cur) sel.value = cur;
 }
 
@@ -1559,7 +1562,7 @@ function _sStartConsoleSSE() {
       sSelectedToken   = tok;
       sSelectedTokenAc = null;
       if (tok.linkedId && tok.type !== 'monster') {
-        fetch(`/api/characters/${tok.linkedId}/qroll`)
+        fetch(`/api/characters/${tok.linkedId}/qroll`, { headers: sAuthHeaders() })
           .then(r => r.ok ? r.json() : null)
           .then(c => {
             if (!c) return;

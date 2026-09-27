@@ -1,8 +1,11 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-09-27 11:57
 
 // ── HTML escape ───────────────────────────────────────────────────────────────
+// null / undefined / false become ''; everything else — 0 included, which the
+// old `s||''` turned into an empty string — is shown as its text.
 function esc(s) {
-  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  return (s == null || s === false ? '' : String(s))
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
 // ── Escape a value embedded in a single-quoted JS string inside an HTML attribute ──

@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-09-26 16:50
+// Written by Irmak Hakman — 2026-09-27 11:13
 
 /**
  * API integration tests for /api/chat — a campaign's history is its own.
@@ -23,12 +23,14 @@ const asPlayer = (a, campaignId) => a.set('X-Campaign-Id', campaignId);
 
 const setup = () => makeApp();
 
+// Posting needs a login since v240, so these post as the campaign's DM; the
+// stranger's case has its own suite at the bottom.
 const say = (app, campaignId, sender, message) =>
-  asPlayer(request(app).post('/api/chat'), campaignId)
+  asDM(request(app).post('/api/chat'), campaignId)
     .send({ type: 'text', sender, message });
 
 const roll = (app, campaignId, sender, extra = {}) =>
-  asPlayer(request(app).post('/api/chat'), campaignId)
+  asDM(request(app).post('/api/chat'), campaignId)
     .send({ sender, dice: '1d20', results: [17], modifier: 2, total: 19, ...extra });
 
 const readAsPlayer = (app, campaignId) =>
@@ -36,6 +38,17 @@ const readAsPlayer = (app, campaignId) =>
 
 const readAsDM = (app, campaignId) =>
   asDM(request(app).get('/api/chat'), campaignId);
+
+/** A real character login (captcha solved), returning the session token. */
+async function loginAs(app, captcha, characterId, password, campaignId = AMN) {
+  const cap = await request(app).get('/api/auth/captcha').set('X-Campaign-Id', campaignId);
+  const login = await request(app).post('/api/auth/login').set('X-Campaign-Id', campaignId).send({
+    type: 'character', characterId, password,
+    captchaId: cap.body.id, captchaAnswer: String(captcha._answerOf(cap.body.id)),
+  });
+  expect(login.status).toBe(200);
+  return login.body.token;
+}
 
 describe('chat history is per campaign', () => {
   it('starts empty in a campaign that has never said anything', async () => {
@@ -137,7 +150,8 @@ describe('chat history is per campaign', () => {
 
   it('behaves like a single-campaign install when no campaign is named', async () => {
     const { app } = setup();
-    await request(app).post('/api/chat').send({ type: 'text', sender: 'Gerion', message: 'No header' });
+    await request(app).post('/api/chat').set('X-Master-Password', TEST_MASTER_PW)
+      .send({ type: 'text', sender: 'Gerion', message: 'No header' });
 
     const res = await request(app).get('/api/chat');
     expect(res.body.map(e => e.message)).toEqual(['No header']);
@@ -201,16 +215,6 @@ describe('POST /api/chat/image', () => {
 // and the history and /api/chat/entry/:id show it to the two people named on
 // it and to the DM — nobody else.
 describe('private messages', () => {
-  async function loginAs(app, captcha, characterId, password) {
-    const cap = await request(app).get('/api/auth/captcha').set('X-Campaign-Id', AMN);
-    const login = await request(app).post('/api/auth/login').set('X-Campaign-Id', AMN).send({
-      type: 'character', characterId, password,
-      captchaId: cap.body.id, captchaAnswer: String(captcha._answerOf(cap.body.id)),
-    });
-    expect(login.status).toBe(200);
-    return login.body.token;
-  }
-
   // Three players, each logged in: Gerion writes to Aliyr, Brenna is the third.
   async function table() {
     const made = setup();
@@ -332,9 +336,10 @@ describe('private messages', () => {
     expect((await t.as(request(t.app).get('/api/chat'), 'c1')).body).toEqual([]);
   });
 
-  it('leaves an ordinary message open to anyone, as before', async () => {
+  it('sends a message with no recipient to the whole table', async () => {
     const t = await table();
-    const res = await say(t.app, AMN, 'Gerion', 'Hello all');
+    const res = await t.as(request(t.app).post('/api/chat'), 'c1')
+      .send({ type: 'text', sender: 'Gerion', message: 'Hello all' });
     expect(res.status).toBe(200);
     expect(res.body.to).toBeUndefined();
     expect(t.broadcasts.some(b => b.channel === 'chat' && b.payload.message === 'Hello all')).toBe(true);
@@ -347,12 +352,12 @@ describe('private messages', () => {
 describe('HTML chat messages', () => {
   const card = '<strong>Fireball</strong><img src=x onerror=alert(1)>';
 
-  it('keeps a stranger’s HTML as plain text', async () => {
+  it('refuses a stranger’s HTML outright (v240: posting needs a login)', async () => {
     const { app } = setup();
     const res = await asPlayer(request(app).post('/api/chat'), AMN)
       .send({ type: 'text', sender: 'Anyone', message: card, html: true });
-    expect(res.status).toBe(200);
-    expect(res.body.html).toBeUndefined();
+    expect(res.status).toBe(401);
+    expect((await readAsDM(app, AMN)).body).toEqual([]);
   });
 
   it('keeps the HTML flag for a logged-in sender', async () => {
@@ -381,4 +386,84 @@ describe('chat broadcast audience', () => {
     expect(broadcasts.find(b => b.channel === 'chat').opts).toEqual({});
   });
 
+});
+
+// ── Table writes need a login (v240) ──────────────────────────────────────────
+// Posting to chat, the 3D dice and every drawing write used to accept anyone
+// who could reach the server. Now any login to THIS campaign will do — the DM
+// or any of its characters — and nothing else: no header at all, or a login to
+// a different campaign, is refused before anything is stored or broadcast.
+describe('table writes need a login to this campaign', () => {
+  async function table() {
+    const made = setup();
+    made.ldbFor(AMN).createCharacter('c1', { name: 'Gerion', charType: 'pc', passwordHash: made.hashPassword('pw1') });
+    made.ldbFor(WEST).createCharacter('w1', { name: 'Durnan', charType: 'pc', passwordHash: made.hashPassword('pw9') });
+    const gerion = await loginAs(made.app, made.captcha, 'c1', 'pw1', AMN);
+    const durnan = await loginAs(made.app, made.captcha, 'w1', 'pw9', WEST);
+    made.broadcasts.length = 0;
+    // A request to Amn carrying a given login (or none).
+    const to = (req, token) => {
+      req.set('X-Campaign-Id', AMN);
+      return token ? req.set('X-Character-Password', token) : req;
+    };
+    return { ...made, gerion, durnan, to };
+  }
+
+  const shape = { id: 'd1', type: 'line', x1: 0, y1: 0, x2: 5, y2: 5, color: '#fff', thickness: 2 };
+  const writes = [
+    ['POST /api/chat',             a => a.post('/api/chat'),              { type: 'text', sender: 'X', message: 'hi' }],
+    ['POST /api/chat (a roll)',    a => a.post('/api/chat'),              { sender: 'X', dice: '1d20', results: [4], total: 4 }],
+    ['POST /api/dice/broadcast',   a => a.post('/api/dice/broadcast'),    { sides: 20, dieResults: [4], total: 4 }],
+    ['POST /api/drawings',         a => a.post('/api/drawings'),          shape],
+    ['POST /api/drawings/preview', a => a.post('/api/drawings/preview'),  { shape }],
+    ['PATCH /api/drawings/:id',    a => a.patch('/api/drawings/d1'),      shape],
+    ['DELETE /api/drawings/:id',   a => a.delete('/api/drawings/d1'),     {}],
+    ['DELETE /api/drawings',       a => a.delete('/api/drawings'),        {}],
+  ];
+
+  for (const [name, call, body] of writes) {
+    it(`${name}: refuses a stranger and broadcasts nothing`, async () => {
+      const t = await table();
+      const res = await t.to(call(request(t.app)), null).send(body);
+      expect(res.status).toBe(401);
+      expect(t.broadcasts).toEqual([]);
+    });
+
+    it(`${name}: refuses a login to another campaign`, async () => {
+      const t = await table();
+      const res = await t.to(call(request(t.app)), t.durnan).send(body);
+      expect(res.status).toBe(401);
+      expect(t.broadcasts).toEqual([]);
+    });
+
+    it(`${name}: accepts a player of this campaign`, async () => {
+      const t = await table();
+      const res = await t.to(call(request(t.app)), t.gerion).send(body);
+      expect(res.status).toBe(200);
+    });
+  }
+
+  it('lets the DM post too', async () => {
+    const t = await table();
+    const res = await asDM(request(t.app).post('/api/dice/broadcast'), AMN).send({ sides: 6, dieResults: [3], total: 3 });
+    expect(res.status).toBe(200);
+  });
+
+  it('keeps the chat empty after a stranger’s post', async () => {
+    const t = await table();
+    await t.to(request(t.app).post('/api/chat'), null).send({ type: 'text', sender: 'X', message: 'spam' });
+    expect((await readAsDM(t.app, AMN)).body).toEqual([]);
+  });
+
+  it('leaves the drawings in place when a stranger tries to clear them', async () => {
+    const t = await table();
+    await t.to(request(t.app).post('/api/drawings'), t.gerion).send(shape);
+    await t.to(request(t.app).delete('/api/drawings'), null);
+    expect(t.ldbFor(AMN).listDrawings()).toHaveLength(1);
+  });
+
+  it('still lets anyone read the drawings', async () => {
+    const t = await table();
+    expect((await t.to(request(t.app).get('/api/drawings'), null)).status).toBe(200);
+  });
 });

@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-09-27 11:55
 
 // ── Equipment & Items ─────────────────────────────────────────────────────────
 const ITEM_WEAPON_PROPS = ['Ammunition','Finesse','Heavy','Light','Loading','Range','Reach','Thrown','Two-Handed','Versatile'];
@@ -61,6 +61,9 @@ function closeItemModal() {
   editingItemId = null;
 }
 
+// Everything an item holds comes from the sheet (the player's own, or an
+// import), so every value below is escaped where it meets markup — ids go into
+// onclick as HTML-escaped JSON literals, keeping number or string as stored.
 function initItemPropsGrid() {
   const grid = document.getElementById('im-props-grid');
   if (!grid || grid.childElementCount > 0) return;
@@ -308,7 +311,7 @@ function openItemDetail(id) {
   rows.push(['Equipped', item.equipped ? 'Yes' : 'No']);
   if (item.requiresAttunement) rows.push(['Attuned', item.attuned ? 'Yes' : 'No']);
   let html = `<table style="width:100%;border-collapse:collapse;font-size:12px">` +
-    rows.map(([k, v]) => `<tr><td style="padding:4px 6px;color:var(--ash);width:42%">${k}</td><td style="padding:4px 6px;font-weight:bold">${esc(String(v))}</td></tr>`).join('') +
+    rows.map(([k, v]) => `<tr><td style="padding:4px 6px;color:var(--ash);width:42%">${esc(k)}</td><td style="padding:4px 6px;font-weight:bold">${esc(String(v))}</td></tr>`).join('') +
     `</table>`;
   if (item.notes) html += `<div style="margin-top:10px"><div class="lbl" style="margin-bottom:4px">Notes</div><div style="font-size:12px;white-space:pre-wrap;line-height:1.5">${esc(item.notes)}</div></div>`;
   document.getElementById('item-detail-body').innerHTML = html;
@@ -367,16 +370,16 @@ function renderItems() {
     const valueStr = item.value ? ` · <span style="color:var(--arc)">${esc(item.value)}</span>` : '';
 
     return `<div class="item-row">
-      <input type="checkbox" class="item-chk" ${item.equipped ? 'checked' : ''} onchange="toggleItemEquipped(${item.id})" title="Equipped">
-      <span class="item-name" style="${equippedStyle};cursor:pointer" onclick="openItemDetail(${item.id})">${esc(item.name)}${attuneStr}</span>
-      <span class="item-meta">${typeLabel}${bonusStr ? ' · ' + bonusStr : ''}${valueStr}</span>
-      <button class="char-btn" style="padding:2px 8px;font-size:11px" onclick="openItemModal(${item.id})">Edit</button>
-      <button class="del-btn" onclick="deleteItem(${item.id})"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg></button>
+      <input type="checkbox" class="item-chk" ${item.equipped ? 'checked' : ''} onchange="toggleItemEquipped(${esc(JSON.stringify(item.id))})" title="Equipped">
+      <span class="item-name" style="${equippedStyle};cursor:pointer" onclick="openItemDetail(${esc(JSON.stringify(item.id))})">${esc(item.name)}${attuneStr}</span>
+      <span class="item-meta">${esc(typeLabel)}${bonusStr ? ' · ' + esc(bonusStr) : ''}${valueStr}</span>
+      <button class="char-btn" style="padding:2px 8px;font-size:11px" onclick="openItemModal(${esc(JSON.stringify(item.id))})">Edit</button>
+      <button class="del-btn" onclick="deleteItem(${esc(JSON.stringify(item.id))})"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg></button>
     </div>`;
   }).join('');
 
   const summary = summaryParts.length > 0
-    ? `<div style="font-size:10px;color:var(--ash);margin-top:6px;padding-top:4px;border-top:1px solid var(--rule)"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-bolt"></use></svg> Equipped: ${summaryParts.join(' · ')}</div>`
+    ? `<div style="font-size:10px;color:var(--ash);margin-top:6px;padding-top:4px;border-top:1px solid var(--rule)"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-bolt"></use></svg> Equipped: ${esc(summaryParts.join(' · '))}</div>`
     : '';
 
   body.innerHTML = rows + summary;
@@ -402,21 +405,21 @@ function renderEquippedItemsSummary() {
                     : item.itemType === 'weapon' ? 'weapon'
                     : 'wondrous';
     const chips = [];
-    if (item.itemType === 'armor') chips.push(`<span style="background:var(--rule-hi);padding:1px 5px;border-radius:3px;font-size:10px">Base AC ${item.acBase}</span>`);
-    if (item.acBonus)    chips.push(`<span style="background:var(--rule-hi);padding:1px 5px;border-radius:3px;font-size:10px">AC ${item.acBonus > 0 ? '+' : ''}${item.acBonus}</span>`);
-    if (item.initBonus)  chips.push(`<span style="background:var(--rule-hi);padding:1px 5px;border-radius:3px;font-size:10px">Init ${item.initBonus > 0 ? '+' : ''}${item.initBonus}</span>`);
-    if (item.speedBonus) chips.push(`<span style="background:var(--rule-hi);padding:1px 5px;border-radius:3px;font-size:10px">Speed ${item.speedBonus > 0 ? '+' : ''}${item.speedBonus} ft</span>`);
-    if (item.spellAtkBonus) chips.push(`<span style="background:var(--rule-hi);padding:1px 5px;border-radius:3px;font-size:10px">Spell Atk ${item.spellAtkBonus > 0 ? '+' : ''}${item.spellAtkBonus}</span>`);
-    if (item.spellDcBonus)  chips.push(`<span style="background:var(--rule-hi);padding:1px 5px;border-radius:3px;font-size:10px">Spell DC ${item.spellDcBonus > 0 ? '+' : ''}${item.spellDcBonus}</span>`);
+    if (item.itemType === 'armor') chips.push(`<span style="background:var(--rule-hi);padding:1px 5px;border-radius:3px;font-size:10px">Base AC ${esc(item.acBase)}</span>`);
+    if (item.acBonus)    chips.push(`<span style="background:var(--rule-hi);padding:1px 5px;border-radius:3px;font-size:10px">AC ${item.acBonus > 0 ? '+' : ''}${esc(item.acBonus)}</span>`);
+    if (item.initBonus)  chips.push(`<span style="background:var(--rule-hi);padding:1px 5px;border-radius:3px;font-size:10px">Init ${item.initBonus > 0 ? '+' : ''}${esc(item.initBonus)}</span>`);
+    if (item.speedBonus) chips.push(`<span style="background:var(--rule-hi);padding:1px 5px;border-radius:3px;font-size:10px">Speed ${item.speedBonus > 0 ? '+' : ''}${esc(item.speedBonus)} ft</span>`);
+    if (item.spellAtkBonus) chips.push(`<span style="background:var(--rule-hi);padding:1px 5px;border-radius:3px;font-size:10px">Spell Atk ${item.spellAtkBonus > 0 ? '+' : ''}${esc(item.spellAtkBonus)}</span>`);
+    if (item.spellDcBonus)  chips.push(`<span style="background:var(--rule-hi);padding:1px 5px;border-radius:3px;font-size:10px">Spell DC ${item.spellDcBonus > 0 ? '+' : ''}${esc(item.spellDcBonus)}</span>`);
     (item.bonuses || []).forEach(b => {
-      if (b && b.value) chips.push(`<span style="background:var(--rule-hi);padding:1px 5px;border-radius:3px;font-size:10px">${esc(itemBonusTargetLabel(b.target))} ${b.value > 0 ? '+' : ''}${b.value}</span>`);
+      if (b && b.value) chips.push(`<span style="background:var(--rule-hi);padding:1px 5px;border-radius:3px;font-size:10px">${esc(itemBonusTargetLabel(b.target))} ${b.value > 0 ? '+' : ''}${esc(b.value)}</span>`);
     });
     const attuneStr = item.attuned ? ' 🔮' : '';
     const notesSnip = item.notes ? `<div style="font-size:10px;color:var(--ash);margin-top:2px">${esc(item.notes.slice(0,80))}${item.notes.length > 80 ? '…' : ''}</div>` : '';
     return `<div style="display:flex;align-items:flex-start;gap:6px;padding:4px 0;border-bottom:1px solid var(--rule)">
       <div style="flex:1;min-width:0">
-        <span style="font-weight:bold;color:var(--arc-hi);cursor:pointer" onclick="showTab('inventory',document.querySelector('.tab[onclick*=inventory]'));openItemDetail(${item.id})">${esc(item.name)}${attuneStr}</span>
-        <span style="color:var(--ash);font-size:10px;margin-left:4px">${typeLabel}</span>
+        <span style="font-weight:bold;color:var(--arc-hi);cursor:pointer" onclick="showTab('inventory',document.querySelector('.tab[onclick*=inventory]'));openItemDetail(${esc(JSON.stringify(item.id))})">${esc(item.name)}${attuneStr}</span>
+        <span style="color:var(--ash);font-size:10px;margin-left:4px">${esc(typeLabel)}</span>
         ${chips.length ? `<div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:3px">${chips.join('')}</div>` : ''}
         ${notesSnip}
       </div>

@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-09-27 12:00
 
 // ── Shared monster stat block renderer ───────────────────────────────────────
 // Single source of truth used by dm.js, monsters.js, and table-monsters.js.
@@ -51,7 +51,7 @@ function renderMonsterStatBlock(data) {
   const HR='<hr style="border:none;border-top:1px solid var(--rule-hi);margin:8px 0">';
   function rEntries(entries){return(entries||[]).map(e=>{if(typeof e==='string')return'<p style="margin:2px 0 4px;white-space:pre-wrap">'+parseEntry(e)+'</p>';if(e&&e.type==='list'&&Array.isArray(e.items))return'<ul style="margin:2px 0 4px;padding-left:16px">'+e.items.map(i=>'<li>'+parseEntry(typeof i==='string'?i:(i.name||''))+'</li>').join('')+'</ul>';return'';}).join('');}
   function rSection(items,title){if(!items||!items.length)return'';return HR+'<div style="font-size:10px;color:var(--bone);text-transform:uppercase;font-weight:bold;letter-spacing:.5px;margin-bottom:4px">'+title+'</div>'+items.map(item=>'<div style="margin:5px 0"><span style="color:var(--bone);font-weight:bold;font-style:italic">'+parseEntry(item.name||'')+'</span> '+rEntries(item.entries)+'</div>').join('');}
-  function rSpellEntries(list){return(list||[]).map(sc=>{let h='<div style="margin:5px 0"><span style="color:var(--bone);font-weight:bold;font-style:italic">'+esc(sc.name||'')+'</span> ';if(sc.headerEntries)h+=rEntries(sc.headerEntries);if(sc.will&&sc.will.length)h+='<p style="margin:2px 0 4px"><em>At will:</em> '+sc.will.map(s=>parseEntry(s)).join(', ')+'</p>';if(sc.daily)for(const[k,v]of Object.entries(sc.daily)){const n=k.replace('e','');h+='<p style="margin:2px 0 4px"><em>'+n+'/day'+(k.endsWith('e')?' each':'')+':</em> '+v.map(s=>parseEntry(s)).join(', ')+'</p>';}if(sc.spells)for(const[lvl,sd]of Object.entries(sc.spells)){const slots=sd.slots?' ('+sd.slots+' slot'+(sd.slots!==1?'s':'')+')':'';const ord=['','st','nd','rd'];const lvlStr=lvl==='0'?'Cantrips (at will)':lvl+(ord[+lvl]||'th')+'-level'+slots;h+='<p style="margin:2px 0 4px"><em>'+esc(lvlStr)+':</em> '+[].concat(sd.spells||[]).map(s=>parseEntry(s)).join(', ')+'</p>';}return h+'</div>';}).join('');}
+  function rSpellEntries(list){return(list||[]).map(sc=>{let h='<div style="margin:5px 0"><span style="color:var(--bone);font-weight:bold;font-style:italic">'+esc(sc.name||'')+'</span> ';if(sc.headerEntries)h+=rEntries(sc.headerEntries);if(sc.will&&sc.will.length)h+='<p style="margin:2px 0 4px"><em>At will:</em> '+sc.will.map(s=>parseEntry(s)).join(', ')+'</p>';if(sc.daily)for(const[k,v]of Object.entries(sc.daily)){const n=k.replace('e','');h+='<p style="margin:2px 0 4px"><em>'+esc(n)+'/day'+(k.endsWith('e')?' each':'')+':</em> '+v.map(s=>parseEntry(s)).join(', ')+'</p>';}if(sc.spells)for(const[lvl,sd]of Object.entries(sc.spells)){const slots=sd.slots?' ('+sd.slots+' slot'+(sd.slots!==1?'s':'')+')':'';const ord=['','st','nd','rd'];const lvlStr=lvl==='0'?'Cantrips (at will)':lvl+(ord[+lvl]||'th')+'-level'+slots;h+='<p style="margin:2px 0 4px"><em>'+esc(lvlStr)+':</em> '+[].concat(sd.spells||[]).map(s=>parseEntry(s)).join(', ')+'</p>';}return h+'</div>';}).join('');}
   function rSectionWithSc(items,scList,title){const hi=items&&items.length;const hs=scList&&scList.length;if(!hi&&!hs)return'';return HR+'<div style="font-size:10px;color:var(--bone);text-transform:uppercase;font-weight:bold;letter-spacing:.5px;margin-bottom:4px">'+title+'</div>'+(hi?items.map(item=>'<div style="margin:5px 0"><span style="color:var(--bone);font-weight:bold;font-style:italic">'+parseEntry(item.name||'')+'</span> '+rEntries(item.entries)+'</div>').join(''):'')+rSpellEntries(scList);}
   let html='<div style="font-size:12px">';
   if (data.portraitMedium || data.portrait) {
@@ -68,14 +68,15 @@ function renderMonsterStatBlock(data) {
   html+='<div style="margin:3px 0"><span style="color:var(--bone);font-weight:bold">Proficiency Bonus</span> +'+prof+'</div>';
   const _dexMod=Math.floor(((data.dex||10)-10)/2);
   const _hasInitProf=!!(data.initiative&&data.initiative.proficiency);
-  const _manualInit=data.initBonus||0;
+  // parseInt: stat blocks come from imports; a text initBonus must not reach the markup.
+  const _manualInit=parseInt(data.initBonus)||0;
   const _totalInit=_dexMod+(_hasInitProf?prof:0)+_manualInit;
   const _initParts=['DEX '+(_dexMod>=0?'+':'')+_dexMod];
   if(_hasInitProf)_initParts.push('Prof +'+prof);
   if(_manualInit!==0)_initParts.push('Mod '+(_manualInit>=0?'+':'')+_manualInit);
   html+='<div style="margin:3px 0"><span style="color:var(--bone);font-weight:bold">Initiative</span> '+(_totalInit>=0?'+':'')+_totalInit+' <span style="font-size:10px;color:var(--ash)">('+_initParts.join(', ')+')</span></div>';
   html+=HR+'<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:4px;text-align:center;margin:6px 0">';
-  for(let i=0;i<6;i++){const sc=scores[i];const val=data[sc]||10;const m=Math.floor((val-10)/2);html+='<div style="background:var(--slate-hi);border-radius:3px;padding:4px 2px"><div style="font-size:9px;color:var(--bone);text-transform:uppercase;font-weight:bold">'+snames[i]+'</div><div style="font-size:13px;font-weight:bold">'+val+'</div><div style="font-size:10px;color:var(--ash)">'+(m>=0?'+':'')+m+'</div></div>';}
+  for(let i=0;i<6;i++){const sc=scores[i];const val=data[sc]||10;const m=Math.floor((val-10)/2);html+='<div style="background:var(--slate-hi);border-radius:3px;padding:4px 2px"><div style="font-size:9px;color:var(--bone);text-transform:uppercase;font-weight:bold">'+snames[i]+'</div><div style="font-size:13px;font-weight:bold">'+esc(val)+'</div><div style="font-size:10px;color:var(--ash)">'+(m>=0?'+':'')+m+'</div></div>';}
   html+='</div>'+HR;
   if(saveStr)html+='<div style="margin:3px 0"><span style="color:var(--bone);font-weight:bold">Saving Throws</span> '+esc(saveStr)+'</div>';
   if(skillStr)html+='<div style="margin:3px 0"><span style="color:var(--bone);font-weight:bold">Skills</span> '+esc(skillStr)+'</div>';

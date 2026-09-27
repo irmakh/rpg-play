@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-09-27 12:58
 
 /**
  * Unit tests for characterToXML() in index-char.js — the per-character XML export.
@@ -166,5 +166,44 @@ describe('characterToXML — item value survives export', () => {
 
   it('keeps a multi-type damage string intact', () => {
     expect(load({ items: [item] })({})).toContain('weaponDmg="1d8 slashing, 2d6 fire"');
+  });
+});
+
+// ── Spell slots 1–9 ───────────────────────────────────────────────────────────
+// The sheet, its XML export and the class template used to stop at 6th level,
+// so a high-level caster's 7th–9th level slots were never shown or saved.
+describe('characterToXML — spell slots', () => {
+  it('writes all nine spell levels', () => {
+    const characterToXML = load();
+    const xml = characterToXML({ 'slot-7-total': '1', 'slot-8-total': '1', 'slot-9-total': '1', 'slot-9-used': '1' });
+    expect(xml).toContain('<slot level="7" total="1"');
+    expect(xml).toContain('<slot level="8" total="1"');
+    expect(xml).toContain('<slot level="9" total="1" used="1"/>');
+  });
+});
+
+describe('parseCreatorFormat — full-caster spell slots', () => {
+  const PCF_SRC = extractFunction(CHAR_SRC, 'parseCreatorFormat');
+  function parse(fields) {
+    const ctx = createContext({ JSON, String, parseInt, Math, Set, Array });
+    runInContext(PCF_SRC, ctx);
+    const doc = {
+      querySelector: sel => (sel in fields ? { textContent: String(fields[sel]) } : null),
+      querySelectorAll: () => [],
+    };
+    return ctx.parseCreatorFormat(doc);
+  }
+  const slots = d => Array.from({ length: 9 }, (_, i) => d['slot-' + (i + 1) + '-total']);
+
+  it('gives a level 17 wizard one slot of each level 6–9', () => {
+    expect(slots(parse({ className: 'Wizard', level1: 17 }))).toEqual(['4','3','3','3','2','1','1','1','1']);
+  });
+
+  it('gives a level 20 wizard two 7th-level slots', () => {
+    expect(slots(parse({ className: 'Wizard', level1: 20 }))).toEqual(['4','3','3','3','3','2','2','1','1']);
+  });
+
+  it('gives a non-caster no slots at any level', () => {
+    expect(slots(parse({ className: 'Fighter', level1: 20 }))).toEqual(['0','0','0','0','0','0','0','0','0']);
   });
 });

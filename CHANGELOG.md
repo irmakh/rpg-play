@@ -21,6 +21,37 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [242] — 2026-09-27 — Spell levels on the Spells tab
+
+- **The spell level now shows in full** in the Cantrips & Prepared Spells list. Its box
+  was too narrow for the number to be seen.
+- **Spell slots go up to 9th level.** The Spell Slots card only had levels 1–6, so a
+  high-level caster could not record 7th–9th level slots. The character XML export and
+  the character-creator import now include levels 7–9 as well; a full caster made from
+  the creator import gets the right high-level slots.
+
+---
+
+## [241] — 2026-09-27 — Security hardening
+
+- Names, notes and numbers from character sheets, monster stat blocks and shop
+  records are now always shown as plain text on every screen.
+- A shop purchase must be for a whole number of items (1–1000).
+- Fixed: an ability score, armour class or bonus of **0** sometimes showed as blank.
+- Fixed: the monster import message showed icon code instead of the check-mark icon.
+
+---
+
+## [240] — 2026-09-27 — Security hardening
+
+- Posting to chat, rolling the 3D dice, drawing on the map, pinging, and moving to the
+  next or previous turn now require a login (the DM or any character of the campaign).
+  **A page that is not logged in can still be viewed, but can no longer post, roll or
+  draw.**
+- Prepared maps can only be opened by the DM.
+
+---
+
 ## [239] — 2026-09-26 — WebM videos in Stories
 
 - Story panels now accept **WebM** videos as well as MP4, with the same 500 MB limit.

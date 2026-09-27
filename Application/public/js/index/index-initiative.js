@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-09-26 16:50
+// Written by Irmak Hakman — 2026-09-27 11:13
 
 // ── Initiative Tracker ────────────────────────────────────────────────────────
 let initDataMap        = {};
@@ -152,7 +152,8 @@ async function submitInitNpc() {
 
 async function initSkipTurn() {
   try {
-    await fetch('/api/initiative/next', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+    // Ending your turn needs a login since v240.
+    await fetch('/api/initiative/next', { method: 'POST', headers: sheetAuthHeaders() });
   } catch {}
 }
 

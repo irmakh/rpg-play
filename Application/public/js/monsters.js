@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-09-27 12:25
 
 let masterPw = '';
 let monsters = [];
@@ -280,7 +280,9 @@ async function importMonsters() {
     if (res.status === 401) { location.href = '/dm.html'; return; }
     const data = await res.json();
     if (!res.ok) { statusEl.style.color = 'var(--blood)'; statusEl.textContent = data.error || 'Import failed.'; return; }
-    statusEl.style.color = 'var(--verdigris)'; statusEl.textContent = `<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-check"></use></svg> Imported ${data.count} monster${data.count !== 1 ? 's' : ''}.`;
+    // innerHTML so the check icon renders (textContent showed its markup as text);
+    // the one server value in it is escaped.
+    statusEl.style.color = 'var(--verdigris)'; statusEl.innerHTML = `<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-check"></use></svg> Imported ${esc(data.count)} monster${data.count !== 1 ? 's' : ''}.`;
     document.getElementById('import-text').value = '';
     await loadMonsters();
   } catch { statusEl.style.color = 'var(--blood)'; statusEl.textContent = 'Network error.'; }

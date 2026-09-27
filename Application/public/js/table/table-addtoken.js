@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-09-27 12:25
 
 // ── Add Token Modal ───────────────────────────────────────────────────────────
 function openAddTokenModal() {
@@ -37,7 +37,7 @@ function switchTokenTab(tab) {
 function _monsterRowHtml(m) {
   const portrait = m.data?.portraitThumb || m.data?.portrait;
   const thumb = portrait
-    ? `<img loading="lazy" src="${portrait}" style="width:30px;height:30px;border-radius:50%;object-fit:cover;border:1px solid var(--rule-hi);flex-shrink:0">`
+    ? `<img loading="lazy" src="${esc(portrait)}" style="width:30px;height:30px;border-radius:50%;object-fit:cover;border:1px solid var(--rule-hi);flex-shrink:0">`
     : `<div style="width:30px;height:30px;border-radius:50%;background:var(--slate-hi);border:1px solid var(--rule-hi);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--ash)">?</div>`;
   return `<div class="qroll-row" onclick="selectTokenMonster('${escJs(m.id)}','${escJs(m.name)}')"
        style="padding:5px 10px;border-bottom:1px solid var(--rule);display:flex;align-items:center;gap:8px">

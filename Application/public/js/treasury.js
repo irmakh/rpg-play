@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-09-27 12:12
 
 /**
  * Treasury — DM manager for the unified loot + shop catalogue.
@@ -881,7 +881,7 @@ async function loadLedger() {
         <td><span class="badge ${r.type}">${r.type === 'claim' ? 'Claim' : 'Buy'}</span></td>
         <td><strong>${esc(r.charName)}</strong></td>
         <td>${esc(r.itemName)}</td>
-        <td style="text-align:center">${r.qty}</td>
+        <td style="text-align:center">${esc(r.qty)}</td>
         <td style="color:var(--arc);white-space:nowrap">${r.type === 'claim' ? '—' : cpToGp(r.totalCp)}</td>
       </tr>`;
     }).join('');

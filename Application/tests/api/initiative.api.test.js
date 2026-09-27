@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-09-26 16:50
+// Written by Irmak Hakman — 2026-09-27 11:13
 
 /**
  * API integration tests for /api/initiative routes (rewritten for new API).
@@ -378,9 +378,30 @@ describe('POST /api/initiative/start', () => {
 
 // ── POST /api/initiative/next ─────────────────────────────────────────────────
 describe('POST /api/initiative/next', () => {
+  // A login is needed since v240 (any DM or character of the campaign).
+  it('refuses a caller who is not logged in, and the turn stays put', async () => {
+    const { app, ldb, broadcasts } = makeApp();
+    seed(ldb, [{ id: 'e1', name: 'High', roll: 20 }, { id: 'e2', name: 'Low', roll: 5 }]);
+    ldb.setInitState('e1');
+    const res = await request(app).post('/api/initiative/next');
+    expect(res.status).toBe(401);
+    expect(ldb.getInitState().currentId).toBe('e1');
+    expect(broadcasts.some(b => b.channel === 'initiative')).toBe(false);
+  });
+
+  it('lets a player end the turn, not only the DM', async () => {
+    const { app, ldb, hashPassword } = makeApp();
+    ldb.createCharacter('c1', { name: 'Gerion', charType: 'pc', passwordHash: hashPassword('pw1') });
+    seed(ldb, [{ id: 'e1', name: 'High', roll: 20 }, { id: 'e2', name: 'Low', roll: 5 }]);
+    ldb.setInitState('e1');
+    const res = await request(app).post('/api/initiative/next').set('X-Character-Password', 'pw1');
+    expect(res.status).toBe(200);
+    expect(ldb.getInitState().currentId).toBe('e2');
+  });
+
   it('is a no-op when there are no entries', async () => {
     const { app } = makeApp();
-    const res = await request(app).post('/api/initiative/next');
+    const res = await dm(request(app).post('/api/initiative/next'));
     expect(res.status).toBe(200);
   });
 
@@ -392,7 +413,7 @@ describe('POST /api/initiative/next', () => {
       { id: 'e3', name: 'Low',  roll: 5 },
     ]);
     ldb.setInitState('e1');
-    await request(app).post('/api/initiative/next');
+    await dm(request(app).post('/api/initiative/next'));
     const res = await request(app).get('/api/initiative').set('X-Master-Password', TEST_MASTER_PW);
     expect(res.body.currentId).toBe('e2');
   });
@@ -404,7 +425,7 @@ describe('POST /api/initiative/next', () => {
       { id: 'e2', name: 'Low',  roll: 5 },
     ]);
     ldb.setInitState('e2');
-    await request(app).post('/api/initiative/next');
+    await dm(request(app).post('/api/initiative/next'));
     const res = await request(app).get('/api/initiative').set('X-Master-Password', TEST_MASTER_PW);
     expect(res.body.currentId).toBe('e1');
   });
@@ -415,7 +436,7 @@ describe('POST /api/initiative/next', () => {
       { id: 'e1', name: 'High', roll: 20 },
       { id: 'e2', name: 'Low',  roll: 5 },
     ]);
-    await request(app).post('/api/initiative/next');
+    await dm(request(app).post('/api/initiative/next'));
     const res = await request(app).get('/api/initiative').set('X-Master-Password', TEST_MASTER_PW);
     expect(res.body.currentId).toBe('e1');
   });
@@ -430,7 +451,7 @@ describe('POST /api/initiative/next', () => {
       name: 'Low', type: 'character', initiativeId: 'e2', movedFt: 30,
     });
     ldb.setInitState('e1');
-    await request(app).post('/api/initiative/next');
+    await dm(request(app).post('/api/initiative/next'));
     const tok = ldb.getTableToken('tok-1');
     expect(tok.movedFt).toBe(0);
   });
@@ -438,10 +459,21 @@ describe('POST /api/initiative/next', () => {
 
 // ── POST /api/initiative/prev ─────────────────────────────────────────────────
 describe('POST /api/initiative/prev', () => {
-  it('works without DM auth (symmetric with /next — item 8)', async () => {
-    const { app } = makeApp();
-    const res = await request(app).post('/api/initiative/prev');
+  it('works for a player, not only the DM (symmetric with /next — item 8)', async () => {
+    const { app, ldb, hashPassword } = makeApp();
+    ldb.createCharacter('c1', { name: 'Gerion', charType: 'pc', passwordHash: hashPassword('pw1') });
+    const res = await request(app).post('/api/initiative/prev').set('X-Character-Password', 'pw1');
     expect(res.status).toBe(200);
+  });
+
+  // A login is needed since v240.
+  it('refuses a caller who is not logged in, and the turn stays put', async () => {
+    const { app, ldb } = makeApp();
+    seed(ldb, [{ id: 'e1', name: 'High', roll: 20 }, { id: 'e2', name: 'Low', roll: 5 }]);
+    ldb.setInitState('e2');
+    const res = await request(app).post('/api/initiative/prev');
+    expect(res.status).toBe(401);
+    expect(ldb.getInitState().currentId).toBe('e2');
   });
 
   it('goes back to the previous entry', async () => {
