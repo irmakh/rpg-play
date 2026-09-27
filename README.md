@@ -204,7 +204,7 @@ One catalogue for everything you hand out, replacing the separate Merchant and L
 - **Login activity** — the rolling 30-day audit of every login, failure, lockout and unblock, paged on the server (25 / 50 / 100 per page, remembered between visits; auto-refresh only on page 1)
 - **Active sessions** — everyone signed in: who, which campaign, when they signed in and were last seen, address and browser. **End session** signs one browser out; **End all sessions** does it to everyone but you. Every ending is written to the login activity log
 - Since v237 a connection's identity comes from its session token, not from what the page says about itself, so the connected-clients list shows who is really there
-- **Installs** (v243) — the servers and desktop clients that sent an install report (see [Install reporting](#install-reporting)). Only filled on a server running the collector (`TELEMETRY_COLLECTOR=on`)
+- **Installs** (v243) — the servers and desktop clients that sent an install report (see [Install reporting](#install-reporting)). Shown only on the licensor's server, which collects the reports
 
 ### Map Prep (`/prepare-map.html`) — DM only
 
@@ -553,7 +553,6 @@ plain Node and crash. A normal PowerShell window is unaffected.
 | `TRUST_PROXY` | No | off | Read the client IP from `X-Forwarded-For`. **Only enable behind a real reverse proxy** — with it on and no proxy, a client can forge the header and walk around the login lockout |
 | `TELEMETRY` | No | on | `off` stops the daily install report — see [Install reporting](#install-reporting) |
 | `TELEMETRY_URL` | No | `https://dnd.kimse.me` | Where install reports go |
-| `TELEMETRY_COLLECTOR` | No | off | `on` makes this server **receive** install reports (the licensor's server only) and list them on the maintenance page |
 
 ### Install reporting
 

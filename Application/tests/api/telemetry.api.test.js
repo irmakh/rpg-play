@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-09-27 17:26
+// Written by Irmak Hakman — 2026-09-27 18:14
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -18,7 +18,8 @@ import Database from 'better-sqlite3';
 import { createSessionStore } from '../../lib/sessions.js';
 import { createAuth } from '../../lib/auth.js';
 import registerMaintenance from '../../server/routes/maintenance.js';
-import registerTelemetry, { cleanReport, collectorEnabled } from '../../server/routes/telemetry.js';
+import registerTelemetry, { cleanReport, collectorKeyValid } from '../../server/routes/telemetry.js';
+import { hashPassword } from '../../lib/passwords.js';
 import {
   telemetryEnabled, buildPayload, sendReport, startTelemetry, createHostTracker,
 } from '../../lib/telemetry.js';
@@ -124,10 +125,18 @@ describe('registry', () => {
 });
 
 describe('collector', () => {
-  it('is off unless TELEMETRY_COLLECTOR=on — the route does not exist', async () => {
-    expect(collectorEnabled({})).toBe(false);
-    expect(collectorEnabled({ TELEMETRY_COLLECTOR: 'on' })).toBe(true);
-    const { app } = collectorApp({ collector: false });
+  it('switches on only for the key matching the hash — "on" or a wrong key does not', () => {
+    const hash = hashPassword('the-right-key');
+    expect(collectorKeyValid('the-right-key', hash)).toBe(true);
+    expect(collectorKeyValid(' the-right-key ', hash)).toBe(true);
+    for (const k of [undefined, '', 'on', 'the-right-kex']) expect(collectorKeyValid(k, hash)).toBe(false);
+    expect(collectorKeyValid('on')).toBe(false);   // the built-in hash
+  });
+
+  it('when off, the route does not exist and the installs list is empty and flagged off', async () => {
+    const { app, admin } = collectorApp({ collector: false });
+    const list = await request(app).get('/api/maintenance/installs').set('X-Master-Password', admin);
+    expect(list.body).toMatchObject({ collector: false, installs: [] });
     expect((await request(app).post('/api/telemetry/ping').send({ installId: ID, kind: 'server' })).status).toBe(404);
   });
 

@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-09-27 17:26
+// Written by Irmak Hakman — 2026-09-27 18:13
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -289,7 +289,7 @@ export function lastAuthEventForIp(ip) {
 // ── Install reporting ─────────────────────────────────────────────────────────
 // `settings` holds this install's own random id (lib/telemetry.js sends it).
 // `installs` is only written on the licensor's server, where the collector
-// route (server/routes/telemetry.js) is switched on with TELEMETRY_COLLECTOR=on.
+// route (server/routes/telemetry.js) runs.
 db.exec(`
   CREATE TABLE IF NOT EXISTS settings (
     key   TEXT PRIMARY KEY,

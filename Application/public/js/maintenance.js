@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-09-27 17:26
+// Written by Irmak Hakman — 2026-09-27 18:13
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -455,7 +455,7 @@ function render(data) {
 
 // ── Installs that have reported in ────────────────────────────────────────────
 // Install reports (lib/telemetry.js, and the desktop client at launch) land here
-// only on the server running the collector (TELEMETRY_COLLECTOR=on).
+// only on the server running the collector; elsewhere the section stays hidden.
 async function loadInstalls() {
   if (!_pw) return;
   try {
@@ -468,12 +468,13 @@ async function loadInstalls() {
 }
 
 function renderInstalls(list, now, collector) {
+  // Not the collecting server: there is nothing to show, so no section at all.
+  $('installs-section').hidden = !collector;
+  if (!collector) return;
   const host = $('installs');
   $('installs-pill').textContent = list.length + (list.length === 1 ? ' install' : ' installs');
   if (!list.length) {
-    host.innerHTML = `<div class="muted" style="padding:14px">${collector
-      ? 'No install has reported in yet.'
-      : 'The collector is off on this server — set TELEMETRY_COLLECTOR=on in .env to receive reports.'}</div>`;
+    host.innerHTML = '<div class="muted" style="padding:14px">No install has reported in yet.</div>';
     return;
   }
   const num = v => (v === null || v === undefined ? '—' : esc(v));

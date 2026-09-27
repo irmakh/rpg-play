@@ -96,7 +96,7 @@
 
 **`Application/lib/telemetry.js`** — the daily anonymous install report: `telemetryEnabled(env)` (off for `TELEMETRY=off/0/false/no`), `createHostTracker()` (middleware + `list()`, first 5 Host headers), `buildPayload(deps)`, `sendReport(url, payload, {fetchImpl})` (never throws), `startTelemetry(deps, {env, log, fetchImpl, firstDelayMs, intervalMs})` -> stop() or null.
 
-**`Application/server/routes/telemetry.js`** — the collector, registered only when `TELEMETRY_COLLECTOR=on`: `POST /api/telemetry/ping` (no login, `cleanReport()` validates/truncates, 30 reports/hour/IP). `GET /api/maintenance/installs` (super-admin) in `maintenance.js` lists them. `db/campaignsdb.js` gains `getInstallId()`, `countActiveAccounts(days)`, `upsertInstall(r)`, `listInstalls()` (tables `settings`, `installs`, kept 365 days).
+**`Application/server/routes/telemetry.js`** — the collector, registered only on the licensor's server (`collectorEnabled()` checks a key against a scrypt hash): `POST /api/telemetry/ping` (no login, `cleanReport()` validates/truncates, 30 reports/hour/IP). `GET /api/maintenance/installs` (super-admin) in `maintenance.js` lists them. `db/campaignsdb.js` gains `getInstallId()`, `countActiveAccounts(days)`, `upsertInstall(r)`, `listInstalls()` (tables `settings`, `installs`, kept 365 days).
 
 **`Desktop/src/main/telemetry.js`** — `reportOnLaunch()`: once a day, unless the `telemetryEnabled` setting is off, posts install id / version / platform / server host.
 

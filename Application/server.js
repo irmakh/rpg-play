@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-09-27 17:26
+// Written by Irmak Hakman — 2026-09-27 18:13
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -494,7 +494,7 @@ const MAX_MEDIA_BYTES = 25 * 1024 * 1024;
 // Bump this number whenever frontend JS or CSS files change.
 // Also bump CACHE in public/sw.js to the same value.
 // Both must always match. See deployment notes in CLAUDE.md.
-const FRONTEND_VERSION = 243;
+const FRONTEND_VERSION = 244;
 
 // ── Express app ───────────────────────────────────────────────────────────────
 const app = express();
@@ -504,7 +504,7 @@ app.disable('x-powered-by');
 // by; this remembers the first few it sees.
 const hostTracker = createHostTracker();
 app.use(hostTracker.middleware);
-const TELEMETRY_COLLECTOR = collectorEnabled();
+const COLLECTOR_ON = collectorEnabled();
 
 // Headers on every response — lib/security-middleware.js says what each is for.
 // HSTS only when this process serves HTTPS itself, decided from the same env
@@ -857,7 +857,7 @@ const ctx = {
   // Campaigns
   cdb, campaignIdFromReq, currentCampaignId, currentCampaign,
   isSuperAdminPassword, superAdminEnabled: SUPER_ADMIN_ENABLED,
-  telemetryCollector: TELEMETRY_COLLECTOR,
+  telemetryCollector: COLLECTOR_ON,
   broadcastAll, CAMPAIGN_COOKIE, FRONTEND_VERSION,
   // Waiting screens — the static-mount gate above reads this Set.
   parkedCampaigns,
@@ -895,8 +895,8 @@ registerStories(app, ctx);
 registerHandouts(app, ctx);
 registerNotifs(app, ctx);
 registerMaintenance(app, ctx);
-// Collector for install reports — the licensor's server only (TELEMETRY_COLLECTOR=on).
-if (TELEMETRY_COLLECTOR) registerTelemetry(app, ctx);
+// Collector for install reports — the licensor's server only.
+if (COLLECTOR_ON) registerTelemetry(app, ctx);
 
 // ── Server startup: HTTPS in production, plain HTTP for local dev ─────────────
 const SSL_KEY  = process.env.SSL_KEY;

@@ -21,6 +21,13 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [244] — 2026-09-27 — Installs list only where reports are collected
+
+- **The Installs section is gone from the maintenance page** on every server except the
+  licensor's. It used to show an empty table with setup instructions.
+- *(no frontend bump)* Receiving install reports now needs a secret key; only a scrypt
+  hash of it is in the code.
+
 ## [243] — 2026-09-27 — Install reporting
 
 Each install now tells the licensor it exists, so installs outside the non-commercial
@@ -31,7 +38,7 @@ licence can be spotted. Documented in the README under "Install reporting".
   accounts active in the last 7 days, and up to five host names. No names or content.
   Announced in the startup log; `TELEMETRY=off` in `.env` turns it off.
 - **The maintenance page has an Installs list** — kind, host, version, counts, first and
-  last seen, address. It fills only where `TELEMETRY_COLLECTOR=on`.
+  last seen, address. It fills only on the licensor's server.
 - **Desktop 1.0.4** reports at launch, at most once a day (install id, version, OS,
   server host), and has a Settings switch to turn it off.
 

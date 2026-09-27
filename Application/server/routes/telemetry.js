@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-09-27 17:26
+// Written by Irmak Hakman — 2026-09-27 18:14
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -6,16 +6,18 @@
  * Install-report collector: the receiving end of lib/telemetry.js and of the
  * desktop client's launch report.
  *
- * Runs on the licensor's server only. Everywhere else it stays off: the route
- * is registered solely when TELEMETRY_COLLECTOR=on, so on an ordinary install
- * POST /api/telemetry/ping is a plain 404. The reports are listed on the
- * maintenance page (GET /api/maintenance/installs, super-admin only).
+ * Runs on the licensor's server only; everywhere else the route does not
+ * exist and POST /api/telemetry/ping is a plain 404. The reports are listed
+ * on the maintenance page (GET /api/maintenance/installs, super-admin only).
  *
  * No login — installs out in the world have none on this server — so every
  * field is checked and cut to size, and each address may report 30 times an
  * hour.
  */
 import { clientIp } from '../../lib/login-guard.js';
+import { verifyPassword } from '../../lib/passwords.js';
+
+const COLLECTOR_KEY_HASH = '979677dc07d5516d22240f5c648bf925:28aefcc5338948f13d2cc9467503f546428b267015016fd48583b7661c1f89dea34c3f7db65dcbfb3bc5e6eb8912d9bcc08eb6648592d6020ae13a39ba84085b';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const KINDS = new Set(['server', 'desktop']);
@@ -44,8 +46,14 @@ export function cleanReport(body) {
   };
 }
 
+/** True only for the key whose scrypt hash is COLLECTOR_KEY_HASH. */
+export function collectorKeyValid(key, keyHash = COLLECTOR_KEY_HASH) {
+  const k = String(key ?? '').trim();
+  return !!k && verifyPassword(k, keyHash);
+}
+
 export function collectorEnabled(env = process.env) {
-  return String(env.TELEMETRY_COLLECTOR || '').trim().toLowerCase() === 'on';
+  return collectorKeyValid(env.TELEMETRY_COLLECTOR);
 }
 
 export default function register(app, ctx) {
