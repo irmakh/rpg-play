@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-09-27 17:36
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -138,6 +138,7 @@ async function load() {
   document.getElementById('shortcuts-enabled').checked = !!config.shortcutsEnabled;
   document.getElementById('tray-enabled').checked = !!config.trayEnabled;
   document.getElementById('close-to-tray').checked = !!config.closeToTray;
+  document.getElementById('telemetry-enabled').checked = config.telemetryEnabled !== false;
 
   buildShortcutRows(state.shortcutActions, config.shortcuts || {});
   showFailures(state.shortcutFailures);
@@ -152,6 +153,7 @@ async function save() {
     shortcutsEnabled: document.getElementById('shortcuts-enabled').checked,
     trayEnabled: document.getElementById('tray-enabled').checked,
     closeToTray: document.getElementById('close-to-tray').checked,
+    telemetryEnabled: document.getElementById('telemetry-enabled').checked,
   });
 
   showFailures(result.shortcutFailures);

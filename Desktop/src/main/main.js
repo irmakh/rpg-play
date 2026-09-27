@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-09-27 17:36
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -19,6 +19,7 @@ const downloads = require('./downloads');
 const ipc = require('./ipc');
 const menu = require('./menu');
 const shortcuts = require('./shortcuts');
+const telemetry = require('./telemetry');
 const tray = require('./tray');
 const windows = require('./windows');
 
@@ -61,6 +62,9 @@ if (!app.requestSingleInstanceLock()) {
       const win = windows.open('main');
       if (isDev) win.webContents.openDevTools({ mode: 'detach' });
     }
+
+    // Anonymous install report, once a day; off in Settings. See main/telemetry.js.
+    telemetry.reportOnLaunch().catch(() => {});
   });
 
   // With a tray icon and "close to tray" on, closing the last window leaves the

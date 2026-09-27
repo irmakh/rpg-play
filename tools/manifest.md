@@ -92,6 +92,14 @@
 
 **Frontend** — `public/js/lib/auth-ui.js`: `AuthUI.captcha(el, {onEnter, lazy})`, `login`, `adminLogin`, `verifyAny`, `setFirstPassword`, `logout(token)`, `dmGate({capEl, pwInput, errEl, onUnlock})` (the DM tool pages' gate: unlocks from a live stored session or mounts the captcha), `storedDmToken()`. Self-contained styles (works on the console, AI DM and Stories pages). `js/lib/realtime.js` gained `revokeStoredSession()`, `goToLogin()`, a load-time drop of any pre-v226 plain-password session, and a fetch interceptor for `401 SESSION_EXPIRED`. Console screens share a login through `BroadcastChannel('rpg-console-session')` (SESSION_REQUEST / SESSION_SYNC / SESSION_LOGOUT), same device only.
 
+## Application — Install reporting (v243)
+
+**`Application/lib/telemetry.js`** — the daily anonymous install report: `telemetryEnabled(env)` (off for `TELEMETRY=off/0/false/no`), `createHostTracker()` (middleware + `list()`, first 5 Host headers), `buildPayload(deps)`, `sendReport(url, payload, {fetchImpl})` (never throws), `startTelemetry(deps, {env, log, fetchImpl, firstDelayMs, intervalMs})` -> stop() or null.
+
+**`Application/server/routes/telemetry.js`** — the collector, registered only when `TELEMETRY_COLLECTOR=on`: `POST /api/telemetry/ping` (no login, `cleanReport()` validates/truncates, 30 reports/hour/IP). `GET /api/maintenance/installs` (super-admin) in `maintenance.js` lists them. `db/campaignsdb.js` gains `getInstallId()`, `countActiveAccounts(days)`, `upsertInstall(r)`, `listInstalls()` (tables `settings`, `installs`, kept 365 days).
+
+**`Desktop/src/main/telemetry.js`** — `reportOnLaunch()`: once a day, unless the `telemetryEnabled` setting is off, posts install id / version / platform / server host.
+
 ## Application — Uploads, live delivery, private messages (v234–v237)
 
 **`Application/lib/upload-paths.js`** — the single rule for where an uploaded file may live. `resolveUploadPath(uploadsDir, url, {campaignId, forWrite})` -> absolute path or null (inside uploads, this campaign's folder or a legacy shared folder, media extensions only when writing); `mimeToExt(mime)` (fixed table, else `'bin'`); `safeFileId(id)`. server.js wraps it as `uploadPath(url, forWrite)` (in ctx); every upload read/write/delete and backup restore/export goes through it.

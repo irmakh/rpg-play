@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-09-26 14:53
+// Written by Irmak Hakman — 2026-09-27 17:36
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -186,7 +186,7 @@ function register() {
   });
 
   ipcMain.handle('ui:save-settings', (event, patch) => {
-    const allowed = ['shortcuts', 'shortcutsEnabled', 'trayEnabled', 'closeToTray'];
+    const allowed = ['shortcuts', 'shortcutsEnabled', 'trayEnabled', 'closeToTray', 'telemetryEnabled'];
     const clean = {};
     for (const key of allowed) {
       if (patch && Object.prototype.hasOwnProperty.call(patch, key)) clean[key] = patch[key];

@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-09-27 17:36
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -39,6 +39,12 @@ const DEFAULTS = {
   // Tray behaviour.
   trayEnabled: true,
   closeToTray: false,
+
+  // Install report (main/telemetry.js): once a day at launch, an anonymous
+  // ping to the licensor's server. Switched off in Settings.
+  telemetryEnabled: true,
+  installId: null,
+  lastReportAt: 0,
 
   // Remembered folder for the native save dialog.
   lastDownloadDir: null,

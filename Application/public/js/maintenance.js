@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-09-27 17:26
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -52,7 +52,7 @@ function _toGate(message) {
   $('gate-pw').focus();
 }
 
-$('btn-refresh').addEventListener('click', () => { loadClients(); loadBlocked(); loadAuthEvents(); });
+$('btn-refresh').addEventListener('click', () => { loadClients(); loadBlocked(); loadAuthEvents(); loadInstalls(); });
 $('btn-logout').addEventListener('click', () => {
   AuthUI.logout(_pw);   // end it on the server, not just here
   _toGate('');
@@ -86,6 +86,7 @@ function startPolling() {
   loadBlocked();
   loadSessions();
   loadAuthEvents();
+  loadInstalls();
   _pollTick = 0;
   _pollTimer = setInterval(() => {
     loadClients();
@@ -93,7 +94,7 @@ function startPolling() {
     loadSessions();
     // Only page 1 refreshes by itself: on an older page new events would push
     // the rows along while they are being read.
-    if (++_pollTick % EVENTS_EVERY === 0 && _authPage === 1) loadAuthEvents();
+    if (++_pollTick % EVENTS_EVERY === 0) { if (_authPage === 1) loadAuthEvents(); loadInstalls(); }
   }, POLL_MS);
 }
 function stopPolling() {
@@ -450,4 +451,49 @@ function render(data) {
         ${c.userAgent ? `<div class="ua">${esc(c.userAgent)}</div>` : ''}
       </div>`;
   }).join('');
+}
+
+// ── Installs that have reported in ────────────────────────────────────────────
+// Install reports (lib/telemetry.js, and the desktop client at launch) land here
+// only on the server running the collector (TELEMETRY_COLLECTOR=on).
+async function loadInstalls() {
+  if (!_pw) return;
+  try {
+    const res = await fetch('/api/maintenance/installs', { headers: { 'X-Master-Password': _pw } });
+    if (res.status === 401) { _toGate('Session expired — log in again.'); return; }
+    if (!res.ok) return;
+    const data = await res.json();
+    renderInstalls(data.installs || [], data.now || Date.now(), !!data.collector);
+  } catch { /* transient network error — keep last view */ }
+}
+
+function renderInstalls(list, now, collector) {
+  const host = $('installs');
+  $('installs-pill').textContent = list.length + (list.length === 1 ? ' install' : ' installs');
+  if (!list.length) {
+    host.innerHTML = `<div class="muted" style="padding:14px">${collector
+      ? 'No install has reported in yet.'
+      : 'The collector is off on this server — set TELEMETRY_COLLECTOR=on in .env to receive reports.'}</div>`;
+    return;
+  }
+  const num = v => (v === null || v === undefined ? '—' : esc(v));
+  host.innerHTML = `<table class="events">
+    <thead><tr><th>Kind</th><th>Host</th><th>Version</th><th>Campaigns</th><th>Characters</th><th>Active 7d</th><th>First seen</th><th>Last seen</th><th>Reports</th><th>Address</th><th>Platform</th></tr></thead>
+    <tbody>${list.map(i => {
+      const hostTxt = i.kind === 'desktop' ? (i.serverHost ? '→ ' + i.serverHost : '—') : ((i.hosts || []).join(', ') || '—');
+      return `
+      <tr>
+        <td>${esc(i.kind)}</td>
+        <td title="${esc(i.installId)}">${esc(hostTxt)}</td>
+        <td>${esc(i.version || '—')}</td>
+        <td>${num(i.campaigns)}</td>
+        <td>${num(i.characters)}</td>
+        <td>${num(i.activeUsers7d)}</td>
+        <td title="${esc(absTime(i.firstSeen))}">${relTime(i.firstSeen, now)}</td>
+        <td title="${esc(absTime(i.lastSeen))}">${relTime(i.lastSeen, now)}</td>
+        <td>${num(i.pingCount)}</td>
+        <td class="ip-v">${esc(i.lastIp || '—')}</td>
+        <td class="ua-v">${esc([i.platform, i.node].filter(Boolean).join(' · ') || '—')}</td>
+      </tr>`;
+    }).join('')}</tbody></table>`;
 }

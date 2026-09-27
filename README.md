@@ -204,6 +204,7 @@ One catalogue for everything you hand out, replacing the separate Merchant and L
 - **Login activity** — the rolling 30-day audit of every login, failure, lockout and unblock, paged on the server (25 / 50 / 100 per page, remembered between visits; auto-refresh only on page 1)
 - **Active sessions** — everyone signed in: who, which campaign, when they signed in and were last seen, address and browser. **End session** signs one browser out; **End all sessions** does it to everyone but you. Every ending is written to the login activity log
 - Since v237 a connection's identity comes from its session token, not from what the page says about itself, so the connected-clients list shows who is really there
+- **Installs** (v243) — the servers and desktop clients that sent an install report (see [Install reporting](#install-reporting)). Only filled on a server running the collector (`TELEMETRY_COLLECTOR=on`)
 
 ### Map Prep (`/prepare-map.html`) — DM only
 
@@ -550,6 +551,36 @@ plain Node and crash. A normal PowerShell window is unaffected.
 | `CAMPAIGNS_DB` | No | `Application/campaigns.db` | Override the campaign registry file |
 | `CAMPAIGN_DATA_DIR` | No | `Application/data/campaigns` | Override where per-campaign databases live |
 | `TRUST_PROXY` | No | off | Read the client IP from `X-Forwarded-For`. **Only enable behind a real reverse proxy** — with it on and no proxy, a client can forge the header and walk around the login lockout |
+| `TELEMETRY` | No | on | `off` stops the daily install report — see [Install reporting](#install-reporting) |
+| `TELEMETRY_URL` | No | `https://dnd.kimse.me` | Where install reports go |
+| `TELEMETRY_COLLECTOR` | No | off | `on` makes this server **receive** install reports (the licensor's server only) and list them on the maintenance page |
+
+### Install reporting
+
+RPG Table is licensed under the Business Source License (see `LICENSE`): free for
+non-commercial use, while commercial or hosted-for-others use needs a separate licence.
+To know where it runs, each install sends a small anonymous report to
+`https://dnd.kimse.me`. The server announces this in its startup log.
+
+**A server** reports a minute after it starts and then once a day:
+
+| Field | What it is |
+|---|---|
+| `installId` | A random id made on first start and kept in `campaigns.db` |
+| `version` | The release number (`FRONTEND_VERSION`) |
+| `node`, `platform` | Node.js version, operating system and CPU architecture |
+| `campaigns`, `characters` | How many exist — counts only |
+| `activeUsers7d` | How many accounts logged in during the last 7 days — a count only |
+| `hosts` | Up to five host names this server was reached by (e.g. `rpg.example.com`) |
+
+**The desktop client** reports at launch, at most once a day: a random install id, the
+app version, operating system and the host name of the server it is set up for.
+
+Nothing else is sent: no names, passwords, chat, characters' contents or files. The
+receiving server also sees the address the report came from.
+
+**To turn it off:** set `TELEMETRY=off` in `Application/.env` and restart. In the
+desktop client, untick **Send an anonymous install report** in Settings.
 
 ---
 

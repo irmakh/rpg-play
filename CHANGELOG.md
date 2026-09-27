@@ -21,6 +21,20 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [243] — 2026-09-27 — Install reporting
+
+Each install now tells the licensor it exists, so installs outside the non-commercial
+licence can be spotted. Documented in the README under "Install reporting".
+
+- **Servers send an anonymous install report** a minute after start and then daily: a
+  random install id, the release number, Node/OS, counts of campaigns, characters and
+  accounts active in the last 7 days, and up to five host names. No names or content.
+  Announced in the startup log; `TELEMETRY=off` in `.env` turns it off.
+- **The maintenance page has an Installs list** — kind, host, version, counts, first and
+  last seen, address. It fills only where `TELEMETRY_COLLECTOR=on`.
+- **Desktop 1.0.4** reports at launch, at most once a day (install id, version, OS,
+  server host), and has a Settings switch to turn it off.
+
 ## [242] — 2026-09-27 — Spell levels on the Spells tab
 
 - **The spell level now shows in full** in the Cantrips & Prepared Spells list. Its box

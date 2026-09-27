@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-09-27 17:26
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -182,5 +182,16 @@ export default function register(app, ctx) {
       });
     } catch {}
     res.json({ ok: true, ended: 1 });
+  });
+
+  // ── Installs that have reported in ──────────────────────────────────────────
+  // Filled by server/routes/telemetry.js, which only runs where
+  // TELEMETRY_COLLECTOR=on; everywhere else the list is simply empty.
+  app.get('/api/maintenance/installs', (req, res) => {
+    if (!auth.isAdmin(req)) return res.status(401).json({ error: 'Unauthorized' });
+    let installs = [];
+    try { installs = cdb.listInstalls ? cdb.listInstalls() : []; } catch { installs = []; }
+    res.set('Cache-Control', 'no-store');
+    res.json({ now: Date.now(), collector: !!ctx.telemetryCollector, installs });
   });
 }

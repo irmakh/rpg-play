@@ -189,3 +189,11 @@ Settings Folder`, or `%APPDATA%/RPG Table/config.json`). Server URL, trusted
 certificate fingerprints, per-role window geometry and zoom, hotkeys, and tray
 preferences. Maintenance buttons reset window positions, forget trusted
 certificates, or clear cookies and cached pages.
+
+### Install report
+
+At launch, at most once a day, the client sends an anonymous install report to
+`https://dnd.kimse.me` (`src/main/telemetry.js`, since 1.0.4): a random install id
+kept in `config.json`, the app version, operating system + architecture, and the
+host name of the configured server. Nothing else. Untick **Send an anonymous install
+report** in Settings to stop it. See "Install reporting" in the main README.

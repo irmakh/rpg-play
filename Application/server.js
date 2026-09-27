@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-09-27 13:08
+// Written by Irmak Hakman — 2026-09-27 17:26
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -45,6 +45,8 @@ import registerStories    from './server/routes/stories.js';
 import registerHandouts   from './server/routes/handouts.js';
 import registerNotifs     from './server/routes/notifications.js';
 import registerMaintenance from './server/routes/maintenance.js';
+import registerTelemetry, { collectorEnabled } from './server/routes/telemetry.js';
+import { startTelemetry, createHostTracker } from './lib/telemetry.js';
 import makeNotify         from './server/notify.js';
 // The AI DM was retired in v236 and its code moved, unchanged, to
 // retired/aiDM/ at the repo root — outside Application/, so it no longer
@@ -492,11 +494,17 @@ const MAX_MEDIA_BYTES = 25 * 1024 * 1024;
 // Bump this number whenever frontend JS or CSS files change.
 // Also bump CACHE in public/sw.js to the same value.
 // Both must always match. See deployment notes in CLAUDE.md.
-const FRONTEND_VERSION = 242;
+const FRONTEND_VERSION = 243;
 
 // ── Express app ───────────────────────────────────────────────────────────────
 const app = express();
 app.disable('x-powered-by');
+
+// Install reporting (lib/telemetry.js) names the hosts this server is reached
+// by; this remembers the first few it sees.
+const hostTracker = createHostTracker();
+app.use(hostTracker.middleware);
+const TELEMETRY_COLLECTOR = collectorEnabled();
 
 // Headers on every response — lib/security-middleware.js says what each is for.
 // HSTS only when this process serves HTTPS itself, decided from the same env
@@ -526,6 +534,7 @@ const CAMPAIGN_EXEMPT = [
   /^\/api\/config$/,
   /^\/api\/campaigns(\/|$)/,
   /^\/api\/maintenance\//,   // server-wide admin, gated by a super-admin session
+  /^\/api\/telemetry\//,     // install reports from other servers (collector only)
   /^\/api\/auth\/(captcha|admin-login|logout)$/,   // login plumbing with no campaign of its own
 ];
 
@@ -848,6 +857,7 @@ const ctx = {
   // Campaigns
   cdb, campaignIdFromReq, currentCampaignId, currentCampaign,
   isSuperAdminPassword, superAdminEnabled: SUPER_ADMIN_ENABLED,
+  telemetryCollector: TELEMETRY_COLLECTOR,
   broadcastAll, CAMPAIGN_COOKIE, FRONTEND_VERSION,
   // Waiting screens — the static-mount gate above reads this Set.
   parkedCampaigns,
@@ -885,6 +895,8 @@ registerStories(app, ctx);
 registerHandouts(app, ctx);
 registerNotifs(app, ctx);
 registerMaintenance(app, ctx);
+// Collector for install reports — the licensor's server only (TELEMETRY_COLLECTOR=on).
+if (TELEMETRY_COLLECTOR) registerTelemetry(app, ctx);
 
 // ── Server startup: HTTPS in production, plain HTTP for local dev ─────────────
 const SSL_KEY  = process.env.SSL_KEY;
@@ -957,6 +969,17 @@ wss.on('close', () => clearInterval(wsHeartbeat));
 httpServer.listen(PORT, () => {
   const proto = useSSL ? 'HTTPS' : 'HTTP';
   console.log(`${proto} server listening on port ${PORT}`);
+
+  // Install reporting — README "Install reporting"; TELEMETRY=off disables it.
+  startTelemetry({
+    getInstallId: cdb.getInstallId,
+    countCampaigns: cdb.countCampaigns,
+    countCharacters: () => cdb.listCampaigns({ includeInactive: true })
+      .reduce((n, c) => n + getCampaignData(c.id).ldb.listCharacters().length, 0),
+    countActiveUsers: () => cdb.countActiveAccounts(7),
+    hosts: hostTracker.list,
+    version: FRONTEND_VERSION,
+  });
 });
 
 if (useSSL) {

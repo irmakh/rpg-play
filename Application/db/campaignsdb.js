@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-09-27 17:26
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -284,6 +284,82 @@ export function lastAuthEventForIp(ip) {
   if (!ip) return null;
   return db.prepare('SELECT ts, userAgent, kind FROM auth_events WHERE ip = ? ORDER BY id DESC LIMIT 1')
     .get(String(ip)) || null;
+}
+
+// ── Install reporting ─────────────────────────────────────────────────────────
+// `settings` holds this install's own random id (lib/telemetry.js sends it).
+// `installs` is only written on the licensor's server, where the collector
+// route (server/routes/telemetry.js) is switched on with TELEMETRY_COLLECTOR=on.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS settings (
+    key   TEXT PRIMARY KEY,
+    value TEXT DEFAULT ''
+  );
+  CREATE TABLE IF NOT EXISTS installs (
+    installId     TEXT PRIMARY KEY,
+    kind          TEXT DEFAULT '',
+    firstSeen     INTEGER NOT NULL,
+    lastSeen      INTEGER NOT NULL,
+    pingCount     INTEGER DEFAULT 0,
+    version       TEXT DEFAULT '',
+    platform      TEXT DEFAULT '',
+    node          TEXT DEFAULT '',
+    campaigns     INTEGER,
+    characters    INTEGER,
+    activeUsers7d INTEGER,
+    hosts         TEXT DEFAULT '[]',
+    serverHost    TEXT DEFAULT '',
+    lastIp        TEXT DEFAULT ''
+  );
+`);
+
+const INSTALL_KEEP_MS = 365 * 24 * 60 * 60 * 1000;
+
+/** This install's id, created on first call and kept for good. */
+export function getInstallId() {
+  const row = db.prepare("SELECT value FROM settings WHERE key = 'installId'").get();
+  if (row && row.value) return row.value;
+  const id = crypto.randomUUID();
+  db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('installId', ?)").run(id);
+  return id;
+}
+
+/**
+ * People with a successful login in the last `days` days, counted once per
+ * account (role + campaign + character), across every campaign.
+ */
+export function countActiveAccounts(days = 7, now = Date.now()) {
+  return db.prepare(`
+    SELECT COUNT(*) AS n FROM (
+      SELECT DISTINCT role, campaignId, charId FROM auth_events
+      WHERE ts >= ? AND kind IN ('login', 'login-as-dm')
+    )`).get(now - days * 24 * 60 * 60 * 1000).n;
+}
+
+/** Collector side: one row per install id, the latest report wins. */
+export function upsertInstall(r, now = Date.now()) {
+  db.prepare(`
+    INSERT INTO installs (installId, kind, firstSeen, lastSeen, pingCount, version, platform, node,
+                          campaigns, characters, activeUsers7d, hosts, serverHost, lastIp)
+    VALUES (@installId, @kind, @now, @now, 1, @version, @platform, @node,
+            @campaigns, @characters, @activeUsers7d, @hosts, @serverHost, @lastIp)
+    ON CONFLICT(installId) DO UPDATE SET
+      kind = excluded.kind, lastSeen = excluded.lastSeen, pingCount = pingCount + 1,
+      version = excluded.version, platform = excluded.platform, node = excluded.node,
+      campaigns = excluded.campaigns, characters = excluded.characters,
+      activeUsers7d = excluded.activeUsers7d, hosts = excluded.hosts,
+      serverHost = excluded.serverHost, lastIp = excluded.lastIp
+  `).run({ ...r, hosts: JSON.stringify(r.hosts || []), now });
+  db.prepare('DELETE FROM installs WHERE lastSeen < ?').run(now - INSTALL_KEEP_MS);
+}
+
+/** Newest report first. */
+export function listInstalls() {
+  return db.prepare('SELECT * FROM installs ORDER BY lastSeen DESC').all().map(r => {
+    let hosts = [];
+    try { hosts = JSON.parse(r.hosts || '[]'); } catch { hosts = []; }
+    return { ...r, hosts };
+  });
 }
 
 export const _db = db;
