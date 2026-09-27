@@ -1,4 +1,6 @@
 // Written by Irmak Hakman in 2026.
+// Copyright (c) 2026 Irmak Hakman
+// SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
 // Pure row-shape helper, exported at module level by localdb.js (it closes over
 // no database), used so an imported loot row lands in treasury_items with exactly

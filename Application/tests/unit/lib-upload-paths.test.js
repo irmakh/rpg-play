@@ -1,4 +1,6 @@
 // Written by Irmak Hakman — 2026-09-26 16:30
+// Copyright (c) 2026 Irmak Hakman
+// SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
 /**
  * lib/upload-paths.js — the single rule for where an uploaded file may live.

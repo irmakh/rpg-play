@@ -1,4 +1,6 @@
 // Written by Irmak Hakman in 2026.
+// Copyright (c) 2026 Irmak Hakman
+// SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
 // ── Wire proficiency checkboxes + derived inputs to recalcAll ─────────────────
 document.querySelectorAll('[data-key^="sk-prof-"], [data-key^="sk-exp-"], [data-key^="save-prof-"]').forEach(el => {

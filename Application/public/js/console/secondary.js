@@ -1,4 +1,6 @@
 // Written by Irmak Hakman — 2026-09-27 11:45
+// Copyright (c) 2026 Irmak Hakman
+// SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
 // ── Secondary Screen (Screen 2 — Info Panel) ──────────────────────────────────
 // table-secondary.html only. Self-contained: own SSE, own state, own API calls.

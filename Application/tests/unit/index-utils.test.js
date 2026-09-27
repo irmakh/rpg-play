@@ -1,4 +1,6 @@
 // Written by Irmak Hakman in 2026.
+// Copyright (c) 2026 Irmak Hakman
+// SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
 /**
  * Unit tests for pure helpers in index-utils.js and session helpers in index-state.js.

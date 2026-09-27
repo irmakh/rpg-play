@@ -1,4 +1,6 @@
 // Written by Irmak Hakman in 2026.
+// Copyright (c) 2026 Irmak Hakman
+// SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
 // ── Hidden maintenance dashboard ──────────────────────────────────────────────
 // Super-admin gated. Polls /api/maintenance/clients and shows every connected

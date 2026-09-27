@@ -1,4 +1,6 @@
 // Written by Irmak Hakman — 2026-09-26 18:25
+// Copyright (c) 2026 Irmak Hakman
+// SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
 import { AsyncLocalStorage } from 'async_hooks';
 

@@ -1,4 +1,6 @@
 // Written by Irmak Hakman — 2026-09-27 11:57
+// Copyright (c) 2026 Irmak Hakman
+// SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
 // ── HTML escape ───────────────────────────────────────────────────────────────
 // null / undefined / false become ''; everything else — 0 included, which the

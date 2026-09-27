@@ -1,4 +1,6 @@
 // Written by Irmak Hakman in 2026.
+// Copyright (c) 2026 Irmak Hakman
+// SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
 /**
  * Unit tests for _monsterDamageStr in table-monsters.js — the 5etools stat-block

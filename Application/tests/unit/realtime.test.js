@@ -1,4 +1,6 @@
 // Written by Irmak Hakman — 2026-09-26 16:50
+// Copyright (c) 2026 Irmak Hakman
+// SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
 /**
  * Unit tests for js/lib/realtime.js — one page, one connection.

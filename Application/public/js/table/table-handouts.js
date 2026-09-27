@@ -1,4 +1,6 @@
 // Written by Irmak Hakman in 2026.
+// Copyright (c) 2026 Irmak Hakman
+// SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
 // ── Handouts on the table screen ──────────────────────────────────────────────
 // A handout pops up the moment the DM hands it out, and again when they confirm

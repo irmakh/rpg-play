@@ -1,4 +1,6 @@
 // Written by Irmak Hakman — 2026-09-27 12:10
+// Copyright (c) 2026 Irmak Hakman
+// SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
 /**
  * Treasury — the unified item catalogue that replaces the separate loot and

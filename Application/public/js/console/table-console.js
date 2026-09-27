@@ -1,4 +1,6 @@
 // Written by Irmak Hakman — 2026-09-26 16:50
+// Copyright (c) 2026 Irmak Hakman
+// SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
 // ── Console Mode Bridge (Screen 1 — Map) ─────────────────────────────────────
 // Loaded only by table-console.html. Opens the secondary info window and keeps

@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 # Written by Irmak Hakman — 2026-09-15 18:08
+# Copyright (c) 2026 Irmak Hakman
+# SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 """Seed a fresh demo campaign with meaningful sample data.
 
 WHY THIS TALKS TO SQLITE DIRECTLY INSTEAD OF THE HTTP API:

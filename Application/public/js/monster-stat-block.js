@@ -1,4 +1,6 @@
 // Written by Irmak Hakman — 2026-09-27 12:00
+// Copyright (c) 2026 Irmak Hakman
+// SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
 // ── Shared monster stat block renderer ───────────────────────────────────────
 // Single source of truth used by dm.js, monsters.js, and table-monsters.js.

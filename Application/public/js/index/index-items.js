@@ -1,4 +1,6 @@
 // Written by Irmak Hakman — 2026-09-27 11:55
+// Copyright (c) 2026 Irmak Hakman
+// SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
 // ── Equipment & Items ─────────────────────────────────────────────────────────
 const ITEM_WEAPON_PROPS = ['Ammunition','Finesse','Heavy','Light','Loading','Range','Reach','Thrown','Two-Handed','Versatile'];

@@ -1,4 +1,6 @@
 // Written by Irmak Hakman — 2026-09-27 12:35
+// Copyright (c) 2026 Irmak Hakman
+// SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
 /**
  * Phase 4 of the security plan: text a user controls must never turn into

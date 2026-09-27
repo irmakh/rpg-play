@@ -1,4 +1,6 @@
 // Written by Irmak Hakman in 2026.
+// Copyright (c) 2026 Irmak Hakman
+// SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
 // ── Music Player — table screen module ───────────────────────────────────────
 // The table screen is an audio SINK: it holds the page's <audio> element, plays

@@ -1,4 +1,6 @@
 // Written by Irmak Hakman in 2026.
+// Copyright (c) 2026 Irmak Hakman
+// SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
 // ── Waiting screen manager (DM) ───────────────────────────────────────────────
 // Create the images the DM parks the table on between scenes, and show or stop
