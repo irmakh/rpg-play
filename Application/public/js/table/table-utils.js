@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-10 19:37
+// Written by Irmak Hakman — 2026-10-11 01:00
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -87,6 +87,19 @@ function tokenLabelMetrics(cellSize, sizeMult) {
   const mult = Math.max(1, sizeMult || 1);
   const font = Math.max(9, Math.min(40, Math.round(cs * 0.18 * Math.sqrt(mult))));
   return { font, bar: Math.max(4, Math.round(font * 0.45)) };
+}
+// What to write beside a token while it is being dragged. In a fight the token
+// has a movement budget for the turn, so the label counts it down and turns red
+// once it is overspent. Outside a fight nothing is spent, but the distance is
+// still worth seeing - it goes amber past the creature's speed, as a hint and
+// not a limit. `tone` is 'ok' | 'warn' | 'over'; the caller picks the colour.
+function dragDistanceLabel(dist, speed, remainingFt, freeMove) {
+  if (freeMove) return { text: `${dist} ft`, tone: dist > (speed || 30) ? 'warn' : 'ok' };
+  const left = remainingFt - dist;
+  return {
+    text: `${dist}ft  (${left >= 0 ? left + 'ft left' : Math.abs(left) + 'ft over'})`,
+    tone: left >= 0 ? 'ok' : 'over',
+  };
 }
 function getActiveTurnTokenId() {
   if (!initData.currentId) return null;

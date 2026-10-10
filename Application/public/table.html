@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Written by Irmak Hakman — 2026-09-26 15:58 -->
+<!-- Written by Irmak Hakman — 2026-10-11 00:58 -->
 <!-- Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) -->
 <html lang="en" class="lamplit">
 <head>
@@ -16,6 +16,7 @@
 <link rel="stylesheet" href="/css/table.css">
 <link rel="stylesheet" href="/css/notifications.css">
 <link rel="stylesheet" href="/css/table-theme-modern.css">
+<link rel="stylesheet" href="/css/table-ux.css">
 <link rel="stylesheet" href="/css/weather.css">
 </head>
 <body>
@@ -57,21 +58,42 @@
   </div>
 
   <button class="btn tool-btn" id="btn-my-sheet" onclick="showMySheet()" title="Open my character sheet — works with or without a token on the map" style="display:none;margin-left:4px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-clipboard"></use></svg> My sheet</button>
-  <button class="btn tool-btn" onclick="openDiceRollerModal()" title="Dice Roller" style="margin-left:4px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg> </button>
-  <!-- Dice mode toggle (item 2): persistent Normal/Adv/Dis/Ask applied to every d20 roll -->
-  <div class="rp-dice-mode" id="rp-dice-mode" style="margin-left:6px" title="Roll mode applied to every d20 roll">
-    <button type="button" class="dm-seg" data-mode="norm" onclick="setDiceMode('norm')">Normal</button>
-    <button type="button" class="dm-seg" data-mode="adv" onclick="setDiceMode('adv')" title="Roll with advantage">Adv</button>
-    <button type="button" class="dm-seg" data-mode="dis" onclick="setDiceMode('dis')" title="Roll with disadvantage">Dis</button>
-    <button type="button" class="dm-seg active" data-mode="ask" onclick="setDiceMode('ask')" title="Ask each roll: pick Normal/Adv/Dis in a popup">Ask</button>
+  <button class="btn tool-btn" id="btn-dice" onclick="openDiceRollerModal()" title="Dice Roller" style="margin-left:4px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg> </button>
+  <!-- Dice settings: the button shows the roll mode in force; the mode switch
+       and the animation switch live in its pop-over (js/table/table-ux.js). -->
+  <div class="ux-anchor">
+    <button class="btn" id="btn-dice-opts" data-mode="ask" onclick="uxTogglePop('ux-dice-pop')" aria-haspopup="true" aria-expanded="false" aria-controls="ux-dice-pop" title="Roll mode and dice animation"><span id="ux-dice-mode-lbl">Ask</span> <svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-down"></use></svg></button>
+    <div class="ux-pop" id="ux-dice-pop" hidden>
+      <div class="ux-pop-lbl">Every d20 roll</div>
+      <div class="rp-dice-mode" id="rp-dice-mode" title="Roll mode applied to every d20 roll">
+        <button type="button" class="dm-seg" data-mode="norm" onclick="setDiceMode('norm')">Normal</button>
+        <button type="button" class="dm-seg" data-mode="adv" onclick="setDiceMode('adv')" title="Roll with advantage">Adv</button>
+        <button type="button" class="dm-seg" data-mode="dis" onclick="setDiceMode('dis')" title="Roll with disadvantage">Dis</button>
+        <button type="button" class="dm-seg active" data-mode="ask" onclick="setDiceMode('ask')" title="Ask each roll: pick Normal/Adv/Dis in a popup">Ask</button>
+      </div>
+      <div class="ux-pop-row" onclick="if(!event.target.closest('button'))toggleDiceAnim()"><span>Dice animation</span>
+        <button class="dice-anim-switch on" id="btn-dice-anim" role="switch" aria-checked="true" onclick="toggleDiceAnim()" title="Dice animation on/off"><span class="das-knob"></span></button>
+      </div>
+    </div>
   </div>
-  <button class="dice-anim-switch on" id="btn-dice-anim" role="switch" aria-checked="true" onclick="toggleDiceAnim()" title="Dice animation on/off"><span class="das-knob"></span></button>
-  <!-- Both panels start open, so the chevron starts pointing the way it folds. -->
-  <button class="btn tool-btn" id="btn-leftpanel-toggle" onclick="toggleLeftPanel()" title="Hide left panel" aria-expanded="true" style="margin-left:4px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-left"></use></svg> </button>
-  <button class="btn tool-btn" id="btn-sidepanel-toggle" onclick="toggleSidePanel()" title="Hide right panel" aria-expanded="true" style="margin-left:2px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-right"></use></svg> </button>
-  <button class="btn tool-btn" id="btn-pop-left" onclick="togglePopout('left-panel')" title="Pop out / dock the left panel in its own window" style="margin-left:6px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-popout"></use></svg> <svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-left"></use></svg> </button>
-  <button class="btn tool-btn" id="btn-pop-right" onclick="togglePopout('side-panel')" title="Pop out / dock the right panel in its own window" style="margin-left:2px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-right"></use></svg> <svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-popout"></use></svg> </button>
-  <button class="btn tool-btn" id="btn-pop-chat" onclick="togglePopout('chat-bar')" title="Pop out / dock the chat in its own window" style="margin-left:2px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-popout"></use></svg> <svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chat"></use></svg> </button>
+  <!-- View menu: the two panel toggles and the three pop-out buttons, which
+       used to sit in this row as five icon squares. Same ids, same handlers. -->
+  <div class="ux-anchor">
+    <button class="btn" id="btn-view" onclick="uxTogglePop('ux-view-pop')" aria-haspopup="true" aria-expanded="false" aria-controls="ux-view-pop" title="Panels, pop-outs and map options">View <svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-down"></use></svg></button>
+    <div class="ux-pop ux-menu" id="ux-view-pop" hidden>
+      <!-- Both panels start open, so the chevron starts pointing the way it folds. -->
+      <button type="button" id="btn-leftpanel-toggle" onclick="toggleLeftPanel()" title="Hide left panel" aria-expanded="true"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-left"></use></svg></button>
+      <button type="button" id="btn-sidepanel-toggle" onclick="toggleSidePanel()" title="Hide right panel" aria-expanded="true"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-right"></use></svg></button>
+      <div class="ux-pop-sep"></div>
+      <button type="button" id="btn-pop-left" onclick="togglePopout('left-panel')" data-label="Pop out left panel" data-label-on="Dock left panel"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-popout"></use></svg></button>
+      <button type="button" id="btn-pop-right" onclick="togglePopout('side-panel')" data-label="Pop out right panel" data-label-on="Dock right panel"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-popout"></use></svg></button>
+      <button type="button" id="btn-pop-chat" onclick="togglePopout('chat-bar')" data-label="Pop out chat" data-label-on="Dock chat"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-popout"></use></svg></button>
+      <div class="ux-pop-sep"></div>
+      <button type="button" id="ux-follow" role="menuitemcheckbox" aria-checked="true" onclick="uxToggleFollow()" title="When the turn changes, bring that token into view">Follow the turn</button>
+      <button type="button" id="ux-hints" role="menuitemcheckbox" aria-checked="true" onclick="uxToggleHints()" title="The line over the map that says what the current tool does">Tool hints</button>
+      <button type="button" onclick="uxShowHelp()">Keyboard shortcuts <kbd>?</kbd></button>
+    </div>
+  </div>
 </div>
 
 <!-- Now Playing bar — visible to all clients when music is playing -->
@@ -222,6 +244,9 @@
       <div style="color:var(--bone);font-size:13px;font-weight:bold;">Loading map…</div>
       <div style="width:200px;height:3px;background:rgba(255,255,255,.12);border-radius:2px;overflow:hidden"><div style="height:100%;width:35%;background:var(--bone);border-radius:2px;animation:chat-upslide 1.1s ease-in-out infinite"></div></div>
     </div>
+    <!-- What the current tool does (js/table/table-ux.js). A sticky box of no
+         size, so it rides the scroll without moving the map. -->
+    <div id="ux-hint-anchor"><div id="ux-hint" role="status" hidden></div></div>
     <div id="canvas-content-wrap" style="position:relative;transform-origin:top left;display:inline-block">
       <img id="map-img" alt="" style="position:absolute;top:0;left:0;pointer-events:none;display:none">
       <canvas id="grid-canvas" style="position:absolute;top:0;left:0;pointer-events:none"></canvas>
@@ -712,5 +737,6 @@
 <script src="/js/lib/modal-guard.js" defer></script>
 <script src="/js/table/table-waiting.js" defer></script>
 <script src="/js/table/table-main.js" defer></script>
+<script src="/js/table/table-ux.js" defer></script>
 </body>
 </html>

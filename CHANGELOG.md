@@ -21,6 +21,49 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [261] — 2026-10-11 — Table: easier to get around, quicker in a fight
+
+Sixteen ease-of-use changes to the table screen (`/table.html`). The console is unchanged,
+apart from the drag distance, which it shares.
+
+**Getting around the map**
+- **The mouse wheel zooms,** and it zooms where the pointer is instead of sliding the map
+  toward its top-left corner. The slider and the + / − buttons now zoom about the middle
+  of the view. Shift + wheel scrolls sideways.
+- **Pan from any tool:** hold Space and drag, or drag with the middle mouse button.
+- **Touch:** pinch to zoom, hold a token to drag it, and the ruler, draw and multi-select
+  tools work with a finger. One-finger panning is as before.
+- **The map follows the turn.** When the turn passes to a token that is off screen, the map
+  glides to it. It does not select the token or change the side panel. Switch it off under
+  View → Follow the turn.
+
+**Keyboard**
+- **A key for each tool:** V move, H pan, R ruler, P ping, D draw, M multi-select (DM).
+  Each tool's tooltip names its key.
+- **N and B** move to the next and the previous turn (DM, while a fight is running).
+- **Ctrl + Z** undoes the last token move. Arrow keys already moved the selected token.
+- **?** opens a sheet listing every shortcut (also under View).
+
+**Toolbar**
+- **One View menu** replaces five icon buttons: show/hide for both panels and the three
+  pop-outs, plus the new switches.
+- **Dice settings sit behind one button** next to the dice roller. It shows the roll mode
+  in force (Ask / Normal / Adv / Dis) and turns green or red while advantage or
+  disadvantage is left on. The animation switch is in the same place.
+- **A hint over the map** says what the current tool does, and what you can do with the
+  selected token. Switch it off under View → Tool hints.
+- **The table remembers** your zoom, your tool, and which panels and the chat were open.
+
+**Tokens**
+- **Right-click a token** for damage and healing, conditions, hide/show, roll initiative,
+  details and remove. Players get the menu on their own token, without the DM's actions.
+- **Type a number with a token selected** to damage it: `7` then Enter takes 7, `+7` heals 7.
+- **Hover a token** for a summary card: HP, AC, speed (or movement used this turn) and
+  conditions. Players see a monster's name and conditions only, as before.
+- **Dragging a token shows the distance** outside a fight too, with a line back to where it
+  started. It turns amber past the creature's speed; in a fight it still counts the turn's
+  movement down and turns red when overspent.
+
 ## [260] — 2026-10-11 — Console: follow the turn; the DM moves any token
 
 - **When the turn changes, the console goes to that token.** The map slides to it, and for

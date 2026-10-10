@@ -58,6 +58,7 @@ char_sheet/
 │   │   │   ├── stories.css             #     Stories (dashboard/builder/viewer) styles
 │   │   │   ├── table-sheet-popout.css  #     Scoped layout for the popped-out character sheet
 │   │   │   ├── table-theme-modern.css  #     Modern HUD table theme
+│   │   │   ├── table-ux.css            #     Table ease-of-use layer: View menu, dice settings, hint, token menu, hover card
 │   │   │   ├── table.css               #     Virtual table styles
 │   │   │   ├── tokens.css              #     Design tokens — loaded first on every page
 │   │   │   ├── treasury.css            #     Treasury manager styles (master-detail)
@@ -138,6 +139,7 @@ char_sheet/
 │   │   │   │   ├── table-realtime.js   #       Live event handling
 │   │   │   │   ├── table-state.js      #       Shared state + session
 │   │   │   │   ├── table-utils.js      #       Helpers (canvas pos, display names, HP colours)
+│   │   │   │   ├── table-ux.js         #       Ease-of-use layer (table.html only): wheel zoom, pan, touch, shortcuts, token menu, hover card
 │   │   │   │   ├── table-waiting.js    #       Waiting-screen overlay, picker + pop-out lock
 │   │   │   │   └── table-weather.js    #       Toolbar weather widget for the current date
 │   │   │   ├── campaigns.js            #     Campaign picker — list, detail, login, create/settings/delete
@@ -253,6 +255,7 @@ char_sheet/
 │   │       ├── table-map.test.js       #     Table map/canvas
 │   │       ├── table-monster-damage.test.js  # Monster damage extraction
 │   │       ├── table-utils.test.js     #     Table helpers
+│   │       ├── table-ux.test.js        #     Table ease-of-use helpers: zoom steps, quick HP, tool keys, hover/menu markup
 │   │       ├── upload-paths.test.js    #     Upload paths (server wiring)
 │   │       ├── console-gamepad.test.js #     Console gamepad: reading, repeat, routing, focus movement
 │   │       ├── console-panel.test.js   #     Console info panel: who may see what in the initiative order

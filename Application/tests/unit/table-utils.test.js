@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-10 19:37
+// Written by Irmak Hakman — 2026-10-11 01:04
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -56,6 +56,7 @@ function load({ masterPw = '', tokens = [], initData = { entries: [], currentId:
     tokenRingColor:       ctx.tokenRingColor,
     hpBarColor:           ctx.hpBarColor,
     tokenLabelMetrics:    ctx.tokenLabelMetrics,
+    dragDistanceLabel:    ctx.dragDistanceLabel,
     getActiveTurnTokenId: ctx.getActiveTurnTokenId,
     isDM:                 ctx.isDM,
   };
@@ -195,6 +196,33 @@ describe('tokDisplayName', () => {
     it('handles a monster with a single-word name and no label', () => {
       expect(tokDisplayName({ type: 'monster', name: 'Dragon' })).toBe('Dragon');
     });
+  });
+});
+
+// ── dragDistanceLabel ─────────────────────────────────────────────────────────
+describe('dragDistanceLabel says how far a dragged token has gone', () => {
+  const { dragDistanceLabel } = load();
+
+  it('counts the turn\'s movement down during a fight', () => {
+    expect(dragDistanceLabel(10, 30, 30, false)).toEqual({ text: '10ft  (20ft left)', tone: 'ok' });
+    expect(dragDistanceLabel(30, 30, 30, false)).toEqual({ text: '30ft  (0ft left)', tone: 'ok' });
+  });
+
+  it('turns red once the turn\'s movement is overspent', () => {
+    expect(dragDistanceLabel(25, 30, 15, false)).toEqual({ text: '25ft  (10ft over)', tone: 'over' });
+  });
+
+  it('shows the plain distance outside a fight', () => {
+    expect(dragDistanceLabel(20, 30, Infinity, true)).toEqual({ text: '20 ft', tone: 'ok' });
+  });
+
+  it('only warns, never blocks, past the creature\'s speed outside a fight', () => {
+    expect(dragDistanceLabel(30, 30, Infinity, true).tone).toBe('ok');
+    expect(dragDistanceLabel(35, 30, Infinity, true).tone).toBe('warn');
+  });
+
+  it('assumes 30 ft when the token has no speed', () => {
+    expect(dragDistanceLabel(35, 0, Infinity, true).tone).toBe('warn');
   });
 });
 

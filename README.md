@@ -112,18 +112,22 @@ Uploaded images and audio are split the same way: new uploads land in `public/up
 - Shared battle map with a configurable grid overlay; upload any image as the background
 - Token system for PC / NPC / monster tokens, each with a portrait (thumbnails auto-generated on upload)
 - **Open token movement** — anyone can drag any token (no ownership, monster, or turn gating), with a 100 ms hold delay to avoid accidental drags and a single-level **Undo** button to snap the last move back
-- Movement distance is measured **Euclidean** (matching the ruler), reset per turn
+- Movement distance is measured **Euclidean** (matching the ruler), reset per turn; dragging a token shows the distance as you go, in and out of combat
+- **Getting around** — the mouse wheel zooms where the pointer is, Space + drag (or the middle button) pans from any tool, pinch zooms on touch screens, and the map glides to the acting token when the turn changes
+- **Keyboard shortcuts** — a key per tool (V H R P D M), N / B for next and previous turn (DM), arrow keys and Ctrl + Z for token moves, `?` for the full list
+- **Token right-click menu** — damage/heal, conditions, hide/show, roll initiative, remove; or select a token and just type a number (`7` damages, `+7` heals). Hovering a token shows a summary card
+- The table remembers your zoom, tool and open panels between visits
 - Token HP panel: damage, heal, temp HP, death saves, and live **AC display**; per-token HP bar overlay (green → yellow → red)
 - **Move tool also selects** — clicking a token selects it (a dedicated Select tool is no longer needed)
 - Monster names hidden from players — shown as an identifier (e.g. "Goblin #2"), editable by the DM from the side panel; per-monster visibility toggle in real time
-- **Token quick-roll side panel** — click a token for full dice rolling: saves, skills, ability checks, damage, initiative. A persistent **dice-mode toggle** (Normal / Adv / Dis / Ask, default **Ask**) in the top toolbar applies to every roll
+- **Token quick-roll side panel** — click a token for full dice rolling: saves, skills, ability checks, damage, initiative. A persistent **dice-mode setting** (Normal / Adv / Dis / Ask, default **Ask**) behind the button beside the dice roller applies to every roll; the button shows the mode in force
 - Right-panel sections use the same gold-bar headers as the character sheet (Conditions, HP, Temp HP, etc.), with the Bulk Edit panel mirroring the same controls for multi-token edits
 - **Equipment wear/unwear** in the right panel — toggling items recomputes AC, initiative, speed, and spell DC and syncs to the token
 - **Monster actions panel** — each action has a **Use** button that posts the action text and a damage roll to chat; players' custom actions have the same **Use** button
 - Click a weapon row to roll the attack, then a **Miss / Roll Damage** prompt; click a spell name to post its full description to chat with a 5e.tools link
-- **3D dice** — animated icosahedron (d20) and pentagonal-trapezohedron (d10), shown for every roll including those broadcast from the character sheet; a toolbar switch toggles the animation on/off
+- **3D dice** — animated icosahedron (d20) and pentagonal-trapezohedron (d10), shown for every roll including those broadcast from the character sheet; a switch in the dice settings toggles the animation on/off
 - **Group rolls (DM)** — select multiple tokens and trigger a single ability check or saving throw; each token rolls by its own bonus and the results post as one combined chat message (also for group initiative)
-- **Pop-out panels** — pop the initiative/chat sidebar, the right token panel, or the chat bar into a separate browser window; the real DOM node moves across windows and keeps updating over SSE. The popped-out character sheet uses a dedicated responsive "magazine" layout
+- **Pop-out panels** (View menu) — pop the initiative/chat sidebar, the right token panel, or the chat bar into a separate browser window; the real DOM node moves across windows and keeps updating over SSE. The popped-out character sheet uses a dedicated responsive "magazine" layout
 - Fog-of-war regions and hidden map items (traps, chests, doors, notes): DM reveals or re-hides per region/item; hovering a panel entry highlights its spot on the canvas
 - Drawing tools (freehand, line, arrow, rectangle, circle with colour/weight), ruler, ping marker, zoom
 - Prepared-map selector loads a preset from Map Prep

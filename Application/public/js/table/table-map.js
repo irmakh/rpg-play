@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-10 19:37
+// Written by Irmak Hakman — 2026-10-11 01:00
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -1195,15 +1195,28 @@ document.addEventListener('mousemove', e => {
   oCtx.strokeStyle = 'rgba(140,158,255,0.8)';
   oCtx.lineWidth = 2;
   oCtx.stroke();
-  if (!dragState.freeMove) {
-    const dx = Math.abs(grid.x - dragState.origX), dy = Math.abs(grid.y - dragState.origY);
-    const dist = Math.round(Math.sqrt(dx * dx + dy * dy) * 5); // Euclidean, like the ruler
-    const remaining = dragState.remainingFt - dist;
+  // Distance from where the token started - in and out of combat (it used to
+  // show only during a fight). A dashed line ties the ghost back to the start.
+  const dx = Math.abs(grid.x - dragState.origX), dy = Math.abs(grid.y - dragState.origY);
+  const dist = Math.round(Math.sqrt(dx * dx + dy * dy) * 5); // Euclidean, like the ruler
+  if (dist > 0) {
+    const lbl = dragDistanceLabel(dist, dragTok?.speed || 30, dragState.remainingFt, dragState.freeMove);
+    // Canvas colours are literals: --verdigris, --arc, --blood (see table-utils.js).
+    const colour = lbl.tone === 'over' ? '#E4666B' : lbl.tone === 'warn' ? '#E0A93F' : '#3DD68C';
+    const half = sizeMult * cs / 2;
+    oCtx.save();
+    oCtx.strokeStyle = colour; oCtx.lineWidth = 1.5; oCtx.globalAlpha = 0.7;
+    oCtx.setLineDash([5, 4]);
+    oCtx.beginPath();
+    oCtx.moveTo((tableState.offsetX || 0) + dragState.origX * cs + half, (tableState.offsetY || 0) + dragState.origY * cs + half);
+    oCtx.lineTo(cx, cy);
+    oCtx.stroke();
+    oCtx.restore();
     oCtx.font = 'bold 12px Segoe UI';
     oCtx.textAlign = 'center';
     oCtx.shadowColor = '#000'; oCtx.shadowBlur = 3;
-    oCtx.fillStyle = remaining >= 0 ? '#3DD68C' : '#E4666B';
-    oCtx.fillText(`${dist}ft  (${remaining >= 0 ? remaining + 'ft left' : Math.abs(remaining) + 'ft over'})`, cx, cy - size / 2 - 8);
+    oCtx.fillStyle = colour;
+    oCtx.fillText(lbl.text, cx, cy - size / 2 - 8);
     oCtx.shadowBlur = 0;
   }
 });
