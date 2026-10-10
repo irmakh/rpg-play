@@ -1,4 +1,4 @@
-/* Written by Irmak Hakman — 2026-10-10 21:10 */
+/* Written by Irmak Hakman — 2026-10-10 23:58 */
 /* Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) */
 
 /* ============================================================================
@@ -198,10 +198,21 @@ html.pad-on .cx :focus,html.pad-on.console :focus{outline:2px solid var(--c-focu
    would need scrolling to reach the Log in button, so on a short landscape
    screen the captcha and the button move into a second column. */
 @media (orientation:landscape) and (max-height:540px){
-  .c-login{max-width:40rem;gap:.6rem}
+  .c-gate{padding-block:.6rem}
+  /* Two columns throughout: the title beside the campaign choice, then the
+     who-is-logging-in strip and the form across both. Measured on a 640 x 360
+     screen, this is what keeps the Log in button on screen with the campaign
+     field showing. */
+  .c-login{max-width:40rem;display:grid;grid-template-columns:1fr 1fr;gap:.5rem 1.25rem;align-items:end}
+  .c-login>.c-seg,.c-login>.c-login-form{grid-column:1 / -1}
   .c-login .c-title{font-size:var(--c-t-lg)}
+  .c-login .c-sub{font-size:var(--c-t-xs)}
   .c-login-cols{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;align-items:start}
-  .c-login-form,.c-login-col{gap:.6rem}
+  .c-login-form,.c-login-col{gap:.5rem}
+  .c-login .c-input,.c-login .c-btn,.c-login .c-seg button{min-height:2.5rem}
+  .cx .authui-cap-img{width:160px}
+  .cx .authui-cap-new{width:2.5rem;height:2.5rem}
+  .c-login .c-err{min-height:0}
 }
 
 /* ── Launcher and plain console pages ────────────────────────────────────── */

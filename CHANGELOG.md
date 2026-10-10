@@ -21,6 +21,12 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [255] — 2026-10-11 — Console login fits the screen again
+
+- **The console's Log in button is back on screen** on a short, wide display. Adding the
+  campaign choice in v254 had pushed it below the fold; the title now sits beside the
+  campaign field and the form is a little more compact.
+
 ## [254] — 2026-10-11 — Console: choose a campaign at login, initiative fixes
 
 - **The console login lets you choose the campaign** when the server hosts more than one.

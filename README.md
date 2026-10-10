@@ -99,6 +99,12 @@ Uploaded images and audio are split the same way: new uploads land in `public/up
 - **Private messages** — every chat box (sheet, table, DM panel, both console screens) has a recipient picker. *Everyone* is the default; pick the DM or a character and only the sender, the recipient and the DM can read it. The picker returns to *Everyone* after each private message
 - Three themes: Dark Gold, Parchment, Midnight; quick-nav buttons to the Table and Stories
 
+<p align="center">
+  <img src="docs/screenshots/mobile-sheet.webp" width="280" alt="The character sheet at phone width — the same vitals bar, with the tab strip scrolled horizontally">
+</p>
+
+<p align="center"><em>The character sheet at phone width.</em></p>
+
 ### Virtual Table (`/table.html`)
 
 ![The table with the chat dock open — dice rolls posted from the sheet arrive here live](docs/screenshots/table-chat.webp)
@@ -283,13 +289,17 @@ backup.
 
 ### Console — two-screen handheld mode (`/console/`)
 
+![The console's map screen — a status line with whose turn it is, the tool and zoom, the shared map with tokens, and a command line with the move arrows](docs/screenshots/console-map.webp)
+
 <p align="center">
-  <img src="docs/screenshots/mobile-console.webp" width="280" alt="The console PWA on a phone — map screen or info panel">
-  &nbsp;&nbsp;
-  <img src="docs/screenshots/mobile-sheet.webp" width="280" alt="The character sheet at phone width — the same vitals bar, with the tab strip scrolled horizontally">
+  <img src="docs/screenshots/console-panel-turn.webp" width="270" alt="The info panel's Turn tab — the initiative order with each combatant's health, and the turn controls along the bottom">
+  &nbsp;
+  <img src="docs/screenshots/console-panel-token-health.webp" width="270" alt="The Token tab's Health part — damage, healing, temporary hit points and conditions for the selected token">
+  &nbsp;
+  <img src="docs/screenshots/console-panel-token-combat.webp" width="270" alt="The Token tab's Combat part — attacks and damage rolls for a character, with the Normal, Advantage and Disadvantage switch">
 </p>
 
-<p align="center"><em>The console (screenshot from before its redesign), and the character sheet at phone width.</em></p>
+<p align="center"><em>The map on the top screen; the info panel on the bottom one, as the DM sees it: Turn, then the Token tab's Health and Combat parts.</em></p>
 
 The console runs the table on a two-screen handheld (built for the AYN Thor): the **map**
 on the top screen and an **info panel** on the bottom one. Each is an installable PWA, and
