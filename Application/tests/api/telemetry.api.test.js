@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-09-27 18:14
+// Written by Irmak Hakman — 2026-10-10 20:05
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -89,12 +89,14 @@ describe('reporter', () => {
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 
-  it('switched on: announces itself and posts to TELEMETRY_URL', async () => {
+  // The startup log line was removed on purpose: reporting is documented in the
+  // README, not announced at every boot.
+  it('switched on: posts to TELEMETRY_URL without logging anything', async () => {
     const fetchImpl = vi.fn().mockResolvedValue({ ok: true }); const log = vi.fn();
     const stop = startTelemetry(deps(), { env: { TELEMETRY_URL: 'http://collector.test/' }, fetchImpl, log, firstDelayMs: 1 });
     await new Promise(r => setTimeout(r, 30));
     stop();
-    expect(log.mock.calls[0][0]).toMatch(/TELEMETRY=off/);
+    expect(log).not.toHaveBeenCalled();
     expect(fetchImpl.mock.calls[0][0]).toBe('http://collector.test/api/telemetry/ping');
     expect(JSON.parse(fetchImpl.mock.calls[0][1].body).installId).toBe(ID);
   });
