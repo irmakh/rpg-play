@@ -21,6 +21,14 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [260] — 2026-10-11 — Console: follow the turn; the DM moves any token
+
+- **When the turn changes, the console goes to that token.** The map slides to it, and for
+  the DM (and for the player whose token it is) it becomes the selected token on both
+  screens, ready to move. The info panel stays on the tab you were on.
+- **The DM can move any token with the arrows or the stick at any time,** not only on
+  that token's turn. Players still move their own token on its turn.
+
 ## [259] — 2026-10-11 — Console: choose your gamepad buttons
 
 - **Every gamepad button can be re-assigned.** The More tab lists each action with the

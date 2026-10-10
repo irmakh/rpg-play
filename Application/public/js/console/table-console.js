@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-11 00:20
+// Written by Irmak Hakman — 2026-10-11 00:25
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -161,13 +161,41 @@ function consoleShowWeather() {
   showToast(weatherSummary(_tableWeatherToday));
 }
 
-// Show/hide D-pad based on whether current user can move the selected token
+// May the current user move this token with the arrows or the stick right now?
+// The DM may move any token at any time. A player moves their own, and during
+// a fight only on its turn.
+function _consoleCanMove(tok) {
+  if (!tok) return false;
+  if (isDM()) return true;
+  return isMyToken(tok) && (!initData.currentId || tok.id === getActiveTurnTokenId());
+}
+
+// Show the move arrows only when the selected token may be moved.
 function _consoleUpdateArrows() {
   const wrap = document.getElementById('console-arrow-btns');
   if (!wrap) return;
   const tok = (tokens || []).find(t => t.id === selectedTokenId);
-  const canMove = tok && isMyToken(tok) && (!initData.currentId || tok.id === getActiveTurnTokenId());
-  wrap.style.display = canMove ? 'flex' : 'none';
+  wrap.style.display = _consoleCanMove(tok) ? 'flex' : 'none';
+}
+
+// When the turn passes to someone, bring their token into view. The DM, and
+// the player whose token it is, also get it selected, so the arrows and the
+// stick move it straight away. _prevOpenHpPanel, not openHpPanel: this is not
+// a tap, and must not pull the info panel over to its Token tab.
+let _consoleTurnShown = null;
+function _consoleFollowTurn() {
+  const current = initData.currentId || null;
+  if (current === _consoleTurnShown) return;
+  if (!current) { _consoleTurnShown = null; return; }
+  const tok = (tokens || []).find(t => t.id === getActiveTurnTokenId());
+  if (!tok) return;                  // tokens not loaded yet: try again on the next redraw
+  _consoleTurnShown = current;
+  panToToken(tok.id);
+  if (isDM() || isMyToken(tok)) {
+    selectToken(tok.id);
+    _prevOpenHpPanel(tok);
+    _consoleUpdateArrows();
+  }
 }
 
 // Wrap openHpPanel to relay the selected token to the secondary
@@ -191,6 +219,7 @@ window.renderTokens = function() {
   _prevRenderTokens();
   _consoleUpdateArrows();
   _consoleUpdateTurn();
+  _consoleFollowTurn();
 };
 
 // The initiative list is redrawn on every initiative event - the status line follows.
@@ -199,6 +228,7 @@ window.renderInitiativeTracker = function(showBadge) {
   _prevRenderInitiativeTracker(showBadge);
   _consoleUpdateTurn();
   _consoleUpdateArrows();
+  _consoleFollowTurn();
 };
 
 // Picking a tool names it on the status line and closes the drawer.
@@ -231,12 +261,6 @@ window.logout = function() {
 // owns moving the selected token (left stick), sliding the map (right stick),
 // zoom (L2/R2), the Tools drawer (Start) and Undo move (Select). Everything
 // else belongs to the info panel and is forwarded to it.
-
-// May the current user move this token right now? The same rule that decides
-// whether the on-screen arrows are shown.
-function _consoleCanMove(tok) {
-  return !!tok && isMyToken(tok) && (!initData.currentId || tok.id === getActiveTurnTokenId());
-}
 
 let _consolePadToastAt = 0;
 function _consolePadToast(msg) {

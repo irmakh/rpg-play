@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-10 23:39
+// Written by Irmak Hakman — 2026-10-11 00:25
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -90,9 +90,11 @@ async function sInitPost(path, failure) {
       sToast(res.status === 401 ? 'You are not allowed to do that. Log in again.' : failure(err));
       return false;
     }
+    const before = sInitData.currentId || null;
     const fresh = await fetch('/api/initiative', { headers: sAuthHeaders() });
     if (fresh.ok) sInitData = await fresh.json();
     sInitChanged();
+    sFollowTurn(before);
     return true;
   } catch { sToast('Connection error.'); return false; }
 }

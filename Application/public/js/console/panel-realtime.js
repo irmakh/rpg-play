@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-11 00:19
+// Written by Irmak Hakman — 2026-10-11 00:25
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -71,8 +71,10 @@ function sStartSSE() {
       }
     },
     initiative: async () => {
+      const before = sInitData.currentId || null;
       try { const r = await fetch('/api/initiative', { headers: sAuthHeaders() }); if (r.ok) sInitData = await r.json(); } catch {}
       sInitChanged();
+      sFollowTurn(before);
     },
     chat: entry => {
       appendChatEntry(entry);
@@ -130,6 +132,19 @@ function _sStartConsoleSSE() {
   };
 }
 
+// When the turn passes to someone, their token becomes the selected one here
+// as well - for the DM always, for a player when it is their own. It is
+// selected quietly: the tab you are on stays, and the Token tab is ready.
+function sFollowTurn(before) {
+  const current = sInitData.currentId || null;
+  if (!current || current === before) return;
+  const tok = sTokens.find(t => t.id === sGetActiveTokId());
+  if (!tok || !(sIsDM() || sIsMyToken(tok))) return;
+  if (sSelectedToken && sSelectedToken.id === tok.id) return;
+  sSelectTokenObj(tok, false);
+  sMark('token', false);
+}
+
 // A player's own token becomes the selection when nothing else is selected,
 // without switching tab or marking it as news.
 function sSelectOwnTokenQuietly() {
@@ -166,6 +181,7 @@ window.addEventListener('load', async () => {
   // empty for them. It does not switch tab.
   const own = sMyOwnToken();
   sSelectOwnTokenQuietly();
+  sFollowTurn(null);          // a fight already running: start on the token whose turn it is
 
   sShowTab('turn');
   if (sIsDM()) sLoadPrepMaps();
