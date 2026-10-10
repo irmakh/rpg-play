@@ -1,8 +1,8 @@
-// Written by Irmak Hakman — 2026-10-10 19:37
+// Written by Irmak Hakman — 2026-10-10 23:40
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
-const CACHE = 'rpg-v245';
+const CACHE = 'rpg-v254';
 
 const STATIC = [
   // Core pages
@@ -26,6 +26,7 @@ const STATIC = [
   '/console/',
   '/console/table-console.html',
   '/console/table-secondary.html',
+  '/console/probe.html',
   '/console/manifest.json',
   '/console/manifest-d20.json',
   '/console/manifest-d20-companion.json',
@@ -39,7 +40,16 @@ const STATIC = [
   '/css/table-sheet-popout.css',
   '/css/weather.css',
   '/css/notifications.css',
-  '/css/console/table-console.css',
+  '/css/console/console.css',
+  '/css/console/panel.css',
+  '/css/console/map.css',
+  // Console typeface (referenced from console.css, so it needs listing to work offline)
+  '/fonts/plex-cond-400-latin.woff2',
+  '/fonts/plex-cond-400-latin-ext.woff2',
+  '/fonts/plex-cond-500-latin.woff2',
+  '/fonts/plex-cond-500-latin-ext.woff2',
+  '/fonts/plex-cond-600-latin.woff2',
+  '/fonts/plex-cond-600-latin-ext.woff2',
   // Shared JS libs
   '/js/monster-stat-block.js',
   '/js/lib/esc.js',
@@ -72,8 +82,23 @@ const STATIC = [
   '/js/table/table-weather.js',
   '/js/table/table-main.js',
   // Console JS
+  '/js/lib/auth-ui.js',
+  '/js/console/console-login.js',
+  '/js/console/console-gamepad.js',
   '/js/console/table-console.js',
-  '/js/console/secondary.js',
+  '/js/lib/chat-pm.js',
+  '/js/console/panel-core.js',
+  '/js/console/panel-nav.js',
+  '/js/console/panel-turn.js',
+  '/js/console/panel-token.js',
+  '/js/console/panel-sheet.js',
+  '/js/console/panel-chat.js',
+  '/js/console/panel-table.js',
+  '/js/console/panel-handouts.js',
+  '/js/console/panel-music.js',
+  '/js/console/panel-notify.js',
+  '/js/console/panel-pad.js',
+  '/js/console/panel-realtime.js',
 ];
 
 self.addEventListener('install', e => {

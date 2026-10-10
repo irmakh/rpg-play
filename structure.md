@@ -30,16 +30,19 @@ char_sheet/
 │   │   ├── sessions.js                 #   Opaque session tokens (stored as SHA-256) + setup tickets
 │   │   └── upload-paths.js             #   The one rule for resolving upload paths safely
 │   ├── public/                         # Served frontend (HTML / CSS / JS + PWA)
-│   │   ├── console/                    #   Mobile companion PWA (d20 + companion screens)
-│   │   │   ├── index.html              #     Companion PWA launcher
+│   │   ├── console/                    #   Two-screen console for a handheld (map + info panel)
+│   │   │   ├── index.html              #     Launcher and login (with campaign choice)
 │   │   │   ├── manifest-d20-companion.json  # PWA manifest — companion info screen
 │   │   │   ├── manifest-d20.json       #     PWA manifest — tactical map screen
 │   │   │   ├── manifest.json           #     PWA manifest — launcher
-│   │   │   ├── table-console.html      #     Primary map screen (Screen 1)
-│   │   │   └── table-secondary.html    #     Secondary info screen (Screen 2)
+│   │   │   ├── probe.html              #     Device check: screen size and gamepad as the browser reports them
+│   │   │   ├── table-console.html      #     Map screen (top screen): shared table map in the console frame
+│   │   │   └── table-secondary.html    #     Info panel (bottom screen): Turn, Token, Chat, Handouts, Table, More
 │   │   ├── css/                        #   Stylesheets
-│   │   │   ├── console/                #     Companion styles
-│   │   │   │   └── table-console.css   #       Console screen styles
+│   │   │   ├── console/                #     Console styles (own design system, not tokens.css)
+│   │   │   │   ├── console.css         #       Console design system (tokens, shared pieces, login)
+│   │   │   │   ├── map.css             #       Frame around the map (top screen)
+│   │   │   │   └── panel.css           #       Info panel (bottom screen)
 │   │   │   ├── app-shell.css           #     Full-height DM tool layout
 │   │   │   ├── base.css                #     Lamplit design primitives (scoped to html.lamplit)
 │   │   │   ├── calendar.css            #     Calendar of Harptos styles
@@ -60,7 +63,7 @@ char_sheet/
 │   │   │   ├── treasury.css            #     Treasury manager styles (master-detail)
 │   │   │   ├── waiting-screens.css     #     Waiting-screen manager styles
 │   │   │   └── weather.css             #     Weather sprite icons, tooltip, table widget
-│   │   ├── fonts/                      #   Self-hosted webfonts (Atkinson Hyperlegible, Fraunces)
+│   │   ├── fonts/                      #   Self-hosted webfonts (Atkinson Hyperlegible, Fraunces; IBM Plex Sans Condensed for the console)
 │   │   ├── img/                        #   Static images & PWA icons
 │   │   │   ├── parchment/              #     Parchment theme assets
 │   │   │   │   ├── bg.jpeg             #       Theme background
@@ -70,9 +73,22 @@ char_sheet/
 │   │   │   ├── weather.jpeg            #     Weather icon sprite (source)
 │   │   │   └── weather.png             #     Weather icon sprite
 │   │   ├── js/                         #   Frontend scripts
-│   │   │   ├── console/                #     Companion PWA scripts
-│   │   │   │   ├── secondary.js        #       Secondary info screen (own live connection + state)
-│   │   │   │   └── table-console.js    #       Primary↔secondary sync bridge
+│   │   │   ├── console/                #     Console scripts
+│   │   │   │   ├── console-gamepad.js  #       Gamepad: reads the pad, names actions, forwards them between screens
+│   │   │   │   ├── console-login.js    #       Shared login form for every console screen, campaign choice
+│   │   │   │   ├── panel-core.js       #       Info panel: state, session, helpers, confirm and toast
+│   │   │   │   ├── panel-nav.js        #       Info panel: tabs, unread marks, command bar
+│   │   │   │   ├── panel-turn.js       #       Info panel: Turn tab and turn control
+│   │   │   │   ├── panel-token.js      #       Info panel: Token tab — health, conditions, monster rolls, stat block, manage
+│   │   │   │   ├── panel-sheet.js      #       Info panel: a character's Skills / Combat / Spells / Items
+│   │   │   │   ├── panel-chat.js       #       Info panel: Chat tab
+│   │   │   │   ├── panel-table.js      #       Info panel: Table tab (DM)
+│   │   │   │   ├── panel-handouts.js   #       Info panel: Handouts tab
+│   │   │   │   ├── panel-music.js      #       Info panel: glue for the shared music code
+│   │   │   │   ├── panel-notify.js     #       Info panel: notifications open a tab, not a page
+│   │   │   │   ├── panel-pad.js        #       Info panel: what the gamepad does here
+│   │   │   │   ├── panel-realtime.js   #       Info panel: live events, link to the map screen, start-up
+│   │   │   │   └── table-console.js    #       Map screen: console frame, link to the info panel, gamepad half
 │   │   │   ├── index/                  #     Character sheet — 15 modules
 │   │   │   │   ├── index-actions.js    #       Actions tab (weapons + action spells + custom actions)
 │   │   │   │   ├── index-calc.js       #       AC / init / speed / derived stat calc
@@ -238,6 +254,9 @@ char_sheet/
 │   │       ├── table-monster-damage.test.js  # Monster damage extraction
 │   │       ├── table-utils.test.js     #     Table helpers
 │   │       ├── upload-paths.test.js    #     Upload paths (server wiring)
+│   │       ├── console-gamepad.test.js #     Console gamepad: reading, repeat, routing, focus movement
+│   │       ├── console-panel.test.js   #     Console info panel: who may see what in the initiative order
+│   │       ├── sw-precache.test.js     #     Service worker list matches files on disk; version numbers agree
 │   │       └── xss-render.test.js      #     User text stays text in the page renderers
 │   ├── .env.example                    # Environment template (app)
 │   ├── .gitignore                      # Git ignore rules (app)

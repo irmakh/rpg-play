@@ -1,287 +1,89 @@
 <!DOCTYPE html>
-<!-- Written by Irmak Hakman — 2026-09-27 12:28 -->
+<!-- Written by Irmak Hakman — 2026-10-10 21:36 -->
 <!-- Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) -->
 <html lang="en" class="lamplit">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Tactical Map</title>
+<title>Map screen</title>
 <link rel="manifest" href="/console/manifest-d20.json">
-<meta name="theme-color" content="#080C15">
+<meta name="theme-color" content="#000000">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <script>if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js');</script>
-<style>
-#pwa-gate{position:fixed;inset:0;background:var(--ink);z-index:9999;display:flex;align-items:center;justify-content:center;font-family:var(--ui);padding:16px}
-.pwag-box{background:var(--slate);border:1px solid var(--arc)55;border-radius:10px;padding:24px 20px;width:100%;max-width:340px}
-.pwag-logo{text-align:center;margin-bottom:16px}
-.pwag-logo h2{color:var(--arc);font-size:18px;font-weight:bold;}
-.pwag-logo p{color:#aaa;font-size:11px;margin-top:3px}
-.pwag-tabs{display:flex;border:1px solid var(--arc)55;border-radius:5px;overflow:hidden;margin-bottom:16px}
-.pwag-tab{flex:1;padding:7px;background:transparent;border:none;color:#aaa;font-size:12px;font-weight:bold;cursor:pointer;}
-.pwag-tab.active{background:var(--arc);color:var(--ink)}
-.pwag-pane{display:none}.pwag-pane.active{display:block}
-.pwag-lbl{display:block;font-size:10px;color:var(--arc);margin-bottom:4px}
-.pwag-field{margin-bottom:12px}
-.pwag-inp{width:100%;background:var(--slate-hi);border:1px solid var(--arc)55;color:#e0d8c8;border-radius:4px;padding:8px 10px;font-size:13px;font-family:inherit}
-.pwag-inp:focus{outline:none;border-color:var(--arc)}
-.pwag-btn{width:100%;padding:10px;background:var(--arc);border:none;color:var(--ink);border-radius:4px;font-size:13px;font-weight:bold;cursor:pointer;margin-top:2px}
-.pwag-btn:hover{background:var(--arc-hi)}
-.pwag-btn:disabled{opacity:.5;cursor:not-allowed}
-.pwag-btn.ghost{background:transparent;border:1px solid var(--arc)55;color:#aaa;margin-top:7px}
-.pwag-btn.ghost:hover{background:var(--arc)22;color:#e0d8c8}
-.pwag-err{color:var(--blood);font-size:11px;min-height:14px;margin-bottom:8px;text-align:center}
-.pwag-step-title{font-size:13px;color:var(--arc);font-weight:bold;margin-bottom:3px}
-.pwag-step-sub{font-size:11px;color:#aaa;margin-bottom:14px}
-</style>
 <link rel="stylesheet" href="/css/tokens.css">
 <link rel="stylesheet" href="/css/fonts.css">
 <link rel="stylesheet" href="/css/base.css">
 <link rel="stylesheet" href="/css/table.css">
-<link rel="stylesheet" href="/css/console/table-console.css">
+<link rel="stylesheet" href="/css/weather.css">
+<link rel="stylesheet" href="/css/notifications.css">
+<link rel="stylesheet" href="/css/console/console.css">
+<link rel="stylesheet" href="/css/console/map.css">
 <script src="/js/lib/icons.js"></script>
 <script src="/js/lib/auth-ui.js"></script>
+<script src="/js/console/console-login.js"></script>
 </head>
 <body class="console-mode">
 
-<!-- Login gate — shown immediately if no session; covers UI until authenticated -->
-<div id="pwa-gate" style="display:none">
-  <div class="pwag-box">
-    <div class="pwag-logo">
-      <h2><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-map"></use></svg> d20</h2>
-      <p>Login to continue</p>
-    </div>
-    <div class="pwag-tabs">
-      <button class="pwag-tab active" id="pwag-tb-char" onclick="pwagSwitch('char')">Character</button>
-      <button class="pwag-tab" id="pwag-tb-dm" onclick="pwagSwitch('dm')">DM</button>
-    </div>
+<!-- Login: one shared form for every console screen (js/console/console-login.js).
+     It covers the page until someone is logged in, then reloads. -->
+<script>ConsoleLogin.init({ title: 'Map screen', sub: 'Log in to open the map.' });</script>
 
-    <!-- Character pane -->
-    <div class="pwag-pane active" id="pwag-pane-char">
-      <div id="pwag-char-step">
-        <div class="pwag-field">
-          <label class="pwag-lbl">Character</label>
-          <select id="pwag-char-sel" class="pwag-inp"><option value="">Loading…</option></select>
-        </div>
-        <div class="pwag-field">
-          <label class="pwag-lbl">Password</label>
-          <input type="password" id="pwag-char-pw" class="pwag-inp" placeholder="Enter password…"
-                 autocomplete="current-password" onkeydown="if(event.key==='Enter')pwagLoginChar()">
-        </div>
-        <div id="pwag-char-cap"></div>
-        <div class="pwag-err" id="pwag-char-err"></div>
-        <button class="pwag-btn" id="pwag-char-btn" onclick="pwagLoginChar()">Login</button>
-      </div>
-      <div id="pwag-setup-step" style="display:none">
-        <div class="pwag-step-title" id="pwag-setup-name"></div>
-        <div class="pwag-step-sub">No password set yet — choose one to continue.</div>
-        <div class="pwag-field">
-          <label class="pwag-lbl">New Password</label>
-          <input type="password" id="pwag-setup-pw1" class="pwag-inp" placeholder="Choose a password…"
-                 autocomplete="new-password" onkeydown="if(event.key==='Enter')document.getElementById('pwag-setup-pw2').focus()">
-        </div>
-        <div class="pwag-field">
-          <label class="pwag-lbl">Confirm Password</label>
-          <input type="password" id="pwag-setup-pw2" class="pwag-inp" placeholder="Confirm password…"
-                 autocomplete="new-password" onkeydown="if(event.key==='Enter')pwagSetupPw()">
-        </div>
-        <div class="pwag-err" id="pwag-setup-err"></div>
-        <button class="pwag-btn" id="pwag-setup-btn" onclick="pwagSetupPw()">Set Password &amp; Login</button>
-        <button class="pwag-btn ghost" onclick="pwagCancelSetup()">Back</button>
-      </div>
-    </div>
-
-    <!-- DM pane -->
-    <div class="pwag-pane" id="pwag-pane-dm">
-      <div class="pwag-field">
-        <label class="pwag-lbl">Master Password</label>
-        <input type="password" id="pwag-dm-pw" class="pwag-inp" placeholder="Enter master password…"
-               autocomplete="current-password" onkeydown="if(event.key==='Enter')pwagLoginDM()">
-      </div>
-      <div id="pwag-dm-cap"></div>
-      <div class="pwag-err" id="pwag-dm-err"></div>
-      <button class="pwag-btn" onclick="pwagLoginDM()">Login as DM</button>
-    </div>
-  </div>
+<!-- ── Console chrome (css/console/map.css, js/console/table-console.js) ──────
+     The map itself is the shared table code. Around it the console draws its
+     own frame: a status line on top, a Tools drawer that drops from it, and a
+     command line underneath. The ids the table scripts look for (tool buttons,
+     zoom, badges, the DM controls) are all still here, only moved. -->
+<div id="toolbar" class="cx m-status">
+  <span class="m-turn" id="m-turn">No initiative running</span>
+  <span class="m-badge" id="dm-badge" style="display:none">DM</span>
+  <span class="m-badge" id="user-badge" style="display:none"></span>
+  <button type="button" class="m-btn" id="btn-dm-unlock" style="display:none" onclick="unlockDM()">Unlock DM</button>
+  <span class="m-space"></span>
+  <!-- Today's weather (js/table/table-weather.js shows it once the DM has set
+       it for the campaign's current date). Tap for the details. -->
+  <button type="button" class="m-wx" id="wx-toolbar" style="display:none" onclick="consoleShowWeather()" aria-label="Today's weather">
+    <span class="wx-tb-icons" id="wx-toolbar-icons"></span>
+    <span class="wx-tb-text" id="wx-toolbar-text"></span>
+  </button>
+  <!-- Notifications (js/lib/notifications.js). While the info panel is
+       connected it is the one that pops up and chimes; here only the count. -->
+  <button type="button" class="m-bell" data-notif-bell aria-label="Notifications"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-bell"></use></svg></button>
+  <span class="m-stat">Tool <b id="m-tool">Select</b></span>
+  <span class="m-stat">Zoom <b id="zoom-val">100%</b></span>
+  <span class="m-stat" title="Whether the info panel is connected">Panel <i id="console-secondary-dot"></i></span>
+  <button type="button" class="m-btn" id="m-tools-btn" aria-expanded="false" aria-controls="m-tools" onclick="consoleToggleTools()">Tools</button>
 </div>
-<script>
-// Login captchas (js/lib/auth-ui.js) and the same-device session channel.
-var _pwagCapChar,_pwagCapDm,_pwagTicket,_consoleBC;
-(function(){
-  // Console screens on the SAME device share one login through the browser
-  // (BroadcastChannel). It used to go through /api/console/event, a server
-  // relay anyone could listen to — the session never travels that way now.
-  try{_consoleBC=new BroadcastChannel('rpg-console-session');}catch{}
-  if(_consoleBC)_consoleBC.onmessage=function(ev){
-    try{
-      var d=ev.data||{};
-      if(d.type==='SESSION_REQUEST'){
-        var mine=null;try{mine=JSON.parse(sessionStorage.getItem('rpgSession')||'null');}catch{}
-        if(mine&&mine.role)_consoleBC.postMessage({type:'SESSION_SYNC',session:mine});
-        return;
-      }
-      if(d.type==='SESSION_SYNC'&&d.session){
-        var cur=null;try{cur=JSON.parse(sessionStorage.getItem('rpgSession')||'null');}catch{}
-        if(cur&&cur.role===d.session.role&&(cur.role==='dm'?cur.masterPw===d.session.masterPw:cur.characterId===d.session.characterId))return;
-        sessionStorage.setItem('rpgSession',JSON.stringify(d.session));
-        if(d.session.role==='dm'){sessionStorage.setItem('tableMasterPw',d.session.masterPw);sessionStorage.setItem('dmMasterPw',d.session.masterPw);}
-        else{sessionStorage.removeItem('tableMasterPw');sessionStorage.removeItem('dmMasterPw');}
-        location.reload();
-      }
-      if(d.type==='SESSION_LOGOUT'){
-        if(!sessionStorage.getItem('rpgSession'))return;
-        sessionStorage.removeItem('rpgSession');
-        sessionStorage.removeItem('tableMasterPw');
-        sessionStorage.removeItem('dmMasterPw');
-        location.reload();
-      }
-    }catch{}
-  };
-  try{var s=JSON.parse(sessionStorage.getItem('rpgSession')||'null');if(s&&s.role)return;}catch{}
-  var g=document.getElementById('pwa-gate');
-  g.style.display='flex';
-  _pwagCapChar=AuthUI.captcha(document.getElementById('pwag-char-cap'),{onEnter:pwagLoginChar});
-  _pwagCapDm=AuthUI.captcha(document.getElementById('pwag-dm-cap'),{onEnter:pwagLoginDM,lazy:true});
-  // Another console window on this device may already be logged in: ask it.
-  if(_consoleBC)_consoleBC.postMessage({type:'SESSION_REQUEST'});
-  fetch('/api/characters').then(function(r){return r.ok?r.json():[];}).then(function(chars){
-    var sel=document.getElementById('pwag-char-sel');
-    var pcs=chars.filter(function(c){return c.char_type==='pc';});
-    // Built with DOM calls, not markup: a character's name is the player's own
-    // text, and esc.js (deferred) may not have loaded yet when this runs.
-    sel.innerHTML='';
-    if(pcs.length)pcs.forEach(function(c){sel.appendChild(new Option(c.name||'',c.id));});
-    else sel.innerHTML='<option value="">No characters found</option>';
-  }).catch(function(){document.getElementById('pwag-char-sel').innerHTML='<option value="">Error loading</option>';});
-})();
 
-function pwagSwitch(tab){
-  if(tab==='dm'&&_pwagCapDm)_pwagCapDm.ensure();
-  ['char','dm'].forEach(function(t){
-    document.getElementById('pwag-tb-'+t).classList.toggle('active',t===tab);
-    document.getElementById('pwag-pane-'+t).classList.toggle('active',t===tab);
-  });
-  setTimeout(function(){document.getElementById(tab==='dm'?'pwag-dm-pw':'pwag-char-pw').focus();},30);
-}
+<div id="m-tools" class="cx m-tools" hidden>
+  <span class="m-label">Tool</span>
+  <button type="button" class="m-btn tool-btn active" id="btn-tool-select" onclick="setTool('select')">Select</button>
+  <button type="button" class="m-btn tool-btn" id="btn-tool-move" onclick="setTool('move')">Move</button>
+  <button type="button" class="m-btn tool-btn" id="btn-tool-pan" onclick="setTool('pan')">Pan</button>
+  <button type="button" class="m-btn tool-btn" id="btn-tool-ruler" onclick="setTool('ruler')">Ruler</button>
+  <button type="button" class="m-btn tool-btn" id="btn-tool-ping" onclick="setTool('ping')">Ping</button>
+  <button type="button" class="m-btn tool-btn" id="btn-tool-draw" onclick="setTool('draw')">Draw</button>
 
-function _pwagStore(sess){
-  sessionStorage.setItem('rpgSession',JSON.stringify(sess));
-  if(sess.role==='dm'){sessionStorage.setItem('tableMasterPw',sess.masterPw);sessionStorage.setItem('dmMasterPw',sess.masterPw);}
-  else{sessionStorage.removeItem('tableMasterPw');sessionStorage.removeItem('dmMasterPw');}
-  if(_consoleBC)_consoleBC.postMessage({type:'SESSION_SYNC',session:sess});   // same device only
-  location.reload();
-}
-
-async function pwagLoginChar(){
-  var id=document.getElementById('pwag-char-sel').value,
-      pw=document.getElementById('pwag-char-pw').value,
-      err=document.getElementById('pwag-char-err'),
-      btn=document.getElementById('pwag-char-btn');
-  err.textContent='';
-  if(!id){err.textContent='Select a character.';return;}
-  if(!pw){err.textContent='Enter your password.';return;}
-  btn.disabled=true;
-  try{
-    var r=await AuthUI.login({type:'character',characterId:id,password:pw},_pwagCapChar);
-    if(r.data.needsSetup){pwagShowSetup(r.data.characterId,r.data.characterName,r.data.setupTicket);return;}
-    if(!r.ok){err.textContent=r.message;return;}
-    _pwagStore({role:'character',characterId:r.data.characterId,characterName:r.data.characterName,charPw:r.data.token});
-  }catch{err.textContent='Connection error.';}
-  finally{btn.disabled=false;}
-}
-
-var _pwagSetupId=null;
-function pwagShowSetup(charId,charName,ticket){
-  _pwagSetupId=charId;
-  _pwagTicket=ticket||null;
-  document.getElementById('pwag-char-step').style.display='none';
-  document.getElementById('pwag-setup-step').style.display='block';
-  document.getElementById('pwag-setup-name').textContent=charName;
-  document.getElementById('pwag-setup-pw1').value='';
-  document.getElementById('pwag-setup-pw2').value='';
-  setTimeout(function(){document.getElementById('pwag-setup-pw1').focus();},30);
-}
-function pwagCancelSetup(){
-  document.getElementById('pwag-setup-step').style.display='none';
-  document.getElementById('pwag-char-step').style.display='block';
-  document.getElementById('pwag-char-pw').value='';
-}
-async function pwagSetupPw(){
-  var pw1=document.getElementById('pwag-setup-pw1').value,
-      pw2=document.getElementById('pwag-setup-pw2').value,
-      err=document.getElementById('pwag-setup-err'),
-      btn=document.getElementById('pwag-setup-btn');
-  err.textContent='';
-  if(!pw1){err.textContent='Enter a password.';return;}
-  if(pw1!==pw2){err.textContent='Passwords do not match.';return;}
-  if(pw1.length<3){err.textContent='At least 3 characters.';return;}
-  btn.disabled=true;
-  try{
-    var r=await AuthUI.setFirstPassword(_pwagSetupId,pw1,_pwagTicket);
-    if(!r.ok){err.textContent=r.message;return;}
-    _pwagStore({role:'character',characterId:r.data.characterId,characterName:r.data.characterName,charPw:r.data.token});
-  }catch{err.textContent='Connection error.';}
-  finally{btn.disabled=false;}
-}
-
-async function pwagLoginDM(){
-  var pw=document.getElementById('pwag-dm-pw').value,
-      err=document.getElementById('pwag-dm-err');
-  err.textContent='';
-  if(!pw){err.textContent='Enter the master password.';return;}
-  try{
-    var r=await AuthUI.login({type:'dm',password:pw},_pwagCapDm);
-    if(!r.ok){err.textContent=r.message;return;}
-    _pwagStore({role:'dm',masterPw:r.data.token});
-  }catch{err.textContent='Connection error.';}
-}
-</script>
-
-<div id="toolbar">
-  <a href="/dm.html" class="btn" style="text-decoration:none"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-arrow-left"></use></svg> DM</a>
-  <span id="dm-badge" style="display:none;background:var(--bone);color:var(--ink);padding:2px 8px;border-radius:3px;font-size:11px;font-weight:bold">DM</span>
-  <span id="user-badge" style="display:none;background:var(--rule-hi);border:1px solid var(--rule-hi);color:var(--bone);padding:2px 8px;border-radius:3px;font-size:11px;font-weight:bold"></span>
-  <button class="btn" id="btn-dm-unlock" style="display:none" onclick="unlockDM()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-key"></use></svg> DM</button>
-
-  <div class="dm-controls" style="display:none;display:contents">
-    <button class="btn primary" id="btn-add-token" onclick="openAddTokenModal()">+ Token</button>
-    <button class="btn danger" onclick="clearAllTokens()">Clear</button>
-  </div>
-  <button class="btn" onclick="logout()" style="margin-left:4px" title="Logout"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-exit"></use></svg> </button>
-
-  <div style="flex:1"></div>
-
-  <button class="btn tool-btn active" id="btn-tool-select" onclick="setTool('select')" title="Select"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-cursor"></use></svg> </button>
-  <button class="btn tool-btn" id="btn-tool-move" onclick="setTool('move')" title="Move"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-move"></use></svg> Move</button>
-  <button class="btn tool-btn" id="btn-tool-pan" onclick="setTool('pan')" title="Pan map"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-hand"></use></svg> </button>
-  <button class="btn tool-btn" id="btn-tool-ruler" onclick="setTool('ruler')" title="Ruler"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-ruler"></use></svg> </button>
-  <button class="btn tool-btn" id="btn-tool-ping" onclick="setTool('ping')" title="Ping"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-pin"></use></svg> </button>
-  <button class="btn tool-btn" id="btn-tool-draw" onclick="setTool('draw')" title="Draw shapes"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-pencil"></use></svg> </button>
-
-  <div style="display:flex;align-items:center;gap:4px;margin-left:8px;padding-left:8px;border-left:1px solid var(--rule-hi)">
-    <span style="font-size:10px;color:var(--ash)">Zoom</span>
-    <button id="btn-zoom-out" style="background:none;border:1px solid var(--rule-hi);color:var(--bone);border-radius:3px;width:20px;height:20px;cursor:pointer;font-size:13px;line-height:1;padding:0">−</button>
-    <input type="range" id="slider-zoom" min="50" max="200" value="100" style="width:70px;vertical-align:middle;cursor:pointer">
-    <button id="btn-zoom-in" style="background:none;border:1px solid var(--rule-hi);color:var(--bone);border-radius:3px;width:20px;height:20px;cursor:pointer;font-size:13px;line-height:1;padding:0">+</button>
-    <span id="zoom-val" style="font-size:11px;color:var(--bone);min-width:34px">100%</span>
-  </div>
-  <button class="btn tool-btn" onclick="openDiceRollerModal()" title="Dice Roller" style="margin-left:4px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg> </button>
-
-  <!-- D-pad: move selected token — shown only when user can move it -->
-  <div id="console-arrow-btns" style="display:none;flex-direction:column;align-items:center;gap:2px;margin-left:8px;padding-left:8px;border-left:1px solid var(--rule-hi)">
-    <button class="btn" onclick="moveSelectedToken('ArrowUp')"    title="Move Up"    style="width:36px;height:32px;padding:0;font-size:13px;line-height:1"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-up"></use></svg> </button>
-    <div style="display:flex;gap:2px">
-      <button class="btn" onclick="moveSelectedToken('ArrowLeft')"  title="Move Left"  style="width:36px;height:32px;padding:0;font-size:13px;line-height:1"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-left"></use></svg> </button>
-      <button class="btn" onclick="moveSelectedToken('ArrowRight')" title="Move Right" style="width:36px;height:32px;padding:0;font-size:13px;line-height:1"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-right"></use></svg> </button>
-    </div>
-    <button class="btn" onclick="moveSelectedToken('ArrowDown')"  title="Move Down"  style="width:36px;height:32px;padding:0;font-size:13px;line-height:1"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-down"></use></svg> </button>
+  <span class="m-label">Zoom</span>
+  <div class="m-zoom">
+    <button type="button" class="m-btn" id="btn-zoom-out" aria-label="Zoom out">−</button>
+    <input type="range" id="slider-zoom" min="50" max="200" value="100" aria-label="Zoom">
+    <button type="button" class="m-btn" id="btn-zoom-in" aria-label="Zoom in">+</button>
   </div>
 
-  <!-- Console: secondary screen button + connection dot -->
-  <div style="display:flex;align-items:center;gap:5px;margin-left:8px;padding-left:8px;border-left:1px solid var(--rule-hi)">
-    <div id="console-secondary-dot" title="Secondary screen connection"></div>
-    <button class="btn tool-btn" onclick="consoleOpenSecondary()" title="Open secondary screen">📱</button>
+  <!-- DM only: applyDMControls() switches this between display:none and
+       display:contents, which drops its children straight into the grid. -->
+  <div class="dm-controls" style="display:none">
+    <span class="m-label">Tokens</span>
+    <button type="button" class="m-btn" id="btn-add-token" onclick="consoleToggleTools(false);openAddTokenModal()">Add token</button>
+    <button type="button" class="m-btn danger" onclick="consoleToggleTools(false);clearAllTokens()">Remove all tokens</button>
   </div>
+
+  <span class="m-label">This screen</span>
+  <button type="button" class="m-btn" onclick="consoleToggleTools(false);openDiceRollerModal()">Roll dice</button>
+  <button type="button" class="m-btn" onclick="consoleToggleTools(false);consoleOpenSecondary()">Open info panel</button>
+  <a class="m-btn" href="/console/">Launcher</a>
+  <button type="button" class="m-btn" onclick="logout()">Log out</button>
 </div>
 
 <!-- Draw sub-toolbar (shown when draw tool active) -->
@@ -439,6 +241,26 @@ async function pwagLoginDM(){
 
 </div><!-- /#table-wrap -->
 
+<!-- Command line: what the current tool does, and the controls for the
+     selected token. The arrows appear only when you may move that token. -->
+<div id="m-cmd" class="cx m-cmd">
+  <div class="m-arrows" id="console-arrow-btns" style="display:none">
+    <button type="button" class="m-btn" onclick="moveSelectedToken('ArrowLeft')" aria-label="Move token left">←</button>
+    <button type="button" class="m-btn" onclick="moveSelectedToken('ArrowUp')" aria-label="Move token up">↑</button>
+    <button type="button" class="m-btn" onclick="moveSelectedToken('ArrowDown')" aria-label="Move token down">↓</button>
+    <button type="button" class="m-btn" onclick="moveSelectedToken('ArrowRight')" aria-label="Move token right">→</button>
+  </div>
+  <span class="m-hint" id="m-hint">Tap a token to select it.</span>
+  <!-- Shown instead of the hint once a gamepad has been used -->
+  <span class="m-pad pad-only">
+    <span><span class="c-key">L stick</span>Move token</span>
+    <span><span class="c-key">R stick</span>Slide map</span>
+    <span><span class="c-key">L2</span><span class="c-key">R2</span>Zoom</span>
+    <span><span class="c-key">Start</span>Tools</span>
+  </span>
+  <button type="button" class="m-btn" id="btn-undo-move" style="display:none" onclick="undoLastMove()">Undo move</button>
+</div>
+
 <!-- Advantage modal -->
 <div id="adv-modal" style="position:fixed;inset:0;background:var(--scrim);display:none;align-items:center;justify-content:center;z-index:2500" onclick="advClose()">
   <div class="adv-box" onclick="event.stopPropagation()">
@@ -589,6 +411,11 @@ async function pwagLoginDM(){
 <script src="/js/table/table-addtoken.js" defer></script>
 <script src="/js/table/table-waiting.js" defer></script>
 <script src="/js/table/table-main.js" defer></script>
+<script src="/js/lib/notifications.js" defer></script>
+<script src="/js/lib/weather-ui.js" defer></script>
+<script src="/js/table/table-weather.js" defer></script>
+<script src="/js/monster-stat-block.js" defer></script>
+<script src="/js/console/console-gamepad.js" defer></script>
 <script src="/js/console/table-console.js" defer></script>
 </body>
 </html>

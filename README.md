@@ -281,7 +281,7 @@ backup.
 - **Viewer** (`/story-viewer.html`) — grid or vertical strip layout, fullscreen lightbox, and a cast strip showing portrait / name / species / class
 - Password gate on all three screens accepts the DM password or any character password (`POST /api/auth/verify-any`), which starts a real session just like the normal login; bypassed if already logged in
 
-### Mobile Companion PWA (`/console/`)
+### Console — two-screen handheld mode (`/console/`)
 
 <p align="center">
   <img src="docs/screenshots/mobile-console.webp" width="280" alt="The console PWA on a phone — map screen or info panel">
@@ -289,11 +289,43 @@ backup.
   <img src="docs/screenshots/mobile-sheet.webp" width="280" alt="The character sheet at phone width — the same vitals bar, with the tab strip scrolled horizontally">
 </p>
 
-<p align="center"><em>The companion PWA, and the character sheet at phone width — a real media query now, not a theme setting.</em></p>
-- Installable PWA for phone / tablet, works offline after first load; full SSE sync with the main table (initiative, HP, state)
-- **Actions tab** for quick common actions; **D-pad** to move the selected token from the phone
-- **DM controls in companion:** token visibility toggle and character assignment
-- Safe-area padding for notched / punch-hole phones (iOS and Android)
+<p align="center"><em>The console (screenshot from before its redesign), and the character sheet at phone width.</em></p>
+
+The console runs the table on a two-screen handheld (built for the AYN Thor): the **map**
+on the top screen and an **info panel** on the bottom one. Each is an installable PWA, and
+both also work as two browser windows on a PC. It has its own look, separate from the
+rest of the app: true black for AMOLED screens, rows instead of cards, one condensed
+typeface, and four colours that each mean one thing (blue = focus, amber = whose turn,
+red = hostile or damage, green = health).
+
+- **Launcher and login** (`/console/`) — one login form for all console screens, with a
+  campaign picker when the server hosts several. Two console windows on the same device
+  share one login.
+- **Map screen** (`/console/table-console.html`) — the shared table map inside a thin
+  frame: a status line (whose turn, today's weather, notification count, tool, zoom,
+  panel link), a Tools drawer, and a command line with move arrows and Undo move.
+- **Info panel** (`/console/table-secondary.html`) — six tabs and a notification bell:
+  - **Turn** — the initiative order with health, a line about your own character, and
+    the turn controls. A player gets *End my turn* on their own turn.
+  - **Token** — the selected token: Health (damage, healing, conditions), and for a
+    player character the full sheet as **Skills**, **Combat** (attacks, actions, limited
+    uses, short and long rest), **Spells** (slots and prepared spells) and **Items**
+    (wear / take off). For the DM a monster gets **Rolls** and its **Stat block**, and
+    every token **Manage** (initiative, hide, assign to a player, delete).
+  - **Chat** — the shared chat with private messages and dice.
+  - **Handouts** — players examine and read; the DM hands out and judges checks.
+  - **Table** (DM) — initiative, prepared maps, every token's health, fog and hidden items.
+  - **More** — music (the app's shared player, with a per-device volume), the list of
+    gamepad buttons, and Log out.
+- **Gamepad** — the handheld's buttons drive both screens, whichever one has them:
+  D-pad moves a highlight on the panel, A presses, B goes back, L1/R1 change tab, X
+  (twice) runs the turn action, Y opens dice; the left stick moves the selected token,
+  the right stick slides the map, L2/R2 zoom, Start opens Tools, Select undoes a move.
+  A keyboard works too (`[` `]` tabs, WASD move, IJKL slide, `-` `=` zoom, T, U, X, Y, Esc).
+- **Device check** (`/console/probe.html`) — shows the screen size, pixel ratio and
+  gamepad buttons exactly as the browser reports them. No login needed.
+- Installable, with safe-area padding for notched screens; pages and fonts are cached
+  for offline start-up.
 
 ### Desktop App (`Desktop/`) — Windows
 
@@ -394,7 +426,8 @@ after 5 minutes. No third-party service, no external request, no new dependency.
 | Stories | `/stories.html` | Any (password gated) |
 | Story Builder | `/story-builder.html` | Any (password gated) |
 | Story Viewer | `/story-viewer.html` | Any (password gated) |
-| Mobile Companion | `/console/` | All users |
+| Console (two-screen mode) | `/console/` | All users |
+| Console device check | `/console/probe.html` | Anyone, no login |
 
 ---
 
@@ -622,7 +655,8 @@ char_sheet/
 │       ├── js/index/       #     15 character-sheet modules
 │       ├── js/table/       #     17 virtual-table modules
 │       ├── js/lib/         #     Shared utilities (dice engine, chat render, calendar, …)
-│       ├── console/        #     Mobile companion PWA
+│       ├── console/        #     Two-screen console: launcher, map screen, info panel
+│       ├── js/console/     #     Console scripts (login, gamepad, info panel modules)
 │       ├── css/  img/      #     Styles and static images
 │       ├── sw.js           #     Service worker (PWA cache)
 │       └── uploads/  story-images/   #   Runtime user uploads

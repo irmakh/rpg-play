@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<!-- Written by Irmak Hakman — 2026-10-10 21:10 -->
+<!-- Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) -->
+<html lang="en" class="console">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Console device check</title>
+<meta name="theme-color" content="#000000">
+<link rel="stylesheet" href="/css/console/console.css">
+</head>
+<body>
+
+<!-- Device check. The console is sized and mapped for one handheld (the AYN
+     Thor), and what its browser reports - how many CSS pixels each screen has,
+     which gamepad buttons arrive and as what - cannot be known from a desk.
+     This page shows those facts so they can be read off the device. It needs no
+     login and sends nothing anywhere. -->
+<main class="c-page">
+  <div>
+    <h1 class="c-title">Device check</h1>
+    <p class="c-sub">Open this on each screen. Press every button and move both sticks once, then read out the report at the bottom.</p>
+  </div>
+
+  <section>
+    <h2 class="c-h">This screen</h2>
+    <dl class="c-facts" id="facts" style="margin-top:.6rem"></dl>
+  </section>
+
+  <section>
+    <h2 class="c-h">Gamepad</h2>
+    <div class="c-pads" id="pads" style="margin-top:.6rem">
+      <p class="c-mute" style="margin:0">No gamepad seen yet. Press any button on the device.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="c-h">Keys</h2>
+    <p class="c-sub">Some handhelds send the D-pad and buttons as keyboard keys. The last eight are listed here.</p>
+    <ul class="c-log" id="keys"></ul>
+  </section>
+
+  <section>
+    <h2 class="c-h">Report</h2>
+    <pre class="c-report" id="report" style="margin-top:.6rem"></pre>
+  </section>
+
+  <div class="c-page-foot">
+    <a class="c-btn plain" href="/console/">Back to the console</a>
+  </div>
+</main>
+
+<script>
+(function () {
+  const $ = id => document.getElementById(id);
+
+  // Everything a gamepad has ever shown us, kept across frames so the report
+  // still lists a button after it is released.
+  const seenButtons = {};   // pad index -> Set of button indexes pressed at least once
+  const seenAxes    = {};   // pad index -> Set of axis indexes moved past the dead zone
+  const keyLog      = [];   // last key names, newest first
+  const seenKeys    = new Set();
+
+  function facts() {
+    const vv = window.visualViewport;
+    const so = screen.orientation ? screen.orientation.type : 'unknown';
+    return [
+      ['Page size',     `${window.innerWidth} x ${window.innerHeight} CSS px`],
+      ['Pixel ratio',   String(Math.round((window.devicePixelRatio || 1) * 100) / 100)],
+      ['Real pixels',   `${Math.round(window.innerWidth * (window.devicePixelRatio || 1))} x ${Math.round(window.innerHeight * (window.devicePixelRatio || 1))}`],
+      ['Whole screen',  `${screen.width} x ${screen.height} CSS px`],
+      ['Visible area',  vv ? `${Math.round(vv.width)} x ${Math.round(vv.height)}` : 'not reported'],
+      ['Orientation',   so],
+      ['Touch points',  String(navigator.maxTouchPoints || 0)],
+      ['Pointer',       matchMedia('(pointer:coarse)').matches ? 'finger' : 'mouse or pen'],
+      ['Hover',         matchMedia('(hover:hover)').matches ? 'yes' : 'no'],
+      ['Installed app', matchMedia('(display-mode:fullscreen)').matches ? 'yes, fullscreen'
+                       : matchMedia('(display-mode:standalone)').matches ? 'yes, standalone' : 'no, a browser tab'],
+      ['Gamepad API',   'getGamepads' in navigator ? 'available' : 'not available'],
+      ['Browser',       navigator.userAgent],
+    ];
+  }
+
+  function renderFacts() {
+    const dl = $('facts');
+    dl.replaceChildren();
+    for (const [k, v] of facts()) {
+      const dt = document.createElement('dt'); dt.textContent = k;
+      const dd = document.createElement('dd'); dd.textContent = v;
+      dl.append(dt, dd);
+    }
+  }
+
+  function pads() {
+    try { return [...(navigator.getGamepads ? navigator.getGamepads() : [])].filter(Boolean); }
+    catch { return []; }
+  }
+
+  function renderPads() {
+    const list = pads();
+    const wrap = $('pads');
+    if (!list.length) return;
+    wrap.replaceChildren();
+    for (const p of list) {
+      const sb = (seenButtons[p.index] ||= new Set());
+      const sa = (seenAxes[p.index] ||= new Set());
+      const box = document.createElement('div');
+
+      const name = document.createElement('div');
+      name.className = 'c-pad-name';
+      name.textContent = `#${p.index}: ${p.id} (mapping: ${p.mapping || 'none'}, ${p.buttons.length} buttons, ${p.axes.length} axes)`;
+
+      const btns = document.createElement('div');
+      btns.className = 'c-pad-btns';
+      p.buttons.forEach((b, i) => {
+        const on = b.pressed || b.value > 0.5;
+        if (on) sb.add(i);
+        const s = document.createElement('span');
+        s.textContent = i;
+        if (on) s.className = 'on';
+        btns.appendChild(s);
+      });
+
+      const axes = document.createElement('div');
+      axes.className = 'c-pad-name';
+      p.axes.forEach((v, i) => { if (Math.abs(v) > 0.5) sa.add(i); });
+      axes.textContent = 'Axes: ' + p.axes.map((v, i) => `${i}=${v.toFixed(2)}`).join('  ');
+
+      box.append(name, btns, axes);
+      wrap.appendChild(box);
+    }
+  }
+
+  function renderKeys() {
+    const ul = $('keys');
+    ul.replaceChildren(...keyLog.map(k => { const li = document.createElement('li'); li.textContent = k; return li; }));
+  }
+
+  function renderReport() {
+    const lines = facts().map(([k, v]) => `${k}: ${v}`);
+    const list = pads();
+    if (!list.length) lines.push('Gamepad: none seen');
+    for (const p of list) {
+      lines.push(`Gamepad #${p.index}: ${p.id} | mapping ${p.mapping || 'none'} | ${p.buttons.length} buttons, ${p.axes.length} axes`);
+      lines.push(`  buttons pressed so far: ${[...(seenButtons[p.index] || [])].sort((a, b) => a - b).join(', ') || 'none'}`);
+      lines.push(`  axes moved so far: ${[...(seenAxes[p.index] || [])].sort((a, b) => a - b).join(', ') || 'none'}`);
+    }
+    lines.push(`Keys seen: ${[...seenKeys].join(', ') || 'none'}`);
+    // Rewritten only when it changes: a node replaced every frame cannot be selected.
+    const text = lines.join('\n');
+    if ($('report').textContent !== text) $('report').textContent = text;
+  }
+
+  window.addEventListener('keydown', e => {
+    const name = `${e.key} (code ${e.code || 'none'}, keyCode ${e.keyCode})`;
+    seenKeys.add(e.key);
+    keyLog.unshift(name);
+    keyLog.length = Math.min(keyLog.length, 8);
+    renderKeys();
+  });
+  window.addEventListener('resize', renderFacts);
+  window.addEventListener('gamepadconnected', renderPads);
+
+  renderFacts();
+  // The Gamepad API has no "button pressed" event: it is polled every frame.
+  (function tick() { renderPads(); renderReport(); requestAnimationFrame(tick); })();
+})();
+</script>
+</body>
+</html>

@@ -21,6 +21,129 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [254] — 2026-10-11 — Console: choose a campaign at login, initiative fixes
+
+- **The console login lets you choose the campaign** when the server hosts more than one.
+  The character list follows the choice, and the launcher shows which campaign you are in.
+- **Starting initiative no longer fails silently.** If nobody has rolled yet the panel says
+  so; any other refusal is shown as well.
+- **The DM's Table tab has the initiative controls too** (Start or End, Previous, Next
+  turn), and a button that rolls initiative for every monster that has no roll yet.
+
+## [253] — 2026-10-11 — Console: the full character sheet
+
+The last of the features the console was missing. For a player character the info panel's
+Token tab now has four parts beside Health, matching the table screen's right panel:
+
+- **Skills:** ability checks, saving throws and all eighteen skills, each one tap to roll,
+  with proficiency bonus, passive Perception and spell save DC shown.
+- **Combat:** attacks and damage, then the character's actions, bonus actions, reactions
+  and others, including action spells. Limited uses are boxes to tap, with Short rest and
+  Long rest to bring them back.
+- **Spells:** spell slots to spend and restore, and prepared spells by level. Tapping a
+  spell or an action posts its description to chat.
+- **Items:** tap to wear or take off; armour class and everything else an item changes
+  are recalculated.
+- The sheet on the console updates by itself when the character is edited elsewhere.
+
+## [252] — 2026-10-10 — Console: handouts
+
+- **The info panel has a Handouts tab.** A player sees the handouts their character holds,
+  examines the ones that need a check, and reads the result once the DM has called it. The
+  tab is marked while something is waiting.
+- **The DM runs a handout from the same tab:** pick one, choose who gets it, watch the
+  checks come in, and call each a success or a failure (or accept what the DC suggests,
+  ask for another roll, or take the handout back).
+- A handout notification opens this tab.
+
+## [251] — 2026-10-10 — Console: notifications
+
+- **The info panel has the notification bell**, at the end of its tab bar, with the unread
+  count. Alerts pop up and chime there: your turn, combat started, loot, handouts.
+- **Opening a notification on the console goes to the matching tab** (Turn, Chat, Token)
+  instead of leaving the console for another page.
+- **The map screen shows the unread count** on its status line. It stays silent while the
+  info panel is connected, so one event does not chime twice on the same device.
+
+## [250] — 2026-10-10 — Console: weather, the shared music player, stat block
+
+The first of the features the console was missing.
+
+- **Today's weather is on the map screen's status line** once the DM has set it for the
+  current date. Tap it for the details.
+- **The info panel uses the same music player as the rest of the app.** The DM opens the
+  full player from the More tab. Everyone gets a volume control for their own device, and
+  two open screens no longer risk playing the same track twice.
+- **Pictures in the info panel's chat open full screen** when tapped.
+- Fixed: a monster's stat block being updated while its Info window was open raised an
+  error on the console map.
+
+## [249] — 2026-10-10 — Console redesign, step 4: gamepad
+
+The console can be driven with the handheld's buttons and sticks. It does not matter which
+of the two screens the device gives its buttons to; each screen passes on what belongs to
+the other.
+
+- **Info panel:** the D-pad moves a blue highlight between buttons and rows, A presses it,
+  B goes back, L1/R1 change tab, Y opens the dice. X runs the turn action (Next turn, End
+  my turn or Start initiative) and has to be pressed twice.
+- **Map:** the left stick moves the selected token, the right stick slides the map, L2/R2
+  zoom, Start opens Tools, Select undoes the last move.
+- **A token picked on the info panel is now selected on the map as well**, so it can be
+  moved straight away.
+- The More tab lists the buttons. Button hints appear on both screens once a gamepad has
+  been used.
+- A keyboard works too, for testing on a PC: `[` `]` tabs, WASD move, IJKL slide, `-` `=`
+  zoom, T tools, U undo, X turn, Y dice, Esc back.
+
+## [248] — 2026-10-10 — Console redesign, step 3: the map screen
+
+The frame around the console's map is rebuilt in the new design. The map, its tokens and
+its dialogs are unchanged.
+
+- **A thin status line replaces the toolbar:** whose turn it is, the tool in use, the zoom
+  level, and whether the info panel is connected.
+- **The tools moved into a Tools drawer** opened from the status line: Select, Move, Pan,
+  Ruler, Ping, Draw, zoom, and for the DM Add token and Remove all tokens.
+- **A command line under the map** says what the current tool does and holds the arrows
+  that move the selected token.
+- **Undo move is now on the console map** too; it was only on the normal table screen.
+- The map leaves more room: two lines of frame instead of a toolbar that wrapped onto
+  several rows on a small screen.
+
+## [247] — 2026-10-10 — Console redesign, step 2: the info panel
+
+The info panel (the console's bottom screen) is rebuilt in the new design. Everything it
+could do before is still there; where it lives has changed.
+
+- **Five tabs instead of seven:** Turn, Token, Chat, Table (DM only) and More.
+- **Turn** shows the initiative order with each combatant's health, and a line about you:
+  your character, your hit points, and whether it is your turn. The turn buttons sit in a
+  bar at the bottom. A player gets an **End my turn** button while it is their turn.
+- **Token** is everything about the selected token, in up to four parts: Health (damage,
+  healing, conditions), Rolls, Stat block and Manage. The old HP, Actions and Monster tabs
+  are folded into it. A player's own token is selected when the panel opens.
+- **Table** (DM) has the map picker, every token with its health, fog regions and hidden
+  items. **More** has the music controls and Log out.
+- **Questions are asked on the panel itself**, not in a browser pop-up, before deleting a
+  token, removing all tokens, loading a map, removing someone from initiative, or ending
+  initiative.
+- Condition buttons show the full name instead of a three-letter code.
+
+## [246] — 2026-10-10 — Console redesign, step 1: new login and launcher
+
+The console screens (the two-screen mode for the AYN Thor handheld) are being rebuilt in a
+new look of their own. This is the first of several releases; the map and the info panel
+themselves still look as before.
+
+- **One login form for all three console pages**, in the new design. On the Thor's short,
+  wide screens the form is laid out in two columns, so the Log in button is reachable
+  without scrolling.
+- **The console launcher is redesigned**, and now offers the map screen to players as well
+  as the DM.
+- **New Device check page** (`/console/probe.html`, also linked from the launcher): shows
+  the screen size, pixel ratio and gamepad buttons exactly as the browser reports them.
+
 ## [245] — 2026-10-10 — Token names keep pace with the token
 
 - **Token names on the map are no longer tiny beside big tokens.** The name, the

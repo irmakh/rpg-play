@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-09-27 12:35
+// Written by Irmak Hakman — 2026-10-10 21:42
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -196,18 +196,105 @@ describe('inventory list (index-items.js)', () => {
 });
 
 // ── Console: a player's own spell-attack bonus, rendered on the DM's console ─
-describe('console character stats (console/secondary.js)', () => {
-  it('escapes the spell attack bonus inside its onclick', () => {
+describe('console info panel (console/panel-*.js)', () => {
+  // The panel keeps its state in `let` bindings, which only code run inside the
+  // context can reassign (a property set on ctx would be a different variable).
+  function panel() {
     const { ctx, els } = browserContext();
-    run(ctx, 'lib/esc.js', 'lib/dnd-data.js', 'console/secondary.js');
-    // secondary.js keeps these in `let` bindings, which only code run inside the
-    // context can reassign (a property set on ctx would be a different variable).
-    ctx.__data = { 'sp-atk': JSOUT + TAG, _weapons: JSON.stringify([[TAG, DQ, SQ, JSOUT]]) };
-    ctx.__name = TAG;
-    runInContext('sessionRole = "dm"; masterPw = "t"; sQrollData = __data; sQrollCharName = __name;', ctx);
-    ctx.sRenderCharStats({ id: 't1', linkedId: 'c1', type: 'character' });
-    const html = els.get('s-char-stats').innerHTML;
-    expect(html.length).toBeGreaterThan(0);
-    expectInert(html);
+    run(ctx, 'lib/esc.js', 'lib/dnd-data.js', 'console/panel-core.js', 'console/panel-nav.js',
+      'console/panel-turn.js', 'console/panel-token.js', 'console/panel-sheet.js', 'console/panel-table.js', 'console/panel-handouts.js');
+    runInContext('sessionRole = "dm"; masterPw = "t";', ctx);
+    return { ctx, els };
+  }
+
+  it('escapes every part of a character sheet: skills, combat, spells, items', () => {
+    const { ctx, els } = panel();
+    // A spell row is positional: 0 level, 1 name, 4 concentration, 5 ritual,
+    // 7 prepared, 13 the action kind it is filed under.
+    const spell = (lvl, name, kind) => { const s = []; s[0] = lvl; s[1] = name; s[4] = true; s[7] = true; s[13] = kind; return s; };
+    ctx.__data = {
+      str: '16', dex: TAG, 'sp-atk': JSOUT + TAG, 'sp-dc': TAG, pb: DQ, pp: SQ,
+      'sk-0': JSOUT, 'save-str': SQ, init: TAG,
+      'slot-1-total': '3', 'slot-1-used': '1',
+      _weapons: JSON.stringify([[TAG, DQ, SQ, JSOUT], [JSOUT, JSOUT, JSOUT]]),
+      _spells: JSON.stringify([spell(TAG, TAG + JSOUT, 'action'), spell('0', SQ, 'bonus'), spell(DQ, DQ, '')]),
+      _actions: JSON.stringify([{ id: JSOUT, name: TAG, category: 'action', description: TAG + DQ, dice: JSOUT, uses: 3, used: 1, recharge: 'short' },
+                                { id: 7, name: SQ, category: 'other', dice: TAG }]),
+      _items: JSON.stringify([{ id: JSOUT, name: TAG + SQ, equipped: true, itemType: 'armor', acBase: TAG }, { id: 3, name: DQ, acBonus: 1 }]),
+    };
+    runInContext('sQrollData = __data; sSelectedToken = { id: "t1", linkedId: "c1", type: "character" };', ctx);
+    for (const part of ['skills', 'combat', 'spells', 'items']) {
+      ctx.sRenderSheetPane(part);
+      const html = els.get('s-pane-' + part).innerHTML;
+      expect([part, html.length > 0]).toEqual([part, true]);
+      expectInert(html);
+    }
+    expect(els.get('s-pane-combat').innerHTML).toContain('2 of 3 left');
+    expect(els.get('s-pane-spells').innerHTML).toContain('2 of 3 left');
+    expect(els.get('s-pane-items').innerHTML).toContain('Worn');
+  });
+
+  it('escapes an imported monster in its rolls and its stat block', () => {
+    const { ctx, els } = panel();
+    ctx.__mon = {
+      name: TAG, source: TAG, dex: 14,
+      skill: { [JSOUT]: JSOUT, stealth: SQ },
+      save: { dex: JSOUT },
+      senses: [TAG], languages: [DQ],
+      action: [{ name: TAG + JSOUT, entries: ['{@hit 5} ' + TAG + ' {@damage 1d6+2}', { type: 'list', items: [TAG] }] }],
+      trait: [{ name: SQ, entries: [DQ] }],
+    };
+    runInContext('sMonsterData = __mon;', ctx);
+    const tok = { id: 't1', linkedId: 'm1', type: 'monster', label: TAG, name: TAG };
+    ctx.sRenderMonsterRolls(tok);
+    const rolls = els.get('s-pane-rolls').innerHTML;
+    expect(rolls.length).toBeGreaterThan(0);
+    expectInert(rolls);
+    const block = ctx.sRenderMonsterStatBlock(ctx.__mon, tok);
+    expect(block.length).toBeGreaterThan(0);
+    expectInert(block);
+  });
+
+  it('escapes a handout for the player who reads it and the DM who judges it', () => {
+    const { ctx, els } = panel();
+    // DM shape: recipients with a roll; the character's name is a player's text.
+    ctx.__chars = [{ id: JSOUT, name: TAG + SQ, char_type: 'pc' }, { id: 'c2', name: DQ, char_type: 'pc' }];
+    ctx.__dm = [{ id: JSOUT, title: TAG + DQ, checkSkill: 3, checkSkillName: TAG, checkDc: 12,
+      recipients: [{ charId: JSOUT, outcome: 'rolled', rollTotal: 14, rollDetail: TAG + SQ, suggested: 'success' }] }];
+    runInContext('sCharList = __chars; sHandouts = __dm; sHoPick = null;', ctx);
+    ctx.sRenderHandouts();
+    expectInert(els.get('s-handouts').innerHTML);
+    ctx.__pick = JSOUT;
+    runInContext('sHoPick = __pick;', ctx);
+    ctx.sRenderHandouts();
+    const detail = els.get('s-handouts').innerHTML;
+    expect(detail).toContain('Roll again');
+    expectInert(detail);
+
+    // Player shape: every stage, each unfolded.
+    ctx.__mine = [
+      { id: JSOUT, title: TAG, canRoll: true, promptText: TAG + DQ, outcome: 'pending' },
+      { id: 'h2', title: SQ, awaitingDm: true, promptText: TAG, outcome: 'rolled' },
+      { id: 'h3', title: DQ, outcome: 'success', text: TAG + SQ, imageUrl: JSOUT, imageMedium: DQ },
+    ];
+    runInContext('sessionRole = "character"; masterPw = ""; sessionCharId = "c2"; sHandouts = __mine; sHoOpen.add(__pick); sHoOpen.add("h2"); sHoOpen.add("h3");', ctx);
+    ctx.sRenderHandouts();
+    const mine = els.get('s-handouts').innerHTML;
+    expect(mine).toContain('Examine it');
+    expectInert(mine);
+  });
+
+  it('escapes names and ids in the initiative order and the token list', () => {
+    const { ctx, els } = panel();
+    ctx.__toks = [{ id: JSOUT, name: TAG, type: 'character', linkedId: 'c1', initiativeId: 'i1', hpCurrent: 3, hpMax: 9, conditions: JSON.stringify([TAG, DQ]) }];
+    ctx.__init = { currentId: 'i1', entries: [{ id: 'i1', name: TAG + SQ, roll: 12, charId: 'c1' }, { id: JSOUT, name: DQ, roll: 3, monsterId: 'm' }] };
+    runInContext('sTokens = __toks; sInitData = __init;', ctx);
+    ctx.sRenderInitiative();
+    ctx.sRenderDmHpList();
+    for (const id of ['s-you', 's-init-list', 's-dm-hp-list']) {
+      const html = els.get(id).innerHTML;
+      expect(html.length).toBeGreaterThan(0);
+      expectInert(html);
+    }
   });
 });

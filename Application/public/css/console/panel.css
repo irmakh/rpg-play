@@ -1,0 +1,358 @@
+/* Written by Irmak Hakman — 2026-10-10 21:41 */
+/* Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) */
+
+/* ============================================================================
+   panel.css - the info panel (console/table-secondary.html), the bottom screen
+   of the two-screen console. Builds on console.css; read that file first for
+   the tokens and the rules of the design.
+
+   The screen is about 413 x 360 CSS px on the Thor. Three bands, top to bottom:
+     .p-tabs   the five tabs                       (one row)
+     .p-view   the open tab; its .p-scroll scrolls (everything left over)
+     .p-cmd    the command bar, when the tab has actions (one row)
+   Nothing else is fixed, so a taller screen simply shows more rows.
+   ========================================================================== */
+
+/* ── Shared libraries paint with the main app's token names ─────────────────
+   chat-render.js, chat-pm.js and auth-ui.js are used by every page in the app
+   and set colours inline as var(--bone), var(--ash) and so on. Rather than fork
+   them, the console answers to those names with its own palette.            */
+html.console{
+  --bone:var(--c-tx);
+  --ash:var(--c-mute);
+  --arc:var(--c-tx);
+  --blood:var(--c-foe);
+  --verdigris:var(--c-ok);
+  --slate-hi:var(--c-surface);
+  --slate:var(--c-surface);
+  --ink:var(--c-bg);
+  --wash:var(--c-surface-hi);
+  --rule:var(--c-rule);
+  --rule-hi:var(--c-rule-hi);
+}
+/* Their icons come from the shared sprite (js/lib/icons.js). */
+html.console .lt-icon{width:1.1em;height:1.1em;flex:none;vertical-align:-.15em;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+
+/* ── Frame ───────────────────────────────────────────────────────────────── */
+html.console body.p-body{height:100dvh;min-height:0;overflow:hidden;overscroll-behavior:none;user-select:none;touch-action:manipulation}
+.p-app{
+  height:100dvh;display:grid;grid-template-rows:auto minmax(0,1fr) auto;
+  padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+.p-view{min-height:0;display:flex;flex-direction:column}
+.p-scroll{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain}
+.p-list{list-style:none;margin:0;padding:0}
+.p-empty{margin:0;padding:1rem var(--c-pad);color:var(--c-mute);font-size:var(--c-t-sm)}
+.p-h{margin:0;padding:.7rem var(--c-pad) .3rem;font-size:var(--c-t-sm);font-weight:500;color:var(--c-mute)}
+.pad{padding-inline:var(--c-pad)}
+.c-btn.ok{color:var(--c-ok);border-color:var(--c-ok)}
+.c-btn[aria-pressed="true"]{background:var(--c-tx);color:var(--c-bg);border-color:var(--c-tx)}
+
+/* ── Tabs ────────────────────────────────────────────────────────────────── */
+.p-tabs{display:flex;border-bottom:1px solid var(--c-rule)}
+.p-tab{
+  flex:1 1 0;min-width:0;
+  appearance:none;border:0;background:none;font:inherit;color:var(--c-mute);cursor:pointer;
+  min-height:var(--c-row);padding:0 .15rem;display:flex;align-items:center;justify-content:center;gap:.3rem;
+  font-size:.9375rem;white-space:nowrap;   /* six tabs and the bell share about 413px */
+}
+.p-tab[aria-selected="true"]{color:var(--c-tx);box-shadow:inset 0 -3px 0 var(--c-focus)}
+/* "Something arrived here while you were on another tab." */
+.p-mark{width:.4rem;height:.4rem;border-radius:50%;background:var(--c-tx)}
+
+/* ── Notifications ───────────────────────────────────────────────────────── */
+/* The bell sits at the end of the tab bar. The list and toasts are drawn by the
+   shared notifications.css in the main app's shapes; these rules put them into
+   the console's: full width under the tab bar, square, larger type, no emoji. */
+.p-bell{
+  appearance:none;flex:none;min-width:var(--c-row);min-height:var(--c-row);padding:0 .5rem;cursor:pointer;
+  display:inline-flex;align-items:center;justify-content:center;gap:.3rem;
+  background:none;border:0;border-left:1px solid var(--c-rule);color:var(--c-mute);font:inherit;
+}
+.p-bell.has-unread{color:var(--c-tx)}
+.p-bell .notif-count{
+  position:static;min-width:1.25rem;height:1.25rem;padding:0 .3rem;border-radius:.65rem;box-shadow:none;
+  background:var(--c-tx);color:var(--c-bg);font-size:var(--c-t-xs);font-weight:600;line-height:1.25rem;
+}
+html.console #notif-panel{
+  top:calc(var(--c-row) + env(safe-area-inset-top)) !important;left:0 !important;right:0 !important;
+  width:auto;max-width:none;max-height:calc(100dvh - var(--c-row));
+  background:var(--c-surface);border:0;border-bottom:1px solid var(--c-rule-hi);border-radius:0;box-shadow:none;
+}
+html.console #notif-panel>*{zoom:1.25}
+html.console .notif-row.unread{box-shadow:inset 3px 0 0 var(--c-tx)}
+html.console .notif-row-icon,html.console .notif-toast-icon{display:none}
+html.console #notif-toasts{top:calc(var(--c-row) + .4rem);left:.5rem;right:.5rem;max-width:none}
+html.console .notif-toast{zoom:1.2;background:var(--c-tx);color:var(--c-bg);border:0;border-radius:2px;box-shadow:none}
+html.console .notif-toast-body{color:var(--c-bg);opacity:.75}
+
+/* ── Health bar ──────────────────────────────────────────────────────────── */
+.p-bar{display:block;height:.3rem;background:var(--c-rule);min-width:0}
+.p-bar i{display:block;height:100%;background:var(--c-ok)}
+.p-bar i.low{background:var(--c-foe)}
+
+/* ── Turn tab ────────────────────────────────────────────────────────────── */
+.p-you{
+  display:flex;align-items:baseline;gap:.6rem;min-height:2.5rem;
+  padding:.5rem var(--c-pad);background:var(--c-surface);border-bottom:1px solid var(--c-rule);
+}
+.p-you strong{font-weight:600;font-size:var(--c-t-lg);line-height:1.1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.p-you .turn{color:var(--c-turn);font-size:var(--c-t-sm);white-space:nowrap}
+.p-you .wait{color:var(--c-mute);font-size:var(--c-t-sm);white-space:nowrap}
+.p-you .num{margin-left:auto;font-weight:600;white-space:nowrap}
+.p-you .num small{font-weight:400;color:var(--c-mute);font-size:var(--c-t-sm)}
+
+/* One combatant. Columns: roll, name, health bar, hit points. */
+.p-init{display:grid;grid-template-columns:minmax(0,1fr) auto;border-bottom:1px solid var(--c-rule)}
+.p-init-main{
+  appearance:none;border:0;background:none;color:inherit;font:inherit;text-align:left;
+  display:grid;grid-template-columns:1.9rem minmax(0,1fr) 4.5rem 3.6rem;align-items:center;gap:.6rem;
+  min-height:var(--c-row);padding:.25rem var(--c-pad);
+}
+.p-init-main.no-roll{grid-template-columns:minmax(0,1fr) 4.5rem 3.6rem}
+button.p-init-main{cursor:pointer}
+button.p-init-main:active{background:var(--c-surface-hi)}
+.p-init .roll{color:var(--c-mute);font-weight:500}
+.p-init .name{min-width:0;display:flex;flex-direction:column}
+.p-init .name>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.p-init .name small{font-size:var(--c-t-xs);color:var(--c-mute);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.p-init .hp{text-align:right;font-size:var(--c-t-sm);color:var(--c-mute)}
+.p-init.foe .name>span{color:var(--c-foe)}
+/* Whose turn it is: amber, and only here. */
+.p-init.on{background:var(--c-turn-fill);box-shadow:inset 3px 0 0 var(--c-turn)}
+.p-init.on .roll{color:var(--c-turn)}
+.p-x{
+  appearance:none;border:0;border-left:1px solid var(--c-rule);background:none;font:inherit;
+  font-size:var(--c-t-sm);color:var(--c-mute);padding:0 .75rem;cursor:pointer;
+}
+.p-x:active{background:var(--c-foe-fill);color:var(--c-foe)}
+
+/* ── Token tab ───────────────────────────────────────────────────────────── */
+.p-token{flex:1;min-height:0;display:flex;flex-direction:column}
+.p-tok-head{
+  display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:baseline;gap:.25rem .9rem;
+  padding:.5rem var(--c-pad) .45rem;background:var(--c-surface);
+}
+.p-tok-head .name{font-size:var(--c-t-lg);font-weight:600;line-height:1.1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.p-tok-head .name.foe{color:var(--c-foe)}
+.p-tok-head .stat{color:var(--c-mute);font-size:var(--c-t-sm);white-space:nowrap}
+.p-tok-head .stat b{color:var(--c-tx);font-size:var(--c-t-lg);font-weight:600}
+.p-tok-head .stat b.low{color:var(--c-foe)}
+.p-tok-head .p-bar{grid-column:1 / -1}
+.p-subseg button{min-height:2.4rem;font-size:var(--c-t-sm);padding:0 .15rem;white-space:nowrap}
+
+.p-amount{display:grid;grid-template-columns:5rem 1fr 1fr;gap:.5rem;padding:.6rem var(--c-pad) 0}
+.p-quick{display:grid;grid-template-columns:repeat(6,1fr);gap:.35rem;padding:.5rem var(--c-pad) 0}
+.p-quick .c-btn{padding:0}
+.p-temp{display:grid;grid-template-columns:minmax(0,1fr) 5rem auto;align-items:center;gap:.5rem;padding:.5rem var(--c-pad) 0}
+.p-temp label{font-size:var(--c-t-sm);color:var(--c-mute)}
+.p-chips{display:grid;grid-template-columns:repeat(auto-fill,minmax(6.4rem,1fr));gap:.35rem;padding:0 var(--c-pad) .75rem}
+.p-chip{
+  appearance:none;min-height:2.4rem;padding:0 .4rem;font:inherit;font-size:var(--c-t-sm);cursor:pointer;
+  background:none;color:var(--c-mute);border:1px solid var(--c-rule-hi);border-radius:2px;
+}
+.p-chip[aria-pressed="true"]{background:var(--c-tx);color:var(--c-bg);border-color:var(--c-tx);font-weight:600}
+.p-chip:disabled{cursor:default}
+.p-chip:disabled[aria-pressed="false"]{opacity:.45}
+
+.p-manage{display:flex;flex-direction:column;gap:.6rem;padding:.6rem var(--c-pad) .9rem}
+.p-inline{display:flex;gap:.5rem;align-items:center}
+.p-inline>.c-input{flex:1;min-width:0}
+.p-inline>.c-btn{flex:none}
+
+/* Rolls: a strip for how the d20 is rolled, then tappable rows in groups. */
+.p-rollmode{background:var(--c-bg)}
+.p-rollmode button{font-size:var(--c-t-sm);min-height:2.4rem}
+.p-group{border-bottom:1px solid var(--c-rule)}
+.p-group>summary{
+  list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;
+  min-height:2.5rem;padding:0 var(--c-pad);background:var(--c-surface);font-weight:500;
+}
+.p-group>summary::-webkit-details-marker{display:none}
+.p-group>summary::after{content:'Show';font-weight:400;font-size:var(--c-t-sm);color:var(--c-mute)}
+.p-group[open]>summary::after{content:'Hide'}
+.p-roll{
+  appearance:none;width:100%;border:0;border-top:1px solid var(--c-rule);background:none;color:inherit;font:inherit;text-align:left;
+  display:flex;align-items:center;gap:.75rem;min-height:var(--c-row);padding:0 var(--c-pad);cursor:pointer;
+}
+.p-roll:active{background:var(--c-surface-hi)}
+.p-roll .lbl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.p-roll .val{flex:none;font-weight:600}
+.p-roll.sub{min-height:2.3rem;padding-left:calc(var(--c-pad) + 1.1rem);color:var(--c-mute)}
+.p-roll.sub .val{color:var(--c-tx);font-weight:500}
+.p-roll.plain{cursor:default}
+.p-roll.playing .val{color:var(--c-ok)}
+.p-roll-wrap{display:grid;grid-template-columns:minmax(0,1fr) auto}
+.p-post{
+  appearance:none;border:0;border-top:1px solid var(--c-rule);border-left:1px solid var(--c-rule);background:none;
+  font:inherit;font-size:var(--c-t-sm);color:var(--c-mute);padding:0 .9rem;cursor:pointer;
+}
+.p-post:active{background:var(--c-surface-hi);color:var(--c-tx)}
+
+/* A character's sheet (panel-sheet.js). */
+.p-facts{margin:0;padding:.2rem var(--c-pad) .5rem;display:flex;flex-wrap:wrap;gap:.2rem 1rem;font-size:var(--c-t-sm);color:var(--c-mute)}
+.p-facts b{color:var(--c-tx);font-weight:600}
+.p-sb-abil.pad{margin:.6rem 0 .5rem}
+.p-sb-abil .none{display:flex;flex-direction:column;align-items:center;padding:.3rem 0;opacity:.4}
+/* Rolls side by side: two columns for skills, three for the six saves. */
+.p-cols{display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid var(--c-rule)}
+.p-cols.three{grid-template-columns:repeat(3,1fr)}
+.p-cols .p-roll{padding:0 .6rem;gap:.4rem;min-height:2.5rem;font-size:var(--c-t-sm);border-right:1px solid var(--c-rule)}
+.p-roll .val.post{font-weight:400;font-size:var(--c-t-sm);color:var(--c-mute)}
+/* A custom action with its limited uses. */
+.p-act{padding:.5rem var(--c-pad) .6rem;border-top:1px solid var(--c-rule)}
+.p-act-head{display:flex;align-items:center;gap:.4rem}
+.p-act-head strong{flex:1;min-width:0;font-weight:500}
+.p-act-head .c-btn{flex:none;min-height:2.3rem;padding:0 .6rem;font-size:var(--c-t-sm)}
+.p-act p{margin:.3rem 0 0;font-size:var(--c-t-sm);color:var(--c-mute);white-space:pre-wrap}
+/* One box per use or spell slot: hollow is available, filled is spent. */
+.p-uses{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem;margin-top:.45rem}
+.p-uses>span{font-size:var(--c-t-sm);color:var(--c-mute);margin-left:.2rem}
+.p-use{appearance:none;width:1.9rem;height:1.9rem;padding:0;background:none;border:2px solid var(--c-tx);border-radius:2px;cursor:pointer}
+.p-use.used{background:var(--c-rule-hi);border-color:var(--c-rule-hi)}
+.p-use:disabled{cursor:default}
+.p-slots{display:grid;grid-template-columns:4rem minmax(0,1fr);align-items:center;gap:.5rem;padding:.35rem var(--c-pad);border-top:1px solid var(--c-rule)}
+.p-slots .lvl{font-size:var(--c-t-sm);color:var(--c-mute)}
+.p-slots .p-uses{margin-top:0}
+.p-rest{padding-bottom:.8rem}
+.p-rest .c-btn{flex:1}
+
+/* Stat block: reading text, so it may be selected and wraps freely. */
+.p-sb{padding:.6rem var(--c-pad) 1rem;user-select:text}
+.p-sb-img{float:right;width:4.5rem;height:4.5rem;object-fit:cover;margin:0 0 .5rem .75rem;border:1px solid var(--c-rule)}
+.p-sb-name{margin:0;font-size:var(--c-t-lg);font-weight:600;color:var(--c-foe);line-height:1.15}
+.p-sb-kind{margin:.1rem 0 .5rem;font-size:var(--c-t-sm);color:var(--c-mute);font-style:italic}
+.p-sb-line{margin:.15rem 0}
+.p-sb-line b{font-weight:600}
+.p-sb-h{margin:.9rem 0 .2rem;padding-bottom:.2rem;font-size:var(--c-t-md);font-weight:600;border-bottom:1px solid var(--c-rule)}
+.p-sb-item{margin:.45rem 0}
+.p-sb-item p{display:inline;margin:0}
+.p-sb-item p+p{display:block;margin-top:.3rem}
+.p-sb-item ul{margin:.3rem 0;padding-left:1.1rem}
+.p-sb-abil{display:grid;grid-template-columns:repeat(6,1fr);gap:.3rem;margin:.6rem 0 .2rem;clear:both}
+.p-sb-abil button{
+  appearance:none;background:var(--c-surface);border:1px solid var(--c-rule);border-radius:2px;color:inherit;font:inherit;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;padding:.3rem 0;line-height:1.15;
+}
+.p-sb-abil small{font-size:var(--c-t-xs);color:var(--c-mute)}
+.p-sb-abil b{font-weight:600}
+.p-sb-abil span{font-size:var(--c-t-sm);color:var(--c-mute)}
+.p-sb .p-roll{margin-inline:calc(var(--c-pad) * -1);width:calc(100% + var(--c-pad) * 2)}
+
+/* ── Chat tab ────────────────────────────────────────────────────────────── */
+.p-chat-log{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:.5rem var(--c-pad);display:flex;flex-direction:column;gap:.45rem;user-select:text}
+/* Entries are drawn by the shared chat-render.js with inline pixel sizes meant
+   for a desktop sidebar (10-11px). zoom scales the whole entry up to a size
+   that can be read on the handheld without touching that file. */
+.p-chat-log .chat-entry{zoom:1.25;padding:.2rem 0 .2rem .5rem;border-left:2px solid var(--c-rule-hi)}
+.p-chat-log .chat-entry.nat20{border-left-color:var(--c-ok)}
+.p-chat-log .chat-entry.nat1{border-left-color:var(--c-foe)}
+.p-chat-log .ce-sender{font-weight:600;font-size:11px}
+.p-chat-log .ce-total{font-size:15px;font-weight:600;margin-top:1px}
+.p-chat-log .ce-dmg-label{color:var(--c-mute);font-size:11px;margin-bottom:2px}
+.p-chat-log .ce-dmg-parts{display:flex;flex-direction:column;gap:2px;margin:2px 0 1px}
+.p-chat-log .ce-dmg-row{display:grid;grid-template-columns:auto 1fr auto;align-items:baseline;gap:8px;font-size:11px}
+.p-chat-log .ce-dmg-dice{color:var(--c-mute);white-space:nowrap}
+.p-chat-log .ce-dmg-rolls{opacity:.75}
+.p-chat-log .ce-dmg-type{color:var(--c-mute);font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.p-chat-log .ce-dmg-val{font-weight:600;font-size:12px;justify-self:end}
+.p-chat-log .chat-html a{color:var(--c-focus)}
+.p-dice{display:grid;grid-template-columns:repeat(6,1fr);border-top:1px solid var(--c-rule)}
+.p-dice button{
+  appearance:none;border:0;border-right:1px solid var(--c-rule);background:none;color:var(--c-tx);font:inherit;
+  min-height:2.5rem;cursor:pointer;
+}
+.p-dice button:last-child{border-right:0}
+.p-dice button:active{background:var(--c-surface-hi)}
+.p-dice .d20{font-weight:600}
+.p-chat-in{display:grid;grid-template-columns:minmax(4.5rem,7rem) minmax(0,1fr) auto;gap:.35rem;padding:.35rem var(--c-pad);border-top:1px solid var(--c-rule)}
+.p-chat-in .c-input,.p-chat-in .c-btn{min-height:2.5rem}
+.p-chat-in select.c-input{padding-left:.5rem;font-size:var(--c-t-sm)}
+
+/* ── Handouts tab ────────────────────────────────────────────────────────── */
+.p-ho .p-roll{border-top:0;border-bottom:1px solid var(--c-rule)}
+.p-ho .p-roll .val{font-weight:400;font-size:var(--c-t-sm);color:var(--c-mute)}
+/* Waiting on you: a check to judge, something to examine, a result unread. */
+.p-ho.new .p-roll{box-shadow:inset 3px 0 0 var(--c-tx)}
+.p-ho.new .p-roll .val{color:var(--c-tx)}
+.p-roll.two .lbl{display:flex;flex-direction:column;white-space:normal}
+.p-roll.two .lbl small{font-size:var(--c-t-xs);color:var(--c-mute)}
+.p-ho-body{padding:.6rem var(--c-pad) .9rem;border-bottom:1px solid var(--c-rule);background:var(--c-surface);user-select:text}
+.p-ho-body p{margin:0 0 .6rem}
+.p-ho-body p:last-child{margin-bottom:0}
+.p-ho-body .text{white-space:pre-wrap}
+.p-ho-body img{display:block;max-width:100%;max-height:14rem;margin:0 0 .6rem;border:1px solid var(--c-rule);cursor:pointer}
+.p-ho-head{padding:.6rem var(--c-pad);background:var(--c-surface);border-bottom:1px solid var(--c-rule);display:flex;flex-direction:column}
+.p-ho-head strong{font-size:var(--c-t-lg);font-weight:600;line-height:1.15}
+.p-ho-head small{color:var(--c-mute);font-size:var(--c-t-sm)}
+.p-ho-rec{padding:.5rem var(--c-pad) .6rem;border-bottom:1px solid var(--c-rule)}
+.p-ho-rec.rolled{box-shadow:inset 3px 0 0 var(--c-tx)}
+.p-ho-rec .top{display:flex;justify-content:space-between;align-items:baseline;gap:.75rem}
+.p-ho-rec .top strong{font-weight:500}
+.p-ho-rec .top span{font-size:var(--c-t-sm);color:var(--c-mute)}
+.p-ho-rec.success .top span{color:var(--c-ok)}
+.p-ho-rec.fail .top span{color:var(--c-foe)}
+.p-ho-rec p{margin:.15rem 0 0;font-size:var(--c-t-sm);color:var(--c-mute)}
+.p-ho-rec p b{color:var(--c-tx)}
+.p-ho-rec .btns{display:flex;flex-wrap:wrap;gap:.35rem;margin-top:.45rem}
+.p-ho-rec .btns .c-btn{flex:1 1 auto;min-height:2.3rem;padding:0 .6rem;font-size:var(--c-t-sm)}
+.p-ho-go{padding-block:.5rem}
+
+/* ── Table and More tabs ─────────────────────────────────────────────────── */
+/* A named thing with one button beside it: a fog region, an item, the login. */
+.p-reveal{display:flex;align-items:center;gap:.75rem;min-height:var(--c-row);padding:.3rem var(--c-pad);border-top:1px solid var(--c-rule)}
+.p-reveal .name{flex:1;min-width:0;display:flex;flex-direction:column}
+.p-reveal .name small{font-size:var(--c-t-xs);color:var(--c-mute)}
+.p-reveal .c-btn{flex:none;min-height:2.3rem}
+.p-item-desc{margin:0;padding:0 var(--c-pad) .5rem;font-size:var(--c-t-sm);color:var(--c-mute);white-space:pre-wrap;user-select:text}
+.p-item-desc.none{font-style:italic}
+
+.p-now{display:flex;align-items:baseline;gap:.6rem;padding:.2rem var(--c-pad) .6rem}
+.p-now .state{color:var(--c-mute);font-size:var(--c-t-sm);white-space:nowrap}
+.p-now .name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.p-now .times{color:var(--c-mute);font-size:var(--c-t-sm);white-space:nowrap}
+.p-seek{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:.6rem;min-height:2.5rem;font-size:var(--c-t-sm);color:var(--c-mute)}
+.p-seek input[type="range"]{width:100%;accent-color:var(--c-tx)}
+.p-transport{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:.35rem;padding-block:.25rem}
+.p-transport .c-btn{padding:0 .3rem;font-size:var(--c-t-sm)}
+
+/* The full music player (/music.html in a frame), over the whole panel. */
+.p-music{position:fixed;inset:0;z-index:55;flex-direction:column;background:var(--c-bg)}
+.p-music-head{flex:none;display:flex;align-items:center;justify-content:space-between;gap:1rem;min-height:var(--c-row);padding:0 var(--c-pad);border-bottom:1px solid var(--c-rule)}
+.p-music-head strong{font-weight:600}
+.p-music-head .c-btn{min-height:2.3rem}
+.p-music-body{flex:1;min-height:0;overflow-y:auto}
+.p-music-body iframe{display:block;width:100%;height:320px;border:0}
+.p-music-open{padding-block:.4rem}
+
+/* ── Command bar ─────────────────────────────────────────────────────────── */
+.p-cmd{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;border-top:1px solid var(--c-rule)}
+.p-cmd[hidden]{display:none}
+.p-cmd button{
+  appearance:none;border:0;border-right:1px solid var(--c-rule);background:none;color:var(--c-tx);font:inherit;
+  min-height:var(--c-row);padding:0 .4rem;cursor:pointer;
+}
+.p-cmd button:last-child{border-right:0}
+.p-cmd button:active{background:var(--c-surface-hi)}
+/* The action that moves the turn on. */
+.p-cmd .go{color:var(--c-turn);font-weight:600}
+
+.p-cmd button{display:inline-flex;align-items:center;justify-content:center;gap:.4rem}
+
+/* The list of gamepad buttons on the More tab. */
+.p-keys{margin:0;padding:0 var(--c-pad) .5rem;display:grid;grid-template-columns:auto minmax(0,1fr);gap:.45rem .75rem;align-items:center;font-size:var(--c-t-sm)}
+.p-keys dt{display:flex;gap:.25rem}
+.p-keys dd{margin:0;color:var(--c-mute)}
+
+/* ── Confirm sheet and toast ─────────────────────────────────────────────── */
+.p-sheet{position:fixed;inset:0;z-index:50;display:grid;align-items:end;background:#000000B3}
+.p-sheet-box{
+  background:var(--c-surface);border-top:1px solid var(--c-rule-hi);
+  padding:1rem max(var(--c-pad),env(safe-area-inset-right)) max(1rem,env(safe-area-inset-bottom)) max(var(--c-pad),env(safe-area-inset-left));
+}
+.p-sheet-box p{margin:0 0 .9rem;font-size:var(--c-t-md)}
+.p-sheet-btns{display:grid;grid-template-columns:1fr 1fr;gap:.5rem}
+.p-toast{
+  position:fixed;z-index:60;left:50%;bottom:calc(var(--c-row) + .75rem);transform:translateX(-50%);max-width:calc(100% - 2rem);
+  background:var(--c-tx);color:var(--c-bg);padding:.45rem .8rem;border-radius:2px;font-size:var(--c-t-sm);font-weight:500;
+}

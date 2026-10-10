@@ -1,0 +1,236 @@
+/* Written by Irmak Hakman — 2026-10-10 21:10 */
+/* Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) */
+
+/* ============================================================================
+   console.css - the design system for the console screens ("Field Chart").
+
+   The console is the two-screen mode used on the AYN Thor handheld: the map on
+   the 6" top screen, an info panel on the 3.92" bottom one. It has its own
+   look, separate from the navy-and-gold main app, and none of it touches
+   tokens.css.
+
+   THE DIRECTION: an instrument panel on true black.
+
+   - The ground is #000 on purpose. Both Thor screens are AMOLED, so a black
+     pixel is a switched-off pixel: no glow at a dark table, less battery.
+   - Rows and hairlines, never cards. The bottom screen is the size of a small
+     phone; a border around everything would spend a tenth of it on boxes.
+   - Each colour means ONE thing, everywhere:
+       --c-focus  blue   where the gamepad cursor / keyboard focus is
+       --c-turn   amber  whose turn it is
+       --c-foe    red    a hostile creature, damage, a destructive action
+       --c-ok     green  health, success
+     If something is not one of those four, it is --c-tx or --c-mute.
+   - One typeface, IBM Plex Sans Condensed: a condensed face fits one more
+     column per row at this size. Numbers use tabular figures so they line up.
+     No all-caps labels and no monospace - both are hard to read this small.
+
+   SCOPING: tokens live on html.console (a page fully in the new design) and on
+   .cx (a new-design island inside a page that is not converted yet, such as
+   the login gate). Class names are prefixed c- so nothing collides with
+   table.css while both are loaded.
+   ========================================================================== */
+
+/* ── Type: self-hosted, so the installed PWA keeps it offline ────────────── */
+@font-face{font-family:'IBM Plex Sans Condensed';font-style:normal;font-weight:400;font-display:swap;
+  src:url('/fonts/plex-cond-400-latin-ext.woff2') format('woff2');
+  unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:'IBM Plex Sans Condensed';font-style:normal;font-weight:400;font-display:swap;
+  src:url('/fonts/plex-cond-400-latin.woff2') format('woff2');
+  unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:'IBM Plex Sans Condensed';font-style:normal;font-weight:500;font-display:swap;
+  src:url('/fonts/plex-cond-500-latin-ext.woff2') format('woff2');
+  unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:'IBM Plex Sans Condensed';font-style:normal;font-weight:500;font-display:swap;
+  src:url('/fonts/plex-cond-500-latin.woff2') format('woff2');
+  unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:'IBM Plex Sans Condensed';font-style:normal;font-weight:600;font-display:swap;
+  src:url('/fonts/plex-cond-600-latin-ext.woff2') format('woff2');
+  unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:'IBM Plex Sans Condensed';font-style:normal;font-weight:600;font-display:swap;
+  src:url('/fonts/plex-cond-600-latin.woff2') format('woff2');
+  unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+
+/* ── Tokens ──────────────────────────────────────────────────────────────── */
+html.console,.cx{
+  --c-bg:#000000;          /* ground: a switched-off AMOLED pixel            */
+  --c-surface:#0D1014;     /* the one raised level: your own line, a field   */
+  --c-surface-hi:#171C22;  /* a pressed row                                  */
+  --c-rule:#2A313A;        /* hairlines between rows                         */
+  --c-rule-hi:#465160;     /* the edge of a control you can type in or press */
+  --c-tx:#F2F5F7;          /* primary text                                   */
+  --c-mute:#8A96A3;        /* secondary text, units, dormant tabs            */
+  --c-focus:#4CC2FF;       /* blue: where the cursor is                      */
+  --c-turn:#FFB020;        /* amber: whose turn                              */
+  --c-foe:#FF5D5D;         /* red: hostile, damage, destructive              */
+  --c-ok:#46D38A;          /* green: health, success                         */
+  --c-turn-fill:#FFB02014; /* the wash behind the acting row                 */
+  --c-foe-fill:#FF5D5D1F;
+  --c-focus-fill:#4CC2FF1F;
+
+  --c-font:'IBM Plex Sans Condensed','Arial Narrow','Roboto Condensed',Arial,sans-serif;
+
+  /* The scale. Everything is rem, so the whole console resizes from the one
+     root size set on html.console below. */
+  --c-t-xs:.75rem;
+  --c-t-sm:.875rem;
+  --c-t-md:1rem;
+  --c-t-lg:1.25rem;
+  --c-t-xl:1.75rem;
+
+  --c-row:2.75rem;         /* 44px at the default root: the smallest thing a thumb should have to hit */
+  --c-pad:.75rem;          /* the left/right edge every row lines up on      */
+}
+
+/* ── Page base (pages fully in the new design) ───────────────────────────── */
+html.console{font-size:16px;color-scheme:dark;background:var(--c-bg)}
+html.console *,html.console *::before,html.console *::after{box-sizing:border-box}
+html.console body{
+  margin:0;min-height:100dvh;background:var(--c-bg);color:var(--c-tx);
+  font-family:var(--c-font);font-size:var(--c-t-md);line-height:1.35;
+  font-variant-numeric:tabular-nums;
+  -webkit-tap-highlight-color:transparent;-webkit-font-smoothing:antialiased;
+}
+
+/* An island of the new design inside an unconverted page. */
+.cx{color:var(--c-tx);font-family:var(--c-font);font-size:16px;line-height:1.35;font-variant-numeric:tabular-nums;color-scheme:dark}
+.cx *,.cx *::before,.cx *::after{box-sizing:border-box}
+
+/* `hidden` must beat the display:flex / grid our own classes set. */
+html.console [hidden],.cx [hidden],.cx[hidden]{display:none !important}
+
+/* Focus is always the blue ring - it is also what the gamepad cursor draws. */
+html.console :focus-visible,.cx :focus-visible{outline:2px solid var(--c-focus);outline-offset:1px}
+
+/* ── Text ────────────────────────────────────────────────────────────────── */
+.c-title{margin:0;font-size:var(--c-t-xl);font-weight:600;line-height:1.1;letter-spacing:-.01em}
+.c-sub{margin:.25rem 0 0;font-size:var(--c-t-sm);color:var(--c-mute)}
+.c-mute{color:var(--c-mute)}
+.c-err{min-height:1.2em;margin:0;font-size:var(--c-t-sm);color:var(--c-foe)}
+
+/* ── Segmented choice (two or three options, one active) ─────────────────── */
+.c-seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;border-bottom:1px solid var(--c-rule)}
+.c-seg button{
+  appearance:none;border:0;background:transparent;font:inherit;color:var(--c-mute);
+  min-height:var(--c-row);padding:0 .5rem;cursor:pointer;
+}
+.c-seg button[aria-selected="true"]{color:var(--c-tx);box-shadow:inset 0 -3px 0 var(--c-focus)}
+
+/* ── Fields ──────────────────────────────────────────────────────────────── */
+.c-field{display:flex;flex-direction:column;gap:.3rem;min-width:0}
+.c-field label,.cx .authui-cap-lbl{font-size:var(--c-t-sm);color:var(--c-mute)}
+.c-input,.cx .authui-cap input.authui-cap-ans{
+  appearance:none;width:100%;min-height:var(--c-row);padding:0 .75rem;
+  background:var(--c-surface);color:var(--c-tx);font:inherit;
+  border:1px solid var(--c-rule-hi);border-radius:2px;
+}
+.c-input:focus,.cx .authui-cap input.authui-cap-ans:focus{outline:2px solid var(--c-focus);outline-offset:1px;border-color:var(--c-focus)}
+select.c-input{
+  padding-right:2rem;
+  background-image:linear-gradient(45deg,transparent 50%,var(--c-mute) 50%),linear-gradient(135deg,var(--c-mute) 50%,transparent 50%);
+  background-position:calc(100% - 1.05rem) 50%,calc(100% - .7rem) 50%;background-size:.35rem .35rem;background-repeat:no-repeat;
+}
+select.c-input option{background:var(--c-surface);color:var(--c-tx)}
+
+/* ── Buttons ─────────────────────────────────────────────────────────────── */
+.c-btn{
+  appearance:none;display:inline-flex;align-items:center;justify-content:center;gap:.5rem;
+  min-height:var(--c-row);padding:0 1rem;font:inherit;font-weight:500;cursor:pointer;
+  background:transparent;color:var(--c-tx);border:1px solid var(--c-rule-hi);border-radius:2px;
+  text-decoration:none;
+}
+.c-btn:active{background:var(--c-surface-hi)}
+.c-btn:disabled{opacity:.45;cursor:default}
+/* The one solid button on a screen: the thing you came here to do. */
+.c-btn.primary{background:var(--c-tx);color:var(--c-bg);border-color:var(--c-tx);font-weight:600}
+.c-btn.primary:active{background:var(--c-mute);border-color:var(--c-mute)}
+.c-btn.danger{color:var(--c-foe);border-color:var(--c-foe)}
+.c-btn.plain{border-color:transparent;color:var(--c-mute)}
+.c-btn.block{width:100%}
+
+/* ── Rows: the building block of every list ──────────────────────────────── */
+.c-rows{list-style:none;margin:0;padding:0;border-top:1px solid var(--c-rule)}
+.c-row{
+  display:flex;align-items:center;gap:.75rem;min-height:var(--c-row);
+  padding:.4rem var(--c-pad);border-bottom:1px solid var(--c-rule);
+  color:var(--c-tx);text-decoration:none;
+}
+a.c-row:active,button.c-row:active{background:var(--c-surface-hi)}
+.c-row-main{flex:1;min-width:0;display:flex;flex-direction:column}
+.c-row-main strong{font-weight:500}
+.c-row-main small{font-size:var(--c-t-sm);color:var(--c-mute)}
+.c-row-end{flex:none;color:var(--c-mute);font-size:var(--c-t-sm)}
+
+/* ── Gamepad key badge, used in the command bar and beside a control ─────── */
+.c-key{
+  display:inline-grid;place-items:center;min-width:1.5rem;height:1.5rem;padding:0 .3rem;
+  font-size:var(--c-t-xs);font-weight:600;line-height:1;color:var(--c-focus);
+  border:1px solid var(--c-focus);border-radius:3px;flex:none;
+}
+
+/* ── Gamepad mode ────────────────────────────────────────────────────────────
+   html.pad-on is set the first time a gamepad button is pressed
+   (js/console/console-gamepad.js). From then on whatever has focus wears the
+   blue ring - a browser does not draw :focus-visible for focus moved by script -
+   and anything marked .pad-only (button legends) appears. */
+.pad-only{display:none !important}
+html.pad-on .pad-only{display:inline-grid !important}
+html.pad-on .cx :focus,html.pad-on.console :focus{outline:2px solid var(--c-focus);outline-offset:-2px}
+
+/* ── Login gate ──────────────────────────────────────────────────────────── */
+.c-gate{
+  position:fixed;inset:0;z-index:9999;overflow-y:auto;background:var(--c-bg);
+  display:grid;place-items:center;
+  padding:max(1rem,env(safe-area-inset-top)) max(1rem,env(safe-area-inset-right)) max(1rem,env(safe-area-inset-bottom)) max(1rem,env(safe-area-inset-left));
+}
+.c-login{width:100%;max-width:22rem;display:flex;flex-direction:column;gap:1rem}
+.c-login-form{display:flex;flex-direction:column;gap:.9rem}
+.c-login-form[hidden]{display:none}
+.c-login-cols{display:flex;flex-direction:column;gap:.9rem}
+.c-login-col{display:flex;flex-direction:column;gap:.9rem;min-width:0}
+.cx .authui-cap{margin:0;display:flex;flex-direction:column;gap:.3rem}
+.cx .authui-cap-lbl{margin:0}
+.cx .authui-cap-row{margin:0}
+.cx .authui-cap-img{border-radius:2px;background:var(--c-surface)}
+.cx .authui-cap-new{width:var(--c-row);height:var(--c-row);border:1px solid var(--c-rule-hi);border-radius:2px;color:var(--c-mute)}
+
+/* Both Thor screens are short and wide (about 360px tall). Stacked, the form
+   would need scrolling to reach the Log in button, so on a short landscape
+   screen the captcha and the button move into a second column. */
+@media (orientation:landscape) and (max-height:540px){
+  .c-login{max-width:40rem;gap:.6rem}
+  .c-login .c-title{font-size:var(--c-t-lg)}
+  .c-login-cols{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;align-items:start}
+  .c-login-form,.c-login-col{gap:.6rem}
+}
+
+/* ── Launcher and plain console pages ────────────────────────────────────── */
+.c-page{
+  max-width:34rem;margin:0 auto;display:flex;flex-direction:column;gap:1.25rem;
+  padding:max(1.25rem,env(safe-area-inset-top)) max(var(--c-pad),env(safe-area-inset-right)) max(1.25rem,env(safe-area-inset-bottom)) max(var(--c-pad),env(safe-area-inset-left));
+}
+.c-page .c-rows{margin-inline:calc(var(--c-pad) * -1)}
+.c-page-foot{display:flex;justify-content:space-between;align-items:center;gap:1rem}
+
+/* ── Device check (probe.html) ───────────────────────────────────────────── */
+.c-facts{margin:0;display:grid;grid-template-columns:auto 1fr;gap:.35rem 1rem;font-size:var(--c-t-md)}
+.c-facts dt{color:var(--c-mute)}
+.c-facts dd{margin:0;min-width:0;overflow-wrap:anywhere}
+.c-h{margin:0;font-size:var(--c-t-md);font-weight:600;padding-bottom:.35rem;border-bottom:1px solid var(--c-rule)}
+.c-pads{display:flex;flex-direction:column;gap:.75rem}
+.c-pad-name{font-size:var(--c-t-sm);color:var(--c-mute);overflow-wrap:anywhere}
+.c-pad-btns{display:flex;flex-wrap:wrap;gap:.3rem}
+.c-pad-btns span{
+  min-width:2rem;height:2rem;display:grid;place-items:center;font-size:var(--c-t-sm);
+  border:1px solid var(--c-rule);color:var(--c-mute);border-radius:2px;
+}
+.c-pad-btns span.on{background:var(--c-focus);border-color:var(--c-focus);color:var(--c-bg);font-weight:600}
+.c-log{margin:0;padding:0;list-style:none;font-size:var(--c-t-sm);color:var(--c-mute);min-height:1.35em}
+.c-report{
+  margin:0;padding:.75rem;background:var(--c-surface);border:1px solid var(--c-rule);border-radius:2px;
+  font-family:var(--c-font);font-size:var(--c-t-sm);white-space:pre-wrap;overflow-wrap:anywhere;user-select:all;
+}
+
+@media (prefers-reduced-motion:reduce){
+  html.console *,.cx *{transition:none !important;animation:none !important}
+}

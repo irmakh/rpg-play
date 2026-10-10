@@ -1,0 +1,111 @@
+/* Written by Irmak Hakman — 2026-10-10 21:36 */
+/* Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) */
+
+/* ============================================================================
+   map.css - the console's frame around the map (console/table-console.html),
+   the top screen of the two-screen console. Builds on console.css.
+
+   The map, its tokens and its dialogs are the shared table code and keep the
+   main app's stylesheet (table.css). This file only draws what sits AROUND the
+   map, as three .cx islands in the console's own design:
+
+     .m-status  one thin line on top: whose turn, the tool, zoom, panel link
+     .m-tools   a drawer that drops from that line when Tools is pressed
+     .m-cmd     one line underneath: move arrows, what the tool does, undo
+
+   The top screen is about 640 x 360 CSS px, so the map gets everything that is
+   left after two lines - roughly four fifths of the height.
+   ========================================================================== */
+
+/* The surround is black, like the rest of the console (an unlit AMOLED pixel). */
+body.console-mode{background:#000;padding-bottom:0}
+body.console-mode #canvas-area{background:#000}
+body.console-mode #left-panel,
+body.console-mode #side-panel{display:none !important}
+
+/* ── Status line ─────────────────────────────────────────────────────────── */
+/* #toolbar is the id the table code and table.css know; the extra id in the
+   selector is what lets these rules win over table.css's own #toolbar rule. */
+#toolbar.m-status{
+  flex:none;display:flex;align-items:center;flex-wrap:nowrap;gap:.9rem;min-height:2.5rem;
+  padding:0 0 0 max(var(--c-pad),env(safe-area-inset-left));
+  background:var(--c-bg);border-bottom:1px solid var(--c-rule);backdrop-filter:none;
+  font-size:var(--c-t-sm);
+}
+.m-turn{font-size:var(--c-t-md);font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.m-turn.on{color:var(--c-turn)}
+.m-badge{flex:none;color:var(--c-mute);white-space:nowrap;max-width:9rem;overflow:hidden;text-overflow:ellipsis}
+.m-space{flex:1}
+.m-stat{flex:none;color:var(--c-mute);white-space:nowrap;display:inline-flex;align-items:center;gap:.35rem}
+.m-stat b{color:var(--c-tx);font-weight:500}
+/* Today's weather. weather.css styles #wx-toolbar for the main app's toolbar;
+   the #toolbar prefix lets the console's version win. */
+#toolbar #wx-toolbar.m-wx{
+  appearance:none;flex:none;align-items:center;gap:.35rem;margin:0;padding:0 .4rem;min-height:2.5rem;
+  background:none;border:0;border-radius:0;color:var(--c-tx);font:inherit;font-size:var(--c-t-sm);cursor:pointer;
+}
+#toolbar #wx-toolbar .wx-tb-text{color:var(--c-tx);font-weight:500}
+
+/* Notifications: the bell with its unread count, and the shared list. */
+.m-bell{
+  appearance:none;flex:none;display:inline-flex;align-items:center;gap:.3rem;min-height:2.5rem;padding:0 .4rem;cursor:pointer;
+  background:none;border:0;color:var(--c-mute);font:inherit;
+}
+.m-bell.has-unread{color:var(--c-tx)}
+.m-bell .notif-count{
+  position:static;min-width:1.2rem;height:1.2rem;padding:0 .3rem;border-radius:.6rem;box-shadow:none;
+  background:var(--c-tx);color:var(--c-bg);font-size:var(--c-t-xs);font-weight:600;line-height:1.2rem;
+}
+body.console-mode #notif-panel{background:#0D1014;border:1px solid #465160;border-radius:2px;box-shadow:none}
+body.console-mode .notif-toast{background:#0D1014;border:1px solid #465160;border-radius:2px}
+
+/* The link to the info panel: green when it answers, red when it does not. */
+#console-secondary-dot{width:.55rem;height:.55rem;border-radius:50%;background:var(--c-rule-hi);flex:none}
+#console-secondary-dot.online{background:var(--c-ok)}
+#console-secondary-dot.offline{background:var(--c-foe)}
+
+/* ── Buttons in the frame ────────────────────────────────────────────────── */
+.m-btn{
+  appearance:none;display:inline-flex;align-items:center;justify-content:center;
+  min-height:2.5rem;padding:0 .9rem;font:inherit;font-size:var(--c-t-sm);font-weight:500;cursor:pointer;
+  background:transparent;color:var(--c-tx);border:1px solid var(--c-rule-hi);border-radius:2px;text-decoration:none;
+}
+.m-btn:active{background:var(--c-surface-hi)}
+.m-btn:disabled{opacity:.45}
+.m-btn.danger{color:var(--c-foe);border-color:var(--c-foe)}
+#m-tools-btn{border-width:0 0 0 1px;border-color:var(--c-rule);border-radius:0;align-self:stretch;padding:0 1.1rem}
+#m-tools-btn[aria-expanded="true"]{background:var(--c-tx);color:var(--c-bg)}
+
+/* ── Tools drawer ────────────────────────────────────────────────────────── */
+.m-tools{
+  position:fixed;z-index:1500;top:2.5rem;right:0;width:min(100%,23rem);max-height:calc(100dvh - 2.5rem);overflow-y:auto;
+  display:grid;grid-template-columns:repeat(3,1fr);gap:.4rem;
+  padding:.6rem max(var(--c-pad),env(safe-area-inset-right)) .8rem var(--c-pad);
+  background:var(--c-surface);border-left:1px solid var(--c-rule-hi);border-bottom:1px solid var(--c-rule-hi);
+}
+.m-label{grid-column:1 / -1;margin-top:.3rem;font-size:var(--c-t-sm);color:var(--c-mute)}
+.m-label:first-child{margin-top:0}
+.m-tools .m-btn{padding:0 .3rem;text-align:center;line-height:1.15}
+/* The tool in use. table.css also styles .tool-btn.active; the extra class wins. */
+.m-tools .m-btn.tool-btn.active{background:var(--c-tx);color:var(--c-bg);border-color:var(--c-tx);font-weight:600}
+.m-zoom{grid-column:1 / -1;display:grid;grid-template-columns:2.75rem minmax(0,1fr) 2.75rem;align-items:center;gap:.6rem}
+.m-zoom input[type="range"]{width:100%;accent-color:var(--c-tx)}
+.m-zoom .m-btn{font-size:var(--c-t-lg);padding:0}
+
+/* ── Command line ────────────────────────────────────────────────────────── */
+.m-cmd{
+  flex:none;display:flex;align-items:center;gap:.75rem;min-height:2.75rem;
+  padding:0 max(var(--c-pad),env(safe-area-inset-right)) env(safe-area-inset-bottom) max(var(--c-pad),env(safe-area-inset-left));
+  background:var(--c-bg);border-top:1px solid var(--c-rule);
+}
+.m-arrows{display:flex;gap:.3rem;flex:none}
+.m-arrows .m-btn{width:2.75rem;padding:0;font-size:var(--c-t-lg)}
+.m-hint{flex:1;min-width:0;font-size:var(--c-t-sm);color:var(--c-mute);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* Gamepad legend: takes the hint's place once a pad is in use. */
+.m-pad{flex:1;min-width:0;gap:1rem;grid-auto-flow:column;justify-content:start;align-items:center;font-size:var(--c-t-sm);color:var(--c-mute);white-space:nowrap;overflow:hidden}
+.m-pad>span{display:inline-flex;align-items:center;gap:.3rem}
+html.pad-on .m-hint{display:none}
+
+/* ── The draw options strip (shared table markup) in console colours ─────── */
+body.console-mode #draw-toolbar{background:#0D1014;border-bottom:1px solid #2A313A}
