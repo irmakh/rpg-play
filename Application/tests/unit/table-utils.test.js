@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-10-10 19:37
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -55,6 +55,7 @@ function load({ masterPw = '', tokens = [], initData = { entries: [], currentId:
     tokDisplayName:       ctx.tokDisplayName,
     tokenRingColor:       ctx.tokenRingColor,
     hpBarColor:           ctx.hpBarColor,
+    tokenLabelMetrics:    ctx.tokenLabelMetrics,
     getActiveTurnTokenId: ctx.getActiveTurnTokenId,
     isDM:                 ctx.isDM,
   };
@@ -194,6 +195,40 @@ describe('tokDisplayName', () => {
     it('handles a monster with a single-word name and no label', () => {
       expect(tokDisplayName({ type: 'monster', name: 'Dragon' })).toBe('Dragon');
     });
+  });
+});
+
+// ── tokenLabelMetrics ─────────────────────────────────────────────────────────
+describe('tokenLabelMetrics sizes a token label from the grid', () => {
+  const { tokenLabelMetrics } = load();
+
+  it('leaves a default 50px grid exactly as it was (9px name, 4px bar)', () => {
+    expect(tokenLabelMetrics(50, 1)).toEqual({ font: 9, bar: 4 });
+  });
+
+  it('never goes below the old size on a small grid', () => {
+    expect(tokenLabelMetrics(30, 1)).toEqual({ font: 9, bar: 4 });
+  });
+
+  it('grows the name in step with the cell size', () => {
+    expect(tokenLabelMetrics(100, 1).font).toBe(18);
+    expect(tokenLabelMetrics(150, 1).font).toBe(27);
+  });
+
+  it('grows a larger creature\'s name, but slower than the token', () => {
+    const one = tokenLabelMetrics(50, 1).font;
+    const four = tokenLabelMetrics(50, 4).font;
+    expect(four).toBe(18);
+    expect(four).toBeLessThan(one * 4);
+  });
+
+  it('caps the name so a huge token on a huge grid stays sane', () => {
+    expect(tokenLabelMetrics(150, 4).font).toBe(40);
+  });
+
+  it('falls back to defaults for missing or bad input', () => {
+    expect(tokenLabelMetrics(undefined, undefined)).toEqual({ font: 9, bar: 4 });
+    expect(tokenLabelMetrics(0, 0)).toEqual({ font: 9, bar: 4 });
   });
 });
 

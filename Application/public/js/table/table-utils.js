@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-10-10 19:37
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -75,6 +75,18 @@ function hpBarColor(pct) {
   if (pct >= 0.5)  return '#3DD68C';            // --verdigris
   if (pct >= 0.25) return '#C2434A';            // --blood-deep
   return '#E4666B';                             // --blood
+}
+// Text and HP-bar sizes for the label under a token, in map pixels. The token
+// itself grows with the grid (cell size) and with the creature (1-4 cells), so
+// a fixed 9px name ended up unreadably small beside a big token. The name grows
+// in step with the cell, and only by the square root of the creature size - a
+// 4-cell dragon gets a name twice as tall as a 1-cell goblin's, not four times.
+// A default 50px grid gives exactly the old 9px / 4px, so nothing moves there.
+function tokenLabelMetrics(cellSize, sizeMult) {
+  const cs = cellSize > 0 ? cellSize : 50;
+  const mult = Math.max(1, sizeMult || 1);
+  const font = Math.max(9, Math.min(40, Math.round(cs * 0.18 * Math.sqrt(mult))));
+  return { font, bar: Math.max(4, Math.round(font * 0.45)) };
 }
 function getActiveTurnTokenId() {
   if (!initData.currentId) return null;

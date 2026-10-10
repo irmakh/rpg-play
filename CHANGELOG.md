@@ -21,6 +21,15 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [245] — 2026-10-10 — Token names keep pace with the token
+
+- **Token names on the map are no longer tiny beside big tokens.** The name, the
+  controller badge, the condition tags and the HP bar now grow with the map's grid size
+  and with the creature's size (a 4-cell creature gets a name twice as tall, not four
+  times). A map on the default 50px grid looks exactly as before.
+- **A long name that wraps now grows downward**, away from the token, instead of climbing
+  up over the HP bar.
+
 ## [244] — 2026-09-27 — Installs list only where reports are collected
 
 - **The Installs section is gone from the maintenance page** on every server except the

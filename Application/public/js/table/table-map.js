@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-09-27 12:25
+// Written by Irmak Hakman — 2026-10-10 19:37
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -383,6 +383,10 @@ function renderTokens() {
     const tokTop  = oy + (tok.y || 0) * cs + 2;
     const isSelected = tok.id === selectedTokenId;
     const isBulkSelected = bulkTokenIds.has(tok.id);
+    // Label sizes follow the token (see tokenLabelMetrics); table.css reads them
+    // from these two custom properties on whichever element holds the label.
+    const lm = tokenLabelMetrics(cs, sizeMult);
+    const labelVars = `--tk-fs:${lm.font}px;--tk-bar:${lm.bar}px`;
     const div = document.createElement('div');
     div.className = 'token' + (tok.id === activeTokId ? ' active-turn' : '');
     div.dataset.id = tok.id;
@@ -395,6 +399,7 @@ function renderTokens() {
       (tok.portraitThumb || tok.portrait) ? `background-position:center` : '',
       `border:3px solid ${tokenRingColor(tok.type || 'custom')}`,
       `font-size:${Math.round(Math.max(11, size * 0.28))}px`,
+      labelVars,
       isSelected ? `box-shadow:0 0 0 3px #fff,0 0 10px 4px rgba(255,255,255,0.7)` : isBulkSelected ? `box-shadow:0 0 0 3px #00e5ff,0 0 8px 3px rgba(0,229,255,0.5)` : '',
       tok.visible === false ? 'opacity:0.5' : ''
     ].filter(Boolean).join(';');
@@ -445,7 +450,7 @@ function renderTokens() {
       if (condDiv) div.appendChild(condDiv);
     } else {
       const labelWrap = document.createElement('div');
-      labelWrap.style.cssText = `position:absolute;left:${tokLeft}px;top:${tokTop}px;width:${size}px;height:${size}px;pointer-events:none`;
+      labelWrap.style.cssText = `position:absolute;left:${tokLeft}px;top:${tokTop}px;width:${size}px;height:${size}px;pointer-events:none;${labelVars}`;
       labelWrap.appendChild(bar);
       labelWrap.appendChild(label);
       if (condDiv) labelWrap.appendChild(condDiv);
