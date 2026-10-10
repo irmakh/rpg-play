@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-11 00:20
+// Written by Irmak Hakman — 2026-10-11 00:16
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -29,7 +29,6 @@ function sSheetCanEdit() {
 function sSheetList(key) {
   try { const v = JSON.parse((sQrollData || {})[key] || '[]'); return Array.isArray(v) ? v : []; } catch { return []; }
 }
-function sSigned(n) { return (n >= 0 ? '+' : '') + n; }
 
 // Redraw whichever part of the sheet is showing.
 function sRenderSheetPane(name) {

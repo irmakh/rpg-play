@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-10 23:39
+// Written by Irmak Hakman — 2026-10-11 00:16
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -46,7 +46,9 @@ function sRenderTableInit() {
 async function sRollInitMonsters() {
   if (!sIsDM()) return;
   const todo = sTokens.filter(t => t.type === 'monster' && !sInitData.entries.find(e => e.id === t.initiativeId));
-  for (const tok of todo) await sRollInitFor(tok);
+  let done = 0;
+  for (const tok of todo) if (await sRollInitFor(tok)) done++;
+  sToast(`Rolled initiative for ${done} monster${done === 1 ? '' : 's'}.`);
   try { const r = await fetch('/api/initiative', { headers: sAuthHeaders() }); if (r.ok) sInitData = await r.json(); } catch {}
   sInitChanged();
 }

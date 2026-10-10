@@ -21,6 +21,41 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [259] — 2026-10-11 — Console: choose your gamepad buttons
+
+- **Every gamepad button can be re-assigned.** The More tab lists each action with the
+  button it is on; press Change, then the button you want. If that button was doing
+  something else, the two swap. The choice is remembered on the device and used by both
+  screens; one button puts everything back to the standard layout.
+- The button hints on both screens show the buttons as you have set them.
+
+## [258] — 2026-10-11 — Console: music controls for the DM
+
+- **The DM's music controls on the info panel are the console's own:** playlist, track
+  list, Play or Pause, Previous, Next, Stop, repeat, and the volume everyone hears. They
+  replace the framed player, which the gamepad could not reach into and which kept the
+  main app's look.
+
+## [257] — 2026-10-11 — Console: the map screen's dialogs in the console design
+
+- **Add token, the dice roller, monster info and the confirm box** on the console's map
+  screen now use the console design: black and square, the console typeface, and controls
+  large enough for a finger. They fit a short screen and scroll inside themselves.
+- **The draw options strip, the toast and the notification list** on the map screen
+  follow the same design.
+
+## [256] — 2026-10-11 — Console: live pop-ups on the map, initiative rolls
+
+- **A picture the DM shows everyone now appears on the console's map screen.** It was
+  missing there, so the reveal silently did nothing. The "Loading the map" notice is back
+  as well.
+- **A player can roll their own initiative from the info panel.** The Turn tab offers
+  *Roll my initiative* (with the sheet's bonus) until they are in the order, and a re-roll
+  until the fight starts.
+- **Initiative rolled by the DM on the console now includes the bonus:** Dexterity (and
+  proficiency or a flat bonus, where the stat block has one) for a monster, the sheet's
+  initiative for a character. It used to be a bare d20. The panel shows the result.
+
 ## [255] — 2026-10-11 — Console login fits the screen again
 
 - **The console's Log in button is back on screen** on a short, wide display. Adding the

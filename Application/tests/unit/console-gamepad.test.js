@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-10 23:20
+// Written by Irmak Hakman — 2026-10-11 00:21
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -23,7 +23,7 @@ function load() {
   // Top-level const/function declarations of a script are reachable from later
   // code run in the same context, so the helpers are handed out through one.
   runInContext(SRC, ctx);
-  return runInContext('({ padHeld, padStep, padRoute, padPick, PAD_ACTIONS, PAD_REPEATS, PAD_KEYS, PAD_REPEAT_DELAY, PAD_REPEAT_EVERY })', ctx);
+  return runInContext('({ padHeld, padStep, padRoute, padPick, padDefaultMap, padResolveMap, padAssign, padInvert, padButtonLabel, PAD_ACTIONS, PAD_REPEATS, PAD_KEYS, PAD_REPEAT_DELAY, PAD_REPEAT_EVERY })', ctx);
 }
 const P = load();
 
@@ -55,6 +55,56 @@ describe('padHeld: reading a gamepad', () => {
   it('survives a missing pad', () => {
     expect(P.padHeld(null).size).toBe(0);
     expect(P.padHeld({}).size).toBe(0);
+  });
+});
+
+describe('choosing the buttons', () => {
+  it('starts from the standard layout', () => {
+    const map = P.padDefaultMap();
+    expect(map.a).toBe(0);
+    expect(map.start).toBe(9);
+    expect(Object.keys(map)).toHaveLength(14);
+  });
+
+  it('moves a control to another button and swaps with whatever had it', () => {
+    const map = P.padAssign(P.padDefaultMap(), 'a', 1);   // A onto B's button
+    expect(map.a).toBe(1);
+    expect(map.b).toBe(0);
+    // Every control still has a button of its own.
+    expect(new Set(Object.values(map)).size).toBe(14);
+  });
+
+  it('moves a control to a button nothing was using', () => {
+    const map = P.padAssign(P.padDefaultMap(), 'x', 16);
+    expect(map.x).toBe(16);
+    expect(Object.values(map).filter(i => i === 2)).toHaveLength(0);
+  });
+
+  it('does not change the map it was given, and ignores an unknown control', () => {
+    const start = P.padDefaultMap();
+    P.padAssign(start, 'a', 5);
+    expect(start.a).toBe(0);
+    expect(P.padAssign(start, 'nope', 5)).toEqual(start);
+  });
+
+  it('reads a custom layout: the re-assigned button now produces that control', () => {
+    const table = P.padInvert(P.padAssign(P.padDefaultMap(), 'a', 1));
+    expect([...P.padHeld(pad({ pressed: [1] }), table)]).toEqual(['a']);
+    expect([...P.padHeld(pad({ pressed: [0] }), table)]).toEqual(['b']);
+  });
+
+  it('falls back to the standard layout for a damaged saved setting', () => {
+    expect(P.padResolveMap(null)).toEqual(P.padDefaultMap());
+    expect(P.padResolveMap('rubbish')).toEqual(P.padDefaultMap());
+    const partly = P.padResolveMap({ a: 7, b: -1, x: 'two', bogus: 3 });
+    expect(partly.a).toBe(7);
+    expect(partly.b).toBe(1);
+    expect(partly.x).toBe(2);
+    expect('bogus' in partly).toBe(false);
+  });
+
+  it('names buttons for the screen', () => {
+    expect([P.padButtonLabel(0), P.padButtonLabel(9), P.padButtonLabel(22), P.padButtonLabel(undefined)]).toEqual(['A', 'Start', 'Button 22', 'none']);
   });
 });
 

@@ -1,4 +1,4 @@
-/* Written by Irmak Hakman — 2026-10-10 21:41 */
+/* Written by Irmak Hakman — 2026-10-11 00:20 */
 /* Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) */
 
 /* ============================================================================
@@ -316,13 +316,6 @@ button.p-init-main:active{background:var(--c-surface-hi)}
 .p-transport{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:.35rem;padding-block:.25rem}
 .p-transport .c-btn{padding:0 .3rem;font-size:var(--c-t-sm)}
 
-/* The full music player (/music.html in a frame), over the whole panel. */
-.p-music{position:fixed;inset:0;z-index:55;flex-direction:column;background:var(--c-bg)}
-.p-music-head{flex:none;display:flex;align-items:center;justify-content:space-between;gap:1rem;min-height:var(--c-row);padding:0 var(--c-pad);border-bottom:1px solid var(--c-rule)}
-.p-music-head strong{font-weight:600}
-.p-music-head .c-btn{min-height:2.3rem}
-.p-music-body{flex:1;min-height:0;overflow-y:auto}
-.p-music-body iframe{display:block;width:100%;height:320px;border:0}
 .p-music-open{padding-block:.4rem}
 
 /* ── Command bar ─────────────────────────────────────────────────────────── */
@@ -339,10 +332,13 @@ button.p-init-main:active{background:var(--c-surface-hi)}
 
 .p-cmd button{display:inline-flex;align-items:center;justify-content:center;gap:.4rem}
 
-/* The list of gamepad buttons on the More tab. */
-.p-keys{margin:0;padding:0 var(--c-pad) .5rem;display:grid;grid-template-columns:auto minmax(0,1fr);gap:.45rem .75rem;align-items:center;font-size:var(--c-t-sm)}
-.p-keys dt{display:flex;gap:.25rem}
-.p-keys dd{margin:0;color:var(--c-mute)}
+/* The gamepad buttons on the More tab: button, what it does, Change. */
+.p-key-row{display:grid;grid-template-columns:3.6rem minmax(0,1fr) auto;align-items:center;gap:.6rem;min-height:2.6rem;padding:.2rem var(--c-pad);border-top:1px solid var(--c-rule)}
+.p-key-row .c-key{justify-self:start;min-width:2rem}
+.p-key-row .what{font-size:var(--c-t-sm);color:var(--c-mute)}
+.p-key-row .c-btn{min-height:2.2rem;padding:0 .7rem;font-size:var(--c-t-sm)}
+.p-key-row.waiting{background:var(--c-focus-fill)}
+.p-key-row.waiting .what{color:var(--c-tx)}
 
 /* ── Confirm sheet and toast ─────────────────────────────────────────────── */
 .p-sheet{position:fixed;inset:0;z-index:50;display:grid;align-items:end;background:#000000B3}

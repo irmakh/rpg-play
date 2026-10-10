@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-10 22:15
+// Written by Irmak Hakman — 2026-10-11 00:16
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -29,6 +29,8 @@ function load() {
   });
   runInContext(src('panel-core.js'), ctx);
   runInContext(src('panel-nav.js'), ctx);
+  runInContext(src('panel-turn.js'), ctx);
+  runInContext(src('panel-token.js'), ctx);
   return ctx;
 }
 
@@ -91,6 +93,68 @@ describe('sInitRows: the Turn tab rows', () => {
   it('copes with an entry that has no token on the map', () => {
     const rows = sInitRows({ entries: [{ id: 'iX', name: 'Hireling', roll: 9 }], currentId: null }, [], DM);
     expect(rows[0]).toMatchObject({ name: 'Hireling', tokenId: null, canSelect: false, hp: null });
+  });
+});
+
+describe('initiative bonuses', () => {
+  const { sMonsterInitBonus, sSheetInitBonus, sMonsterProfBonus } = load();
+
+  it('a monster adds its Dexterity modifier', () => {
+    expect(sMonsterInitBonus({ dex: 14 })).toBe(2);
+    expect(sMonsterInitBonus({ dex: 8 })).toBe(-1);
+    expect(sMonsterInitBonus({})).toBe(0);
+    expect(sMonsterInitBonus(null)).toBe(0);
+  });
+
+  it('adds proficiency when the stat block says so, and any flat bonus', () => {
+    expect(sMonsterInitBonus({ dex: 14, cr: '5', initiative: { proficiency: 1 } })).toBe(2 + 3);
+    expect(sMonsterInitBonus({ dex: 10, initBonus: 4 })).toBe(4);
+  });
+
+  it('proficiency follows challenge rating', () => {
+    expect([sMonsterProfBonus('1/4'), sMonsterProfBonus(4), sMonsterProfBonus({ cr: '9' }), sMonsterProfBonus('30')]).toEqual([2, 2, 4, 9]);
+  });
+
+  it('a character adds the sheet initiative and the manual bonus', () => {
+    expect(sSheetInitBonus({ init: '3', 'init-bonus': '2' })).toBe(5);
+    expect(sSheetInitBonus({ init: '-1' })).toBe(-1);
+    expect(sSheetInitBonus(undefined)).toBe(0);
+  });
+});
+
+describe('sCmdFor: what the Turn tab offers', () => {
+  // The panel's state lives in `let` bindings, set from inside the context.
+  function as(role, init, tokens = TOKENS) {
+    const ctx = load();
+    ctx.__init = init; ctx.__toks = tokens;
+    runInContext(role === 'dm'
+      ? 'sessionRole = "dm"; masterPw = "t"; sInitData = __init; sTokens = __toks;'
+      : 'sessionRole = "character"; sessionCharId = "cA"; sInitData = __init; sTokens = __toks;', ctx);
+    return ctx.sCmdFor('turn').map(c => c[0]);
+  }
+
+  it('gives the DM Start, or Previous / End / Next while running', () => {
+    expect(as('dm', { entries: ENTRIES, currentId: null })).toEqual(['Start initiative']);
+    expect(as('dm', { entries: ENTRIES, currentId: 'iA' })).toEqual(['Previous', 'End initiative', 'Next turn']);
+  });
+
+  it('lets a player who is not in the order roll, before or during a fight', () => {
+    const others = ENTRIES.filter(e => e.charId !== 'cA');
+    expect(as('player', { entries: others, currentId: null })).toEqual(['Roll my initiative']);
+    expect(as('player', { entries: others, currentId: 'iB' })).toEqual(['Roll my initiative']);
+  });
+
+  it('lets a player roll again only until the fight starts', () => {
+    expect(as('player', { entries: ENTRIES, currentId: null })).toEqual(['Roll my initiative again']);
+    expect(as('player', { entries: ENTRIES, currentId: 'iB' })).toEqual([]);
+  });
+
+  it('gives a player End my turn on their own turn', () => {
+    expect(as('player', { entries: ENTRIES, currentId: 'iA' })).toEqual(['End my turn']);
+  });
+
+  it('offers nothing on other tabs', () => {
+    expect(load().sCmdFor('chat')).toEqual([]);
   });
 });
 

@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-10 23:39
+// Written by Irmak Hakman — 2026-10-11 00:19
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -171,6 +171,7 @@ window.addEventListener('load', async () => {
   if (sIsDM()) sLoadPrepMaps();
   sLoadHandouts();
   initMusicPlayer();                                 // js/table/table-music.js
+  sMusicInit();                                      // the DM's controls
 
   // Send our own credential: the server decides which private messages belong in
   // this history, and a caller who sends nothing gets only the public ones.

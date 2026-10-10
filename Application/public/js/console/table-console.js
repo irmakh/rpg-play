@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-10 21:36
+// Written by Irmak Hakman — 2026-10-11 00:20
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -267,6 +267,11 @@ window.addEventListener('load', () => {
   _consoleStartSSE();
   _consoleUpdateTool();
   _consoleUpdateTurn();
+  // The legend names the buttons as they are assigned now (they can be changed
+  // on the info panel's More tab).
+  ConsolePad.onChange(() => document.querySelectorAll('[data-pad-control]').forEach(el => {
+    el.textContent = ConsolePad.label(el.dataset.padControl);
+  }));
   ConsolePad.init({
     relay: _consolePost,
     handlers: {

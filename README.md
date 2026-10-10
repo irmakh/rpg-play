@@ -313,10 +313,12 @@ red = hostile or damage, green = health).
   share one login.
 - **Map screen** (`/console/table-console.html`) — the shared table map inside a thin
   frame: a status line (whose turn, today's weather, notification count, tool, zoom,
-  panel link), a Tools drawer, and a command line with move arrows and Undo move.
+  panel link), a Tools drawer, and a command line with move arrows and Undo move. Its
+  dialogs (add token, dice roller, monster info) and a picture the DM shows everyone
+  appear in the console's design.
 - **Info panel** (`/console/table-secondary.html`) — six tabs and a notification bell:
   - **Turn** — the initiative order with health, a line about your own character, and
-    the turn controls. A player gets *End my turn* on their own turn.
+    the turn controls. A player gets *Roll my initiative*, and *End my turn* on their own turn.
   - **Token** — the selected token: Health (damage, healing, conditions), and for a
     player character the full sheet as **Skills**, **Combat** (attacks, actions, limited
     uses, short and long rest), **Spells** (slots and prepared spells) and **Items**
@@ -325,13 +327,14 @@ red = hostile or damage, green = health).
   - **Chat** — the shared chat with private messages and dice.
   - **Handouts** — players examine and read; the DM hands out and judges checks.
   - **Table** (DM) — initiative, prepared maps, every token's health, fog and hidden items.
-  - **More** — music (the app's shared player, with a per-device volume), the list of
-    gamepad buttons, and Log out.
+  - **More** — music (what is playing, a per-device volume, and for the DM playlist,
+    tracks, transport and the volume everyone hears), the gamepad buttons, and Log out.
 - **Gamepad** — the handheld's buttons drive both screens, whichever one has them:
   D-pad moves a highlight on the panel, A presses, B goes back, L1/R1 change tab, X
   (twice) runs the turn action, Y opens dice; the left stick moves the selected token,
   the right stick slides the map, L2/R2 zoom, Start opens Tools, Select undoes a move.
   A keyboard works too (`[` `]` tabs, WASD move, IJKL slide, `-` `=` zoom, T, U, X, Y, Esc).
+  Any button can be re-assigned on the More tab, for a device that numbers them differently.
 - **Device check** (`/console/probe.html`) — shows the screen size, pixel ratio and
   gamepad buttons exactly as the browser reports them. No login needed.
 - Installable, with safe-area padding for notched screens; pages and fonts are cached

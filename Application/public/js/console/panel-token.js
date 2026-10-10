@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-10 23:39
+// Written by Irmak Hakman — 2026-10-11 00:16
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -248,34 +248,112 @@ function sUnassignToken() {
 
 async function sRollTokenInit() {
   if (!sSelectedToken || !sIsDM()) return;
-  await sRollInitFor(sSelectedToken);
+  const r = await sRollInitFor(sSelectedToken);
+  if (r) sToast(`${sTokDisplayName(sSelectedToken)} rolled ${r.roll} for initiative (${r.d20} ${sSigned(r.bonus)}).`);
 }
 
-// Rolls a d20 for one token and puts it in the initiative order (or replaces
-// the roll it already has).
-async function sRollInitFor(tok) {
-  const roll     = Math.ceil(Math.random() * 20);
-  const existing = sInitData.entries.find(e => e.id === tok.initiativeId);
+// ── Initiative rolls ─────────────────────────────────────────────────────────
+// Initiative is a d20 plus a bonus. For a character the bonus is on its sheet
+// ("init" is dexterity plus items; "init-bonus" is a manual extra). For a
+// monster it is the Dexterity modifier from its stat block, plus proficiency
+// when the stat block says so, plus any flat initiative bonus it lists.
+
+const _sMonsterCache = new Map();   // monster id -> stat block data
+
+async function sMonsterStatBlock(monsterId) {
+  if (_sMonsterCache.has(monsterId)) return _sMonsterCache.get(monsterId);
   try {
-    if (existing) {
-      await fetch(`/api/initiative/entries/${tok.initiativeId}/roll`, {
-        method: 'PATCH', headers: { 'Content-Type': 'application/json', 'X-Master-Password': masterPw },
-        body: JSON.stringify({ roll }),
+    const r = await fetch(`/api/monsters/${monsterId}`, { headers: { 'X-Master-Password': masterPw } });
+    if (!r.ok) return null;
+    const data = (await r.json()).data || {};
+    _sMonsterCache.set(monsterId, data);
+    return data;
+  } catch { return null; }
+}
+
+// Proficiency bonus by challenge rating (2 below CR 5, then +1 every four).
+function sMonsterProfBonus(cr) {
+  const v = (cr && typeof cr === 'object') ? parseFloat(cr.cr) : parseFloat(cr);
+  return isNaN(v) ? 2 : v < 5 ? 2 : v < 9 ? 3 : v < 13 ? 4 : v < 17 ? 5 : v < 21 ? 6 : v < 25 ? 7 : v < 29 ? 8 : 9;
+}
+
+function sMonsterInitBonus(data) {
+  if (!data) return 0;
+  let bonus = data.dex ? Math.floor((parseInt(data.dex) - 10) / 2) : 0;
+  if (data.initiative && data.initiative.proficiency) bonus += sMonsterProfBonus(data.cr);
+  if (data.initBonus) bonus += parseInt(data.initBonus) || 0;
+  return bonus;
+}
+
+function sSheetInitBonus(data) {
+  return (parseInt((data || {})['init']) || 0) + (parseInt((data || {})['init-bonus']) || 0);
+}
+
+async function sInitBonusFor(tok) {
+  if (tok.type === 'monster') return tok.linkedId ? sMonsterInitBonus(await sMonsterStatBlock(tok.linkedId)) : 0;
+  if (!tok.linkedId) return 0;
+  const sheet = await sFetchSheet(tok.linkedId);
+  return sSheetInitBonus(sheet && sheet.data);
+}
+
+/**
+ * Rolls initiative for one token and puts it in the order, or replaces the
+ * roll it already has. Resolves {d20, bonus, roll}, or null if it failed.
+ * (DM only - a player rolls their own with sRollMyInitiative.)
+ */
+async function sRollInitFor(tok) {
+  const bonus = await sInitBonusFor(tok);
+  const d20   = Math.ceil(Math.random() * 20);
+  const roll  = d20 + bonus;
+  const dm    = { 'Content-Type': 'application/json', 'X-Master-Password': masterPw };
+  try {
+    if (tok.type !== 'monster' && tok.linkedId) {
+      // A character has ONE entry, found by its character id; the server also
+      // links the entry to the character's token.
+      const res = await fetch('/api/initiative/entries', {
+        method: 'POST', headers: dm, body: JSON.stringify({ name: tok.name, roll, charId: String(tok.linkedId) }),
       });
+      if (!res.ok) return null;
+    } else if (sInitData.entries.find(e => e.id === tok.initiativeId)) {
+      const res = await fetch(`/api/initiative/entries/${tok.initiativeId}/roll`, {
+        method: 'PATCH', headers: dm, body: JSON.stringify({ roll }),
+      });
+      if (!res.ok) return null;
     } else {
       const res = await fetch('/api/initiative/entries', {
-        method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Master-Password': masterPw },
-        body: JSON.stringify({ name: tok.name, roll, monsterId: tok.linkedId || '' }),
+        method: 'POST', headers: dm, body: JSON.stringify({ name: tok.name, roll, monsterId: tok.linkedId || '' }),
       });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.id) await fetch(`/api/table/tokens/${tok.id}`, {
-          method: 'PUT', headers: { 'Content-Type': 'application/json', 'X-Master-Password': masterPw },
-          body: JSON.stringify({ initiativeId: data.id }),
-        });
+      if (!res.ok) return null;
+      const data = await res.json();
+      // A monster's entry is tied to its token by the id stamped on the token.
+      if (data.id) {
+        await fetch(`/api/table/tokens/${tok.id}`, { method: 'PUT', headers: dm, body: JSON.stringify({ initiativeId: data.id }) });
+        tok.initiativeId = data.id;
       }
     }
-  } catch {}
+    return { d20, bonus, roll };
+  } catch { return null; }
+}
+
+// A player puts their own character into the order (or rolls again).
+async function sRollMyInitiative() {
+  if (!sIsCharSession()) return;
+  const sheet = await sFetchSheet(sessionCharId);
+  const bonus = sSheetInitBonus(sheet && sheet.data);
+  const d20   = Math.ceil(Math.random() * 20);
+  const roll  = d20 + bonus;
+  const mine  = sMyOwnToken();
+  try {
+    const res = await fetch('/api/initiative/entries', {
+      method: 'POST', headers: sAuthHeaders(),
+      body: JSON.stringify({ name: (mine && mine.name) || (sheet && sheet.name) || sSessionName(), roll, charId: String(sessionCharId) }),
+    });
+    if (!res.ok) { sToast('Could not roll initiative.'); return; }
+    sToast(`You rolled ${roll} for initiative (${d20} ${sSigned(bonus)}).`);
+    const fresh = await fetch('/api/initiative', { headers: sAuthHeaders() });
+    if (fresh.ok) sInitData = await fresh.json();
+    sInitChanged();
+  } catch { sToast('Connection error.'); }
 }
 
 // ── Rolling ──────────────────────────────────────────────────────────────────

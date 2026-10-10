@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Written by Irmak Hakman — 2026-10-10 23:39 -->
+<!-- Written by Irmak Hakman — 2026-10-11 00:20 -->
 <!-- Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) -->
 <html lang="en" class="console">
 <head>
@@ -209,23 +209,37 @@
         <input type="range" id="local-vol-slider" min="0" max="100" value="100" aria-label="Volume on this device" oninput="setLocalVolume(this.value)" onchange="setLocalVolume(this.value)">
         <span id="local-vol-pct">100%</span>
       </div>
-      <!-- DM only: table-music.js un-hides this button for the DM -->
-      <div class="pad p-music-open"><button type="button" class="c-btn block" id="btn-music" style="display:none" onclick="openMusicModal()">Open music player</button></div>
+      <!-- The DM's controls (js/console/panel-music.js). table-music.js un-hides
+           the element with id="btn-music" for the DM, so that id is this block. -->
+      <div id="btn-music" style="display:none">
+        <div class="p-inline pad p-music-open">
+          <select class="c-input" id="s-music-pl-sel" aria-label="Playlist" onchange="sMusicPickPlaylist()"><option value="">Choose a playlist</option></select>
+        </div>
+        <div class="p-transport pad">
+          <button type="button" class="c-btn" onclick="sMusicControl('prev')">Previous</button>
+          <button type="button" class="c-btn primary" id="s-music-play-btn" onclick="sMusicPlayPause()">Play</button>
+          <button type="button" class="c-btn" onclick="sMusicControl('next')">Next</button>
+          <button type="button" class="c-btn danger" onclick="sMusicControl('stop')">Stop</button>
+        </div>
+        <div class="p-transport pad">
+          <button type="button" class="c-btn" data-loop="none" aria-pressed="true" onclick="sMusicSetLoop('none')">Play once</button>
+          <button type="button" class="c-btn" data-loop="track" aria-pressed="false" onclick="sMusicSetLoop('track')">Repeat track</button>
+          <button type="button" class="c-btn" data-loop="playlist" aria-pressed="false" onclick="sMusicSetLoop('playlist')">Repeat playlist</button>
+        </div>
+        <div class="p-seek pad">
+          <span>Volume for everyone</span>
+          <input type="range" id="s-music-volume" min="0" max="100" value="100" aria-label="Volume for everyone" oninput="sMusicVolume(this.value)" onchange="sMusicVolume(this.value)">
+          <span id="s-music-vol-pct">100%</span>
+        </div>
+        <h3 class="p-h">Tracks</h3>
+        <ol class="p-list" id="s-music-track-list"></ol>
+      </div>
 
       <h3 class="p-h">Gamepad buttons</h3>
-      <dl class="p-keys">
-        <dt><span class="c-key">D-pad</span></dt><dd>Move between buttons and rows on this screen</dd>
-        <dt><span class="c-key">A</span></dt><dd>Press the highlighted button</dd>
-        <dt><span class="c-key">B</span></dt><dd>Back</dd>
-        <dt><span class="c-key">L1</span><span class="c-key">R1</span></dt><dd>Previous and next tab</dd>
-        <dt><span class="c-key">X</span></dt><dd>Next turn or end my turn (press twice)</dd>
-        <dt><span class="c-key">Y</span></dt><dd>Dice</dd>
-        <dt><span class="c-key">L stick</span></dt><dd>Move the selected token on the map</dd>
-        <dt><span class="c-key">R stick</span></dt><dd>Slide the map</dd>
-        <dt><span class="c-key">L2</span><span class="c-key">R2</span></dt><dd>Zoom out and in</dd>
-        <dt><span class="c-key">Start</span></dt><dd>Map tools</dd>
-        <dt><span class="c-key">Select</span></dt><dd>Undo the last token move</dd>
-      </dl>
+      <!-- Drawn by js/console/panel-pad.js: each action, the button it is on,
+           and Change to put it on another button. -->
+      <div id="s-pad-keys"></div>
+      <div class="pad p-music-open"><button type="button" class="c-btn block" onclick="sPadReset()">Reset buttons to the standard layout</button></div>
 
       <h3 class="p-h">This device</h3>
       <div class="p-reveal">
@@ -250,16 +264,6 @@
   </div>
 </div>
 <div class="p-toast" id="s-toast" role="status" hidden></div>
-
-<!-- The full music player: the same page (/music.html) the table screen and the
-     desktop app use, shown over the panel. table-music.js loads it on first open. -->
-<div class="p-music" id="music-modal" style="display:none">
-  <div class="p-music-head">
-    <strong>Music player</strong>
-    <button type="button" class="c-btn" onclick="closeMusicModal()">Close</button>
-  </div>
-  <div class="p-music-body"><iframe id="music-frame" title="Music player"></iframe></div>
-</div>
 
 <!-- The table's music plays through this element -->
 <audio id="bg-music" preload="none" hidden></audio>

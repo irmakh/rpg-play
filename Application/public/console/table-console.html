@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Written by Irmak Hakman — 2026-10-10 21:36 -->
+<!-- Written by Irmak Hakman — 2026-10-11 00:20 -->
 <!-- Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) -->
 <html lang="en" class="lamplit">
 <head>
@@ -103,6 +103,8 @@
 </div>
 
 <div id="table-wrap">
+  <!-- Shown by js/table/table-map.js while a map picture is downloading -->
+  <div id="map-loading-overlay" class="cx m-loading" style="display:none">Loading the map…</div>
 
   <!-- Left panel kept in DOM so existing JS can still render to it (display:none via CSS) -->
   <div id="left-panel">
@@ -241,6 +243,16 @@
 
 </div><!-- /#table-wrap -->
 
+<!-- A picture the DM shows everyone (the 'image-reveal' live event). The ids
+     are the ones js/table/table-chat.js fills; it can be dragged aside and is
+     closed only with its button, never by a stray tap. -->
+<div id="image-reveal-modal" class="cx m-reveal" style="display:none">
+  <div id="image-reveal-card" class="m-reveal-card" onmousedown="startImageRevealDrag(event)" ontouchstart="startImageRevealDrag(event)">
+    <button type="button" class="m-btn" onclick="event.stopPropagation();closeImageRevealModal()">Close</button>
+    <img id="image-reveal-img" alt="" draggable="false">
+  </div>
+</div>
+
 <!-- Command line: what the current tool does, and the controls for the
      selected token. The arrows appear only when you may move that token. -->
 <div id="m-cmd" class="cx m-cmd">
@@ -255,8 +267,8 @@
   <span class="m-pad pad-only">
     <span><span class="c-key">L stick</span>Move token</span>
     <span><span class="c-key">R stick</span>Slide map</span>
-    <span><span class="c-key">L2</span><span class="c-key">R2</span>Zoom</span>
-    <span><span class="c-key">Start</span>Tools</span>
+    <span><span class="c-key" data-pad-control="l2">L2</span><span class="c-key" data-pad-control="r2">R2</span>Zoom</span>
+    <span><span class="c-key" data-pad-control="start">Start</span>Tools</span>
   </span>
   <button type="button" class="m-btn" id="btn-undo-move" style="display:none" onclick="undoLastMove()">Undo move</button>
 </div>

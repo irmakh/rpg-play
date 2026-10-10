@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-10 21:40
+// Written by Irmak Hakman — 2026-10-11 00:16
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -134,6 +134,9 @@ function sParseConditions(raw) {
   if (Array.isArray(raw)) return raw;
   try { return JSON.parse(raw || '[]'); } catch { return []; }
 }
+
+// A modifier with its sign: 3 -> "+3", -1 -> "-1".
+function sSigned(n) { return (n >= 0 ? '+' : '') + n; }
 
 // 0..1 share of hit points left; 0 when there is no maximum to compare with.
 function sHpPct(cur, max) {

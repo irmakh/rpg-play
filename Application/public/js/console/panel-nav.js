@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-10 23:39
+// Written by Irmak Hakman — 2026-10-11 00:20
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -37,6 +37,7 @@ function sShowTab(name) {
     if (log) log.scrollTop = log.scrollHeight;
   }
   if (name === 'handouts') { sRenderHandouts(); sLoadHandouts(); }
+  if (name === 'more') sMusicLoadPlaylists();   // a playlist may have been edited since
   if (name === 'table') {
     sRenderTableInit();
     sRenderDmHpList();
@@ -68,9 +69,15 @@ function sCmdFor(tab) {
       ? [['Previous', 'sPrevTurn'], ['End initiative', 'sToggleInitiative'], ['Next turn', 'sNextTurn', 'go']]
       : [['Start initiative', 'sToggleInitiative', 'go']];
   }
+  if (!sIsCharSession()) return [];
   // A player may end a turn only while it is their own token's turn.
   const active = sTokens.find(t => t.id === sGetActiveTokId());
   if (running && active && sIsMyToken(active)) return [['End my turn', 'sNextTurn', 'go']];
+  // Otherwise the one thing a player does here is roll their own initiative:
+  // to join the order, or - before the fight starts - to roll again.
+  const inOrder = (sInitData.entries || []).some(e => e.charId && e.charId === sessionCharId);
+  if (!inOrder) return [['Roll my initiative', 'sRollMyInitiative', 'go']];
+  if (!running) return [['Roll my initiative again', 'sRollMyInitiative']];
   return [];
 }
 
@@ -81,6 +88,7 @@ function sRenderCmd() {
   bar.hidden = cmds.length === 0;
   // Labels and function names are fixed strings from sCmdFor - nothing typed by
   // a user. The X badge shows only once a gamepad has been used (.pad-only).
+  const key = typeof ConsolePad !== 'undefined' ? ConsolePad.label('x') : 'X';
   bar.innerHTML = cmds.map(([label, fn, cls]) =>
-    `<button type="button" class="${cls || ''}" onclick="${fn}()">${cls === 'go' ? '<span class="c-key pad-only">X</span>' : ''}${label}</button>`).join('');
+    `<button type="button" class="${cls || ''}" onclick="${fn}()">${cls === 'go' ? `<span class="c-key pad-only">${key}</span>` : ''}${label}</button>`).join('');
 }
