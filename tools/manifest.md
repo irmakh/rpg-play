@@ -14,7 +14,7 @@
 
 ## Application Tools (`Application/scripts/`)
 
-- **seed_demo_data.py** - Seeds a fresh demo campaign (prompts for campaign name, DM password, player password) with 4 full player characters, 5 monster stat blocks and 8 treasury items; writes SQLite directly (Node-compatible scrypt hashing replicated in Python) since campaign/password creation is captcha-gated over HTTP. Must run inside the app container: `docker compose exec app python3 scripts/seed_demo_data.py`. See goals/new_dev_machine_setup.md.
+- **seed_demo_data.py** - Installs the demo campaign "Shadows over Emberfall" on a development machine from `Application/scripts/demo_campaign.zip` (its registry row, four databases and 112 uploaded files incl. music). The zip is NOT in git — no campaign data or media is — and is shared by hand; `--zip PATH` for another location, and without it nothing is installed. Every run overwrites the local copy of that campaign (fixed id) and leaves other campaigns alone. Writes the files directly (registry row with Node-compatible scrypt hashing, databases via SQLite backup, uploads unpacked with path checks) since campaign/password creation is captcha-gated over HTTP. Unattended with `--defaults` (DM `demo-dm`, players `demo-player`); `--dm-password` / `--player-password` override. Run inside the app container, then restart it: `docker compose exec -T app python3 scripts/seed_demo_data.py --defaults && docker compose restart app`. Part of every new install — see goals/new_dev_machine_setup.md §3a, which also says how to rebuild the zip.
 
 ## Application — Multi-Tenant Campaigns
 

@@ -179,7 +179,7 @@ char_sheet/
 │   │   ├── treasury.html               #   Treasury manager page (loot + shop, DM)
 │   │   └── waiting-screens.html        #   Waiting-screen manager page (DM)
 │   ├── scripts/
-│   │   └── seed_demo_data.py           #   Seeds a demo campaign with sample data
+│   │   └── seed_demo_data.py           #   Installs the demo campaign from demo_campaign.zip (zip is not in git)
 │   ├── server/                         # Backend
 │   │   ├── notify.js                   #   Notification emitter — ctx.notify(), fan-out + coalescing
 │   │   └── routes/                     #   17 Express route modules (each exports register(app, ctx))

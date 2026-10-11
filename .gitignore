@@ -68,3 +68,8 @@ build/
 
 # Playwright MCP session artifacts (snapshots, console logs)
 .playwright-mcp/
+
+# The demo campaign installed by Application/scripts/seed_demo_data.py is shared
+# by hand as one zip and never committed — neither its data nor its media.
+Application/scripts/demo_campaign*.zip
+Application/scripts/demo_campaign/
