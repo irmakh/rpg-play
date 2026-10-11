@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-11 01:04
+// Written by Irmak Hakman — 2026-10-11 22:10
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -305,9 +305,11 @@ describe('hpBarColor mirrors the design tokens, and steps at the right points', 
     expect(hpBarColor(0.5).toUpperCase()).toBe(token('verdigris'));
   });
 
-  it('hurt below half, down to a quarter', () => {
-    expect(hpBarColor(0.49).toUpperCase()).toBe(token('blood-deep'));
-    expect(hpBarColor(0.25).toUpperCase()).toBe(token('blood-deep'));
+  // Green, then yellow, then red: the middle step used to be a second red,
+  // so a bar went straight from green to red at half.
+  it('hurt below half, down to a quarter, is the amber accent', () => {
+    expect(hpBarColor(0.49).toUpperCase()).toBe(token('arc'));
+    expect(hpBarColor(0.25).toUpperCase()).toBe(token('arc'));
   });
 
   it('critical below a quarter, and never past it', () => {

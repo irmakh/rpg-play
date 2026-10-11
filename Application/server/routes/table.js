@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-09-27 11:13
+// Written by Irmak Hakman — 2026-10-11 22:10
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -530,7 +530,7 @@ export default function register(app, ctx) {
           const removed = before.filter(c => !after.includes(c));
           if (added.length || removed.length) {
             ctx.notify?.({
-              to: tok.linkedId, kind: 'condition',
+              to: tok.linkedId, kind: 'condition', priority: 'alert',
               title: added.length ? 'You are now ' + added.join(', ') : 'No longer ' + removed.join(', '),
               data: { href: '/table.html' },
             });
@@ -563,8 +563,9 @@ export default function register(app, ctx) {
                     kind: delta < 0 ? 'damage' : 'healing',
                     title: delta < 0 ? `You took ${-delta} damage` : `You were healed ${delta}`,
                     body: `HP ${after}${update.hpMax ?? tok.hpMax ? ' / ' + (update.hpMax ?? tok.hpMax) : ''}`,
-                    // Dropping to 0 is the one HP change worth interrupting for.
-                    priority: after === 0 ? 'alert' : 'feed',
+                    // Something done to the character: it pops up, like any
+                    // other news that matters to the player it happened to.
+                    priority: 'alert',
                     data: { href: '/table.html' },
                   });
                 }

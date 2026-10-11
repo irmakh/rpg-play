@@ -21,6 +21,19 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [265] — 2026-10-11 — Notifications that matter pop up; HP bars go green, yellow, red
+
+- **More notifications pop up** instead of waiting silently in the bell: damage and healing
+  the DM applies to your character, a condition gained or lost, the shop opening or
+  closing, and a private message. They behave like the new-day and weather notices.
+- Dice rolls, table chat and "now playing" stay quiet in the bell, so a fight does not
+  bury the screen.
+- **Fixed: hit point bars had no yellow.** A bar went from green straight to red at half.
+  It is now green down to half, yellow down to a quarter, and red below that — on tokens,
+  the initiative list, the hit point panel and the hover card.
+
+---
+
 ## [264] — 2026-10-11 — Table: spell slots you can read, and the whole spellbook
 
 The Spells tab of the character panel on the table screen, and its pop-out window.

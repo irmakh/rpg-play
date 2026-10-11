@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-11 21:20
+// Written by Irmak Hakman — 2026-10-11 22:10
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -73,7 +73,7 @@ function tokenRingColor(type) {
 }
 function hpBarColor(pct) {
   if (pct >= 0.5)  return '#3DD68C';            // --verdigris
-  if (pct >= 0.25) return '#C2434A';            // --blood-deep
+  if (pct >= 0.25) return '#E0A93F';            // --arc: hurt, not yet critical
   return '#E4666B';                             // --blood
 }
 // Text and HP-bar sizes for the label under a token, in map pixels. The token

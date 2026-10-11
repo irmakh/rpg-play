@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-09-27 11:13
+// Written by Irmak Hakman — 2026-10-11 22:10
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -227,7 +227,7 @@ describe('notifications — ambient and character changes', () => {
     const { app } = setup();
     await asDM(request(app).put('/api/treasury/status')).send({ isOpen: true, activeTags: ['Potions'] });
     let mine = (await inbox(app, asAliyr)).body.items;
-    expect(mine[0]).toMatchObject({ kind: 'shop-open', priority: 'feed' });
+    expect(mine[0]).toMatchObject({ kind: 'shop-open', priority: 'alert' });
     expect(mine[0].body).toContain('Potions');
 
     await asDM(request(app).put('/api/treasury/status')).send({ isOpen: false });
@@ -246,7 +246,7 @@ describe('notifications — ambient and character changes', () => {
     await asDM(request(app).put('/api/table/tokens/tok-1')).send({ hpCurrent: 12 });
 
     const mine = (await inbox(app, asAliyr)).body.items;
-    expect(mine[0]).toMatchObject({ kind: 'damage', priority: 'feed' });
+    expect(mine[0]).toMatchObject({ kind: 'damage', priority: 'alert' });
     expect(mine[0].title).toContain('8 damage');
     expect((await inbox(app, asGerion)).body.items).toEqual([]);
   });

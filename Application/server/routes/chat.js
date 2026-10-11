@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-09-27 11:13
+// Written by Irmak Hakman — 2026-10-11 22:10
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -185,8 +185,10 @@ export default function register(app, ctx) {
    * for the animation, and announcing both would tell everybody twice. This is
    * the durable record, so it is the one that speaks.
    *
-   * Both are 'feed': silent, bell only, and coalesced per sender, so a combat
-   * round becomes "Gerion rolled 6 times" rather than six separate rows.
+   * Rolls and table chat are 'feed': silent, bell only, and coalesced per
+   * sender, so a combat round becomes "Gerion rolled 6 times" rather than six
+   * separate rows. A private message is an 'alert' — it pops up for the one
+   * person it is for.
    */
   function notifyChat(entry) {
     if (!ctx.notify || !entry || entry.type === 'media') return;
@@ -213,7 +215,7 @@ export default function register(app, ctx) {
     if (entry.to) {
       ctx.notify({
         to: entry.to, exclude,
-        kind: 'chat', actorName: sender, priority: 'feed',
+        kind: 'chat', actorName: sender, priority: 'alert',
         title: `${sender} (private)`,
         body: 'Sent you a private message',
         data: { href: '/table.html' },

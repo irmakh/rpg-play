@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-11 20:40
+// Written by Irmak Hakman — 2026-10-11 22:10
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -521,7 +521,7 @@ export default function register(app, ctx) {
       ldb.setShopConfig(isOpen, activeTags);
       broadcast('treasury', { action: 'statusChanged', isOpen, activeTag, activeTags });
       ctx.notify?.({
-        to: 'players', kind: isOpen ? 'shop-open' : 'shop-closed',
+        to: 'players', kind: isOpen ? 'shop-open' : 'shop-closed', priority: 'alert',
         title: isOpen ? 'The shop is open' : 'The shop has closed',
         body: isOpen && activeTags.length ? 'Selling: ' + activeTags.join(', ') : '',
         data: { href: '/index.html' },
