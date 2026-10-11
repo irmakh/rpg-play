@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Written by Irmak Hakman in 2026. -->
+<!-- Written by Irmak Hakman — 2026-10-11 18:00 -->
 <!-- Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) -->
 <html lang="en" class="lamplit app-page">
 <head>
@@ -63,11 +63,10 @@
       <span class="cal-today-date" id="cal-cur-date-display">—</span>
       <span class="cal-today-year" id="cal-cur-date-year"></span>
       <div id="cal-today-bar-btns">
-        <button class="btn sm" onclick="calPrevDay()" title="Previous day"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-left"></use></svg> Day</button>
-        <button class="btn sm" onclick="calNextDay()" title="Next day">Day <svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-right"></use></svg> </button>
-        <button class="btn sm" onclick="calGoToToday()" title="Navigate to current date">Go to Today</button>
-        <button class="btn sm" onclick="calOpenJumpModal()" title="Jump to specific date">Set Date…</button>
-        <button class="btn sm" onclick="weatherOpenModal()" title="Roll daily weather">🌦 Weather</button>
+        <button class="btn sm" onclick="calPrevDay()" title="Move the campaign back one day"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-left"></use></svg> Back a day</button>
+        <button class="btn primary sm" onclick="calNextDay()" title="Move the campaign on one day — rolls that day's weather and tells the players">Advance day <svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-right"></use></svg></button>
+        <button class="btn sm" onclick="calOpenJumpModal('campaign')" title="Move the campaign to any date">Set campaign date…</button>
+        <button class="btn sm" onclick="weatherOpenModal()" title="The day's weather">🌦 Weather</button>
       </div>
     </div>
 
@@ -81,6 +80,14 @@
       </div>
       <button class="cal-nav-btn" onclick="calNavPage(1)">&#8594;</button>
     </div>
+      <!-- Looking around the calendar. None of these move the campaign date. -->
+      <div class="cal-view-ctl" role="group" aria-label="Day on show">
+        <button class="btn sm" onclick="calViewDay(-1)" title="Show the day before"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-left"></use></svg> Day</button>
+        <span class="cal-view-day" id="cal-view-day">—</span>
+        <button class="btn sm" onclick="calViewDay(1)" title="Show the day after">Day <svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-right"></use></svg></button>
+        <button class="btn sm" onclick="calGoToToday()" title="Show the campaign's current day">Today</button>
+        <button class="btn sm" onclick="calOpenJumpModal('view')" title="Show any date">Go to…</button>
+      </div>
       <div class="app-list">
         <div id="cal-grid-area"></div>
       </div>
@@ -91,6 +98,7 @@
       <span class="cal-events-title" id="cal-events-section-title">Events</span>
       <button class="btn sm" onclick="calOpenAddEvent()">+ Add Event</button>
     </div>
+      <div class="cal-tools" id="cal-list-tools"></div>
       <div id="cal-events-list"></div>
     </main>
   </div>
@@ -205,7 +213,7 @@
 <!-- Jump to Date Modal -->
 <div class="cal-modal" id="cal-jump-modal" style="display:none">
   <div class="cal-modal-box">
-    <div class="cal-modal-title">Set Campaign Date</div>
+    <div class="cal-modal-title" id="cal-jump-title">Set Campaign Date</div>
 
     <div class="cal-form-row">
       <label>Date Type</label>
@@ -267,7 +275,7 @@
 
     <div class="cal-modal-btns">
       <button class="btn sm" onclick="calCloseJumpModal()">Cancel</button>
-      <button class="btn primary sm" onclick="calSetCurrentDate()">Set Date</button>
+      <button class="btn primary sm" id="cal-jump-ok" onclick="calSetCurrentDate()">Set Date</button>
     </div>
   </div>
 </div>
@@ -277,6 +285,20 @@
   <div class="cal-modal-box" style="max-width:540px">
     <div class="cal-modal-title">🌦 Daily Weather</div>
 
+    <!-- The day's weather. A day gets its weather by itself when the campaign
+         date moves onto it; this window is for looking, re-rolling, or
+         correcting by hand. -->
+    <div class="wx-now">
+      <div class="wx-now-date">Weather for <b id="weather-target-date">—</b>
+        <a href="#" id="weather-today-link" onclick="weatherUseCurrentDate();return false">show the campaign date</a></div>
+      <div id="weather-summary"></div>
+      <div class="wx-now-btns">
+        <button class="btn primary sm" id="weather-roll-btn" onclick="weatherRoll()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg> <span id="weather-roll-lbl">Roll</span></button>
+      </div>
+    </div>
+
+    <details class="wx-details" id="weather-details">
+      <summary>Edit details</summary>
     <div class="cal-form-inline" style="align-items:flex-end">
       <div class="cal-form-row" style="flex:1.2">
         <label>Session Normal (base °)</label>
@@ -296,7 +318,7 @@
     <!-- Roll date selector -->
     <div class="cal-form-inline" style="align-items:flex-end">
       <div class="cal-form-row" style="flex-shrink:0">
-        <label>Roll for</label>
+        <label>Day</label>
         <select id="weather-date-type" onchange="weatherToggleDateType()">
           <option value="day">Day</option>
           <option value="festival">Festival</option>
@@ -326,12 +348,6 @@
           </select></div>
       </div>
     </div>
-    <div class="cal-form-row" style="margin:4px 0 8px">
-      <label>Weather for: <b id="weather-target-date" style="color:var(--bone)">—</b>
-        <a href="#" onclick="weatherUseCurrentDate();return false" style="font-size:11px;margin-left:8px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-refresh"></use></svg> campaign date</a>
-        <button class="btn sm" id="weather-roll-btn" onclick="weatherRoll()" style="margin-left:10px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg> Roll dice</button></label>
-    </div>
-
     <!-- Editable result form -->
     <div class="cal-form-inline">
       <div class="cal-form-row" style="flex:1.4">
@@ -371,6 +387,8 @@
       <button class="btn primary sm" id="weather-save-btn" onclick="weatherSave()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-save"></use></svg> Save for this date</button>
     </div>
 
+    </details>
+
     <!-- History -->
     <div class="cal-form-row" style="margin-top:10px">
       <label>History (click to edit)</label>
@@ -384,6 +402,7 @@
 </div>
 
 <script src="/js/lib/fr_calendar.js" defer></script>
+<script src="/js/lib/calendar-list.js" defer></script>
 <script src="/js/lib/lightbox.js" defer></script>
 <script src="/js/lib/weather-ui.js" defer></script>
 <script src="/js/lib/realtime.js" defer></script>

@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-09-27 12:12
+// Written by Irmak Hakman — 2026-10-11 20:40
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -504,6 +504,10 @@ function fillForm(it) {
   $('f-type').value = it.itemType || 'other';
   $('f-desc').value = it.description || '';
   $('f-desc-visible').checked = !!it.descVisible;
+  $('f-unid-name').value = it.unidName || '';
+  updateIdentifyBtn();
+  $('f-charges').value = it.charges || 0;
+  $('f-charges-long').checked = it.chargesRecharge === 'long';
   $('f-armor-type').value = it.armorType || 'light';
   $('f-ac-base').value = it.acBase ?? 10;
 
@@ -566,6 +570,9 @@ function formPayload() {
     mode: $('mode-seg').dataset.mode || 'hidden',
     description: $('f-desc').value,
     descVisible: $('f-desc-visible').checked,
+    unidName: $('f-unid-name').value.trim(),
+    charges: Math.max(0, parseInt($('f-charges').value) || 0),
+    chargesRecharge: $('f-charges-long').checked ? 'long' : '',
     itemType: $('f-type').value,
     armorType: $('f-armor-type').value,
     acBase: parseInt($('f-ac-base').value) || 10,
@@ -581,6 +588,22 @@ function formPayload() {
     weaponDmg: $('f-weapon-dmg').value.trim(),
     weaponProperties: getSelectedProps(),
   };
+}
+
+// The Identify button is there for as long as the item is unidentified.
+function updateIdentifyBtn() {
+  $('btn-identify').style.display = currentId && !$('f-desc-visible').checked ? '' : 'none';
+}
+
+// One click for "the party has worked out what this is": turns the description
+// on and saves, which puts the real name and properties on every copy held.
+async function identifyCurrent() {
+  if (!currentId) return;
+  const name = $('f-name').value.trim() || 'this item';
+  if (!confirm(`Identify "${name}"?\n\nPlayers will see its real name, description and properties, on every copy they hold.`)) return;
+  $('f-desc-visible').checked = true;
+  updateIdentifyBtn();
+  await saveCurrent();
 }
 
 async function saveCurrent() {

@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-09-27 12:52
+// Written by Irmak Hakman — 2026-10-11 20:00
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -907,7 +907,7 @@ function characterToXML(d) {
   p('  </attunement>');
   p('  <items>');
   items.forEach(item => {
-    p(`    <item id="${item.id}" type="${xe(item.itemType)}" value="${xe(item.value||'')}" armorType="${xe(item.armorType||'')}" acBase="${item.acBase||0}" equipped="${item.equipped}" requiresAttunement="${item.requiresAttunement}" attuned="${item.attuned}" acBonus="${item.acBonus||0}" initBonus="${item.initBonus||0}" speedBonus="${item.speedBonus||0}" spellAtkBonus="${item.spellAtkBonus||0}" spellDcBonus="${item.spellDcBonus||0}" weaponAtk="${xe(item.weaponAtk||'')}" weaponDmg="${xe(item.weaponDmg||'')}" weaponProperties="${xe(JSON.stringify(item.weaponProperties||[]))}" bonuses="${xe(JSON.stringify(item.bonuses||[]))}">`);
+    p(`    <item id="${item.id}" type="${xe(item.itemType)}" value="${xe(item.value||'')}" armorType="${xe(item.armorType||'')}" acBase="${item.acBase||0}" equipped="${item.equipped}" requiresAttunement="${item.requiresAttunement}" attuned="${item.attuned}" acBonus="${item.acBonus||0}" initBonus="${item.initBonus||0}" speedBonus="${item.speedBonus||0}" spellAtkBonus="${item.spellAtkBonus||0}" spellDcBonus="${item.spellDcBonus||0}" weaponAtk="${xe(item.weaponAtk||'')}" weaponDmg="${xe(item.weaponDmg||'')}" weaponProperties="${xe(JSON.stringify(item.weaponProperties||[]))}" bonuses="${xe(JSON.stringify(item.bonuses||[]))}"${parseInt(item.charges) ? ` charges="${parseInt(item.charges)}" chargesUsed="${parseInt(item.chargesUsed)||0}" chargesRecharge="${xe(item.chargesRecharge||'')}"` : ''}>`);
     p(`      <name>${xe(item.name)}</name><notes>${xe(item.notes)}</notes>`);
     p(`    </item>`);
   });
@@ -1165,7 +1165,13 @@ function xmlToCharacterData(xmlText) {
       weaponDmg: el.getAttribute('weaponDmg') || '',
       weaponProperties: (() => { try { return JSON.parse(el.getAttribute('weaponProperties') || '[]'); } catch { return []; } })(),
       bonuses: (() => { try { return JSON.parse(el.getAttribute('bonuses') || '[]'); } catch { return []; } })(),
-      notes: el.querySelector('notes')?.textContent?.trim() || ''
+      notes: el.querySelector('notes')?.textContent?.trim() || '',
+      // Written only for an item that has charges, so older XML reads as before.
+      ...(el.hasAttribute('charges') ? {
+        charges: parseInt(el.getAttribute('charges')) || 0,
+        chargesUsed: parseInt(el.getAttribute('chargesUsed')) || 0,
+        chargesRecharge: el.getAttribute('chargesRecharge') === 'long' ? 'long' : '',
+      } : {}),
     });
   });
   d._items = JSON.stringify(parsedItems);

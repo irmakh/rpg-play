@@ -21,6 +21,81 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [264] — 2026-10-11 — Table: spell slots you can read, and the whole spellbook
+
+The Spells tab of the character panel on the table screen, and its pop-out window.
+
+- **Spell slots are one row per level** with large markers and the count in words — "2 of
+  4 left". A slot that can still be spent is solid and lit; a spent one is a struck-through
+  ring. A level with nothing left is dimmed. Click a slot to use or restore it, as before.
+- **The whole spellbook is listed,** grouped by level, not only the prepared spells.
+  Unprepared spells are dimmed and marked with a hollow dot.
+- **Filter: Prepared / Not prepared / All,** each with its count. It starts on Prepared and
+  is remembered as you move between characters.
+- **Search box** to find a spell by name.
+- Clicking a spell's name still sends it to chat.
+
+---
+
+## [263] — 2026-10-11 — Treasury: charges, and a name for what is not yet identified
+
+**Charges on items**
+- **An item can hold charges.** Set how many in the treasury editor or on an item in a
+  character's inventory, and whether a long rest refills them.
+- **Use button.** An item with charges shows how many are left and a Use button — on the
+  character sheet's inventory and on the table screen's Items tab. Each use takes one
+  charge and says so in chat; at zero the button is off. The sheet also has Refill.
+- **A long rest refills** the items set to refill, from the sheet or the table.
+- Claimed and bought items arrive fully charged. Charges are carried in the character XML.
+
+**A name for an unidentified item**
+- **"Name while unidentified"** on a treasury item is what players read until you identify
+  it — in the treasury, in their inventory and in the notifications about it. The real
+  name stays on the server until then, and an inventory copy is marked "unidentified".
+- **Copies players already hold follow it.** Add or change the name later and their
+  inventory is renamed too, so nobody keeps reading the real one.
+- **Identify button** in the treasury editor, on any unidentified item: one click reveals
+  its real name, description and properties on every copy held.
+- Leave it empty and nothing changes: players see the real name marked "(unidentified)".
+- An unidentified item shows no charges, like its other properties.
+
+**Fixed**
+- Editing an inventory item no longer drops what the form does not show — where it came
+  from, its picture, and whether it is still unidentified. An unidentified item that was
+  edited could no longer be identified.
+
+---
+
+## [262] — 2026-10-11 — Calendar: find an event, look around freely, weather by itself
+
+The DM's calendar (`/events.html`) and the players' Calendar tab.
+
+**Finding an event**
+- **Events are grouped under their day,** one line each. Click a line to open its text,
+  attachments and buttons; the day the campaign is on is marked "Today".
+- **Search and filters** above the list: a search box over titles, text and authors, and
+  pickers for kind, who can see it (DM) and author.
+- **How much to show:** Day, Month, Upcoming (from the campaign date on) or All.
+- **Click a day in the grid to see that day.** Click it again for the whole month. Adding
+  an event or journal uses the day on show.
+
+**Looking around without moving the campaign**
+- **The calendar has its own controls** — previous day, next day, Today and, for the DM,
+  "Go to…" any date. None of them change the campaign date.
+- **The top bar is the campaign date only,** and says so: "Back a day", "Advance day",
+  "Set campaign date…".
+
+**Weather**
+- **A day gets its weather by itself** when the campaign date moves onto it. Days that
+  are jumped over get none, and a day that already has weather keeps it.
+- **The DM is told the details** (every value with its roll); **players are told what the
+  day is like** in words — cold, wind, rain or snow, and what it means for travel.
+- **The weather window shows the day first.** The base temperature, the dice ranges and
+  the fields for setting a day by hand are under "Edit details".
+- The weather tip on a calendar day now includes the description.
+
+---
+
 ## [261] — 2026-10-11 — Table: easier to get around, quicker in a fight
 
 Sixteen ease-of-use changes to the table screen (`/table.html`). The console is unchanged,

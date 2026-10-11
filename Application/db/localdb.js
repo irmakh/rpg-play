@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-10-11 19:30
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -338,6 +338,11 @@ try { db.exec(`ALTER TABLE notifications ADD COLUMN count INTEGER DEFAULT 1`); }
 // table_state rather than in memory so a player who reloads during a break is
 // still held on the screen, and a restart cannot silently expose the map.
 try { db.exec(`ALTER TABLE table_state ADD COLUMN waitingScreenId TEXT DEFAULT ''`); } catch {}
+// Treasury (v263): the name players see while an item is unidentified, and
+// how many charges it holds (0 = none) and whether a long rest refills them.
+try { db.exec(`ALTER TABLE treasury_items ADD COLUMN unidName TEXT DEFAULT ''`); } catch {}
+try { db.exec(`ALTER TABLE treasury_items ADD COLUMN charges INTEGER DEFAULT 0`); } catch {}
+try { db.exec(`ALTER TABLE treasury_items ADD COLUMN chargesRecharge TEXT DEFAULT ''`); } catch {}
 
 // Ensure singleton rows exist
 db.prepare("INSERT OR IGNORE INTO shop_config (id, isOpen) VALUES (?, 1)").run(SHOP_CONFIG_ID);
@@ -674,10 +679,12 @@ function createTreasuryItem(id, fields) {
   db.prepare(`INSERT INTO treasury_items
     (id, name, tag, mode, description, descVisible, itemType, armorType, acBase, valueCp, quantity,
      acBonus, initBonus, speedBonus, spellAtkBonus, spellDcBonus, requiresAttunement,
-     weaponAtk, weaponDmg, weaponPropertiesJson, imageUrl, imageThumb, imageMedium, createdAt)
+     weaponAtk, weaponDmg, weaponPropertiesJson, imageUrl, imageThumb, imageMedium, createdAt,
+     unidName, charges, chargesRecharge)
     VALUES (@id, @name, @tag, @mode, @description, @descVisible, @itemType, @armorType, @acBase, @valueCp, @quantity,
      @acBonus, @initBonus, @speedBonus, @spellAtkBonus, @spellDcBonus, @requiresAttunement,
-     @weaponAtk, @weaponDmg, @weaponPropertiesJson, @imageUrl, @imageThumb, @imageMedium, @createdAt)`)
+     @weaponAtk, @weaponDmg, @weaponPropertiesJson, @imageUrl, @imageThumb, @imageMedium, @createdAt,
+     @unidName, @charges, @chargesRecharge)`)
     .run({
       id,
       name: fields.name || '', tag: fields.tag || '', mode: fields.mode || 'hidden',
@@ -691,6 +698,7 @@ function createTreasuryItem(id, fields) {
       weaponPropertiesJson: fields.weaponPropertiesJson || '[]',
       imageUrl: fields.imageUrl || '', imageThumb: fields.imageThumb || '', imageMedium: fields.imageMedium || '',
       createdAt: fields.createdAt || new Date().toISOString(),
+      unidName: fields.unidName || '', charges: fields.charges ?? 0, chargesRecharge: fields.chargesRecharge || '',
     });
 }
 function updateTreasuryItem(id, fields) {

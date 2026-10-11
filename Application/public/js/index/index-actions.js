@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-09-27 11:52
+// Written by Irmak Hakman — 2026-10-11 19:50
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -223,6 +223,8 @@ function actionRest(type) {
       if ((parseInt(a.used) || 0) !== 0) { a.used = 0; changed++; }
     }
   });
+  // Items that refill on a long rest come back with it.
+  if (typeof restItemCharges === 'function') changed += restItemCharges(type);
   renderActionsTab();
   if (changed) scheduleAutoSave();
 }

@@ -1,8 +1,8 @@
-// Written by Irmak Hakman — 2026-10-11 01:02
+// Written by Irmak Hakman — 2026-10-11 21:30
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
-const CACHE = 'rpg-v261';
+const CACHE = 'rpg-v264';
 
 const STATIC = [
   // Core pages
@@ -65,6 +65,7 @@ const STATIC = [
   '/js/lib/dice-engine.js',
   '/js/lib/lightbox.js',
   '/js/lib/fr_calendar.js',
+  '/js/lib/calendar-list.js',
   '/js/lib/weather-ui.js',
   // Table JS modules
   '/js/table/table-state.js',

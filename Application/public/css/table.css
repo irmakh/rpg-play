@@ -1,4 +1,4 @@
-/* Written by Irmak Hakman — 2026-10-10 19:37 */
+/* Written by Irmak Hakman — 2026-10-11 21:20 */
 /* Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) */
 
 *{box-sizing:border-box;margin:0;padding:0}
@@ -792,3 +792,49 @@ html.lamplit .qroll-val{color:var(--arc);font-weight:700}
 .ce-dmg-rolls{opacity:.75}
 .ce-dmg-type{color:var(--ash);text-transform:uppercase;letter-spacing:1px;font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ce-dmg-val{color:var(--arc);font-weight:bold;font-size:12px;justify-self:end}
+
+/* Items tab: charges on an item and its Use button. */
+.rp-item-cell.has-charges{grid-column:1/-1}
+.rp-item-charges{color:var(--arc);font-weight:bold}
+.rp-item-charges.empty{color:var(--ash);font-weight:normal}
+.rp-item-use{margin-left:auto;flex-shrink:0}
+
+/* ── Spells tab: slots you can read at a glance, and the whole spellbook ─────
+   Built by spellSlotsHTML() / spellbookHTML() in js/table/table-utils.js. */
+.rp-hdr-hint{font-size:8px;opacity:.5;font-weight:normal;letter-spacing:0}
+.rp-slot-list{padding:6px 8px 8px;display:flex;flex-direction:column;gap:5px}
+.rp-slot-row{display:flex;align-items:center;gap:8px;padding:5px 8px;border:1px solid var(--rule-hi);border-radius:5px;background:var(--wash)}
+.rp-slot-lvl{font-size:11px;font-weight:bold;color:var(--bone);flex-shrink:0;min-width:46px}
+.rp-slot-pips{display:flex;flex-wrap:wrap;gap:5px;flex:1;min-width:0}
+/* An open slot is a lit, solid marker; a spent one is an empty ring with a
+   stroke through it — different in shape as well as colour. */
+.rp-slot-pip{width:15px;height:15px;border-radius:50%;box-sizing:border-box;flex-shrink:0;background:var(--arc);border:2px solid var(--arc);box-shadow:0 0 5px var(--arc-fill)}
+.rp-slot-pip.used{background:linear-gradient(135deg,transparent 43%,var(--ash) 43%,var(--ash) 57%,transparent 57%);border-color:var(--ash);box-shadow:none;opacity:.55}
+.rp-slot-row.can-edit .rp-slot-pip{cursor:pointer}
+.rp-slot-row.can-edit .rp-slot-pip:hover{transform:scale(1.2)}
+.rp-slot-count{font-size:10px;color:var(--ash);white-space:nowrap;flex-shrink:0}
+.rp-slot-count b{font-size:13px;color:var(--arc)}
+.rp-slot-row.spent{border-style:dashed;background:transparent}
+.rp-slot-row.spent .rp-slot-lvl{color:var(--ash)}
+.rp-slot-row.spent .rp-slot-count b{color:var(--ash)}
+
+.rp-sb-tools{display:flex;flex-direction:column;gap:5px;padding:6px 8px}
+.rp-sb-seg{display:flex;border:1px solid var(--rule-hi);border-radius:4px;overflow:hidden}
+.rp-sb-f{flex:1 1 0;min-width:0;background:transparent;border:0;border-right:1px solid var(--rule-hi);color:var(--ash);font:inherit;font-size:10px;padding:4px 2px;cursor:pointer;white-space:nowrap}
+.rp-sb-f:last-child{border-right:0}
+.rp-sb-f:hover{color:var(--bone)}
+.rp-sb-f.on{background:var(--arc-fill);color:var(--arc);font-weight:bold}
+.rp-sb-fc{opacity:.7;font-weight:normal}
+input[type=search].rp-sb-search{width:100%;box-sizing:border-box;background:var(--slate);border:1px solid var(--rule-hi);border-radius:4px;color:var(--bone);font:inherit;font-size:11px;padding:4px 7px}
+.rp-sb-lvl{font-size:9px;color:var(--ash);padding:5px 10px 2px;text-transform:uppercase;letter-spacing:.5px}
+.rp-sb-n{opacity:.7}
+.rp-sb-row{display:flex;align-items:center;gap:6px;padding:3px 10px;font-size:11px;min-width:0}
+.rp-sb-row:hover{background:var(--wash)}
+.rp-sb-mark{width:7px;height:7px;border-radius:50%;flex-shrink:0;background:var(--verdigris)}
+.rp-sb-row.unprep .rp-sb-mark{background:transparent;border:1px solid var(--ash)}
+.rp-sb-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px}
+.rp-sb-row.unprep .rp-sb-name{color:var(--ash)}
+.rp-sb-flag{font-size:10px;font-weight:bold;flex-shrink:0}
+.rp-sb-flag.conc{color:var(--arc)}
+.rp-sb-flag.rit{color:#ddaaff}
+.rp-sb-atk{font-size:11px;cursor:pointer;flex-shrink:0}

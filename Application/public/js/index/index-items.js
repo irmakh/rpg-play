@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-09-27 11:55
+// Written by Irmak Hakman — 2026-10-11 19:50
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -29,6 +29,9 @@ function openItemModal(id) {
     document.getElementById('im-weapon-dmg').value = '';
     initItemPropsGrid(); setSelectedItemProps([]);
     setItemBonusRows([]);
+    document.getElementById('im-charges').value = '0';
+    document.getElementById('im-charges-left').value = '0';
+    document.getElementById('im-charges-long').checked = false;
     document.getElementById('im-notes').value = '';
   } else {
     const item = items.find(i => i.id === id);
@@ -50,6 +53,9 @@ function openItemModal(id) {
     document.getElementById('im-weapon-dmg').value = item.weaponDmg || '';
     initItemPropsGrid(); setSelectedItemProps(item.weaponProperties || []);
     setItemBonusRows(item.bonuses || []);
+    document.getElementById('im-charges').value = itemChargesMax(item);
+    document.getElementById('im-charges-left').value = itemChargesLeft(item);
+    document.getElementById('im-charges-long').checked = item.chargesRecharge === 'long';
     document.getElementById('im-notes').value = item.notes || '';
   }
   itemTypeChange();
@@ -258,9 +264,16 @@ function saveItemModal() {
     bonuses: getItemBonusRows(),
     notes: document.getElementById('im-notes').value
   };
+  // Charges are stored as how many it holds and how many are gone.
+  item.charges = Math.max(0, Math.min(999, parseInt(document.getElementById('im-charges').value) || 0));
+  const left = Math.max(0, Math.min(item.charges, parseInt(document.getElementById('im-charges-left').value) || 0));
+  item.chargesUsed = item.charges - left;
+  item.chargesRecharge = item.charges && document.getElementById('im-charges-long').checked ? 'long' : '';
   if (editingItemId !== null) {
     const idx = items.findIndex(i => i.id === editingItemId);
-    if (idx >= 0) items[idx] = item; else items.push(item);
+    // Keep what the form does not show (where the item came from, its picture,
+    // whether it is still unidentified) — the form used to drop them on save.
+    if (idx >= 0) items[idx] = Object.assign({}, items[idx], item); else items.push(item);
   } else {
     items.push(item);
   }
@@ -271,6 +284,47 @@ function saveItemModal() {
   renderEquippedItemsSummary();
   recalcAll();
   scheduleAutoSave();
+}
+
+// ── Charges ───────────────────────────────────────────────────────────────────
+function itemChargesMax(item)  { return Math.max(0, parseInt(item && item.charges) || 0); }
+function itemChargesLeft(item) {
+  const max = itemChargesMax(item);
+  return Math.max(0, max - Math.min(max, parseInt(item && item.chargesUsed) || 0));
+}
+
+// Spend one charge and tell the table.
+function useItemCharge(id) {
+  const item = items.find(i => i.id === id);
+  if (!item || itemChargesLeft(item) <= 0) return;
+  item.chargesUsed = (parseInt(item.chargesUsed) || 0) + 1;
+  renderItems();
+  scheduleAutoSave();
+  const who = getChatSender();
+  postToChat({
+    sender: who, type: 'text', html: true,
+    message: `<strong>${esc(item.name)}</strong><div style="font-size:10px;opacity:.7;margin-top:1px">`
+      + `${esc(who)} uses a charge · ${itemChargesLeft(item)} of ${itemChargesMax(item)} left</div>`,
+  });
+}
+
+function refillItemCharges(id) {
+  const item = items.find(i => i.id === id);
+  if (!item || !itemChargesMax(item)) return;
+  item.chargesUsed = 0;
+  renderItems();
+  scheduleAutoSave();
+}
+
+// A long rest refills the items that say it does. Called from actionRest().
+function restItemCharges(type) {
+  if (type !== 'long') return 0;
+  let changed = 0;
+  items.forEach(i => {
+    if (i && i.chargesRecharge === 'long' && (parseInt(i.chargesUsed) || 0) !== 0) { i.chargesUsed = 0; changed++; }
+  });
+  if (changed) renderItems();
+  return changed;
 }
 
 function toggleItemEquipped(id) {
@@ -310,6 +364,10 @@ function openItemDetail(id) {
   (item.bonuses || []).forEach(b => {
     if (b && b.value) rows.push([itemBonusTargetLabel(b.target), (b.value > 0 ? '+' : '') + b.value]);
   });
+  if (itemChargesMax(item)) {
+    rows.push(['Charges', `${itemChargesLeft(item)} of ${itemChargesMax(item)} left`
+      + (item.chargesRecharge === 'long' ? ' · refills on a long rest' : '')]);
+  }
   rows.push(['Equipped', item.equipped ? 'Yes' : 'No']);
   if (item.requiresAttunement) rows.push(['Attuned', item.attuned ? 'Yes' : 'No']);
   let html = `<table style="width:100%;border-collapse:collapse;font-size:12px">` +
@@ -370,11 +428,23 @@ function renderItems() {
     const attuneStr = item.attuned ? ' 🔮' : '';
     const equippedStyle = item.equipped ? 'color:var(--arc-hi);font-weight:bold' : 'color:var(--ash)';
     const valueStr = item.value ? ` · <span style="color:var(--arc)">${esc(item.value)}</span>` : '';
+    // An unidentified item under the DM's stand-in name carries no marker in
+    // the name itself, so it gets one here.
+    const unidStr = item.unidentified && !/\(unidentified\)\s*$/.test(item.name || '')
+      ? ' <span class="item-unid" title="Its properties are unknown until the DM identifies it">unidentified</span>' : '';
+    const max = itemChargesMax(item), left = itemChargesLeft(item);
+    const idLit = esc(JSON.stringify(item.id));
+    const chargeStr = max
+      ? `<span class="item-charges${left ? '' : ' empty'}" title="Charges left">⚡ ${left}/${max}</span>`
+        + `<button class="char-btn item-use" ${left ? '' : 'disabled'} onclick="useItemCharge(${idLit})" title="Use one charge">Use</button>`
+        + (left < max ? `<button class="char-btn item-use" onclick="refillItemCharges(${idLit})" title="Restore every charge">Refill</button>` : '')
+      : '';
 
     return `<div class="item-row">
       <input type="checkbox" class="item-chk" ${item.equipped ? 'checked' : ''} onchange="toggleItemEquipped(${esc(JSON.stringify(item.id))})" title="Equipped">
-      <span class="item-name" style="${equippedStyle};cursor:pointer" onclick="openItemDetail(${esc(JSON.stringify(item.id))})">${esc(item.name)}${attuneStr}</span>
+      <span class="item-name" style="${equippedStyle};cursor:pointer" onclick="openItemDetail(${esc(JSON.stringify(item.id))})">${esc(item.name)}${attuneStr}${unidStr}</span>
       <span class="item-meta">${esc(typeLabel)}${bonusStr ? ' · ' + esc(bonusStr) : ''}${valueStr}</span>
+      ${chargeStr}
       <button class="char-btn" style="padding:2px 8px;font-size:11px" onclick="openItemModal(${esc(JSON.stringify(item.id))})">Edit</button>
       <button class="del-btn" onclick="deleteItem(${esc(JSON.stringify(item.id))})"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg></button>
     </div>`;

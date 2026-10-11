@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Written by Irmak Hakman — 2026-09-27 12:50 -->
+<!-- Written by Irmak Hakman — 2026-10-11 19:50 -->
 <!-- Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) -->
 <html lang="en" class="lamplit">
 <head>
@@ -475,7 +475,6 @@
         <span class="cal-today-label">Campaign Date</span>
         <span class="cal-today-date" id="pcal-cur-date"></span>
         <span class="cal-today-year" id="pcal-cur-year"></span>
-        <button class="btn sm" style="flex-shrink:0" onclick="pcalGoToToday()">Go to Today</button>
       </div>
       <div class="cal-nav">
         <button class="cal-nav-btn" onclick="pcalNavPage(-1)">&#8592;</button>
@@ -485,11 +484,18 @@
         </div>
         <button class="cal-nav-btn" onclick="pcalNavPage(1)">&#8594;</button>
       </div>
+      <div class="cal-view-ctl" role="group" aria-label="Day on show">
+        <button class="btn sm" onclick="pcalViewDay(-1)" title="Show the day before"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-left"></use></svg> Day</button>
+        <span class="cal-view-day" id="pcal-view-day">—</span>
+        <button class="btn sm" onclick="pcalViewDay(1)" title="Show the day after">Day <svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-right"></use></svg></button>
+        <button class="btn sm" onclick="pcalGoToToday()" title="Show the campaign's current day">Today</button>
+      </div>
       <div id="pcal-grid-area"></div>
       <div class="cal-events-hdr">
         <span class="cal-events-title" id="pcal-events-title">Events</span>
         <button class="btn sm" id="pcal-add-journal-btn" style="display:none;flex-shrink:0" onclick="pcalOpenAddJournal()">＋ Journal</button>
       </div>
+      <div class="cal-tools" id="pcal-list-tools"></div>
       <div id="pcal-events-list"></div>
     </div>
   </div>
@@ -768,6 +774,15 @@
         <div id="im-bonus-list"></div>
         <button type="button" class="char-btn" style="padding:2px 10px;font-size:11px;margin-top:2px" onclick="addBonusRow()">+ Add Bonus</button>
       </div>
+      <div style="font-size:10px;color:var(--bone);margin:10px 0 6px;font-weight:bold;border-bottom:1px solid var(--rule-hi);padding-bottom:2px">Charges</div>
+      <div class="g3" style="gap:8px;margin-bottom:6px">
+        <div class="field"><label class="lbl" for="im-charges">Charges (0 = none)</label><input type="number" id="im-charges" value="0" min="0" max="999"></div>
+        <div class="field"><label class="lbl" for="im-charges-left">Left</label><input type="number" id="im-charges-left" value="0" min="0" max="999"></div>
+        <div style="display:flex;align-items:center;gap:8px;padding-top:14px">
+          <input type="checkbox" id="im-charges-long" style="width:16px;height:16px;accent-color:var(--bone)">
+          <label for="im-charges-long" style="font-size:12px;cursor:pointer">Refills on a long rest</label>
+        </div>
+      </div>
       <div class="field"><label class="lbl">Notes / Description</label><textarea id="im-notes" style="min-height:60px"></textarea></div>
     </div>
     <div class="modal-btns">
@@ -868,6 +883,7 @@
 <script src="/js/lib/esc.js" defer></script>
 <script src="/js/lib/lightbox.js" defer></script>
 <script src="/js/lib/fr_calendar.js" defer></script>
+<script src="/js/lib/calendar-list.js" defer></script>
 <script src="/js/lib/weather-ui.js" defer></script>
 <script src="/js/lib/dice-engine.js" defer></script>
 <script src="/js/lib/chat-render.js" defer></script>

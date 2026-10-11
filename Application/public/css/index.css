@@ -1,4 +1,4 @@
-/* Written by Irmak Hakman — 2026-09-27 13:05 */
+/* Written by Irmak Hakman — 2026-10-11 19:50 */
 /* Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) */
 
 *{box-sizing:border-box;margin:0;padding:0}
@@ -800,3 +800,10 @@ html.lamplit input.big[readonly]{color:var(--arc)}
 .ce-dmg-rolls{opacity:.75}
 .ce-dmg-type{color:var(--ash);text-transform:uppercase;letter-spacing:1px;font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ce-dmg-val{color:var(--arc);font-weight:bold;font-size:12px;justify-self:end}
+
+/* Inventory: charges on an item, and the mark on one still unidentified. */
+.item-charges{font-size:11px;color:var(--arc);font-weight:bold;white-space:nowrap;flex-shrink:0}
+.item-charges.empty{color:var(--ash);font-weight:normal}
+.char-btn.item-use{padding:2px 8px;font-size:11px}
+.char-btn.item-use:disabled{opacity:.4;cursor:not-allowed}
+.item-unid{font-size:9px;font-weight:normal;font-style:italic;color:var(--ash);border:1px solid var(--rule-hi);border-radius:3px;padding:0 4px;margin-left:4px;vertical-align:middle}

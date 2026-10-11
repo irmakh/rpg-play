@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-10-11 18:25
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -8,9 +8,31 @@ let pcalCurrentDate = { frYear: 1492, frMonth: 1, frDay: 1, frFestival: '' };
 let pcalEvents      = [];
 let pcalWeather     = {};   // date-key → weather entry (read-only on the player calendar)
 let pcalLoaded      = false;
-let pcalSelectedDay = null; // { month, day } or { festival } when a cell is clicked
+let pcalSelected    = null; // the day on show (a full date), or null for the whole month
 let pcalEditingId    = null; // id of the journal being edited, or null when adding
 let pcalPendingMedia = [];   // media descriptors staged for the open journal modal
+
+// The events list (js/lib/calendar-list.js) — grouping, search and filters,
+// the same one the DM's calendar uses.
+const pcalList = calListCreate('player', {
+  toolsEl: 'pcal-list-tools', listEl: 'pcal-events-list', titleEl: 'pcal-events-title',
+  dm: false,
+  events: () => pcalEvents,
+  view: () => pcalView,
+  selected: () => pcalSelected,
+  today: () => pcalCurrentDate,
+  mediaHTML: (media) => pcalRenderMedia(media),
+  actionsHTML: (e) => (pcalCanEdit(e)
+    ? `<div class="cal-event-actions">
+         <button class="btn sm" onclick="pcalEditJournal('${escJs(e.id)}')">Edit</button>
+         <button class="btn danger sm" onclick="pcalDeleteJournal('${escJs(e.id)}')">Delete</button>
+       </div>`
+    : ''),
+  weatherHTML: (key) => (pcalWeather[key] ? weatherDayMarkHTML(pcalWeather[key], key) : ''),
+  onPickDay: (d) => pcalSelectDate(d),
+  // "Day" with no day chosen means the campaign's own day.
+  onScope: (scope) => { if (scope === 'day' && !pcalSelected) { pcalSelected = { ...pcalCurrentDate }; pcalView = frDateToView(pcalSelected); pcalRenderNavTitle(); pcalRenderGrid(); } },
+});
 
 async function pcalLoad() {
   if (pcalLoaded) return;
@@ -36,9 +58,16 @@ async function pcalFetch() {
     for (const e of log) pcalWeather[e.id] = e;
     weatherSetRegistry(pcalWeather);
   } catch {}
-  pcalView = frDateToView(pcalCurrentDate);
+  // A refresh (someone added a journal, the DM moved the date) must not throw
+  // a reader who has looked elsewhere back to today.
+  if (!pcalViewTouched) {
+    pcalView = frDateToView(pcalCurrentDate);
+    if (pcalSelected) pcalSelected = { ...pcalCurrentDate };
+  }
   pcalRender();
 }
+// Set once the player has looked somewhere themselves.
+let pcalViewTouched = false;
 
 // Auth headers for calendar requests: master pw for the DM, character id +
 // password for a player session (so private own-journals are returned).
@@ -83,6 +112,8 @@ function pcalRenderTodayBar() {
 }
 
 function pcalRenderNavTitle() {
+  const dayEl = document.getElementById('pcal-view-day');
+  if (dayEl) dayEl.textContent = pcalSelected ? frFormatDate(pcalSelected) : 'Whole month';
   let title, subtitle;
   if (pcalView.type === 'festival') {
     title    = '✦ ' + frFestivalName(pcalView.festival);
@@ -104,7 +135,7 @@ function pcalRenderGrid() {
 
   if (pcalView.type === 'festival') {
     const isToday    = frDatesEqual(pcalCurrentDate, { frYear: pcalView.year, frFestival: pcalView.festival, frMonth: null, frDay: null });
-    const isSelected = pcalSelectedDay && pcalSelectedDay.festival === pcalView.festival;
+    const isSelected = !!pcalSelected && pcalSelected.frFestival === pcalView.festival && pcalSelected.frYear === pcalView.year;
     const fest       = FR_FESTIVALS.find(f => f.key === pcalView.festival);
     const dots       = pcalEventsForView().map(e =>
       `<span class="cal-dot pub" title="${esc(e.title)}"></span>`
@@ -112,7 +143,7 @@ function pcalRenderGrid() {
     const festKey = `${pcalView.year}-F-${pcalView.festival}`;
     const festWx  = pcalWeather[festKey];
     area.innerHTML = `
-      <div class="cal-festival-row${isToday?' cal-is-today':''}${isSelected?' cal-is-today':''}"
+      <div class="cal-festival-row${isToday?' cal-is-today':''}${isSelected?' cal-selected':''}"
            onclick="pcalDayClick(null,'${pcalView.festival}')" style="cursor:pointer">
         <span class="cal-fest-icon"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-star"></use></svg></span>
         <span class="cal-fest-name">${esc(fest ? fest.name : pcalView.festival)}</span>
@@ -136,7 +167,7 @@ function pcalRenderGrid() {
     for (let d = 1; d <= 10; d++) {
       const day        = td * 10 + d;
       const isToday    = frDatesEqual(pcalCurrentDate, { frYear: pcalView.year, frMonth: pcalView.month, frDay: day, frFestival: '' });
-      const isSelected = pcalSelectedDay && pcalSelectedDay.day === day && !pcalSelectedDay.festival;
+      const isSelected = frDatesEqual(pcalSelected, { frYear: pcalView.year, frMonth: pcalView.month, frDay: day, frFestival: '' });
       const dayEvs     = evByDay[day] || [];
       const dots       = dayEvs.map(e => `<span class="cal-dot pub" title="${esc(e.title)}"></span>`).join('');
       const classes    = ['cal-day-cell', isToday ? 'cal-is-today' : '', isSelected ? 'cal-selected' : ''].filter(Boolean).join(' ');
@@ -154,66 +185,7 @@ function pcalRenderGrid() {
   area.innerHTML = `<table class="cal-grid"><tbody>${rows}</tbody></table>`;
 }
 
-function pcalRenderEventsList() {
-  const el      = document.getElementById('pcal-events-list');
-  const titleEl = document.getElementById('pcal-events-title');
-  if (!el) return;
-
-  let evs, heading, showAllLink = '';
-
-  if (pcalSelectedDay) {
-    if (pcalSelectedDay.festival) {
-      evs     = pcalEvents.filter(e => e.frFestival === pcalSelectedDay.festival && e.frYear === pcalView.year);
-      heading = `Events on ${frFestivalName(pcalSelectedDay.festival)}`;
-    } else {
-      evs     = pcalEvents.filter(e => !e.frFestival && e.frMonth === pcalView.month && e.frDay === pcalSelectedDay.day && e.frYear === pcalView.year);
-      heading = `Events on ${pcalSelectedDay.day} ${frMonthName(pcalView.month)}, ${pcalView.year} DR`;
-    }
-    const m = FR_MONTHS.find(mo => mo.num === pcalView.month);
-    const allMonthLabel = pcalSelectedDay.festival ? frFestivalName(pcalSelectedDay.festival) : (m ? m.name : '');
-    showAllLink = `<a href="#" style="font-size:10px;color:var(--ash);text-decoration:none;margin-left:8px" onclick="pcalClearSelection();return false">&#8592; All of ${allMonthLabel}</a>`;
-  } else {
-    evs = pcalEventsForView();
-    if (pcalView.type === 'festival') {
-      heading = `Events on ${frFestivalName(pcalView.festival)}`;
-    } else {
-      const m = FR_MONTHS.find(mo => mo.num === pcalView.month);
-      heading = `Events in ${m ? m.name : '?'} ${pcalView.year} DR`;
-    }
-  }
-
-  if (titleEl) titleEl.innerHTML = esc(heading) + showAllLink;
-
-  if (!evs.length) {
-    el.innerHTML = '<div class="cal-empty">No events recorded for this period.</div>';
-    return;
-  }
-
-  el.innerHTML = evs.map(e => {
-    const dateStr = frFormatDate({ frYear: e.frYear, frMonth: e.frMonth, frDay: e.frDay, frFestival: e.frFestival });
-    const isJournal = !!e.authorCharId;
-    const authorLine = isJournal
-      ? `<div class="cal-event-author"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-book"></use></svg> ${esc(e.authorName || 'Journal')}${e.isPublic ? '' : ' · <svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-lock"></use></svg> Private'}</div>`
-      : '';
-    const actions = pcalCanEdit(e)
-      ? `<div class="cal-event-actions">
-           <button class="btn sm" onclick="pcalEditJournal('${escJs(e.id)}')">Edit</button>
-           <button class="btn danger sm" onclick="pcalDeleteJournal('${escJs(e.id)}')"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg></button>
-         </div>`
-      : '';
-    return `
-      <div class="cal-event-item">
-        <div class="cal-event-info">
-          <div class="cal-event-title">${esc(e.title)}</div>
-          <div class="cal-event-date">${esc(dateStr)} &middot; ${esc(e.eventType)}</div>
-          ${authorLine}
-          ${e.description ? `<div class="cal-event-desc">${esc(e.description)}</div>` : ''}
-          ${pcalRenderMedia(e.media)}
-        </div>
-        ${actions}
-      </div>`;
-  }).join('');
-}
+function pcalRenderEventsList() { pcalList.render(); }
 
 // Render attachment thumbnails / players for a calendar event.
 function pcalRenderMedia(media) {
@@ -238,26 +210,36 @@ function pcalEventsForView() {
   return pcalEvents.filter(e => !e.frFestival && e.frMonth === pcalView.month && e.frYear === pcalView.year);
 }
 
+// Clicking a day shows that day; clicking it again goes back to the month.
 function pcalDayClick(day, festival) {
-  if (festival) {
-    const already = pcalSelectedDay && pcalSelectedDay.festival === festival;
-    pcalSelectedDay = already ? null : { festival };
-  } else {
-    const already = pcalSelectedDay && pcalSelectedDay.day === day && !pcalSelectedDay.festival;
-    pcalSelectedDay = already ? null : { day };
-  }
+  const d = festival
+    ? { frYear: pcalView.year, frMonth: null, frDay: null, frFestival: festival }
+    : { frYear: pcalView.year, frMonth: pcalView.month, frDay: day, frFestival: '' };
+  pcalSelectDate(frDatesEqual(pcalSelected, d) ? null : d);
+}
+
+// Put one day on show (or none, for the whole month).
+function pcalSelectDate(d) {
+  pcalViewTouched = true;
+  pcalSelected = d ? { frYear: d.frYear, frMonth: d.frMonth ?? null, frDay: d.frDay ?? null, frFestival: d.frFestival || '' } : null;
+  if (pcalSelected) { pcalView = frDateToView(pcalSelected); pcalList.state.scope = 'day'; }
+  else if (pcalList.state.scope === 'day') pcalList.state.scope = 'month';
+  pcalRenderNavTitle();
   pcalRenderGrid();
   pcalRenderEventsList();
 }
 
-function pcalClearSelection() {
-  pcalSelectedDay = null;
-  pcalRenderGrid();
-  pcalRenderEventsList();
+// Step the day on show, starting from the campaign's day when none is chosen.
+function pcalViewDay(dir) {
+  const from = pcalSelected || pcalCurrentDate;
+  pcalSelectDate(dir > 0 ? frNextDay(from) : frPrevDay(from));
 }
 
 function pcalNavPage(dir) {
-  pcalSelectedDay = null;
+  pcalViewTouched = true;
+  // Paging to another month leaves the selected day behind.
+  pcalSelected = null;
+  if (pcalList.state.scope === 'day') pcalList.state.scope = 'month';
   pcalView = frNavigate(pcalView, dir);
   pcalRenderNavTitle();
   pcalRenderGrid();
@@ -265,9 +247,8 @@ function pcalNavPage(dir) {
 }
 
 function pcalGoToToday() {
-  pcalSelectedDay = null;
-  pcalView = frDateToView(pcalCurrentDate);
-  pcalRender();
+  pcalSelectDate(pcalCurrentDate);
+  pcalViewTouched = false;   // back on the campaign's day: follow it again
 }
 
 // ── Journal entries (player-authored calendar events) ─────────────────────────
@@ -278,11 +259,11 @@ function pcalJournalErr(msg) {
 
 // Compute the target date for a new journal from the current view + selection.
 function pcalJournalTargetDate() {
+  if (pcalSelected) return { ...pcalSelected };
   if (pcalView.type === 'festival') {
     return { frYear: pcalView.year, frMonth: null, frDay: null, frFestival: pcalView.festival };
   }
-  const day = (pcalSelectedDay && !pcalSelectedDay.festival) ? pcalSelectedDay.day : 1;
-  return { frYear: pcalView.year, frMonth: pcalView.month, frDay: day, frFestival: '' };
+  return { frYear: pcalView.year, frMonth: pcalView.month, frDay: 1, frFestival: '' };
 }
 
 function pcalOpenAddJournal() {

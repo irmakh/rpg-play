@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Written by Irmak Hakman in 2026. -->
+<!-- Written by Irmak Hakman — 2026-10-11 20:40 -->
 <!-- Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) -->
 <html lang="en" class="lamplit app-page">
 <head>
@@ -94,6 +94,7 @@
       <div id="detail-form" style="display:none">
         <div class="d-hdr">
           <input type="text" id="f-name" placeholder="Item name" oninput="markDirty()">
+          <button class="btn primary" id="btn-identify" style="display:none" onclick="identifyCurrent()" title="Reveal this item to the players: its real name, description and properties, on every copy they hold">Identify</button>
           <button class="btn danger" onclick="deleteCurrent()">Delete</button>
         </div>
 
@@ -138,10 +139,15 @@
           <div class="sect-body">
             <textarea id="f-desc" placeholder="What the players read…" oninput="markDirty()"></textarea>
             <label class="chk" style="margin-top:8px">
-              <input type="checkbox" id="f-desc-visible" onchange="markDirty()">
+              <input type="checkbox" id="f-desc-visible" onchange="markDirty();updateIdentifyBtn()">
               Description visible to players
             </label>
-            <div class="mode-help">Leave this off and the item is <strong>unidentified</strong>: players see its name marked “(unidentified)”, plus its kind, price and stock — the description, bonuses, damage dice and properties stay hidden, even from anyone who claims or buys it. Switch it on and everything is revealed, including on copies players already hold.</div>
+            <div class="mode-help">Leave this off and the item is <strong>unidentified</strong>: players see a name, its kind, price and stock — the description, bonuses, charges and other properties stay hidden until you turn this on.</div>
+            <div class="field" style="margin-top:10px">
+              <label class="lbl" for="f-unid-name">Name while unidentified</label>
+              <input type="text" id="f-unid-name" maxlength="120" placeholder="e.g. Dull Iron Ring" oninput="markDirty()">
+            </div>
+            <div class="mode-help">What players read instead of the real name until the item is identified. Leave it empty and they see the real name marked “(unidentified)”.</div>
           </div>
         </div>
 
@@ -237,6 +243,19 @@
             <label class="chk" style="margin-top:6px">
               <input type="checkbox" id="f-attune" onchange="markDirty()"> Requires attunement
             </label>
+          </div>
+        </div>
+
+        <div class="sect">
+          <div class="sect-hdr">Charges</div>
+          <div class="sect-body">
+            <div class="g3">
+              <div class="field"><label class="lbl" for="f-charges">Charges (0 = none)</label><input type="number" id="f-charges" value="0" min="0" max="999" oninput="markDirty()"></div>
+            </div>
+            <label class="chk" style="margin-top:6px">
+              <input type="checkbox" id="f-charges-long" onchange="markDirty()"> Refills on a long rest
+            </label>
+            <div class="mode-help">An item with charges gets a Use button in the owner’s inventory; each use takes one.</div>
           </div>
         </div>
 

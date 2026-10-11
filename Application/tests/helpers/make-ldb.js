@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-09-27 11:13
+// Written by Irmak Hakman — 2026-10-11 19:30
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -88,7 +88,8 @@ export function makeLdb() {
       requiresAttunement INTEGER DEFAULT 0,
       weaponAtk TEXT DEFAULT '', weaponDmg TEXT DEFAULT '', weaponPropertiesJson TEXT DEFAULT '[]',
       imageUrl TEXT DEFAULT '', imageThumb TEXT DEFAULT '', imageMedium TEXT DEFAULT '',
-      createdAt TEXT DEFAULT (datetime('now'))
+      createdAt TEXT DEFAULT (datetime('now')),
+      unidName TEXT DEFAULT '', charges INTEGER DEFAULT 0, chargesRecharge TEXT DEFAULT ''
     );
     CREATE TABLE IF NOT EXISTS loot_logs (
       id TEXT PRIMARY KEY, charId TEXT NOT NULL DEFAULT '', charName TEXT DEFAULT '',
@@ -306,6 +307,13 @@ export function makeLdb() {
     };
   }
   const _CAL_ORDER = 'ORDER BY fr_year, fr_month NULLS LAST, fr_day NULLS LAST';
+  // The campaign's current date — one row in the real database.
+  let _calState = { frYear: 1492, frMonth: 1, frDay: 1, frFestival: '' };
+  function getCalendarState() { return { ..._calState }; }
+  function saveCalendarState(st) {
+    _calState = { frYear: st.frYear, frMonth: st.frMonth ?? null, frDay: st.frDay ?? null, frFestival: st.frFestival || '' };
+  }
+
   function listCalendarEvents({ isDM = false, charId = '' } = {}) {
     if (isDM) return db.prepare(`SELECT * FROM calendar_events ${_CAL_ORDER}`).all().map(_calRow);
     if (!charId) return db.prepare(`SELECT * FROM calendar_events WHERE is_public = 1 ${_CAL_ORDER}`).all().map(_calRow);
@@ -391,12 +399,15 @@ export function makeLdb() {
     db.prepare(`INSERT INTO treasury_items
       (id, name, tag, mode, description, descVisible, itemType, armorType, acBase, valueCp, quantity,
        acBonus, initBonus, speedBonus, spellAtkBonus, spellDcBonus, requiresAttunement,
-       weaponAtk, weaponDmg, weaponPropertiesJson, imageUrl, imageThumb, imageMedium, createdAt)
+       weaponAtk, weaponDmg, weaponPropertiesJson, imageUrl, imageThumb, imageMedium, createdAt,
+       unidName, charges, chargesRecharge)
       VALUES (@id, @name, @tag, @mode, @description, @descVisible, @itemType, @armorType, @acBase, @valueCp, @quantity,
        @acBonus, @initBonus, @speedBonus, @spellAtkBonus, @spellDcBonus, @requiresAttunement,
-       @weaponAtk, @weaponDmg, @weaponPropertiesJson, @imageUrl, @imageThumb, @imageMedium, @createdAt)`)
+       @weaponAtk, @weaponDmg, @weaponPropertiesJson, @imageUrl, @imageThumb, @imageMedium, @createdAt,
+       @unidName, @charges, @chargesRecharge)`)
       .run({
         id,
+        unidName: f.unidName || '', charges: f.charges ?? 0, chargesRecharge: f.chargesRecharge || '',
         name: f.name || '', tag: f.tag || '', mode: f.mode || 'hidden',
         description: f.description || '', descVisible: f.descVisible ? 1 : 0,
         itemType: f.itemType || 'other', armorType: f.armorType || 'light',
@@ -706,6 +717,7 @@ export function makeLdb() {
     listTableTokens, getTableToken, getTableTokensByInitId,
     createTableToken, updateTableToken, deleteTableToken, clearTableTokens,
     // calendar
+    getCalendarState, saveCalendarState,
     listCalendarEvents, getCalendarEvent, createCalendarEvent, updateCalendarEvent, deleteCalendarEvent,
     // monsters + the retired loot table (kept so import routes can be tested)
     listMonsters, getMonster, createMonster, updateMonster, deleteMonster,

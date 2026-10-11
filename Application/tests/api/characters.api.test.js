@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-09-27 11:13
+// Written by Irmak Hakman — 2026-10-11 20:10
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -884,4 +884,76 @@ describe('PATCH /api/characters/:id/spell-slot', () => {
       expect(ldb.getCharacter('c1').dataJson).toBe(before);
     });
   }
+});
+
+// ── PATCH /api/characters/:id/item-charges (v263) ─────────────────────────────
+describe('PATCH /api/characters/:id/item-charges', () => {
+  function seedItems(ldb, hashPassword, password) {
+    ldb.createCharacter('c1', {
+      name: 'Hero',
+      passwordHash: password ? hashPassword(password) : '',
+      dataJson: JSON.stringify({
+        _items: JSON.stringify([
+          { id: 1, name: 'Wand', charges: 3, chargesUsed: 0, chargesRecharge: 'long' },
+          { id: 2, name: 'Rope' },
+          { id: 3, name: 'Old Ring', charges: 2, chargesUsed: 2, chargesRecharge: '' },
+        ]),
+        _actions: JSON.stringify([{ id: 1, recharge: 'long', uses: 1, used: 1 }]),
+      }),
+      createdAt: new Date().toISOString(),
+    });
+  }
+  const item = (ldb, id) => JSON.parse(JSON.parse(ldb.getCharacter('c1').dataJson)._items).find(i => i.id === id);
+
+  it('spends a charge and tells open sheets which part changed', async () => {
+    const { app, ldb, hashPassword, broadcasts } = makeApp();
+    seedItems(ldb, hashPassword);
+    const res = await dm(request(app).patch('/api/characters/c1/item-charges')).send({ itemId: 1, used: 1 });
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ ok: true, used: 1, charges: 3 });
+    expect(item(ldb, 1).chargesUsed).toBe(1);
+    expect(broadcasts.at(-1).payload).toMatchObject({ action: 'updated', id: 'c1', keys: ['_items'] });
+  });
+
+  it('never goes past what the item holds, or below nothing spent', async () => {
+    const { app, ldb, hashPassword } = makeApp();
+    seedItems(ldb, hashPassword);
+    await dm(request(app).patch('/api/characters/c1/item-charges')).send({ itemId: 1, used: 99 });
+    expect(item(ldb, 1).chargesUsed).toBe(3);
+    await dm(request(app).patch('/api/characters/c1/item-charges')).send({ itemId: 1, used: -5 });
+    expect(item(ldb, 1).chargesUsed).toBe(0);
+  });
+
+  it('refuses an item with no charges, a missing item, and a missing field', async () => {
+    const { app, ldb, hashPassword } = makeApp();
+    seedItems(ldb, hashPassword);
+    expect((await dm(request(app).patch('/api/characters/c1/item-charges')).send({ itemId: 2, used: 1 })).status).toBe(400);
+    expect((await dm(request(app).patch('/api/characters/c1/item-charges')).send({ itemId: 9, used: 1 })).status).toBe(404);
+    expect((await dm(request(app).patch('/api/characters/c1/item-charges')).send({ itemId: 1 })).status).toBe(400);
+    expect((await dm(request(app).patch('/api/characters/ghost/item-charges')).send({ itemId: 1, used: 1 })).status).toBe(404);
+  });
+
+  it('needs the DM or the character itself', async () => {
+    const { app, ldb, hashPassword } = makeApp();
+    seedItems(ldb, hashPassword, 'secret');
+    const anon = await request(app).patch('/api/characters/c1/item-charges').send({ itemId: 1, used: 1 });
+    expect(anon.status).toBe(401);
+    expect(item(ldb, 1).chargesUsed).toBe(0);
+    const own = await request(app).patch('/api/characters/c1/item-charges')
+      .set('X-Character-Id', 'c1').set('X-Character-Password', 'secret').send({ itemId: 1, used: 2 });
+    expect(own.status).toBe(200);
+    expect(item(ldb, 1).chargesUsed).toBe(2);
+  });
+
+  it('a long rest refills the items that say so, and only those', async () => {
+    const { app, ldb, hashPassword } = makeApp();
+    seedItems(ldb, hashPassword);
+    await dm(request(app).patch('/api/characters/c1/item-charges')).send({ itemId: 1, used: 3 });
+    await dm(request(app).post('/api/characters/c1/action-rest')).send({ type: 'short' });
+    expect(item(ldb, 1).chargesUsed).toBe(3);
+    await dm(request(app).post('/api/characters/c1/action-rest')).send({ type: 'long' });
+    expect(item(ldb, 1).chargesUsed).toBe(0);
+    expect(item(ldb, 3).chargesUsed).toBe(2);        // no refill setting: untouched
+    expect(item(ldb, 2).chargesUsed).toBeUndefined(); // an item without charges is left alone
+  });
 });

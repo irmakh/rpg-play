@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-09-27 12:10
+// Written by Irmak Hakman — 2026-10-11 20:40
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -719,5 +719,157 @@ describe('broadcasts', () => {
     const actions = broadcasts.filter(b => b.channel === 'treasury').map(b => b.payload.action);
     expect(actions).toContain('requested');
     expect(actions).toContain('approved');
+  });
+});
+
+// ── v263: a name for what is not yet identified ───────────────────────────────
+describe('name while unidentified', () => {
+  const REAL = 'Ring of Three Wishes';
+  const ALIAS = 'Dull Iron Ring';
+  const hidden = (over = {}) => ({
+    name: REAL, unidName: ALIAS, mode: 'loot', description: 'Grants wishes.', descVisible: false,
+    itemType: 'wondrous', ...over,
+  });
+
+  it('shows players the second name and keeps the real one on the server', async () => {
+    const { app, ldb } = setup();
+    seed(ldb, hidden());
+    const res = await asA(request(app).get('/api/treasury'));
+    expect(res.body.loot[0]).toMatchObject({ name: ALIAS, alias: true, unidentified: true });
+    expect(JSON.stringify(res.body)).not.toContain(REAL);
+    expect(JSON.stringify(res.body)).not.toContain('unidName');
+  });
+
+  it('falls back to the real name, unmarked as an alias, when there is no second name', async () => {
+    const { app, ldb } = setup();
+    seed(ldb, hidden({ unidName: '' }));
+    const item = (await asA(request(app).get('/api/treasury'))).body.loot[0];
+    expect(item.name).toBe(REAL);
+    expect(item.alias).toBe(false);
+  });
+
+  it('drops the second name from an identified item', async () => {
+    const { app, ldb } = setup();
+    seed(ldb, hidden({ descVisible: true }));
+    const item = (await asA(request(app).get('/api/treasury'))).body.loot[0];
+    expect(item.name).toBe(REAL);
+    expect(item).not.toHaveProperty('unidName');
+  });
+
+  it('gives the DM both names, and saves an edit to the second one', async () => {
+    const { app, ldb } = setup();
+    const id = seed(ldb, hidden());
+    const all = (await asDM(request(app).get('/api/treasury/all'))).body;
+    expect(all.find(i => i.id === id)).toMatchObject({ name: REAL, unidName: ALIAS });
+    await asDM(request(app).put(`/api/treasury/${id}`)).send({ unidName: '  Plain Band  ' });
+    expect(ldb.getTreasuryItem(id).unidName).toBe('Plain Band');
+  });
+
+  it('hands over the item under the second name, with nothing of the real one', async () => {
+    const { app, ldb } = setup();
+    const id = seed(ldb, hidden());
+    await claimAndApprove(app, ldb, id);
+    expect(charItems(ldb)[0]).toMatchObject({ name: ALIAS, unidentified: true, srcId: id });
+    expect(JSON.stringify(charData(ldb))).not.toContain(REAL);
+    // The notification about it uses the same name.
+    const note = (await asA(request(app).get('/api/notifications'))).body.items.find(n => n.kind === 'loot-granted');
+    expect(note.title).toBe('The DM gave you ' + ALIAS);
+  });
+
+  it('puts the real name on held copies when the DM identifies it', async () => {
+    const { app, ldb } = setup();
+    const id = seed(ldb, hidden({ quantity: -1 }));
+    await claimAndApprove(app, ldb, id);
+    await asDM(request(app).put(`/api/treasury/${id}`)).send({ descVisible: true });
+    const it = charItems(ldb)[0];
+    expect(it.name).toBe(REAL);
+    expect(it.unidentified).toBeUndefined();
+    expect(it.notes).toBe('Grants wishes.');
+  });
+
+  it('orders the shop by the name players see', async () => {
+    const { app, ldb } = setup();
+    ldb.setShopConfig(true, []);
+    seed(ldb, { name: 'Zzz Real Name', unidName: 'Amber Vial', mode: 'shop', descVisible: false });
+    seed(ldb, { name: 'Middle Thing', mode: 'shop' });
+    const names = (await asA(request(app).get('/api/treasury'))).body.shop.map(i => i.name);
+    expect(names).toEqual(['Amber Vial', 'Middle Thing']);
+  });
+});
+
+// ── v263: charges ─────────────────────────────────────────────────────────────
+describe('charges on treasury items', () => {
+  it('saves a count and the long-rest setting, within limits', async () => {
+    const { app, ldb } = setup();
+    const id = seed(ldb, { name: 'Wand' });
+    await asDM(request(app).put(`/api/treasury/${id}`)).send({ charges: 7, chargesRecharge: 'long' });
+    expect(ldb.getTreasuryItem(id)).toMatchObject({ charges: 7, chargesRecharge: 'long' });
+    await asDM(request(app).put(`/api/treasury/${id}`)).send({ charges: -4, chargesRecharge: 'weekly' });
+    expect(ldb.getTreasuryItem(id)).toMatchObject({ charges: 0, chargesRecharge: '' });
+    await asDM(request(app).put(`/api/treasury/${id}`)).send({ charges: 100000 });
+    expect(ldb.getTreasuryItem(id).charges).toBe(999);
+  });
+
+  it('hands over an identified item fully charged', async () => {
+    const { app, ldb } = setup();
+    const id = seed(ldb, { name: 'Wand', mode: 'loot', charges: 7, chargesRecharge: 'long' });
+    await claimAndApprove(app, ldb, id);
+    expect(charItems(ldb)[0]).toMatchObject({ charges: 7, chargesUsed: 0, chargesRecharge: 'long' });
+  });
+
+  it('hides charges on an unidentified item, in the list and in the bag', async () => {
+    const { app, ldb } = setup();
+    const id = seed(ldb, { name: 'Wand', mode: 'loot', charges: 7, chargesRecharge: 'long', descVisible: false, quantity: -1 });
+    const listed = (await asA(request(app).get('/api/treasury'))).body.loot[0];
+    expect(listed).toMatchObject({ charges: 0, chargesRecharge: '' });
+    await claimAndApprove(app, ldb, id);
+    expect(charItems(ldb)[0]).toMatchObject({ charges: 0, chargesUsed: 0, chargesRecharge: '' });
+    // Identifying it brings them out.
+    await asDM(request(app).put(`/api/treasury/${id}`)).send({ descVisible: true });
+    expect(charItems(ldb)[0]).toMatchObject({ charges: 7, chargesUsed: 0, chargesRecharge: 'long' });
+  });
+});
+
+// ── v263: a second name added after players already hold the item ─────────────
+describe('renaming unidentified copies players already hold', () => {
+  const REAL = 'Ring of Three Wishes';
+  const names = (ldb) => charItems(ldb).map(i => i.name);
+
+  it('puts a second name added later onto held copies, and tells the sheet', async () => {
+    const { app, ldb, broadcasts } = setup();
+    const id = seed(ldb, { name: REAL, mode: 'loot', descVisible: false, quantity: -1 });
+    await claimAndApprove(app, ldb, id);
+    expect(names(ldb)).toEqual([REAL + ' - (unidentified)']);
+
+    await asDM(request(app).put(`/api/treasury/${id}`)).send({ unidName: 'Dull Iron Ring' });
+    expect(names(ldb)).toEqual(['Dull Iron Ring']);
+    expect(JSON.stringify(charData(ldb))).not.toContain(REAL);
+    expect(broadcasts.some(b => b.channel === 'characters' && b.payload.id === 'char-a' && (b.payload.keys || []).includes('_items'))).toBe(true);
+  });
+
+  it('follows a change to the second name, and goes back when it is cleared', async () => {
+    const { app, ldb } = setup();
+    const id = seed(ldb, { name: REAL, unidName: 'Dull Iron Ring', mode: 'loot', descVisible: false, quantity: -1 });
+    await claimAndApprove(app, ldb, id);
+    await asDM(request(app).put(`/api/treasury/${id}`)).send({ unidName: 'Plain Band' });
+    expect(names(ldb)).toEqual(['Plain Band']);
+    await asDM(request(app).put(`/api/treasury/${id}`)).send({ unidName: '' });
+    expect(names(ldb)).toEqual([REAL + ' - (unidentified)']);
+  });
+
+  it('leaves identified copies and other items alone', async () => {
+    const { app, ldb } = setup();
+    const known = seed(ldb, { name: 'Rope', mode: 'loot', quantity: -1 });
+    await claimAndApprove(app, ldb, known);
+    await asDM(request(app).put(`/api/treasury/${known}`)).send({ unidName: 'Coil', name: 'Silk Rope' });
+    expect(names(ldb)).toEqual(['Rope']);
+  });
+
+  it('identifying wins over the second name', async () => {
+    const { app, ldb } = setup();
+    const id = seed(ldb, { name: REAL, unidName: 'Dull Iron Ring', mode: 'loot', descVisible: false, quantity: -1 });
+    await claimAndApprove(app, ldb, id);
+    await asDM(request(app).put(`/api/treasury/${id}`)).send({ descVisible: true, unidName: 'Whatever' });
+    expect(names(ldb)).toEqual([REAL]);
   });
 });

@@ -1,6 +1,8 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-10-11 17:25
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
+
+import { describeWeather, weatherDetail } from '../../lib/weather-words.js';
 
 export default function register(app, ctx) {
   const {
@@ -64,18 +66,50 @@ export default function register(app, ctx) {
     } catch (err) { console.error('GET /api/calendar/state:', err); res.status(500).json({ error: 'Server error' }); }
   });
 
+  // Moving the campaign date is also what makes the weather: the day the
+  // campaign LANDS on gets a roll if it has none. Days jumped over are left
+  // alone, and a day that already has weather — rolled earlier or set by hand —
+  // keeps it, so going back a day never rewrites what the table already saw.
   app.put('/api/calendar/state', async (req, res) => {
     try {
       if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
       const s = req.body;
       if (!s || typeof s.frYear !== 'number') return res.status(400).json({ error: 'Invalid body' });
+      const before = ldb.getCalendarState();
       ldb.saveCalendarState(s);
+      const moved = weatherDateKey(before) !== weatherDateKey(s);
+      if (!moved) {
+        broadcast('calendar-updated', { type: 'state' });
+        return res.json({ ok: true, weather: withWords(ldb.getWeatherForDate(weatherDateKey(s))) });
+      }
+
+      // The browser knows the month and festival names; the server does not.
+      const label = String(s.dateLabel || '').slice(0, 80)
+        || (s.frFestival ? `${s.frFestival}, ${s.frYear} DR` : `${s.frDay}/${s.frMonth}/${s.frYear} DR`);
+      let weather = ldb.getWeatherForDate(weatherDateKey(s));
+      const rolledNow = !weather;
+      if (rolledNow) {
+        const cfg = ldb.getWeatherConfig();
+        weather = ldb.saveWeatherEntry({
+          id: weatherDateKey(s),
+          frYear: s.frYear, frMonth: s.frMonth ?? null, frDay: s.frDay ?? null, frFestival: s.frFestival || '',
+          dateLabel: label,
+          sessionNormal: cfg.sessionNormal,
+          ...rollWeather(cfg.sessionNormal, cfg.level1Min, cfg.level2Min),
+        });
+      }
       broadcast('calendar-updated', { type: 'state' });
+      // Players are told what the day is like; only the DM sees the numbers.
       ctx.notify?.({
-        to: 'players', kind: 'calendar', title: 'The date has moved on',
-        body: s.dateLabel || '', data: { href: '/index.html' },
+        to: 'players', kind: 'calendar', priority: 'alert', title: `A new day: ${label}`,
+        body: describeWeather(weather), data: { href: '/index.html' },
       });
-      res.json({ ok: true });
+      ctx.notify?.({
+        to: 'dm', kind: 'weather', priority: 'alert',
+        title: `${rolledNow ? 'Weather rolled' : 'Weather already set'} for ${label}`,
+        body: weatherDetail(weather), data: { href: '/events.html' },
+      });
+      res.json({ ok: true, weather: withWords(weather), rolledNow });
     } catch (err) { console.error('PUT /api/calendar/state:', err); res.status(500).json({ error: 'Server error' }); }
   });
 
@@ -129,6 +163,13 @@ export default function register(app, ctx) {
     return `${d.frYear}-${d.frMonth}-${d.frDay}`;
   }
 
+  // An entry as the browser gets it: with the day put into words. The wording
+  // is worked out on the way out, not stored, so it can change without a
+  // migration and an entry typed by hand gets it too.
+  function withWords(entry) {
+    return entry ? { ...entry, description: describeWeather(entry), detail: weatherDetail(entry) } : null;
+  }
+
   app.get('/api/weather/config', (req, res) => {
     try {
       if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
@@ -166,7 +207,7 @@ export default function register(app, ctx) {
   // screen reads "today's" weather. Weather is environmental, not secret.
   app.get('/api/weather/log', (req, res) => {
     try {
-      const log = ldb.listWeatherLog();
+      const log = ldb.listWeatherLog().map(withWords);
       res.set('Cache-Control', 'no-store');
       res.json(log);
     } catch (err) { console.error('GET /api/weather/log:', err); res.status(500).json({ error: 'Server error' }); }
@@ -208,7 +249,7 @@ export default function register(app, ctx) {
       };
       const saved = ldb.saveWeatherEntry(entry);
       broadcast('calendar-updated', { type: 'weather' });
-      res.json(saved);
+      res.json(withWords(saved));
     } catch (err) { console.error('POST /api/weather/set:', err); res.status(500).json({ error: 'Server error' }); }
   });
 
@@ -245,7 +286,7 @@ export default function register(app, ctx) {
       };
       const saved = ldb.saveWeatherEntry(entry);
       broadcast('calendar-updated', { type: 'weather' });
-      res.json(saved);
+      res.json(withWords(saved));
     } catch (err) { console.error('POST /api/weather/roll:', err); res.status(500).json({ error: 'Server error' }); }
   });
 

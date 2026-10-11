@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-10-11 18:10
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -66,7 +66,8 @@ function weatherTooltipHTML(e) {
     + `<div class="wx-tip-icons">${weatherIconsHTML(e, 40)}</div>`
     + `<div class="wx-tip-row"><span class="wx-tip-lbl">🌡 Temperature</span><span class="wx-tip-val">${_wxEsc(e.temperature.value)}° <small style="opacity:.6">${_wxEsc(tl)}</small></span></div>`
     + `<div class="wx-tip-row"><span class="wx-tip-lbl">💨 Wind</span><span class="wx-tip-val">${_wxEsc(e.wind.value)}</span></div>`
-    + `<div class="wx-tip-row"><span class="wx-tip-lbl">🌧 Precipitation</span><span class="wx-tip-val">${_wxEsc(e.precipitation.value)}</span></div>`;
+    + `<div class="wx-tip-row"><span class="wx-tip-lbl">🌧 Precipitation</span><span class="wx-tip-val">${_wxEsc(e.precipitation.value)}</span></div>`
+    + (e.description ? `<div class="wx-tip-desc">${_wxEsc(e.description)}</div>` : '');
 }
 
 // ── Singleton floating tooltip ────────────────────────────────────────────────

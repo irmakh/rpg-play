@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-10-11 18:50
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -230,5 +230,110 @@ describe('DELETE /api/weather/log/:id', () => {
     await asDM(request(app).delete('/api/weather/log/1492-1-5'));
     const log = (await request(app).get('/api/weather/log')).body;
     expect(log.find(e => e.id === '1492-1-5')).toBeUndefined();
+  });
+});
+
+// ── The weather makes itself when the campaign date moves ─────────────────────
+describe('PUT /api/calendar/state — the day it lands on gets weather', () => {
+  const PW = 'pw-player';
+  function setup() {
+    const made = makeApp();
+    made.ldb.createCharacter('char-a', {
+      name: 'Aliyr', passwordHash: made.hashPassword(PW), dataJson: JSON.stringify({ name: 'Aliyr' }),
+    });
+    return made;
+  }
+  const asPlayer = (a) => a.set('X-Character-Id', 'char-a').set('X-Character-Password', PW);
+  const move = (app, date, label) =>
+    asDM(request(app).put('/api/calendar/state')).send({ ...date, dateLabel: label });
+  const inbox = async (app, who) => (await who(request(app).get('/api/notifications'))).body.items;
+
+  it('is DM only', async () => {
+    const { app } = setup();
+    expect((await request(app).put('/api/calendar/state').send(day())).status).toBe(401);
+  });
+
+  it('rolls weather for the new day and returns it in words', async () => {
+    const { app } = setup();
+    const res = await move(app, day({ frDay: 6 }), '6 Hammer, 1492 DR');
+    expect(res.status).toBe(200);
+    expect(res.body.rolledNow).toBe(true);
+    expect(res.body.weather.id).toBe('1492-1-6');
+    expect(res.body.weather.description).toBeTruthy();
+    const log = (await request(app).get('/api/weather/log')).body;
+    expect(log.map(e => e.id)).toEqual(['1492-1-6']);
+    expect(log[0].description).toBe(res.body.weather.description);
+  });
+
+  it('rolls only the day it lands on, not the days jumped over', async () => {
+    const { app } = setup();
+    await move(app, day({ frDay: 25 }), '25 Hammer, 1492 DR');
+    expect((await request(app).get('/api/weather/log')).body.map(e => e.id)).toEqual(['1492-1-25']);
+  });
+
+  it('keeps weather a day already has, rolled or set by hand', async () => {
+    const { app } = setup();
+    await asDM(request(app).post('/api/weather/set')).send({
+      date: day({ frDay: 9 }), dateLabel: '9 Hammer', sessionNormal: 60,
+      temperature: { level: 'normal', value: 41 },
+      wind: { level: 'level2', value: 'Strong' },
+      precipitation: { level: 'normal', value: 'None' },
+    });
+    const res = await move(app, day({ frDay: 9 }), '9 Hammer, 1492 DR');
+    expect(res.body.rolledNow).toBe(false);
+    expect(res.body.weather.temperature.value).toBe(41);
+    expect(res.body.weather.temperature.roll).toBeNull();
+    // Leaving and coming back does not re-roll it either.
+    await move(app, day({ frDay: 10 }), '10 Hammer, 1492 DR');
+    const back = await move(app, day({ frDay: 9 }), '9 Hammer, 1492 DR');
+    expect(back.body.weather.temperature.value).toBe(41);
+  });
+
+  it('does nothing when the date did not change', async () => {
+    const { app } = setup();
+    await move(app, day({ frDay: 6 }), '6 Hammer, 1492 DR');
+    const again = await move(app, day({ frDay: 6 }), '6 Hammer, 1492 DR');
+    expect(again.body.rolledNow).toBeUndefined();
+    expect(await inbox(app, asPlayer)).toHaveLength(1);
+  });
+
+  it('uses the stored base temperature and dice ranges', async () => {
+    const { app } = setup();
+    // Level 2 from a 1 up: every roll is level 2, so it is always hotter and wet.
+    await asDM(request(app).put('/api/weather/config')).send({ sessionNormal: 70, level1Min: 1, level2Min: 1 });
+    const w = (await move(app, day({ frDay: 12 }), '12 Hammer, 1492 DR')).body.weather;
+    expect(w.sessionNormal).toBe(70);
+    expect(w.temperature.level).toBe(LEVELS.level2);
+    expect(w.temperature.value).toBeGreaterThan(70);
+    expect(w.wind.value).toBe('Strong');
+    expect(w.precipitation.value).toBe('Heavy rain');
+  });
+
+  it('tells players what the day is like, in words only', async () => {
+    const { app } = setup();
+    const w = (await move(app, day({ frDay: 6 }), '6 Hammer, 1492 DR')).body.weather;
+    const items = await inbox(app, asPlayer);
+    expect(items).toHaveLength(1);
+    expect(items[0].kind).toBe('calendar');
+    expect(items[0].title).toBe('A new day: 6 Hammer, 1492 DR');
+    expect(items[0].body).toBe(w.description);
+    expect(items[0].body).not.toMatch(/\d/);
+  });
+
+  it('tells the DM the rolls, and only the DM', async () => {
+    const { app } = setup();
+    await move(app, day({ frDay: 6 }), '6 Hammer, 1492 DR');
+    const items = await inbox(app, asDM);
+    expect(items).toHaveLength(1);
+    expect(items[0].kind).toBe('weather');
+    expect(items[0].title).toBe('Weather rolled for 6 Hammer, 1492 DR');
+    expect(items[0].body).toMatch(/Temperature -?\d+° \(d20 \d+/);
+    expect((await inbox(app, asPlayer)).some(i => i.kind === 'weather')).toBe(false);
+  });
+
+  it('gives a festival day its own weather', async () => {
+    const { app } = setup();
+    const res = await move(app, { frYear: 1492, frMonth: null, frDay: null, frFestival: 'midwinter' }, 'Midwinter, 1492 DR');
+    expect(res.body.weather.id).toBe('1492-F-midwinter');
   });
 });

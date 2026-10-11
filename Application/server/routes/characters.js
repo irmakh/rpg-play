@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-09-27 12:55
+// Written by Irmak Hakman — 2026-10-11 19:30
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -106,6 +106,36 @@ export default function register(app, ctx) {
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
   });
 
+  // Spend or restore an item's charges: `used` is how many are gone, clamped to
+  // what the item holds. The table panel uses this; the character sheet saves
+  // its own item list.
+  app.patch('/api/characters/:id/item-charges', async (req, res) => {
+    try {
+      const charId = req.params.id;
+      if (!masterAuth(req)) {
+        const status = await charAuth(charId, req);
+        if (status !== 200) return res.status(status).json({ error: status === 404 ? 'Not found' : 'Unauthorized' });
+      }
+      const { itemId, used } = req.body || {};
+      if (itemId === undefined || used === undefined) return res.status(400).json({ error: 'itemId and used required' });
+      const char = await getCharacter(charId);
+      if (!char) return res.status(404).json({ error: 'Not found' });
+      let data = {};
+      try { data = JSON.parse(char.dataJson || '{}'); } catch {}
+      let its = [];
+      try { its = JSON.parse(data._items || '[]'); } catch {}
+      const it = its.find(x => x && x.id === itemId);
+      if (!it) return res.status(404).json({ error: 'Item not found' });
+      const max = Math.max(0, parseInt(it.charges) || 0);
+      if (!max) return res.status(400).json({ error: 'This item has no charges' });
+      it.chargesUsed = Math.max(0, Math.min(parseInt(used) || 0, max));
+      data._items = JSON.stringify(its);
+      ldb.updateCharacter(charId, { dataJson: JSON.stringify(data) });
+      broadcast('characters', { action: 'updated', id: charId, keys: ['_items'] });
+      res.json({ ok: true, used: it.chargesUsed, charges: max });
+    } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
+  });
+
   // Reset spent uses on a rest. type 'short' restores short-recharge actions;
   // 'long' restores both long- and short-recharge actions.
   app.post('/api/characters/:id/action-rest', async (req, res) => {
@@ -126,6 +156,13 @@ export default function register(app, ctx) {
         if (a && (a.recharge === 'short' || (type === 'long' && a.recharge === 'long'))) a.used = 0;
       });
       data._actions = JSON.stringify(acts);
+      // A long rest also refills the items that say it does.
+      if (type === 'long') {
+        let its = [];
+        try { its = JSON.parse(data._items || '[]'); } catch {}
+        its.forEach(i => { if (i && i.chargesRecharge === 'long') i.chargesUsed = 0; });
+        data._items = JSON.stringify(its);
+      }
       const dataJson = JSON.stringify(data);
       ldb.updateCharacter(charId, { dataJson });
       broadcast('characters', { action: 'updated', id: charId });

@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-09-27 12:20
+// Written by Irmak Hakman — 2026-10-11 18:10
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -67,7 +67,7 @@ const NOTIF_ICONS = {
   'loot-granted': '💰', 'loot-declined': '📭', 'loot-requested': '🙋',
   'handout': '📜', 'your-turn': '⚔️', 'combat-started': '⚔️',
   'dice': '🎲', 'chat': '💬', 'music': '🎵', 'damage': '🩸', 'healing': '💚',
-  'condition': '🌀', 'shop-open': '🛒', 'shop-closed': '🛒', 'calendar': '📅',
+  'condition': '🌀', 'shop-open': '🛒', 'shop-closed': '🛒', 'calendar': '📅', 'weather': '🌦',
   'security': '🛡️',
 };
 function notifIcon(kind) { return NOTIF_ICONS[kind] || '🔔'; }

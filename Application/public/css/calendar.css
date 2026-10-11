@@ -1,4 +1,4 @@
-/* Written by Irmak Hakman in 2026. */
+/* Written by Irmak Hakman — 2026-10-11 18:10 */
 /* Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) */
 
 /* ── Forgotten Realms Calendar ───────────────────────────────────────────────── */
@@ -254,3 +254,50 @@
   #cal-today-bar-btns{display:flex;flex-wrap:wrap;gap:var(--s1);min-width:0;margin-left:0;flex:1 1 100%;max-width:100%}
   .cal-today-bar > *{min-width:0}
 }
+
+/* ── Looking around: the day on show ─────────────────────────────────────────
+   Sits under the month pager. Nothing here moves the campaign date. */
+.cal-view-ctl{display:flex;align-items:center;gap:var(--s1);flex-wrap:wrap;margin:0 0 var(--s2)}
+.cal-side .cal-view-ctl{flex-shrink:0;margin:0;padding:var(--s2) var(--s3);border-bottom:1px solid var(--rule)}
+.cal-view-day{flex:1;min-width:8ch;text-align:center;font-size:12px;color:var(--bone);font-weight:bold;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* ── Events list: search, filters, days ──────────────────────────────────────
+   Built by js/lib/calendar-list.js for both calendars. */
+.cal-tools{display:flex;flex-wrap:wrap;gap:var(--s2);align-items:center;margin-bottom:var(--s3)}
+.cal-tools input.cal-tool-search{flex:1 1 180px;min-width:0;width:auto;background:var(--slate);border:1px solid var(--rule-hi);border-radius:4px;color:var(--bone);font:inherit;font-size:12px;padding:5px 8px}
+.cal-tools select{flex:0 1 auto;width:auto;max-width:100%;background:var(--slate);border:1px solid var(--rule-hi);border-radius:4px;color:var(--bone);font:inherit;font-size:12px;padding:5px 6px}
+.cal-tool-scope{display:inline-flex;border:1px solid var(--rule-hi);border-radius:4px;overflow:hidden;flex-shrink:0}
+.cal-tool-scope button{background:transparent;border:0;border-right:1px solid var(--rule-hi);color:var(--ash);font:inherit;font-size:12px;padding:5px 10px;cursor:pointer}
+.cal-tool-scope button:last-child{border-right:0}
+.cal-tool-scope button:hover{color:var(--bone)}
+.cal-tool-scope button.on{background:var(--arc-fill);color:var(--arc);font-weight:bold}
+
+.cal-day-group{margin-bottom:var(--s3)}
+.cal-day-hdr{display:flex;align-items:center;gap:var(--s2);padding:4px 0;border-bottom:1px solid var(--rule-hi);margin-bottom:4px;cursor:pointer}
+.cal-day-hdr:hover .cal-day-hdr-date{color:var(--arc)}
+.cal-day-hdr-date{font-size:12px;font-weight:bold;color:var(--bone)}
+.cal-day-hdr-today{font-size:9px;font-weight:bold;color:var(--ink);background:var(--arc);border-radius:3px;padding:1px 5px}
+.cal-day-hdr-count{margin-left:auto;font-size:10px;color:var(--ash)}
+.cal-day-group.is-today .cal-day-hdr{border-bottom-color:var(--arc)}
+
+.cal-row{border:1px solid var(--a33);border-radius:4px;background:var(--slate-hi);margin-bottom:4px}
+.cal-row > summary{display:flex;align-items:center;gap:var(--s2);padding:6px 10px;cursor:pointer;list-style:none;min-width:0}
+.cal-row > summary::-webkit-details-marker{display:none}
+.cal-row > summary::before{content:'▸';color:var(--ash);font-size:10px;flex-shrink:0;width:8px}
+.cal-row[open] > summary::before{content:'▾'}
+.cal-row[open] > summary{border-bottom:1px solid var(--a33)}
+.cal-row-title{flex:1;min-width:0;font-size:13px;font-weight:bold;color:var(--bone);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cal-row[open] .cal-row-title{white-space:normal}
+.cal-row-kind{font-size:10px;color:var(--ash);text-transform:capitalize;flex-shrink:0}
+.cal-row-author{font-size:10px;color:var(--arc);font-style:italic;flex-shrink:0;max-width:14ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cal-row-media{font-size:10px;color:var(--ash);flex-shrink:0}
+.cal-row > summary .cal-event-badge{margin-top:0}
+.cal-row-body{padding:8px 10px 10px 26px}
+.cal-row-body .cal-event-desc{margin-top:0;font-size:12px}
+.cal-row-body .cal-event-actions{margin-top:var(--s2);padding-top:0}
+
+@media (max-width:560px){
+  .cal-row-kind{display:none}
+  .cal-row-body{padding-left:10px}
+}
+.cal-festival-row.cal-selected{box-shadow:inset 0 0 0 2px var(--arc)}

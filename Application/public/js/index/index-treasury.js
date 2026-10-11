@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-10-11 19:50
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -136,8 +136,11 @@ function isUnidentified(item) {
   return item.unidentified === true || item.descVisible === false;
 }
 
+// `alias` means the server already sent the DM's stand-in name, which needs no
+// marker of its own — the "Properties unknown" line under it says the rest.
 function treasuryDisplayName(item) {
-  return isUnidentified(item) ? `${item.name || ''} - (unidentified)` : (item.name || '');
+  if (!isUnidentified(item) || item.alias) return item.name || '';
+  return `${item.name || ''} - (unidentified)`;
 }
 
 function treasuryTypeLabel(item) {
@@ -251,6 +254,7 @@ function openTreasuryDetail(id) {
   if (item.initBonus)  rows.push(['Initiative Bonus', (item.initBonus > 0 ? '+' : '') + item.initBonus]);
   if (item.speedBonus) rows.push(['Speed Bonus',      (item.speedBonus > 0 ? '+' : '') + item.speedBonus + ' ft']);
   if (item.requiresAttunement) rows.push(['Attunement', 'Required']);
+  if (item.charges) rows.push(['Charges', item.charges + (item.chargesRecharge === 'long' ? ' · refills on a long rest' : '')]);
 
   let html = '';
   if (item.imageMedium || item.imageUrl) {

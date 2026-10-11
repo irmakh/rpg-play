@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-09-27 11:50
+// Written by Irmak Hakman — 2026-10-11 21:20
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -129,57 +129,15 @@ function renderSideCharacter() {
       + `</div>`
     : '';
 
-  // Spell slots HTML (shared) — pips are clickable to toggle used/available
+  // Spell slots and the spellbook — built in table-utils.js. Slots are clickable
+  // for whoever may edit; the book lists every spell, narrowed by the filter
+  // and search the viewer last chose.
   const canEditSlots = isDM() || isCharSession();
-  const spellSlotsHtml = spellSlots.length > 0
-    ? `<div class="rp-flat-hdr">Spell Slots${canEditSlots ? ' <span style="font-size:8px;opacity:.5;font-weight:normal;letter-spacing:0">(click to use/restore)</span>' : ''}</div>`
-      + `<div class="rp-spell-slots">`
-      + spellSlots.map(s => {
-          const avail = s.total - s.used;
-          const pips = Array.from({ length: s.total }, (_, j) => {
-            const isAvail = j < avail;
-            const clickAttr = canEditSlots
-              ? ` onclick="clickSpellSlotPip(${s.level},${j})" style="cursor:pointer"`
-              : '';
-            return `<div class="rp-spell-pip${isAvail ? '' : ' used'}" title="Slot ${isAvail ? 'available — click to use' : 'used — click to restore'}"${clickAttr}></div>`;
-          }).join('');
-          return `<div class="rp-spell-lvl"><div class="rp-spell-lvl-num">${s.level}</div><div class="rp-spell-pips">${pips}</div></div>`;
-        }).join('')
-      + `</div>`
-    : '';
-
-  // Items (wear / unwear) — shown before spell slots, 2-per-row grid with checkboxes
+  const spellSlotsHtml = spellSlotsHTML(spellSlots, canEditSlots);
+  // Items (wear / unwear, charges)
   const itemsHtml = _buildSidePanelItems(d, canEditSlots);
-
-  // Prepared spells HTML (shared). _sideSpells holds the rendered spells so a name
-  // click can look the spell up by index and post its description to chat (item 9).
-  let spellListHtml = '';
   _sideSpells = preparedSpells;
-  if (preparedSpells.length > 0) {
-    const byLevel = {};
-    for (const s of preparedSpells) {
-      const lvl = s[0] || 0;
-      if (!byLevel[lvl]) byLevel[lvl] = [];
-      byLevel[lvl].push(s);
-    }
-    spellListHtml = `<div class="rp-flat-hdr">Prepared Spells</div>`;
-    for (const lvl of Object.keys(byLevel).sort((a, b) => Number(a) - Number(b))) {
-      // The level is whatever the sheet's spell row holds, so it is escaped.
-      const lvlName = lvl === '0' ? 'Cantrips' : `Level ${esc(lvl)}`;
-      spellListHtml += `<div style="font-size:9px;color:var(--ash);padding:3px 10px 1px;text-transform:uppercase;letter-spacing:.5px">${lvlName}</div>`;
-      for (const s of byLevel[lvl]) {
-        const idx = preparedSpells.indexOf(s);
-        const sName = s[1] || '?';
-        const flags = (s[4] ? ' <span style="color:var(--arc)" title="Concentration">C</span>' : '')
-                    + (s[5] ? ' <span style="color:#ddaaff" title="Ritual">R</span>' : '');
-        const nameSpan = `<span class="rp-spell-name" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px" onclick="postSpellInfoFromPanel(${idx})" title="Send to chat">${esc(sName)}</span>${flags}`;
-        spellListHtml += `<div class="qroll-row" style="padding:3px 10px;font-size:11px">`
-          + nameSpan
-          + (spAtk !== null ? `<span class="qroll-val" onclick="event.stopPropagation();qroll('${escJs(sName)}','${escJs(String(spAtk))}')" style="font-size:11px;cursor:pointer" title="Spell attack"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-bolt"></use></svg></span>` : '')
-          + `</div>`;
-      }
-    }
-  }
+  const spellListHtml = spellbookHTML(_sideAllSpells, { filter: _sideSpellFilter, query: _sideSpellQuery, spAtk });
 
   // ── Secondary stats bar: Initiative (clickable) | Prof | Passive Perc | Spell DC ──
   const secStats = [];
@@ -289,6 +247,38 @@ function renderSideCharacter() {
     + panesHtml;
 }
 
+// ── Spellbook filter ──────────────────────────────────────────────────────────
+// Which spells the book shows. Kept while the panel moves from one character to
+// the next; the search text is cleared when it does.
+let _sideSpellFilter = 'prepared';
+let _sideSpellQuery  = '';
+
+function setSideSpellFilter(f) { _sideSpellFilter = f; _applySideSpellFilter(); }
+function setSideSpellQuery(q)  { _sideSpellQuery = q;  _applySideSpellFilter(); }
+
+// Show and hide rows in place rather than rebuilding the panel, so typing in
+// the search box never loses the cursor.
+function _applySideSpellFilter() {
+  const root = document.getElementById('rp-sb');
+  if (!root) return;
+  let any = false;
+  root.querySelectorAll('.rp-sb-group').forEach(group => {
+    let shown = 0;
+    group.querySelectorAll('.rp-sb-row').forEach(row => {
+      const show = spellShown(_sideAllSpells[parseInt(row.dataset.idx)], _sideSpellFilter, _sideSpellQuery);
+      row.style.display = show ? '' : 'none';
+      if (show) shown++;
+    });
+    group.style.display = shown ? '' : 'none';
+    const n = group.querySelector('.rp-sb-n');
+    if (n) n.textContent = shown;
+    if (shown) any = true;
+  });
+  root.querySelectorAll('.rp-sb-f').forEach(b => b.classList.toggle('on', b.dataset.f === _sideSpellFilter));
+  const none = root.querySelector('.rp-sb-none');
+  if (none) none.style.display = any ? 'none' : '';
+}
+
 function clickSpellSlotPip(level, pipIndex) {
   if (!qrollData || !_sideCharId) return;
   const totalKey = `slot-${level}-total`;
@@ -336,12 +326,52 @@ function _buildSidePanelItems(d, canEdit) {
       // (number or string, as stored) and HTML-escaped for the attribute.
       ? ` onclick="clickEquipItem(${esc(JSON.stringify(it.id))})" style="cursor:pointer" title="${worn ? 'Worn — click to remove' : 'Click to wear'}"`
       : '';
-    return `<div class="rp-item-cell${worn ? ' worn' : ''}"${attrs}>`
+    // Charges: how many are left, and a Use button for whoever may edit. The
+    // button stops the click so using an item does not also wear or remove it.
+    const max = Math.max(0, parseInt(it.charges) || 0);
+    const left = Math.max(0, max - Math.min(max, parseInt(it.chargesUsed) || 0));
+    const charge = max
+      ? `<span class="rp-item-chip rp-item-charges${left ? '' : ' empty'}" title="Charges left">⚡${left}/${max}</span>`
+        + (canEdit && left
+          ? `<span class="rp-mon-use-btn rp-item-use" onclick="event.stopPropagation();clickUseItem(${esc(JSON.stringify(it.id))})" title="Use one charge">Use</span>`
+          : '')
+      : '';
+    return `<div class="rp-item-cell${worn ? ' worn' : ''}${max ? ' has-charges' : ''}"${attrs}>`
       + `<span class="rp-item-box${worn ? ' on' : ''}"></span>`
-      + `<span class="rp-item-name">${esc(it.name || 'Item')}</span>${_sideItemChip(it)}</div>`;
+      + `<span class="rp-item-name">${esc(it.name || 'Item')}</span>${_sideItemChip(it)}${charge}</div>`;
   }).join('');
   return `<div class="rp-flat-hdr">Items${canEdit ? ' <span style="font-size:8px;opacity:.5;font-weight:normal;letter-spacing:0">(click to wear / remove)</span>' : ''}</div>`
     + `<div class="rp-item-grid">${cells}</div>`;
+}
+
+// Spend one charge of an item: shown at once, saved through the server (which
+// clamps it), and announced in chat like an action's Use button.
+async function clickUseItem(itemId) {
+  if (!qrollData || !_sideCharId) return;
+  let its = [];
+  try { its = JSON.parse(qrollData._items || '[]'); } catch { return; }
+  const it = its.find(x => x && x.id === itemId);
+  if (!it) return;
+  const max = Math.max(0, parseInt(it.charges) || 0);
+  const used = Math.min(max, parseInt(it.chargesUsed) || 0);
+  if (!max || used >= max) return;
+  it.chargesUsed = used + 1;
+  qrollData._items = JSON.stringify(its);
+  const content = document.getElementById('side-qroll-content');
+  if (content) content.innerHTML = renderSideCharacter();
+  const charId = _sideCharId;
+  try {
+    const res = await fetch(`/api/characters/${charId}/item-charges`, {
+      method: 'PATCH',
+      headers: authHeaders(),
+      body: JSON.stringify({ itemId, used: it.chargesUsed }),
+    });
+    if (!res.ok) throw new Error('refused');
+    postChatInfoCard({ name: it.name || 'Item', meta: ['Uses a charge', `${max - it.chargesUsed} of ${max} left`] });
+  } catch {
+    showToast('Could not use that item.', true);
+    if (_sideCharId === charId) { _sideQrollTokenId = null; loadSideQroll(); }   // show what is really saved
+  }
 }
 
 function clickEquipItem(itemId) {
@@ -537,6 +567,13 @@ async function tableActionRest(type) {
     if (a && (a.recharge === 'short' || (type === 'long' && a.recharge === 'long'))) a.used = 0;
   });
   qrollData._actions = JSON.stringify(arr);
+  // The server refills long-rest items too; show it at once.
+  if (type === 'long') {
+    let its = [];
+    try { its = JSON.parse(qrollData._items || '[]'); } catch {}
+    its.forEach(i => { if (i && i.chargesRecharge === 'long') i.chargesUsed = 0; });
+    qrollData._items = JSON.stringify(its);
+  }
   const content = document.getElementById('side-qroll-content');
   if (content) content.innerHTML = renderSideCharacter();
   try {
@@ -569,7 +606,7 @@ async function loadOwnCharacterSheet() {
 
   _sideViewInitId = null;
   selectedTokenId = null;
-  if (_sideQrollTokenId !== SIDE_SELF) { _sideOpenSections.clear(); _sideActiveTab = 'skills'; _sideCombatTab = 'attacks'; }
+  if (_sideQrollTokenId !== SIDE_SELF) { _sideOpenSections.clear(); _sideSpellQuery = ''; _sideActiveTab = 'skills'; _sideCombatTab = 'attacks'; }
   _sidePrevTokenId = SIDE_SELF;
   _sideQrollTokenId = SIDE_SELF;
 
@@ -742,7 +779,7 @@ async function loadSideQroll() {
 
   if (targetId === _sideQrollTokenId) return; // already rendered (data unchanged)
   // Only reset section/tab state when switching to a genuinely different token
-  if (targetId !== _sidePrevTokenId) { _sideOpenSections.clear(); _sideActiveTab = 'skills'; _sideCombatTab = 'attacks'; }
+  if (targetId !== _sidePrevTokenId) { _sideOpenSections.clear(); _sideSpellQuery = ''; _sideActiveTab = 'skills'; _sideCombatTab = 'attacks'; }
   _sidePrevTokenId = targetId;
   _sideQrollTokenId = targetId;
 

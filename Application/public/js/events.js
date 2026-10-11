@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-10-11 18:00
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -81,6 +81,29 @@ function setSaveStatus(msg, isErr) {
 }
 
 // ── Render ────────────────────────────────────────────────────────────────────
+// The day on show. Looking around the calendar is separate from the campaign
+// date: only the buttons in the top bar move the campaign.
+let calSelected = null;   // a date, or null when a whole month is on show
+
+// The events list (js/lib/calendar-list.js) — grouping, search and filters.
+const calList = calListCreate('dm', {
+  toolsEl: 'cal-list-tools', listEl: 'cal-events-list', titleEl: 'cal-events-section-title',
+  dm: true,
+  events: () => calEvents,
+  view: () => calView,
+  selected: () => calSelected,
+  today: () => calCurrentDate,
+  mediaHTML: (media) => calRenderMedia(media),
+  actionsHTML: (e) => `<div class="cal-event-actions">
+      <button class="btn sm" onclick="calOpenEditEvent('${escJs(e.id)}')">Edit</button>
+      <button class="btn danger sm" onclick="calConfirmDelete('${escJs(e.id)}')">Delete</button>
+    </div>`,
+  weatherHTML: (key) => (calWeather[key] ? weatherDayMarkHTML(calWeather[key], key) : ''),
+  onPickDay: (d) => calSelectDate(d),
+  // "Day" with no day chosen means the campaign's own day.
+  onScope: (scope) => { if (scope === 'day' && !calSelected) { calSelected = { ...calCurrentDate }; calView = frDateToView(calSelected); calRenderNavTitle(); calRenderGrid(); } },
+});
+
 function calRender() {
   calRenderTodayBar();
   calRenderNavTitle();
@@ -95,6 +118,8 @@ function calRenderTodayBar() {
 }
 
 function calRenderNavTitle() {
+  const dayEl = document.getElementById('cal-view-day');
+  if (dayEl) dayEl.textContent = calSelected ? frFormatDate(calSelected) : 'Whole month';
   let title, subtitle;
   if (calView.type === 'festival') {
     title    = '✦ ' + frFestivalName(calView.festival);
@@ -119,7 +144,7 @@ function calRenderGrid() {
     const festKey = `${calView.year}-F-${calView.festival}`;
     const festWx  = calWeather[festKey];
     area.innerHTML = `
-      <div class="cal-festival-row${isToday?' cal-is-today':''}" onclick="calDayClick(null,null,'${calView.festival}')">
+      <div class="cal-festival-row${isToday?' cal-is-today':''}${calSelected && calSelected.frFestival === calView.festival && calSelected.frYear === calView.year ? ' cal-selected' : ''}" onclick="calDayClick(null,null,'${calView.festival}')">
         <span class="cal-fest-icon"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-star"></use></svg></span>
         <span class="cal-fest-name">${esc(fest ? fest.name : calView.festival)}</span>
         ${dots ? `<div class="cal-fest-dots">${dots}</div>` : ''}
@@ -144,12 +169,13 @@ function calRenderGrid() {
     for (let d = 1; d <= 10; d++) {
       const day = td * 10 + d;
       const isToday = frDatesEqual(calCurrentDate, { frYear: calView.year, frMonth: calView.month, frDay: day, frFestival: '' });
+      const isSel   = frDatesEqual(calSelected, { frYear: calView.year, frMonth: calView.month, frDay: day, frFestival: '' });
       const dayEvs  = evByDay[day] || [];
       const dots    = dayEvs.map(e => `<span class="cal-dot ${e.isPublic?'pub':'priv'}" title="${esc(e.title)}"></span>`).join('');
       const wxKey   = `${calView.year}-${calView.month}-${day}`;
       const wx      = calWeather[wxKey];
       cells += `
-        <td class="cal-day-cell${isToday?' cal-is-today':''}" onclick="calDayClick(${calView.month},${day},null)">
+        <td class="cal-day-cell${isToday?' cal-is-today':''}${isSel?' cal-selected':''}" onclick="calDayClick(${calView.month},${day},null)">
           <span class="cal-day-num">${day}</span>
           ${dots ? `<div class="cal-dots">${dots}</div>` : ''}
           ${wx ? weatherDayMarkHTML(wx, wxKey) : ''}
@@ -160,47 +186,7 @@ function calRenderGrid() {
   area.innerHTML = `<table class="cal-grid"><tbody>${rows}</tbody></table>`;
 }
 
-function calRenderEventsList() {
-  const viewEvs = calEventsForView();
-  const el      = document.getElementById('cal-events-list');
-  const titleEl = document.getElementById('cal-events-section-title');
-  if (calView.type === 'festival') {
-    titleEl.textContent = `Events on ${frFestivalName(calView.festival)}`;
-  } else {
-    const m = FR_MONTHS.find(mo => mo.num === calView.month);
-    titleEl.textContent = `Events in ${m ? m.name : '?'} ${calView.year} DR`;
-  }
-
-  if (!viewEvs.length) {
-    el.innerHTML = '<div class="cal-empty">No events recorded for this period.</div>';
-    return;
-  }
-
-  el.innerHTML = viewEvs.map(e => {
-    const badge = e.authorCharId
-      ? `<span class="cal-event-badge ${e.isPublic ? 'pub' : 'priv'}">${e.isPublic ? 'Shared' : 'Private'}</span>`
-      : (e.isPublic
-        ? '<span class="cal-event-badge pub">Public</span>'
-        : '<span class="cal-event-badge priv">DM Only</span>');
-    const author = e.authorCharId ? `<div class="cal-event-author"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-book"></use></svg> ${esc(e.authorName || 'Journal')}</div>` : '';
-    const dateStr = frFormatDate({ frYear: e.frYear, frMonth: e.frMonth, frDay: e.frDay, frFestival: e.frFestival });
-    return `
-      <div class="cal-event-item">
-        <div class="cal-event-info">
-          <div class="cal-event-title">${esc(e.title)}</div>
-          <div class="cal-event-date">${esc(dateStr)} &middot; ${esc(e.eventType)}</div>
-          ${author}
-          ${e.description ? `<div class="cal-event-desc">${esc(e.description)}</div>` : ''}
-          ${calRenderMedia(e.media)}
-        </div>
-        ${badge}
-        <div class="cal-event-actions">
-          <button class="btn sm" onclick="calOpenEditEvent('${escJs(e.id)}')">Edit</button>
-          <button class="btn danger sm" onclick="calConfirmDelete('${escJs(e.id)}')">✕</button>
-        </div>
-      </div>`;
-  }).join('');
-}
+function calRenderEventsList() { calList.render(); }
 
 // Render attachment thumbnails / players for a calendar event (DM view).
 function calRenderMedia(media) {
@@ -217,15 +203,32 @@ function calRenderMedia(media) {
 // ── Navigation ────────────────────────────────────────────────────────────────
 function calNavPage(dir) {
   calView = frNavigate(calView, dir);
+  // Paging to another month leaves the selected day behind.
+  calSelected = null;
+  if (calList.state.scope === 'day') calList.state.scope = 'month';
   calRenderNavTitle();
   calRenderGrid();
   calRenderEventsList();
 }
 
-function calGoToToday() {
-  calView = frDateToView(calCurrentDate);
-  calRender();
+// Put one day on show (or none, for the whole month). Never touches the
+// campaign date.
+function calSelectDate(d) {
+  calSelected = d ? { frYear: d.frYear, frMonth: d.frMonth ?? null, frDay: d.frDay ?? null, frFestival: d.frFestival || '' } : null;
+  if (calSelected) { calView = frDateToView(calSelected); calList.state.scope = 'day'; }
+  else if (calList.state.scope === 'day') calList.state.scope = 'month';
+  calRenderNavTitle();
+  calRenderGrid();
+  calRenderEventsList();
 }
+
+// Step the day on show, starting from the campaign's day when none is chosen.
+function calViewDay(dir) {
+  const from = calSelected || calCurrentDate;
+  calSelectDate(dir > 0 ? frNextDay(from) : frPrevDay(from));
+}
+
+function calGoToToday() { calSelectDate(calCurrentDate); }
 
 // ── Campaign Date Controls ────────────────────────────────────────────────────
 async function calSaveCurrentDate(newDate) {
@@ -234,13 +237,20 @@ async function calSaveCurrentDate(newDate) {
     const res = await fetch('/api/calendar/state', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', 'X-Master-Password': masterPw },
-      body: JSON.stringify(newDate),
+      // The label travels with it: the server words the notifications but only
+      // this page knows the month and festival names.
+      body: JSON.stringify({ ...newDate, dateLabel: frFormatDate(newDate) }),
     });
     const json = await res.json().catch(() => ({}));
     if (!res.ok || !json.ok) { setSaveStatus('Save failed', true); return; }
+    // If the campaign's own day was the one on show, keep showing the campaign's day.
+    const following = calSelected && frDatesEqual(calSelected, calCurrentDate);
     calCurrentDate = newDate;
-    setSaveStatus('Saved');
-    setTimeout(() => setSaveStatus(''), 2000);
+    if (following) { calSelected = { ...newDate }; calView = frDateToView(newDate); }
+    // The server has just given the new day its weather.
+    await weatherLoadLog();
+    setSaveStatus(json.weather ? `Weather: ${weatherSummary(json.weather)}` : 'Saved');
+    setTimeout(() => setSaveStatus(''), 6000);
     calRender();
   } catch { setSaveStatus('Save failed', true); }
 }
@@ -248,8 +258,14 @@ async function calSaveCurrentDate(newDate) {
 function calNextDay() { calSaveCurrentDate(frNextDay(calCurrentDate)); }
 function calPrevDay() { calSaveCurrentDate(frPrevDay(calCurrentDate)); }
 
-function calOpenJumpModal() {
-  const d = calCurrentDate;
+// One date picker, two jobs: 'campaign' moves the campaign date, 'view' only
+// changes the day on show.
+let calJumpMode = 'campaign';
+function calOpenJumpModal(mode) {
+  calJumpMode = mode === 'view' ? 'view' : 'campaign';
+  document.getElementById('cal-jump-title').textContent = calJumpMode === 'view' ? 'Go to a Date' : 'Set Campaign Date';
+  document.getElementById('cal-jump-ok').textContent    = calJumpMode === 'view' ? 'Show' : 'Set Campaign Date';
+  const d = (calJumpMode === 'view' && calSelected) || calCurrentDate;
   if (d.frFestival) {
     document.getElementById('cal-jump-type').value      = 'festival';
     document.getElementById('cal-jump-fest-year').value = d.frYear;
@@ -290,7 +306,8 @@ function calSetCurrentDate() {
     };
   }
   calCloseJumpModal();
-  calSaveCurrentDate(newDate);
+  if (calJumpMode === 'view') calSelectDate(newDate);
+  else calSaveCurrentDate(newDate);
 }
 
 // ── Weather ───────────────────────────────────────────────────────────────────
@@ -325,7 +342,8 @@ async function weatherOpenModal() {
   } catch (e) { console.error('weatherOpenModal:', e); }
   weatherRangeHelp();
   await weatherLoadLog();
-  weatherSetTarget(calCurrentDate);
+  document.getElementById('weather-details').open = false;
+  weatherSetTarget(calSelected || calCurrentDate);
   weatherRenderHistory();
 }
 
@@ -360,6 +378,7 @@ function weatherOnDateChange() {
   document.getElementById('weather-target-date').textContent = frFormatDate(weatherTargetDate);
   const existing = calWeather[weatherDateKey(weatherTargetDate)];
   if (existing) weatherFillForm(existing); else weatherClearForm();
+  weatherRenderSummary();
 }
 
 // Point the editor at a date: reflect it into the date inputs, then load its
@@ -380,6 +399,21 @@ function weatherSetTarget(date) {
   document.getElementById('weather-target-date').textContent = frFormatDate(date);
   const existing = calWeather[weatherDateKey(date)];
   if (existing) weatherFillForm(existing); else weatherClearForm();
+  weatherRenderSummary();
+}
+
+// The top of the weather window: the day in pictures and words, then the
+// numbers. Everything that changes them is below, behind "Edit details".
+function weatherRenderSummary() {
+  const e = weatherTargetDate ? calWeather[weatherDateKey(weatherTargetDate)] : null;
+  document.getElementById('weather-roll-lbl').textContent = e ? 'Roll again' : 'Roll';
+  document.getElementById('weather-today-link').style.display =
+    frDatesEqual(weatherTargetDate, calCurrentDate) ? 'none' : '';
+  document.getElementById('weather-summary').innerHTML = e
+    ? `<div class="wx-now-main">${weatherIconsHTML(e, 34)}<span class="wx-now-line">${esc(weatherSummary(e))}</span></div>`
+      + `<div class="wx-now-words">${esc(e.description || '')}</div>`
+      + `<div class="wx-now-detail">${esc(e.detail || '')}</div>`
+    : '<div class="cal-empty">No weather for this day yet. It is rolled by itself when the campaign date moves onto a day.</div>';
 }
 function weatherUseCurrentDate() { weatherSetTarget(calCurrentDate); }
 
@@ -459,6 +493,8 @@ async function weatherRoll() {
     weatherFillForm(await res.json());
     await weatherLoadLog();
     weatherRenderHistory();
+    weatherRenderSummary();
+    calRenderEventsList();
     calRenderGrid();
   } catch (e) { console.error('weatherRoll:', e); setSaveStatus('Weather roll failed', true); }
   finally { btn.disabled = false; }
@@ -498,6 +534,8 @@ async function weatherSave() {
     setTimeout(() => setSaveStatus(''), 1500);
     await weatherLoadLog();
     weatherRenderHistory();
+    weatherRenderSummary();
+    calRenderEventsList();
     calRenderGrid();
   } catch (e) { console.error('weatherSave:', e); setSaveStatus('Weather save failed', true); }
 }
@@ -509,6 +547,8 @@ async function weatherDeleteEntry(id) {
     });
     await weatherLoadLog();
     weatherRenderHistory();
+    weatherRenderSummary();
+    calRenderEventsList();
     calRenderGrid();
   } catch (e) { console.error('weatherDeleteEntry:', e); }
 }
@@ -545,12 +585,18 @@ function calEventsForView() {
   return calEvents.filter(e => !e.frFestival && e.frMonth === calView.month && e.frYear === calView.year);
 }
 
+// Clicking a day shows that day; clicking it again goes back to the month.
 function calDayClick(month, day, festival) {
-  calOpenAddEventOn(calView.year, month, day, festival);
+  const d = festival
+    ? { frYear: calView.year, frMonth: null, frDay: null, frFestival: festival }
+    : { frYear: calView.year, frMonth: month, frDay: day, frFestival: '' };
+  calSelectDate(frDatesEqual(calSelected, d) ? null : d);
 }
 
 function calOpenAddEvent() {
-  if (calView.type === 'festival') {
+  if (calSelected) {
+    calOpenAddEventOn(calSelected.frYear, calSelected.frMonth, calSelected.frDay, calSelected.frFestival || null);
+  } else if (calView.type === 'festival') {
     calOpenAddEventOn(calView.year, null, null, calView.festival);
   } else {
     calOpenAddEventOn(calView.year, calView.month, 1, null);

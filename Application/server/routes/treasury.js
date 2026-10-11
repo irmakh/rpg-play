@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-09-27 12:10
+// Written by Irmak Hakman — 2026-10-11 20:40
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -56,15 +56,27 @@ function objFromRecord(r) {
     imageThumb: r.imageThumb || '',
     imageMedium: r.imageMedium || '',
     createdAt: r.createdAt || '',
+    // What players read instead of the name until the item is identified.
+    unidName: r.unidName || '',
+    // Charges the item holds (0 = it has none) and whether a long rest refills them.
+    charges: Math.max(0, parseInt(r.charges) || 0),
+    chargesRecharge: r.chargesRecharge === 'long' ? 'long' : '',
   };
 }
 
-// An unidentified item keeps its own name — a placeholder name proved more
-// confusing than useful — and is flagged with a suffix instead. Only the
-// properties are withheld.
+// What an unidentified item is called. The DM can give it a second name for
+// exactly this ("Dull Iron Ring"); players then see only that, and the real
+// name stays on the server until the item is identified. With no second name
+// the item keeps its own, flagged with a suffix — an automatic placeholder
+// ("Unidentified Weapon") was tried and proved more confusing than useful.
 const UNIDENTIFIED_SUFFIX = ' - (unidentified)';
 function unidentifiedItemName(name) {
   return `${name || ''}${UNIDENTIFIED_SUFFIX}`;
+}
+/** The name a player may be shown for this item, in a message or a list. */
+function shownName(item) {
+  if (item.descVisible) return item.name || '';
+  return item.unidName || item.name || '';
 }
 
 /**
@@ -78,12 +90,17 @@ function unidentifiedItemName(name) {
  * browser, where they would still be readable in the network payload.
  */
 function playerObj(r) {
-  const o = objFromRecord(r);
+  const full = objFromRecord(r);
+  // The second name is the DM's note; an identified item has no use for it.
+  const { unidName, ...o } = full;
   if (o.descVisible) return o;
   return {
     id: o.id,
     unidentified: true,
-    name: o.name,
+    // `alias` tells the browser the name is already the stand-in, so it does
+    // not add its own "(unidentified)" to it.
+    name: unidName || o.name,
+    alias: !!unidName,
     mode: o.mode,
     descVisible: false,
     description: '',
@@ -100,6 +117,7 @@ function playerObj(r) {
     spellAtkBonus: 0, spellDcBonus: 0,
     requiresAttunement: false,
     weaponAtk: '', weaponDmg: '', weaponProperties: [],
+    charges: 0, chargesRecharge: '',
   };
 }
 
@@ -132,6 +150,9 @@ function sanitizeFields(body, { partial }) {
   if (body.imageUrl !== undefined) out.imageUrl = String(body.imageUrl);
   if (body.imageThumb !== undefined) out.imageThumb = String(body.imageThumb);
   if (body.imageMedium !== undefined) out.imageMedium = String(body.imageMedium);
+  if (body.unidName !== undefined) out.unidName = String(body.unidName).trim().slice(0, 120);
+  if (body.charges !== undefined) out.charges = Math.max(0, Math.min(999, parseInt(body.charges) || 0));
+  if (body.chargesRecharge !== undefined) out.chargesRecharge = body.chargesRecharge === 'long' ? 'long' : '';
 
   if (!partial) {
     // Fill the rest with defaults so a create always writes a complete row.
@@ -141,6 +162,7 @@ function sanitizeFields(body, { partial }) {
       acBonus: 0, initBonus: 0, speedBonus: 0, spellAtkBonus: 0, spellDcBonus: 0,
       requiresAttunement: false, weaponAtk: '', weaponDmg: '', weaponPropertiesJson: '[]',
       imageUrl: '', imageThumb: '', imageMedium: '',
+      unidName: '', charges: 0, chargesRecharge: '',
     };
     for (const [k, v] of Object.entries(defaults)) if (out[k] === undefined) out[k] = v;
   }
@@ -211,7 +233,7 @@ function grantItems(charData, item, qty) {
       srcId: item.id,
       // The suffix is baked into the stored name so the Items tab and the table
       // panel show it without either needing to know about the treasury.
-      name: hidden ? unidentifiedItemName(item.name) : item.name,
+      name: hidden ? (item.unidName || unidentifiedItemName(item.name)) : item.name,
       value: cpToGpStringSafe(item.valueCp ?? 0),
       equipped: false,
       attuned: false,
@@ -221,6 +243,10 @@ function grantItems(charData, item, qty) {
       speedBonus: hidden ? 0 : (item.speedBonus ?? 0),
       img: item.imageUrl || '',
       imgThumb: item.imageThumb || '',
+      // Charges are a property like any other: unknown until identified.
+      charges: hidden ? 0 : (parseInt(item.charges) || 0),
+      chargesUsed: 0,
+      chargesRecharge: hidden ? '' : (item.chargesRecharge || ''),
     };
 
     if (hidden) {
@@ -273,6 +299,9 @@ function identifyHeldCopies(characters, item) {
       held.initBonus = item.initBonus ?? 0;
       held.speedBonus = item.speedBonus ?? 0;
       held.requiresAttunement = !!item.requiresAttunement;
+      held.charges = parseInt(item.charges) || 0;
+      held.chargesUsed = 0;
+      held.chargesRecharge = item.chargesRecharge || '';
       if (item.itemType === 'weapon') {
         const notesStr = weaponNotes(item, item.description || '');
         held.notes = notesStr;
@@ -288,6 +317,35 @@ function identifyHeldCopies(characters, item) {
 
     data._items = JSON.stringify(its);
     data._weapons = JSON.stringify(weapons);
+    touched.push({ char: c, dataJson: JSON.stringify(data) });
+  }
+  return touched;
+}
+
+/**
+ * Keep the name on unidentified copies players already hold in step with the
+ * catalogue. A copy is stamped with the name it was handed over under, so
+ * without this a second name the DM adds (or changes) later would never reach
+ * the bags that already hold the item — they would go on showing the real one.
+ * Returns the characters whose sheets changed.
+ */
+function renameHeldCopies(characters, item) {
+  const wanted = item.unidName || unidentifiedItemName(item.name);
+  const touched = [];
+  for (const c of characters) {
+    let data = {};
+    try { data = JSON.parse(c.dataJson || '{}'); } catch { continue; }
+    let its = [];
+    try { its = JSON.parse(data._items || '[]'); } catch { continue; }
+    let changed = false;
+    for (const held of its) {
+      if (held && held.srcId === item.id && held.unidentified && held.name !== wanted) {
+        held.name = wanted;
+        changed = true;
+      }
+    }
+    if (!changed) continue;
+    data._items = JSON.stringify(its);
     touched.push({ char: c, dataJson: JSON.stringify(data) });
   }
   return touched;
@@ -388,8 +446,9 @@ export default function register(app, ctx) {
         const openTags = cfg.activeTags || [];
         if (openTags.length) shop = shop.filter(r => openTags.includes(r.tag || ''));
         shop = shop
-          .sort((a, b) => (a.itemType || '').localeCompare(b.itemType || '') || (a.name || '').localeCompare(b.name || ''))
-          .map(playerObj);
+          .map(playerObj)
+          // Sorted by the name the player sees, so the order gives nothing away.
+          .sort((a, b) => (a.itemType || '').localeCompare(b.itemType || '') || (a.name || '').localeCompare(b.name || ''));
       }
 
       // Claim history is only disclosed to a caller who proves they are that
@@ -498,6 +557,15 @@ export default function register(app, ctx) {
       // Revealing the description identifies every copy players already hold.
       const revealed = update.descVisible === true && !existing.descVisible;
       if (revealed) await identifyForEveryone({ ...existing, ...update, id: req.params.id });
+
+      // Still unidentified, but called something else now: rename the copies
+      // players hold, so nobody keeps reading a name they should not have.
+      const after = objFromRecord({ ...existing, ...update, id: req.params.id });
+      if (!after.descVisible && (update.unidName !== undefined || update.name !== undefined)) {
+        const touched = renameHeldCopies(ldb.listCharacters(), after);
+        for (const { char, dataJson } of touched) ldb.updateCharacter(char.id, { dataJson, name: char.name });
+        for (const { char } of touched) broadcast('characters', { action: 'updated', id: char.id, keys: ['_items'] });
+      }
 
       // Anyone queued for an item that has stopped being free loot is told no
       // now, rather than sitting in the DM's queue as an unapprovable row.
@@ -774,10 +842,10 @@ export default function register(app, ctx) {
       broadcast('treasury', { action: 'approved', itemId: item.id, charId: reqRow.charId });
 
       // The player is somewhere else in the app when this lands, so tell them.
-      const shownName = item.descVisible ? item.name : 'an unidentified item';
+      const given = item.descVisible ? item.name : (item.unidName || 'an unidentified item');
       ctx.notify?.({
         to: reqRow.charId, kind: 'loot-granted', priority: 'alert',
-        title: 'The DM gave you ' + shownName,
+        title: 'The DM gave you ' + given,
         body: 'It is in your inventory now.',
         data: { href: '/index.html' },
       });
@@ -809,7 +877,7 @@ export default function register(app, ctx) {
       ctx.notify?.({
         to: reqRow.charId, kind: 'loot-declined', priority: 'alert',
         title: 'The DM turned down your request',
-        body: declinedItem && declinedItem.descVisible ? declinedItem.name : 'The item is not yours this time.',
+        body: declinedItem && (declinedItem.descVisible || declinedItem.unidName) ? shownName(declinedItem) : 'The item is not yours this time.',
         data: { href: '/index.html' },
       });
       res.json({ ok: true });
@@ -843,8 +911,8 @@ export default function register(app, ctx) {
         if (!Number.isInteger(qty) || qty < 1 || qty > 1000) return res.status(400).json({ error: 'Invalid quantity' });
         const item = await getOne(itemId);
         if (!item) return res.status(400).json({ error: `Item ${itemId} not found` });
-        if (item.mode !== 'shop') return res.status(400).json({ error: `"${item.name}" is not for sale` });
-        if (item.quantity !== -1 && item.quantity < qty) return res.status(400).json({ error: `Not enough stock for "${item.name}"` });
+        if (item.mode !== 'shop') return res.status(400).json({ error: `"${shownName(item)}" is not for sale` });
+        if (item.quantity !== -1 && item.quantity < qty) return res.status(400).json({ error: `Not enough stock for "${shownName(item)}"` });
         totalCp += (item.valueCp ?? 0) * qty;
         resolved.push({ item, qty });
       }
@@ -896,4 +964,4 @@ export default function register(app, ctx) {
   });
 }
 
-export { objFromRecord, playerObj, sanitizeFields, grantItems };
+export { objFromRecord, playerObj, sanitizeFields, grantItems, renameHeldCopies };
