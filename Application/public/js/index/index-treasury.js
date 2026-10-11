@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-11 19:50
+// Written by Irmak Hakman — 2026-10-12 00:15
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -145,7 +145,7 @@ function treasuryDisplayName(item) {
 
 function treasuryTypeLabel(item) {
   if (item.itemType === 'armor') return `${item.armorType || 'light'} armor`;
-  return { weapon: 'Weapon', shield: 'Shield', wondrous: 'Wondrous / Magic Item', other: 'Other' }[item.itemType]
+  return { weapon: 'Weapon', shield: 'Shield', potion: 'Potion / Consumable', wondrous: 'Wondrous / Magic Item', other: 'Other' }[item.itemType]
     || 'Other';
 }
 function unidentifiedHTML() {

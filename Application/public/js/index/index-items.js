@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-11 19:50
+// Written by Irmak Hakman — 2026-10-12 00:15
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -352,6 +352,7 @@ function openItemDetail(id) {
                   : item.itemType === 'shield' ? 'Shield'
                   : item.itemType === 'weapon' ? 'Weapon'
                   : item.itemType === 'wondrous' || item.itemType === 'item' ? 'Wondrous / Magic Item'
+                  : item.itemType === 'potion' ? 'Potion / Consumable'
                   : 'Other';
   const rows = [['Type', typeLabel]];
   if (item.value) rows.push(['Value', item.value]);
@@ -414,6 +415,7 @@ function renderItems() {
                    : item.itemType === 'shield' ? 'shield'
                    : item.itemType === 'weapon' ? 'weapon'
                    : item.itemType === 'wondrous' || item.itemType === 'item' ? 'wondrous'
+                   : item.itemType === 'potion' ? 'potion'
                    : 'other';
     const bonusParts = [];
     if (item.itemType === 'armor') bonusParts.push(`AC${item.acBase}`);
@@ -475,6 +477,7 @@ function renderEquippedItemsSummary() {
     const typeLabel = item.itemType === 'armor' ? `${item.armorType} armor`
                     : item.itemType === 'shield' ? 'shield'
                     : item.itemType === 'weapon' ? 'weapon'
+                    : item.itemType === 'potion' ? 'potion'
                     : 'wondrous';
     const chips = [];
     if (item.itemType === 'armor') chips.push(`<span style="background:var(--rule-hi);padding:1px 5px;border-radius:3px;font-size:10px">Base AC ${esc(item.acBase)}</span>`);

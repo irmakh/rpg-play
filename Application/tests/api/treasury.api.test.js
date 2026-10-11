@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-11 20:40
+// Written by Irmak Hakman — 2026-10-12 00:30
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -871,5 +871,112 @@ describe('renaming unidentified copies players already hold', () => {
     await claimAndApprove(app, ldb, id);
     await asDM(request(app).put(`/api/treasury/${id}`)).send({ descVisible: true, unidName: 'Whatever' });
     expect(names(ldb)).toEqual([REAL]);
+  });
+});
+
+// ── v266: duplicate, give straight to a character, the potion kind ────────────
+describe('POST /api/treasury/:id/duplicate', () => {
+  it('is DM only and 404s for an item that is not there', async () => {
+    const { app, ldb } = setup();
+    const id = seed(ldb, { name: 'Wand' });
+    expect((await request(app).post(`/api/treasury/${id}/duplicate`)).status).toBe(401);
+    expect((await asDM(request(app).post('/api/treasury/nope/duplicate'))).status).toBe(404);
+  });
+
+  it('copies every property into a new hidden item with its own id', async () => {
+    const { app, ldb } = setup();
+    const id = seed(ldb, {
+      name: 'Longsword +1', tag: 'Armoury', mode: 'shop', itemType: 'weapon', valueCp: 100000, quantity: 3,
+      weaponAtk: '1', weaponDmg: '1d8 slashing', weaponPropertiesJson: '["Versatile"]',
+      description: 'Hums faintly.', descVisible: false, unidName: 'Fine Sword', charges: 2, chargesRecharge: 'long',
+    });
+    const res = await asDM(request(app).post(`/api/treasury/${id}/duplicate`));
+    expect(res.status).toBe(200);
+    expect(res.body.id).not.toBe(id);
+    const copy = ldb.getTreasuryItem(res.body.id);
+    expect(copy).toMatchObject({
+      name: 'Longsword +1 (copy)', tag: 'Armoury', mode: 'hidden', itemType: 'weapon', valueCp: 100000, quantity: 3,
+      weaponAtk: '1', weaponDmg: '1d8 slashing', weaponPropertiesJson: '["Versatile"]',
+      description: 'Hums faintly.', descVisible: false, unidName: 'Fine Sword', charges: 2, chargesRecharge: 'long',
+    });
+    // The original is untouched.
+    expect(ldb.getTreasuryItem(id)).toMatchObject({ name: 'Longsword +1', mode: 'shop' });
+  });
+
+  it('does not share the picture files with the original', async () => {
+    const { app, ldb } = setup();
+    const id = seed(ldb, { name: 'Idol', imageUrl: '/uploads/treasury/a.png', imageThumb: '/uploads/treasury/a_thumb.webp', imageMedium: '/uploads/treasury/a_medium.webp' });
+    const res = await asDM(request(app).post(`/api/treasury/${id}/duplicate`));
+    const copy = ldb.getTreasuryItem(res.body.id);
+    expect(copy.imageUrl).not.toBe('/uploads/treasury/a.png');
+  });
+});
+
+describe('POST /api/treasury/:id/give', () => {
+  it('is DM only, and needs a real item and a real character', async () => {
+    const { app, ldb } = setup();
+    const id = seed(ldb, { name: 'Wand' });
+    expect((await asA(request(app).post(`/api/treasury/${id}/give`)).send({ charId: 'char-a' })).status).toBe(401);
+    expect((await asDM(request(app).post(`/api/treasury/${id}/give`)).send({})).status).toBe(400);
+    expect((await asDM(request(app).post('/api/treasury/nope/give')).send({ charId: 'char-a' })).status).toBe(404);
+    expect((await asDM(request(app).post(`/api/treasury/${id}/give`)).send({ charId: 'ghost' })).status).toBe(404);
+    expect((await asDM(request(app).post(`/api/treasury/${id}/give`)).send({ charId: 'char-a', quantity: 0 })).status).toBe(400);
+  });
+
+  it('puts a hidden item straight into the inventory, logs it and tells the player', async () => {
+    const { app, ldb } = setup();
+    const id = seed(ldb, { name: 'Cloak', mode: 'hidden', acBonus: 1, description: 'Warm', quantity: 2 });
+    const res = await asDM(request(app).post(`/api/treasury/${id}/give`)).send({ charId: 'char-a' });
+    expect(res.status).toBe(200);
+    expect(res.body.quantity).toBe(1);
+    expect(charItems(ldb)[0]).toMatchObject({ name: 'Cloak', acBonus: 1, srcId: id, notes: 'Warm' });
+    expect(ldb.getTreasuryItem(id)).toMatchObject({ quantity: 1, mode: 'hidden' });
+    const logs = (await asDM(request(app).get('/api/treasury/logs'))).body;
+    expect(logs.some(l => l.type === 'claim' && l.itemId === id && l.charName === 'Alice')).toBe(true);
+    const note = (await asA(request(app).get('/api/notifications'))).body.items.find(n => n.kind === 'loot-granted');
+    expect(note.title).toBe('The DM gave you Cloak');
+  });
+
+  it('never blocks the DM on stock, and leaves unlimited stock alone', async () => {
+    const { app, ldb } = setup();
+    const last = seed(ldb, { name: 'Last Potion', mode: 'shop', quantity: 0 });
+    expect((await asDM(request(app).post(`/api/treasury/${last}/give`)).send({ charId: 'char-a' })).status).toBe(200);
+    expect(ldb.getTreasuryItem(last).quantity).toBe(0);
+    const open = seed(ldb, { name: 'Rations', mode: 'loot', quantity: -1 });
+    await asDM(request(app).post(`/api/treasury/${open}/give`)).send({ charId: 'char-a', quantity: 3 });
+    expect(ldb.getTreasuryItem(open)).toMatchObject({ quantity: -1, mode: 'loot' });
+    expect(charItems(ldb).filter(i => i.name === 'Rations')).toHaveLength(3);
+  });
+
+  it('takes the last piece of free loot out of the pool and turns down whoever was waiting', async () => {
+    const { app, ldb } = setup();
+    ldb.createCharacter('char-b', { name: 'Bob', passwordHash: '', dataJson: JSON.stringify({ name: 'Bob' }) });
+    const id = seed(ldb, { name: 'Amulet', mode: 'loot', quantity: 1 });
+    await asA(request(app).post('/api/treasury/request')).send({ charId: 'char-a', items: [{ id }] });
+    const res = await asDM(request(app).post(`/api/treasury/${id}/give`)).send({ charId: 'char-b' });
+    expect(res.body).toMatchObject({ quantity: 0, declined: 1 });
+    expect(ldb.getTreasuryItem(id)).toMatchObject({ quantity: 0, mode: 'hidden' });
+    expect(ldb.listTreasuryRequests('pending')).toHaveLength(0);
+  });
+
+  it('hands over an unidentified item still unidentified, under its second name', async () => {
+    const { app, ldb } = setup();
+    const id = seed(ldb, { name: 'Ring of Three Wishes', unidName: 'Dull Iron Ring', descVisible: false, description: 'Grants wishes.' });
+    await asDM(request(app).post(`/api/treasury/${id}/give`)).send({ charId: 'char-a' });
+    expect(charItems(ldb)[0]).toMatchObject({ name: 'Dull Iron Ring', unidentified: true });
+    expect(JSON.stringify(charData(ldb))).not.toContain('Three Wishes');
+    const note = (await asA(request(app).get('/api/notifications'))).body.items.find(n => n.kind === 'loot-granted');
+    expect(note.title).toBe('The DM gave you Dull Iron Ring');
+  });
+});
+
+describe('the potion kind', () => {
+  it('is kept as its own kind, where an unknown one still becomes "other"', async () => {
+    const { app, ldb } = setup();
+    const id = seed(ldb, { name: 'Vial' });
+    await asDM(request(app).put(`/api/treasury/${id}`)).send({ itemType: 'potion' });
+    expect(ldb.getTreasuryItem(id).itemType).toBe('potion');
+    await asDM(request(app).put(`/api/treasury/${id}`)).send({ itemType: 'gizmo' });
+    expect(ldb.getTreasuryItem(id).itemType).toBe('other');
   });
 });

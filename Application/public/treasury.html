@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Written by Irmak Hakman — 2026-10-11 20:40 -->
+<!-- Written by Irmak Hakman — 2026-10-11 23:55 -->
 <!-- Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) -->
 <html lang="en" class="lamplit app-page">
 <head>
@@ -41,286 +41,233 @@
     <div class="hdr-left">
       <button class="btn" onclick="location.href='/dm.html'" title="Back to DM Panel"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-arrow-left"></use></svg> DM</button>
       <h1><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-coins"></use></svg> Treasury</h1>
-      
-      <span id="status-msg"></span>
+      <span id="status-msg" role="status"></span>
     </div>
     <div class="hdr-right">
+      <span id="save-state" class="save-state" role="status"></span>
+      <button class="btn" id="btn-undo" style="display:none" onclick="undoLast()">Undo</button>
       <button class="btn" data-notif-bell title="Notifications"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-bell"></use></svg> </button>
-      <button class="btn" id="shop-status-btn" onclick="toggleShopStatus()">Loading…</button>
-      <div class="pop-wrap">
-        <button class="btn" id="open-tags-btn" onclick="toggleTagsPopup()" title="Choose which tags are on sale"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-document"></use></svg> Tags <svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-down"></use></svg> </button>
-        <div class="pop" id="tags-popup">
-          <div class="pop-hdr">
-            <span>Open the shop for…</span>
-            <button class="btn sm" onclick="setAllOpenTags(true)">All</button>
-            <button class="btn sm" onclick="setAllOpenTags(false)">None</button>
-          </div>
-          <div id="tags-popup-list"></div>
-          <div class="pop-note">With nothing ticked the entire shop is open.</div>
-          <div class="pop-btns">
-            <button class="btn sm" onclick="closeTagsPopup()">Cancel</button>
-            <button class="btn sm primary" onclick="applyOpenTags()">Open Shop</button>
-          </div>
-        </div>
-      </div>
-      <button class="btn" id="btn-requests" onclick="toggleRequests()" title="Players waiting on free loot">🙋 Requests<span id="req-count" class="req-pill" style="display:none">0</span></button>
-      <button class="btn" id="btn-ledger" onclick="toggleLedger()" title="Claim &amp; purchase history"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-clipboard"></use></svg> Ledger</button>
-      <button class="btn" onclick="openImportModal()" title="Bulk text import"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-arrow-down"></use></svg> Import</button>
+      <button class="btn" id="btn-requests" onclick="showAsked()" title="Show every item a player is waiting for">Requests<span id="req-count" class="count" style="display:none">0</span></button>
+      <button class="btn" onclick="openLedger()" title="Everything given and bought"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-clipboard"></use></svg> Ledger</button>
+      <button class="btn" onclick="openImportModal()" title="Add many items from pasted text"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-arrow-down"></use></svg> Import</button>
       <button class="btn" onclick="refreshAll()" title="Refresh"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-refresh"></use></svg> </button>
-      <button class="btn primary" onclick="createItem()">+ Add Item</button>
+      <button class="btn primary" onclick="createItem()" title="Add an item to the tag on show (N)">+ Add item</button>
     </div>
+  </div>
+
+  <!-- The shop at a glance: open or closed, and which tags are on sale. -->
+  <div class="strip" id="shop-strip"></div>
+
+  <!-- One tag at a time. The picker is a single button so the table keeps the width. -->
+  <div class="tools">
+    <div class="tag-dd" id="tag-dd">
+      <button type="button" id="tag-btn" class="tag-btn" aria-haspopup="true" aria-expanded="false" onclick="toggleTagMenu()" title="Choose a tag (T)"></button>
+      <div class="tag-menu" id="tag-menu">
+        <input type="search" id="tag-q" placeholder="Find a tag…" aria-label="Find a tag" oninput="renderTagMenu()">
+        <div id="tag-list"></div>
+      </div>
+    </div>
+    <div class="seg" id="mode-filter" role="group" aria-label="Where the items are"></div>
+    <span class="sp"></span>
+    <input type="search" id="search" placeholder="Search this view…  ( / )" aria-label="Search items" oninput="onSearch()">
   </div>
 
   <div id="body">
-
-    <!-- ── Sidebar ─────────────────────────────────────────────────────────── -->
-    <div id="sidebar">
-      <div id="sb-controls">
-        <input type="text" id="search" placeholder="Search items…" oninput="renderList()">
-        <div id="mode-filter">
-          <span class="chip on" data-mode="all"    onclick="setModeFilter('all',this)">All</span>
-          <span class="chip"    data-mode="hidden" onclick="setModeFilter('hidden',this)">Hidden</span>
-          <span class="chip"    data-mode="loot"   onclick="setModeFilter('loot',this)">Loot</span>
-          <span class="chip"    data-mode="shop"   onclick="setModeFilter('shop',this)">Shop</span>
-        </div>
-      </div>
-      <div id="item-list"><div class="sb-empty">Loading…</div></div>
-    </div>
-
-    <!-- ── Detail ──────────────────────────────────────────────────────────── -->
-    <div id="detail">
-      <div id="detail-empty">Select an item on the left, or click <strong>+ Add Item</strong>.</div>
-
-      <div id="detail-form" style="display:none">
-        <div class="d-hdr">
-          <input type="text" id="f-name" placeholder="Item name" oninput="markDirty()">
-          <button class="btn primary" id="btn-identify" style="display:none" onclick="identifyCurrent()" title="Reveal this item to the players: its real name, description and properties, on every copy they hold">Identify</button>
-          <button class="btn danger" onclick="deleteCurrent()">Delete</button>
-        </div>
-
-        <div class="sect">
-          <div class="sect-hdr">Distribution</div>
-          <div class="sect-body">
-            <div id="mode-seg">
-              <button type="button" data-mode="hidden" onclick="setMode('hidden')">Hidden</button>
-              <button type="button" data-mode="loot"   onclick="setMode('loot')">Free Loot</button>
-              <button type="button" data-mode="shop"   onclick="setMode('shop')">Shop</button>
-            </div>
-            <div class="mode-help" id="mode-help"></div>
-            <div class="g2" style="margin-top:10px">
-              <div class="field">
-                <label class="lbl">Tag</label>
-                <select id="f-tag-sel" onchange="onTagPick('f-tag');markDirty()"></select>
-                <input type="text" id="f-tag-new" placeholder="New tag name…" style="display:none;margin-top:5px"
-                       oninput="markDirty()">
-              </div>
-              <div class="field">
-                <label class="lbl">Type</label>
-                <select id="f-type" onchange="onTypeChange();markDirty()">
-                  <option value="wondrous">Wondrous / Magic</option>
-                  <option value="weapon">Weapon</option>
-                  <option value="armor">Armor</option>
-                  <option value="shield">Shield</option>
-                  <option value="other">Other / Consumable</option>
-                </select>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Only shown for free loot, and only when somebody is waiting. -->
-        <div class="sect" id="sect-requests" style="display:none">
-          <div class="sect-hdr">Requested by</div>
-          <div class="sect-body" id="item-requests"></div>
-        </div>
-
-        <div class="sect">
-          <div class="sect-hdr">Description</div>
-          <div class="sect-body">
-            <textarea id="f-desc" placeholder="What the players read…" oninput="markDirty()"></textarea>
-            <label class="chk" style="margin-top:8px">
-              <input type="checkbox" id="f-desc-visible" onchange="markDirty();updateIdentifyBtn()">
-              Description visible to players
-            </label>
-            <div class="mode-help">Leave this off and the item is <strong>unidentified</strong>: players see a name, its kind, price and stock — the description, bonuses, charges and other properties stay hidden until you turn this on.</div>
-            <div class="field" style="margin-top:10px">
-              <label class="lbl" for="f-unid-name">Name while unidentified</label>
-              <input type="text" id="f-unid-name" maxlength="120" placeholder="e.g. Dull Iron Ring" oninput="markDirty()">
-            </div>
-            <div class="mode-help">What players read instead of the real name until the item is identified. Leave it empty and they see the real name marked “(unidentified)”.</div>
-          </div>
-        </div>
-
-        <div class="sect">
-          <div class="sect-hdr">Image</div>
-          <div class="sect-body">
-            <div id="img-drop">
-              <img id="img-preview" alt="" style="display:none">
-              <div id="img-zone"
-                   onclick="document.getElementById('img-file').click()"
-                   ondragover="event.preventDefault();this.classList.add('drag')"
-                   ondragleave="this.classList.remove('drag')"
-                   ondrop="handleImgDrop(event)">
-                Drop an image here or click to choose<br>
-                <span style="font-size:10px">JPEG, PNG, GIF or WebP · max 25 MB</span>
-              </div>
-              <div id="img-actions" style="display:none">
-                <button class="btn sm" onclick="document.getElementById('img-file').click()">Replace</button>
-                <button class="btn sm danger" onclick="removeImage()">Remove</button>
-              </div>
-            </div>
-            <input type="file" id="img-file" accept="image/*" style="display:none" onchange="handleImgPick(this)">
-            <div id="img-err"></div>
-          </div>
-        </div>
-
-        <div class="sect" id="sect-armor" style="display:none">
-          <div class="sect-hdr">Armor</div>
-          <div class="sect-body g2">
-            <div class="field">
-              <label class="lbl">Armor Category</label>
-              <select id="f-armor-type" onchange="markDirty()">
-                <option value="light">Light</option>
-                <option value="medium">Medium</option>
-                <option value="heavy">Heavy</option>
-              </select>
-            </div>
-            <div class="field">
-              <label class="lbl">Base AC</label>
-              <input type="number" id="f-ac-base" value="10" min="0" oninput="markDirty()">
-            </div>
-          </div>
-        </div>
-
-        <div class="sect" id="sect-weapon" style="display:none">
-          <div class="sect-hdr">Weapon</div>
-          <div class="sect-body">
-            <div class="g2">
-              <div class="field">
-                <label class="lbl">Magic Bonus (ATK &amp; DMG)</label>
-                <input type="number" id="f-weapon-atk" value="0" placeholder="0 = none, 1 = +1 sword" oninput="markDirty()">
-              </div>
-              <div class="field">
-                <label class="lbl">Damage (dice + type)</label>
-                <input type="text" id="f-weapon-dmg" placeholder="e.g. 1d8 slashing" oninput="markDirty()">
-              </div>
-            </div>
-            <label class="lbl" style="margin-top:6px">Properties (max 3)</label>
-            <div id="props-grid" class="props-grid"></div>
-            <div id="props-err"></div>
-          </div>
-        </div>
-
-        <div class="sect" id="sect-price">
-          <div class="sect-hdr">Price &amp; Stock</div>
-          <div class="sect-body">
-            <label class="lbl">Price</label>
-            <div class="price-row">
-              <div><label class="lbl">PP</label><input type="number" id="f-pp" value="0" min="0" oninput="updatePricePreview();markDirty()"></div>
-              <div><label class="lbl">GP</label><input type="number" id="f-gp" value="0" min="0" oninput="updatePricePreview();markDirty()"></div>
-              <div><label class="lbl">EP</label><input type="number" id="f-ep" value="0" min="0" oninput="updatePricePreview();markDirty()"></div>
-              <div><label class="lbl">SP</label><input type="number" id="f-sp" value="0" min="0" oninput="updatePricePreview();markDirty()"></div>
-              <div><label class="lbl">CP</label><input type="number" id="f-cp" value="0" min="0" oninput="updatePricePreview();markDirty()"></div>
-            </div>
-            <div class="price-preview" id="price-preview"></div>
-            <div class="field" style="margin-top:8px;max-width:220px">
-              <label class="lbl">Stock (−1 = unlimited)</label>
-              <input type="number" id="f-qty" value="1" oninput="markDirty()">
-            </div>
-          </div>
-        </div>
-
-        <div class="sect">
-          <div class="sect-hdr">Bonuses</div>
-          <div class="sect-body">
-            <div class="g3">
-              <div class="field"><label class="lbl">AC Bonus</label><input type="number" id="f-ac-bonus" value="0" oninput="markDirty()"></div>
-              <div class="field"><label class="lbl">Initiative</label><input type="number" id="f-init-bonus" value="0" oninput="markDirty()"></div>
-              <div class="field"><label class="lbl">Speed (ft)</label><input type="number" id="f-speed-bonus" value="0" oninput="markDirty()"></div>
-              <div class="field"><label class="lbl">Spell Atk</label><input type="number" id="f-sp-atk-bonus" value="0" oninput="markDirty()"></div>
-              <div class="field"><label class="lbl">Spell DC</label><input type="number" id="f-sp-dc-bonus" value="0" oninput="markDirty()"></div>
-            </div>
-            <label class="chk" style="margin-top:6px">
-              <input type="checkbox" id="f-attune" onchange="markDirty()"> Requires attunement
-            </label>
-          </div>
-        </div>
-
-        <div class="sect">
-          <div class="sect-hdr">Charges</div>
-          <div class="sect-body">
-            <div class="g3">
-              <div class="field"><label class="lbl" for="f-charges">Charges (0 = none)</label><input type="number" id="f-charges" value="0" min="0" max="999" oninput="markDirty()"></div>
-            </div>
-            <label class="chk" style="margin-top:6px">
-              <input type="checkbox" id="f-charges-long" onchange="markDirty()"> Refills on a long rest
-            </label>
-            <div class="mode-help">An item with charges gets a Use button in the owner’s inventory; each use takes one.</div>
-          </div>
-        </div>
-
-        <div style="display:flex;gap:8px;align-items:center;margin-bottom:20px">
-          <button class="btn primary" onclick="saveCurrent()">Save</button>
-          <span id="save-hint" style="font-size:11px;color:var(--ash)"></span>
-        </div>
-      </div>
-    </div>
-
-    <!-- ── Free-loot requests ──────────────────────────────────────────────── -->
-    <div id="requests">
-      <div id="requests-body"><div class="req-empty">Loading…</div></div>
-    </div>
-
-    <!-- ── Ledger ──────────────────────────────────────────────────────────── -->
-    <div id="ledger">
-      <table>
-        <thead><tr><th>When</th><th>Type</th><th>Character</th><th>Item</th><th>Qty</th><th>Amount</th></tr></thead>
-        <tbody id="ledger-body"><tr><td colspan="6" style="color:var(--ash)">Loading…</td></tr></tbody>
+    <div id="main">
+      <table class="grid">
+        <thead id="thead"></thead>
+        <tbody id="rows"></tbody>
       </table>
+      <div id="empty" class="empty" style="display:none"></div>
+      <div class="keys">↑ ↓ move · Enter open · H hidden · L free loot · S shop · I identify · D duplicate · N new · T tag · / search · Esc close</div>
     </div>
 
+    <!-- Everything about one item. Opens on a click or Enter; saves as you type. -->
+    <aside id="drawer" aria-label="Item details">
+      <div class="d-top">
+        <input type="text" id="d-name" data-f="name" data-label="name" placeholder="Item name" aria-label="Item name" oninput="onField(this)">
+        <button type="button" class="btn sm" onclick="closeDrawer()" title="Close (Esc)">✕</button>
+      </div>
+      <div class="d-acts">
+        <button type="button" class="btn sm primary" id="d-identify" onclick="identifyItem(curId)" title="Reveal its real name, description and properties to the players">Identify</button>
+        <button type="button" class="btn sm" onclick="duplicateItem()" title="Make a copy to edit (D)">Duplicate</button>
+        <span class="sp"></span>
+        <button type="button" class="btn sm danger" onclick="deleteItem()">Delete</button>
+      </div>
+      <div class="d-tabs" id="d-tabs" role="tablist">
+        <button type="button" data-tab="basics" onclick="setDrawerTab('basics')">Basics</button>
+        <button type="button" data-tab="props" onclick="setDrawerTab('props')">Properties</button>
+        <button type="button" data-tab="picture" onclick="setDrawerTab('picture')">Picture</button>
+        <button type="button" data-tab="history" onclick="setDrawerTab('history')">History</button>
+      </div>
+
+      <div class="d-body">
+        <div class="pane" data-pane="basics">
+          <div class="field">
+            <label class="lbl">Kind</label>
+            <div class="kinds" id="d-kinds"></div>
+          </div>
+          <div class="field">
+            <label class="lbl">Where it is</label>
+            <div class="seg" id="d-mode"></div>
+            <div class="help" id="d-mode-help"></div>
+          </div>
+          <div class="field">
+            <label class="lbl" for="f-tag-sel">Tag</label>
+            <select id="f-tag-sel" onchange="onDrawerTag()"></select>
+            <input type="text" id="f-tag-new" placeholder="New tag name, then Enter" style="display:none;margin-top:5px"
+                   onkeydown="if(event.key==='Enter'){event.preventDefault();commitDrawerTag();}" onblur="commitDrawerTag()">
+          </div>
+          <div class="field">
+            <label class="lbl" for="f-desc">What the players read</label>
+            <textarea id="f-desc" data-f="description" data-label="description" placeholder="Description…" oninput="onField(this)"></textarea>
+          </div>
+          <label class="chk">
+            <input type="checkbox" id="f-desc-visible" data-f="descVisible" data-label="identified" onchange="onField(this)">
+            Identified — players see its name, description and properties
+          </label>
+          <div class="field" id="d-unid-row" style="margin-top:10px">
+            <label class="lbl" for="f-unid-name">Name while unidentified</label>
+            <input type="text" id="f-unid-name" data-f="unidName" data-label="unidentified name" maxlength="120" placeholder="e.g. Dull Iron Ring" oninput="onField(this)">
+            <div class="help">Players read this instead of the real name. Empty: the real name, marked “(unidentified)”.</div>
+          </div>
+
+          <div class="block" id="d-asks-wrap" hidden>
+            <div class="block-h">Asking for it</div>
+            <div id="d-asks"></div>
+          </div>
+
+          <div class="block">
+            <div class="block-h">Give to a character</div>
+            <div class="give">
+              <select id="d-give-char" aria-label="Character"></select>
+              <button type="button" class="btn sm ok" onclick="giveItem()" title="Put one in their inventory now">Give</button>
+            </div>
+            <div class="help">Straight into their inventory, whatever shelf the item is on. Stock counts down.</div>
+          </div>
+        </div>
+
+        <div class="pane" data-pane="props" hidden>
+          <div class="block">
+            <div class="block-h">Price and stock</div>
+            <div class="price-row">
+              <div class="field"><label class="lbl" for="f-pp">PP</label><input type="number" id="f-pp" min="0" value="0" oninput="onPrice()"></div>
+              <div class="field"><label class="lbl" for="f-gp">GP</label><input type="number" id="f-gp" min="0" value="0" oninput="onPrice()"></div>
+              <div class="field"><label class="lbl" for="f-ep">EP</label><input type="number" id="f-ep" min="0" value="0" oninput="onPrice()"></div>
+              <div class="field"><label class="lbl" for="f-sp">SP</label><input type="number" id="f-sp" min="0" value="0" oninput="onPrice()"></div>
+              <div class="field"><label class="lbl" for="f-cp">CP</label><input type="number" id="f-cp" min="0" value="0" oninput="onPrice()"></div>
+            </div>
+            <div class="help" id="price-preview"></div>
+            <div class="field" style="max-width:170px;margin-top:6px">
+              <label class="lbl" for="f-qty">Stock (−1 = no limit)</label>
+              <input type="number" id="f-qty" min="-1" value="1" oninput="onStock()">
+            </div>
+          </div>
+
+          <div class="block" id="sect-weapon">
+            <div class="block-h">Weapon</div>
+            <div class="g2">
+              <div class="field"><label class="lbl" for="f-weapon-atk">Magic bonus</label><input type="number" id="f-weapon-atk" data-f="weaponAtk" data-label="magic bonus" value="0" oninput="onFieldText(this)"></div>
+              <div class="field"><label class="lbl" for="f-weapon-dmg">Damage</label><input type="text" id="f-weapon-dmg" data-f="weaponDmg" data-label="damage" placeholder="1d8 slashing" oninput="onField(this)"></div>
+            </div>
+            <label class="lbl">Properties</label>
+            <div id="props-grid" class="props-grid"></div>
+            <div class="help" id="props-err"></div>
+          </div>
+
+          <div class="block" id="sect-armor">
+            <div class="block-h">Armour</div>
+            <div class="g2">
+              <div class="field"><label class="lbl" for="f-armor-type">Type</label>
+                <select id="f-armor-type" data-f="armorType" data-label="armour type" onchange="onField(this)">
+                  <option value="light">Light</option><option value="medium">Medium</option><option value="heavy">Heavy</option>
+                </select></div>
+              <div class="field"><label class="lbl" for="f-ac-base">Base AC</label><input type="number" id="f-ac-base" data-f="acBase" data-label="base AC" value="10" min="0" oninput="onField(this)"></div>
+            </div>
+          </div>
+
+          <div class="block" id="sect-bonuses">
+            <div class="block-h">Bonuses while worn</div>
+            <div class="g3">
+              <div class="field"><label class="lbl" for="f-ac-bonus">AC</label><input type="number" id="f-ac-bonus" data-f="acBonus" data-label="AC bonus" value="0" oninput="onField(this)"></div>
+              <div class="field"><label class="lbl" for="f-init-bonus">Initiative</label><input type="number" id="f-init-bonus" data-f="initBonus" data-label="initiative bonus" value="0" oninput="onField(this)"></div>
+              <div class="field"><label class="lbl" for="f-speed-bonus">Speed (ft)</label><input type="number" id="f-speed-bonus" data-f="speedBonus" data-label="speed bonus" value="0" oninput="onField(this)"></div>
+              <div class="field"><label class="lbl" for="f-sp-atk-bonus">Spell attack</label><input type="number" id="f-sp-atk-bonus" data-f="spellAtkBonus" data-label="spell attack bonus" value="0" oninput="onField(this)"></div>
+              <div class="field"><label class="lbl" for="f-sp-dc-bonus">Spell DC</label><input type="number" id="f-sp-dc-bonus" data-f="spellDcBonus" data-label="spell DC bonus" value="0" oninput="onField(this)"></div>
+            </div>
+            <label class="chk"><input type="checkbox" id="f-attune" data-f="requiresAttunement" data-label="attunement" onchange="onField(this)"> Requires attunement</label>
+          </div>
+
+          <div class="block" id="sect-charges">
+            <div class="block-h">Charges</div>
+            <div class="field" style="max-width:170px"><label class="lbl" for="f-charges">Charges (0 = none)</label><input type="number" id="f-charges" data-f="charges" data-label="charges" value="0" min="0" max="999" oninput="onField(this)"></div>
+            <label class="chk"><input type="checkbox" id="f-charges-long" data-f="chargesRecharge" data-label="long rest refill" onchange="onField(this)"> Refills on a long rest</label>
+            <div class="help">An item with charges gets a Use button in its owner’s inventory.</div>
+          </div>
+        </div>
+
+        <div class="pane" data-pane="picture" hidden>
+          <div id="img-drop">
+            <img id="img-preview" alt="" style="display:none">
+            <div id="img-zone"
+                 onclick="document.getElementById('img-file').click()"
+                 ondragover="event.preventDefault();this.classList.add('drag')"
+                 ondragleave="this.classList.remove('drag')"
+                 ondrop="handleImgDrop(event)">Drop a picture here, or click to choose one.<br><small>JPEG, PNG, GIF or WebP, up to 25 MB.</small></div>
+            <div id="img-actions" style="display:none">
+              <button type="button" class="btn sm" onclick="document.getElementById('img-file').click()">Replace</button>
+              <button type="button" class="btn sm danger" onclick="removeImage()">Remove</button>
+            </div>
+          </div>
+          <input type="file" id="img-file" accept="image/*" style="display:none" onchange="handleImgPick(this)">
+          <div id="img-err" class="help bad"></div>
+        </div>
+
+        <div class="pane" data-pane="history" hidden>
+          <div id="d-history"></div>
+        </div>
+      </div>
+    </aside>
   </div>
 
-  <!-- Bulk bar -->
+  <!-- Shown while rows are ticked. -->
   <div id="bulk-bar">
     <span class="lbl-inline" id="bulk-count">0 selected</span>
-    <select id="bulk-tag-sel" onchange="onTagPick('bulk-tag')"></select>
+    <span class="lbl-inline">Move to</span>
+    <button type="button" class="btn sm" onclick="applyBulkMode('hidden')">Hidden</button>
+    <button type="button" class="btn sm" onclick="applyBulkMode('loot')">Free loot</button>
+    <button type="button" class="btn sm" onclick="applyBulkMode('shop')">Shop</button>
+    <span class="lbl-inline">Tag</span>
+    <select id="bulk-tag-sel" aria-label="Tag for the selected items" onchange="onTagPick('bulk-tag')"></select>
     <input type="text" id="bulk-tag-new" placeholder="New tag name…" style="display:none">
-    <button class="btn sm" onclick="applyBulkTag()">Apply Tag</button>
-    <select id="bulk-mode">
-      <option value="">Set mode…</option>
-      <option value="hidden">Hidden</option>
-      <option value="loot">Free Loot</option>
-      <option value="shop">Shop</option>
-    </select>
-    <button class="btn sm" onclick="applyBulkMode()">Apply Mode</button>
-    <button class="btn sm danger" onclick="bulkDelete()">Delete</button>
-    <button class="btn sm" onclick="clearSelection()">Clear</button>
+    <button type="button" class="btn sm" onclick="applyBulkTag()">Apply tag</button>
+    <span class="sp"></span>
+    <button type="button" class="btn sm danger" onclick="bulkDelete()">Delete</button>
+    <button type="button" class="btn sm" onclick="clearChecked()">Clear</button>
   </div>
-
 </div>
 
-<!-- Bulk import modal -->
+<!-- Bulk import -->
 <div class="modal-overlay" id="import-modal" style="display:none">
   <div class="modal-box">
-    <div class="ct">Bulk Import</div>
+    <div class="ct">Import items</div>
     <div class="modal-body">
       <div class="field">
-        <label class="lbl">One item per block, blank line between items. First line = name, the rest = description.</label>
+        <label class="lbl" for="import-text">One item per block, with a blank line between items. First line is the name, the rest is the description.</label>
         <textarea id="import-text" style="min-height:150px;font-family:monospace"
                   placeholder="Gold Coins&#10;A handful of gold coins found in the chest.&#10;&#10;Rusty Sword&#10;An old blade, still somewhat sharp."></textarea>
       </div>
       <div class="g2">
         <div class="field">
-          <label class="lbl">Tag (optional)</label>
+          <label class="lbl" for="import-tag-sel">Tag</label>
           <select id="import-tag-sel" onchange="onTagPick('import-tag')"></select>
           <input type="text" id="import-tag-new" placeholder="New tag name…" style="display:none;margin-top:5px">
         </div>
         <div class="field">
-          <label class="lbl">Import as</label>
+          <label class="lbl" for="import-mode">Put them in</label>
           <select id="import-mode">
             <option value="hidden">Hidden</option>
-            <option value="loot">Free Loot</option>
+            <option value="loot">Free loot</option>
             <option value="shop">Shop</option>
           </select>
         </div>
@@ -331,6 +278,20 @@
       <button class="btn" onclick="closeImportModal()">Cancel</button>
       <button class="btn primary" onclick="runImport()">Import</button>
     </div>
+  </div>
+</div>
+
+<!-- Ledger: everything given and bought -->
+<div class="modal-overlay" id="ledger-modal" style="display:none" onclick="if(event.target===this)closeLedger()">
+  <div class="modal-box wide">
+    <div class="ct">Ledger</div>
+    <div class="modal-body">
+      <table class="mini">
+        <thead><tr><th>When</th><th>How</th><th>Who</th><th>Item</th><th class="c-num">Qty</th><th class="c-num">Paid</th></tr></thead>
+        <tbody id="ledger-body"></tbody>
+      </table>
+    </div>
+    <div class="modal-btns"><button class="btn" onclick="closeLedger()">Close</button></div>
   </div>
 </div>
 

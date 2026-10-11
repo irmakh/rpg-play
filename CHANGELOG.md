@@ -21,6 +21,49 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [266] — 2026-10-12 — Treasury: a new DM screen
+
+The DM's treasury (`/treasury.html`) is rebuilt around one table.
+
+**One tag at a time**
+- **A tag button** at the top left chooses what the table shows: one tag, "No tag", "All
+  items" or "Asked for". Each tag shows its item count and a gold dot when it is on sale.
+  The screen reopens on the tag you last looked at.
+- **Search and the Hidden / Free loot / Shop filter** work inside the tag on show. Click a
+  column heading to sort.
+
+**Change things in the row**
+- **Where it is** — Hidden, Free loot or Shop — is a three-way switch in every row.
+- **Price and stock:** click the number and type. A price can be "50", "7 sp" or
+  "2 pp 5 gp"; stock can be a number or ∞.
+- **Identify** is a button on every unidentified row.
+- **Requests** show as "2 asking" on the item; open it for Give and Decline. The Requests
+  button on the top bar lists everything somebody is waiting for.
+
+**The drawer**
+- Click a row for everything else: Basics, Properties, Picture and History (who was given
+  or bought it).
+- **Kinds:** Weapon, Armour, Shield, Potion, Wondrous or Other. Only that kind's fields are
+  shown. Potion is new; it starts with one charge.
+- **Give to a character:** put an item straight into someone's inventory, with no request.
+- **Duplicate** makes a hidden copy to rename.
+
+**No Save button**
+- Changes are saved as you make them. **Undo** on the top bar (or Ctrl+Z) takes back the
+  last one. Identifying cannot be undone.
+
+**The shop**
+- A strip under the top bar shows open or closed and which tags are on sale; click a tag to
+  add or remove it.
+
+**Keyboard:** ↑ ↓ move, Enter open, H / L / S move the item to hidden, free loot or shop,
+I identify, D duplicate, N new, T tags, / search, Esc close.
+
+Ticking rows still brings up the bar for moving, tagging or deleting many at once; Import
+and the Ledger are unchanged in what they do.
+
+---
+
 ## [265] — 2026-10-11 — Notifications that matter pop up; HP bars go green, yellow, red
 
 - **More notifications pop up** instead of waiting silently in the bell: damage and healing

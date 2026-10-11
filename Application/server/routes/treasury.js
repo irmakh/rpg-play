@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-11 22:10
+// Written by Irmak Hakman — 2026-10-11 23:10
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -16,7 +16,7 @@
  */
 
 const MODES      = new Set(['hidden', 'loot', 'shop']);
-const ITEM_TYPES = new Set(['wondrous', 'weapon', 'armor', 'shield', 'other']);
+const ITEM_TYPES = new Set(['wondrous', 'weapon', 'armor', 'shield', 'potion', 'other']);
 const ARMOR_TYPES = new Set(['light', 'medium', 'heavy']);
 const TAG_MAX    = 40;
 const MAX_ACTIVE_TAGS = 50;
@@ -363,7 +363,7 @@ export default function register(app, ctx) {
     ldb, genId,
     masterAuth, charAuth, getCharacter,
     getShopConfig, deductCurrency,
-    processImageSizes, deleteUploadFile,
+    processImageSizes, deleteUploadFile, readUploadAsBase64, extToMime,
     IMAGE_MIME, MAX_MEDIA_BYTES,
     broadcast,
   } = ctx;
@@ -576,6 +576,90 @@ export default function register(app, ctx) {
       broadcast('treasury', { action: 'updated', id: req.params.id });
       res.json({ ok: true });
     } catch (err) { console.error('PUT /api/treasury/:id:', err); res.status(500).json({ error: 'Server error' }); }
+  });
+
+  // A copy of an item, for the next potion or +1 sword. The copy starts hidden
+  // whatever the original was — it is unfinished until the DM has renamed it —
+  // and gets its own picture files, because deleting either item deletes that
+  // item's files.
+  app.post('/api/treasury/:id/duplicate', async (req, res) => {
+    try {
+      if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
+      const src = await getOne(req.params.id);
+      if (!src) return res.status(404).json({ error: 'Not found' });
+      const { id: _id, createdAt: _at, imageUrl, imageThumb: _t, imageMedium: _m, ...fields } = src;
+      const copy = {
+        ...fields,
+        name: `${src.name || 'Item'} (copy)`.slice(0, 200),
+        mode: 'hidden',
+        imageUrl: '', imageThumb: '', imageMedium: '',
+        createdAt: new Date().toISOString(),
+      };
+      if (imageUrl) {
+        try {
+          const b64 = readUploadAsBase64?.(imageUrl);
+          if (b64) {
+            const urls = await processImageSizes(extToMime(imageUrl), Buffer.from(b64, 'base64'), 'treasury', genId());
+            copy.imageUrl = urls.original; copy.imageThumb = urls.thumb; copy.imageMedium = urls.medium;
+          }
+        } catch (e) { console.error('duplicate: picture not copied:', e.message); }
+      }
+      const newId = genId();
+      await createOne(newId, copy);
+      broadcast('treasury', { action: 'created', id: newId });
+      res.json({ ok: true, id: newId });
+    } catch (err) { console.error('POST /api/treasury/:id/duplicate:', err); res.status(500).json({ error: 'Server error' }); }
+  });
+
+  // Hand an item straight to a character, with no request and whatever mode it
+  // is in — the DM deciding at the table. It is built by the same helper as a
+  // claim or a purchase, so an unidentified item arrives unidentified. Stock
+  // counts down where it is finite but never blocks the DM: giving the last
+  // one, or one more than there is, still works.
+  app.post('/api/treasury/:id/give', async (req, res) => {
+    try {
+      if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
+      const { charId } = req.body || {};
+      const qty = Number(req.body?.quantity ?? 1);
+      if (!charId) return res.status(400).json({ error: 'charId required' });
+      if (!Number.isInteger(qty) || qty < 1 || qty > 100) return res.status(400).json({ error: 'Invalid quantity' });
+      const item = await getOne(req.params.id);
+      if (!item) return res.status(404).json({ error: 'Not found' });
+      const charRecord = await getCharacter(charId);
+      if (!charRecord) return res.status(404).json({ error: 'Character not found' });
+      let charData = {};
+      try { charData = JSON.parse(charRecord.dataJson || '{}'); } catch {}
+
+      grantItems(charData, objFromRecord(item), qty);
+      const now = new Date().toISOString();
+      const charName = charData.name || charRecord.name || 'Unknown';
+      ldb.updateCharacter(charId, { dataJson: JSON.stringify(charData), name: charRecord.name });
+      for (let n = 0; n < qty; n++) {
+        ldb.createLootLog(genId(), { charId, charName, itemName: item.name, itemId: item.id, claimedAt: now });
+      }
+
+      // Free loot that runs out leaves the pool, exactly as on an approval, and
+      // anyone still waiting for it is told no.
+      let left = item.quantity;
+      let declined = 0;
+      if (item.quantity !== -1) {
+        left = Math.max(0, item.quantity - qty);
+        const gone = left === 0 && item.mode === 'loot';
+        ldb.updateTreasuryItem(item.id, gone ? { quantity: 0, mode: 'hidden' } : { quantity: left });
+        if (gone) declined = await declinePendingFor(item.id, now);
+      }
+
+      broadcast('characters', { action: 'updated', id: charId });
+      broadcast('treasury', { action: 'approved', itemId: item.id, charId });
+      const given = item.descVisible ? item.name : (item.unidName || 'an unidentified item');
+      ctx.notify?.({
+        to: charId, kind: 'loot-granted', priority: 'alert',
+        title: 'The DM gave you ' + given + (qty > 1 ? ' ×' + qty : ''),
+        body: 'It is in your inventory now.',
+        data: { href: '/index.html' },
+      });
+      res.json({ ok: true, quantity: left, declined });
+    } catch (err) { console.error('POST /api/treasury/:id/give:', err); res.status(500).json({ error: 'Server error' }); }
   });
 
   app.delete('/api/treasury/:id', async (req, res) => {
