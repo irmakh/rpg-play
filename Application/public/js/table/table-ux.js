@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-11 01:12
+// Written by Irmak Hakman — 2026-10-15 15:31
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -635,11 +635,8 @@ window.setTool = function (name) {
   uxSet('tool', name);
   uxUpdateHint();
 };
-const _uxToggleLeftPanel = toggleLeftPanel;
-window.toggleLeftPanel = function () {
-  _uxToggleLeftPanel();
-  uxSet('lpHidden', document.getElementById('left-panel')?.style.display === 'none' ? '1' : '0');
-};
+// The left panel's state is not kept here: it folds to its strip, and
+// table-chat.js remembers that (tbl_lpCollapsed).
 const _uxToggleSidePanel = toggleSidePanel;
 window.toggleSidePanel = function () {
   _uxToggleSidePanel();
@@ -654,7 +651,6 @@ window.chatToggle = function () {
 function uxRestoreView() {
   const zoom = parseInt(uxGet('zoom', ''), 10);
   if (zoom >= 50 && zoom <= 200 && zoom !== zoomPct) _uxApplyZoom(zoom);
-  if (uxGet('lpHidden', '0') === '1') _uxToggleLeftPanel();
   if (uxGet('rpHidden', '0') === '1') _uxToggleSidePanel();
   if (uxGet('chatOpen', '1') === '0' && chatOpen) _uxChatToggle();
   const tool = uxGet('tool', 'move');

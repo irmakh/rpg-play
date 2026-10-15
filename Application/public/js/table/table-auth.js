@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 14:35
+// Written by Irmak Hakman — 2026-10-15 15:31
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -92,6 +92,15 @@ function _setPanelToggleIcon(btn, { open, side }) {
 function toggleLeftPanel() {
   const panel = document.getElementById('left-panel');
   if (!panel) return;
+  // On the map screen the panel folds to its Initiative strip rather than
+  // vanishing (leftPanelCollapse in table-chat.js), so this button folds and
+  // opens it just as the header and the strip do; leftPanelCollapse keeps the
+  // button's icon in step.
+  if (document.getElementById('left-strip') && typeof leftPanelCollapse === 'function') {
+    panel.style.display = '';
+    leftPanelCollapse(!document.body.classList.contains('lp-collapsed'));
+    return;
+  }
   const open = panel.style.display === 'none';   // was hidden, so this opens it
   panel.style.display = open ? '' : 'none';
   _setPanelToggleIcon(document.getElementById('btn-leftpanel-toggle'), { open, side: 'left' });

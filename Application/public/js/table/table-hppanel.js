@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 14:25
+// Written by Irmak Hakman — 2026-10-15 15:29
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -709,12 +709,13 @@ function bulkDeselectToken(id) {
   renderTokens();
 }
 
+// The left panel is always there now (v288): with no initiative it sits folded
+// to its Initiative strip, and opening it says none has been rolled yet. It
+// used to vanish entirely outside combat and bulk edit.
 function updateLeftPanelVisibility() {
   const lp = document.getElementById('left-panel');
   if (!lp) return;
-  const hasInit = (initData.entries || []).length > 0;
-  const hasBulk = isDM() && bulkTokenIds.size > 0;
-  lp.classList.toggle('lp-open', hasInit || hasBulk);
+  lp.classList.add('lp-open');
 }
 
 function renderBulkPanel() {

@@ -21,6 +21,22 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [289] — 2026-10-15 — The initiative panel is always there, and folds like the chat
+
+- **The map screen's Initiative panel is always there now**, not only during
+  combat. With no initiative it is folded to a thin "Initiative" strip down the
+  map's left edge; opened, it says "There is no initiative yet. Roll for
+  initiative."
+- **It opens by itself when initiative is rolled**, and folds again when the
+  tracker is cleared.
+- **Click the Initiative header to fold it, the strip to open it**, the way the
+  chat collapses. The initiative "!" shows on the strip too, and bulk edit opens
+  the panel again. Your own choice is remembered per browser.
+- **View → Hide / Show left panel** folds the panel to its strip and opens it
+  again, like the header and the strip, instead of removing it completely.
+
+---
+
 ## [286] — 2026-10-15 — UI size at the top of the template pop-up
 
 - **UI size** is now the first row of the palette pop-up, above the templates, and

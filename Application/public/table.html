@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Written by Irmak Hakman — 2026-10-15 15:04 -->
+<!-- Written by Irmak Hakman — 2026-10-15 15:29 -->
 <!-- Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) -->
 <html lang="en" class="lamplit">
 <head>
@@ -143,8 +143,13 @@
 
     <!-- Initiative section -->
     <div class="lp-section">
-      <div class="lp-section-hdr" style="cursor:default">
+      <!-- Clicking the header collapses the whole left panel to a strip, the way
+           the chat collapses to its header bar (js/table/table-chat.js). -->
+      <div class="lp-section-hdr" id="init-hdr" role="button" tabindex="0" aria-expanded="true"
+           title="Collapse the initiative panel" onclick="leftPanelCollapse(true)"
+           onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();leftPanelCollapse(true)}">
         <span><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-swords"></use></svg> Initiative <span id="init-badge" class="chat-new-badge" style="display:none">!</span></span>
+        <svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-left"></use></svg>
       </div>
       <div class="lp-body open" id="init-body-wrap">
         <div class="init-panel-btns">
@@ -155,7 +160,7 @@
           <button class="dice-btn" id="btn-init-prev" onclick="dmPrevTurn()" style="display:none"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-prev"></use></svg> Prev</button>
           <button class="dice-btn" id="btn-init-next" onclick="initSkipTurn()" style="display:none"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-next"></use></svg> Next</button>
         </div>
-        <div id="init-tracker-list"><div class="init-empty-msg">No combatants yet.</div></div>
+        <div id="init-tracker-list"><div class="init-empty-msg">There is no initiative yet. Roll for initiative.</div></div>
       </div>
     </div>
 
@@ -217,6 +222,12 @@
     </div>
 
   </div><!-- /#left-panel -->
+  <!-- Shown instead of the left panel while it is collapsed. -->
+  <button type="button" id="left-strip" onclick="leftPanelCollapse(false)" aria-label="Show the initiative panel" title="Show the initiative panel">
+    <svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-right"></use></svg>
+    <span class="ls-label">Initiative</span>
+    <span id="left-strip-badge" class="chat-new-badge" style="display:none">!</span>
+  </button>
   <div class="resize-handle-v" id="rh-left"></div>
 
   <!-- ── Vertical Tool Strip (Modern HUD theme only) ─────────────────────── -->

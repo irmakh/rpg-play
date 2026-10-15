@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 14:25
+// Written by Irmak Hakman — 2026-10-15 15:29
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -15,8 +15,12 @@ function renderInitiativeTracker(showBadge) {
     return tok ? !!tok.assignedCharId : false;
   });
   const sorted = [...visibleEntries].sort((a, b) => (b.roll || 0) - (a.roll || 0));
+  // Opens the left panel when initiative is first rolled, folds it to its
+  // strip when the tracker empties (leftPanelAuto, table-chat.js).
+  if (typeof leftPanelAuto === 'function') leftPanelAuto(sorted.length);
   if (sorted.length === 0) {
-    list.innerHTML = '<div class="init-empty-msg">No combatants yet.</div>';
+    list.innerHTML = '<div class="init-empty-msg">There is no initiative yet. Roll for initiative.</div>';
+    if (typeof updateLeftPanelVisibility === 'function') updateLeftPanelVisibility();
     return;
   }
   list.innerHTML = sorted.map(e => {

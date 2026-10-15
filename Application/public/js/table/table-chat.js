@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 14:35
+// Written by Irmak Hakman — 2026-10-15 15:31
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -164,6 +164,57 @@ try {
   if (document.getElementById('toolbar-strip') && localStorage.getItem('tbl_toolbarHidden') === '1')
     document.body.classList.add('toolbar-hidden');
 } catch {}
+
+// The left panel collapses to a strip from its Initiative header, the same way.
+// Hiding it from the View menu (toggleLeftPanel) is separate and hides it all.
+// `auto` is the panel folding or opening by itself (leftPanelAuto): it neither
+// moves the keyboard focus nor changes the remembered choice.
+function leftPanelCollapse(collapse, auto) {
+  if (!document.getElementById('left-strip')) return;
+  if (document.body.classList.contains('lp-collapsed') === collapse) return;
+  document.body.classList.toggle('lp-collapsed', collapse);
+  document.getElementById('init-hdr')?.setAttribute('aria-expanded', String(!collapse));
+  // The View menu's left-panel button says Hide or Show to match.
+  if (typeof _setPanelToggleIcon === 'function')
+    _setPanelToggleIcon(document.getElementById('btn-leftpanel-toggle'), { open: !collapse, side: 'left' });
+  try { window.dispatchEvent(new Event('resize')); } catch {}
+  if (auto) return;
+  try { localStorage.setItem('tbl_lpCollapsed', collapse ? '1' : '0'); } catch {}
+  document.getElementById(collapse ? 'left-strip' : 'init-hdr')?.focus();
+}
+
+// Called with the number of initiative entries this viewer can see, each time
+// the tracker is drawn. With none the panel folds to its strip; the first roll
+// opens it, and emptying the tracker folds it again. In between, the viewer's
+// own opening and folding stand.
+let _lpInitCount = null;
+function leftPanelAuto(n) {
+  const prev = _lpInitCount;
+  _lpInitCount = n;
+  if (n === 0 && (prev === null || prev > 0)) leftPanelCollapse(true, true);
+  else if (n > 0 && prev === 0) leftPanelCollapse(false, true);
+}
+(function () {
+  if (!document.getElementById('left-strip')) return;   // the console loads this file too
+  try { if (localStorage.getItem('tbl_lpCollapsed') === '1') document.body.classList.add('lp-collapsed'); } catch {}
+  // The View menu button starts as "Hide"; once every script is in, match it
+  // to how the panel actually starts.
+  document.addEventListener('DOMContentLoaded', () => {
+    const folded = document.body.classList.contains('lp-collapsed');
+    document.getElementById('init-hdr')?.setAttribute('aria-expanded', String(!folded));
+    if (typeof _setPanelToggleIcon === 'function')
+      _setPanelToggleIcon(document.getElementById('btn-leftpanel-toggle'), { open: !folded, side: 'left' });
+  });
+  // The strip repeats the initiative "!" so it is not missed while collapsed.
+  const badge = document.getElementById('init-badge'), copy = document.getElementById('left-strip-badge');
+  if (badge && copy) new MutationObserver(() => { copy.style.display = badge.style.display; })
+    .observe(badge, { attributes: true, attributeFilter: ['style'] });
+  // Bulk edit lives in this panel: shift-clicking tokens opens it again.
+  const bulk = document.getElementById('lp-bulk-section');
+  if (bulk) new MutationObserver(() => {
+    if (bulk.style.display !== 'none' && document.body.classList.contains('lp-collapsed')) leftPanelCollapse(false);
+  }).observe(bulk, { attributes: true, attributeFilter: ['style'] });
+})();
 
 function chatToggle() {
   const body = document.getElementById('chat-body-wrap');

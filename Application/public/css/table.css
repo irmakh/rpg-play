@@ -1,4 +1,4 @@
-/* Written by Irmak Hakman — 2026-10-15 15:04 */
+/* Written by Irmak Hakman — 2026-10-15 15:23 */
 /* Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) */
 
 *{box-sizing:border-box;margin:0;padding:0}
@@ -871,3 +871,22 @@ body.toolbar-hidden #toolbar-strip:hover{background:var(--slate-hi);color:var(--
 #map-zoom button:focus-visible,#map-zoom input:focus-visible{outline:2px solid var(--arc);outline-offset:1px}
 #map-zoom #slider-zoom{width:calc(80px*var(--fs, 1));cursor:pointer;accent-color:var(--arc)}
 #map-zoom #zoom-val{font-size:calc(11px * var(--fs, 1));color:var(--ash);min-width:calc(36px*var(--fs, 1));text-align:right;font-variant-numeric:tabular-nums}
+
+/* ── Collapsing the left panel ────────────────────────────────────────────────
+   The Initiative header collapses the panel to a thin strip down the map's left
+   edge, the way the chat collapses to its header; the strip brings it back.
+   table-chat.js sets body.lp-collapsed and remembers it per browser. */
+#init-hdr{cursor:pointer}
+#init-hdr:hover{background:var(--slate)}
+#init-hdr:focus-visible, #left-strip:focus-visible{outline:2px solid var(--arc);outline-offset:-2px}
+#left-strip{display:none}
+body.lp-collapsed #left-panel, body.lp-collapsed #rh-left{display:none!important}
+/* Only while the panel would be showing (combat, or bulk edit: .lp-open). */
+body.lp-collapsed #left-panel.lp-open + #left-strip{
+  display:flex;flex-direction:column;align-items:center;gap:calc(8px*var(--fs, 1));flex-shrink:0;
+  width:calc(28px*var(--fs, 1));padding:calc(10px*var(--fs, 1)) 0;border:0;border-right:1px solid var(--rule-hi);
+  background:var(--slate);color:var(--ash);font:inherit;font-size:calc(11px * var(--fs, 1));font-weight:600;cursor:pointer
+}
+body.lp-collapsed #left-panel.lp-open + #left-strip:hover{background:var(--slate-hi);color:var(--bone)}
+#left-strip .ls-label{writing-mode:vertical-rl;letter-spacing:.04em}
+
