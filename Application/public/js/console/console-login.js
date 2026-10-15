@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 19:02
+// Written by Irmak Hakman — 2026-10-15 19:28
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -192,6 +192,7 @@ const ConsoleLogin = (function () {
               <div data-el="cap-dm"></div>
               <p class="lg-err" data-el="err-dm" role="alert"></p>
               <button type="submit" class="lg-btn">Login as DM</button>
+              <button type="button" class="lg-btn lg-btn-back" data-el="as-admin" hidden>Enter as super admin</button>
             </div>
           </div>
         </form>
@@ -344,6 +345,20 @@ const ConsoleLogin = (function () {
       show('character');
     });
 
+    // A super-admin session on this device opens any campaign as its DM.
+    const asAdmin = el('as-admin');
+    if (AuthUI.adminToken()) asAdmin.hidden = false;
+    asAdmin.addEventListener('click', async () => {
+      const token = AuthUI.adminToken();
+      if (!_campaign) { el('err-dm').textContent = 'Choose a campaign first.'; return; }
+      if (!token || !(await AuthUI.adminTokenWorks(token))) {
+        el('err-dm').textContent = 'The super admin session has ended. Log in on the maintenance page again.';
+        asAdmin.hidden = true;
+        return;
+      }
+      finish({ role: 'dm', masterPw: token, superAdmin: true });
+    });
+
     form('dm').addEventListener('submit', e => {
       e.preventDefault();
       const err = el('err-dm');
@@ -436,7 +451,8 @@ const ConsoleLogin = (function () {
   /** Ends the session on the server and on every console screen on this device. */
   function logout() {
     const sess = session();
-    if (sess) AuthUI.logout(tokenOf(sess));
+    // A campaign opened with the super admin's session leaves that session alive.
+    if (sess && !sess.superAdmin) AuthUI.logout(tokenOf(sess));
     announce('SESSION_LOGOUT');
     clear();
     location.reload();

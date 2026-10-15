@@ -22,7 +22,7 @@ Chrome refuses while another app from the same site is installed.
 - **The map's "Open info panel"** calls `RpgNative.openPanel()` and opens the
   panel on the bottom screen instead of a browser window.
 - **Back** on either screen opens the app menu: Reload, Server address, Open
-  info panel, Maintenance, Check for updates, Exit.
+  info panel, Switch campaign, Maintenance, Check for updates, Exit.
 - **Maintenance** opens the super admin's maintenance page in a window of its
   own (`MaintenanceActivity`) on the same screen. Its menu has **Back to
   campaign**, which sends it behind the campaign screens without closing it, so
@@ -53,7 +53,14 @@ with no fixed end (`remember: true`; it lapses after 90 days unused, and the sup
 admin can end it from the maintenance page), and the app keeps the pages'
 sessionStorage login in localStorage (`REMEMBER_JS` in `ScreenActivity.kt`, run
 before each page's own scripts), so it survives closing the app. Logging out, or
-the server ending the session, removes it.
+the server ending the session, removes it. When the app starts with a remembered
+login, the campaign list goes straight on into the campaign (`window.__rpgRestored`).
+
+The super admin's maintenance login is kept the same way (`rpgAdminToken`), so the
+maintenance page logs in by itself while the server still has that session (24
+hours unused). With it, the campaign list and the console login offer to open any
+campaign as its DM without the DM password; logging out of such a campaign leaves
+the super admin logged in.
 
 ## Updates
 

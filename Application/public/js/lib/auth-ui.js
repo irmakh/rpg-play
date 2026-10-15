@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 18:57
+// Written by Irmak Hakman — 2026-10-15 19:28
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -189,6 +189,28 @@
     } catch {}
   }
 
+  /**
+   * The super-admin session token kept by the maintenance page
+   * (sessionStorage 'rpgAdminToken'; the Android app keeps a copy on the device
+   * as 'rpgApp:rpgAdminToken'), or ''. A super-admin session is a DM session in
+   * every campaign, so the campaign list and the console login offer to open a
+   * campaign with it.
+   */
+  function adminToken() {
+    let t = '';
+    try { t = sessionStorage.getItem('rpgAdminToken') || ''; } catch {}
+    if (!t && window.RpgNative) { try { t = localStorage.getItem('rpgApp:rpgAdminToken') || ''; } catch {} }
+    return String(t).startsWith('rpgs_') ? t : '';
+  }
+
+  /** Whether that token is still a live super-admin session (the server says). */
+  async function adminTokenWorks(token) {
+    try {
+      const r = await fetch('/api/maintenance/sessions', { headers: { 'X-Master-Password': token } });
+      return r.ok;
+    } catch { return false; }
+  }
+
   /** The DM session this tab already holds (rpgSession or the legacy key), if any. */
   function storedDmToken() {
     let t = '';
@@ -241,5 +263,5 @@
     return { submit, start };
   }
 
-  window.AuthUI = { captcha, login, adminLogin, verifyAny, setFirstPassword, logout, dmGate, storedDmToken };
+  window.AuthUI = { captcha, login, adminLogin, verifyAny, setFirstPassword, logout, dmGate, storedDmToken, adminToken, adminTokenWorks };
 })();

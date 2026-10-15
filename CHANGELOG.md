@@ -21,6 +21,22 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [300] + Android app 1.3 — 2026-10-15 — Remembered login in the full app; super admin switches campaigns
+
+- **Fixed: on a one-screen device the app forgot your login.** The campaign list has its own
+  login form, which did not ask for a remembered login, and the app always opened on that list.
+  Now every login form in the app asks for one, and when the app starts with a remembered login
+  it goes straight into the campaign. Going back to the campaign list later still shows it.
+- **The maintenance page logs you in by itself** while your super admin session is still open
+  (it is kept for the browser tab, and in the app on the device; the server still ends it after
+  24 hours unused). Lock ends it as before.
+- **A super admin can open any campaign as its DM without the DM password**: "Open as super
+  admin" on the campaign list's Dungeon Master tab, and "Enter as super admin" on the console's
+  login form. Logging out of that campaign leaves the super admin session (and the maintenance
+  page) logged in.
+- **The app's Back menu has "Switch campaign"**: the campaign list in the full app; on the
+  console screens it logs out of the campaign and shows the login form with its campaign choice.
+
 ## Android app 1.2 — 2026-10-15 — Switch between a campaign and the maintenance page *(no frontend bump)*
 
 - **The app's Back menu has "Maintenance"**, which opens the super admin's maintenance page

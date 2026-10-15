@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 18:57
+// Written by Irmak Hakman — 2026-10-15 19:28
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -173,6 +173,9 @@ function revokeStoredSession() {
   let token = '';
   try {
     const s = JSON.parse(sessionStorage.getItem('rpgSession') || 'null');
+    // A campaign opened with the super admin's session: leaving the campaign
+    // must not log the super admin out of the maintenance page too.
+    if (s && s.superAdmin) return;
     token = (s && (s.role === 'dm' ? s.masterPw : s.charPw)) || sessionStorage.getItem('dmMasterPw') || '';
   } catch {}
   if (!_isToken(token)) return;

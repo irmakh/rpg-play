@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 18:57
+// Written by Irmak Hakman — 2026-10-15 19:28
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -8,7 +8,11 @@
 // the page they're currently viewing, IP and connection details — plus the
 // login activity of every campaign (/api/maintenance/auth-events).
 
-let _pw = null;            // super-admin SESSION TOKEN (never the password), memory only
+let _pw = null;            // super-admin SESSION TOKEN (never the password)
+// Kept for the tab (and on the device in the Android app), so coming back to
+// this page - or opening a campaign as super admin and returning - does not ask
+// again while the session is still alive on the server.
+const ADMIN_KEY = 'rpgAdminToken';
 let _pollTimer = null;
 let _pollTick = 0;
 let _serverVersion = null; // current deployed frontend version
@@ -34,16 +38,31 @@ $('gate-form').addEventListener('submit', async (e) => {
   if (!pw) { errEl.textContent = 'Enter a password.'; return; }
   const r = await AuthUI.adminLogin(pw, _cap);
   if (!r.ok) { errEl.textContent = r.message; return; }
-  _pw = r.data.token;
+  _openPanel(r.data.token);
+});
+
+function _openPanel(token) {
+  _pw = token;
+  try { sessionStorage.setItem(ADMIN_KEY, token); } catch {}
   $('gate-pw').value = '';
   $('gate').style.display = 'none';
   $('panel').style.display = 'block';
   startPolling();
-});
+}
+
+// A super-admin session this tab already holds: straight in, if the server
+// still knows it.
+(async function resume() {
+  const saved = AuthUI.adminToken();
+  if (!saved) return;
+  if (await AuthUI.adminTokenWorks(saved)) _openPanel(saved);
+  else { try { sessionStorage.removeItem(ADMIN_KEY); } catch {} }
+})();
 
 function _toGate(message) {
   stopPolling();
   _pw = null;
+  try { sessionStorage.removeItem(ADMIN_KEY); } catch {}
   $('panel').style.display = 'none';
   $('gate').style.display = 'flex';
   $('gate-err').textContent = message || '';

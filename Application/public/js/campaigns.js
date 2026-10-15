@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 14:25
+// Written by Irmak Hakman — 2026-10-15 19:28
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -28,6 +28,12 @@ let _setupTicket = null;  // from the login answer: proves the login form's capt
 // logs in first and uses the SESSION TOKEN it gets back — no password is sent
 // as a credential header any more.
 let _capChar = null, _capDm = null, _capNew = null, _capMg = null, _capDel = null;
+
+// The Android app (window.RpgNative): logins are remembered, and when the app
+// has just put a remembered login back (window.__rpgRestored, set by the app
+// before this page runs) this list is skipped on the way in. Coming back to it
+// later - to switch campaign - shows it as usual.
+const IN_APP = !!window.RpgNative;
 
 // Where to go after login (honour ?next= so auth guards can bounce back).
 function _nextUrl() {
@@ -209,6 +215,11 @@ function renderDetail() {
         <div class="err-msg" id="dm-err"></div>
         <button class="btn" onclick="loginDM()">Login as DM</button>
         <div class="hint">Each campaign has its own DM password.</div>
+        ${AuthUI.adminToken() ? `
+        <div style="border-top:1px solid var(--rule);margin:calc(16px*var(--fs, 1)) 0"></div>
+        <div class="err-msg" id="admin-err"></div>
+        <button class="btn btn-ghost" onclick="enterAsAdmin()">Open as super admin</button>
+        <div class="hint">You are logged in as super admin: open this campaign as its DM, no DM password.</div>` : ''}
       </div>
     </div>
 
@@ -263,7 +274,7 @@ async function loginCharacter() {
   const btn = document.getElementById('char-login-btn');
   btn.disabled = true;
   try {
-    const r = await AuthUI.login({ type: 'character', characterId, password }, _capChar, { 'X-Campaign-Id': _sel.id });
+    const r = await AuthUI.login({ type: 'character', characterId, password, remember: IN_APP }, _capChar, { 'X-Campaign-Id': _sel.id });
     if (r.data.needsSetup) { showSetupStep(r.data.characterId, r.data.characterName, r.data.setupTicket); return; }
     if (!r.ok) { errEl.textContent = r.message; return; }
     _storeSession({ role: 'character', characterId: r.data.characterId, characterName: r.data.characterName, charPw: r.data.token });
@@ -301,7 +312,7 @@ async function setupPassword() {
   const btn = document.getElementById('setup-btn');
   btn.disabled = true;
   try {
-    const r = await AuthUI.setFirstPassword(_setupCharId, pw1, _setupTicket, { 'X-Campaign-Id': _sel.id });
+    const r = await AuthUI.setFirstPassword(_setupCharId, pw1, _setupTicket, { 'X-Campaign-Id': _sel.id }, { remember: IN_APP });
     if (!r.ok) { errEl.textContent = r.message; return; }
     _storeSession({ role: 'character', characterId: r.data.characterId, characterName: r.data.characterName, charPw: r.data.token });
     location.replace(_nextUrl());
@@ -313,9 +324,25 @@ async function loginDM() {
   const errEl = document.getElementById('dm-err');
   errEl.textContent = '';
   if (!password) { errEl.textContent = "Enter this campaign's DM password."; return; }
-  const r = await AuthUI.login({ type: 'dm', password }, _capDm, { 'X-Campaign-Id': _sel.id });
+  const r = await AuthUI.login({ type: 'dm', password, remember: IN_APP }, _capDm, { 'X-Campaign-Id': _sel.id });
   if (!r.ok) { errEl.textContent = r.message; return; }
   _storeSession({ role: 'dm', masterPw: r.data.token });
+  location.replace(_nextUrl());
+}
+
+// A super-admin session is a DM session in every campaign (lib/auth.js), so the
+// super admin can switch campaigns without each one's DM password. Marked
+// superAdmin, so logging out of the campaign leaves the super-admin session
+// (and the maintenance page) alone.
+async function enterAsAdmin() {
+  const errEl = document.getElementById('admin-err');
+  const token = AuthUI.adminToken();
+  if (!token || !(await AuthUI.adminTokenWorks(token))) {
+    try { sessionStorage.removeItem('rpgAdminToken'); } catch {}
+    if (errEl) errEl.textContent = 'The super admin session has ended. Log in on the maintenance page again.';
+    return;
+  }
+  _storeSession({ role: 'dm', masterPw: token, superAdmin: true });
   location.replace(_nextUrl());
 }
 
@@ -498,4 +525,11 @@ async function deleteCampaign() {
 for (const id of ['new-modal', 'manage-modal', 'del-modal']) {
   if (window.guardModal) guardModal(id, () => closeModal(id));
 }
-loadCampaigns();
+(function start() {
+  if (IN_APP && window.__rpgRestored && !new URLSearchParams(location.search).has('pick')) {
+    try {
+      if (JSON.parse(sessionStorage.getItem('rpgSession') || 'null')?.role) { location.replace(_nextUrl()); return; }
+    } catch {}
+  }
+  loadCampaigns();
+})();

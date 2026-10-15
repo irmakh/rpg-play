@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 19:16
+// Written by Irmak Hakman — 2026-10-15 19:28
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -177,6 +177,7 @@ abstract class ScreenActivity : Activity() {
         items += "Reload"
         if (!maintenance) items += "Server address…"
         if (this is MapActivity && !Screens.panelOpen) items += "Open info panel"
+        if (!maintenance) items += "Switch campaign"
         if (!maintenance) items += "Maintenance"
         items += "Check for updates"
         items += "Exit"
@@ -189,6 +190,7 @@ abstract class ScreenActivity : Activity() {
                     "Reload" -> if (maintenance) load() else Screens.campaignScreens().forEach { it.load() }
                     "Back to campaign" -> moveTaskToBack(true)
                     "Maintenance" -> Screens.openMaintenance(this)
+                    "Switch campaign" -> switchCampaign()
                     "Server address…" -> askServer()
                     "Open info panel" -> Screens.openPanel(this)
                     "Check for updates" -> Updater.checkNow(this)
@@ -196,6 +198,17 @@ abstract class ScreenActivity : Activity() {
                 }
             }
             .show()
+    }
+
+    /**
+     * Back to choosing a campaign. The whole app goes to the campaign list; the
+     * console screens log out of their campaign (both screens, through the
+     * page) and show the login form with its campaign choice - where a super
+     * admin can also enter any campaign without its DM password.
+     */
+    private fun switchCampaign() {
+        if (this is AppActivity) { web.loadUrl(Settings.server(this) + "/?pick=1"); return }
+        web.evaluateJavascript("window.ConsoleLogin && ConsoleLogin.logout();", null)
     }
 
     private fun askServer() {
@@ -252,12 +265,19 @@ abstract class ScreenActivity : Activity() {
 (function () {
   if (window.__rpgRemember) return;
   window.__rpgRemember = true;
-  var KEYS = ['rpgSession', 'tableMasterPw', 'dmMasterPw'], P = 'rpgApp:';
+  // The campaign login (kept together), and the super admin's maintenance
+  // login (its own: the server still ends it after 24 hours unused).
+  var SESSION = ['rpgSession', 'tableMasterPw', 'dmMasterPw'], ADMIN = 'rpgAdminToken';
+  var KEYS = SESSION.concat([ADMIN]), P = 'rpgApp:';
   try {
     var ss = window.sessionStorage, ls = window.localStorage;
-    if (!ss.getItem('rpgSession')) {
-      KEYS.forEach(function (k) { var v = ls.getItem(P + k); if (v !== null) ss.setItem(k, v); });
+    if (!ss.getItem('rpgSession') && ls.getItem(P + 'rpgSession') !== null) {
+      SESSION.forEach(function (k) { var v = ls.getItem(P + k); if (v !== null) ss.setItem(k, v); });
+      // This page starts with a login it did not make: the campaign list
+      // (js/campaigns.js) goes straight on into the app.
+      window.__rpgRestored = true;
     }
+    if (!ss.getItem(ADMIN) && ls.getItem(P + ADMIN) !== null) ss.setItem(ADMIN, ls.getItem(P + ADMIN));
     var proto = Storage.prototype, set = proto.setItem, rem = proto.removeItem, clr = proto.clear;
     proto.setItem = function (k, v) {
       set.call(this, k, v);
