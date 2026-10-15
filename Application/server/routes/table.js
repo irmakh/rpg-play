@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-11 22:10
+// Written by Irmak Hakman — 2026-10-15 13:06
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -58,7 +58,20 @@ export default function register(app, ctx) {
     });
   }
 
-  const TABLE_STATE_ID = 'c8a04a12-4372-4c78-9abc-def012345601';
+  // ── Hidden items ──────────────────────────────────────────────────────────────
+  // Same secret as a hidden token: a trap or a cache the DM has placed but not
+  // revealed. The page never drew them for players, but until v268 the server
+  // still sent every one — label, description and position — to anyone. Now a
+  // player is only ever sent the items the DM has revealed.
+  const itemsForPlayer = (list) => (Array.isArray(list) ? list : []).filter(i => i && i.visible);
+  function broadcastItems(items) {
+    return broadcast('table', { action: 'items-updated', hiddenItems: items }, undefined, {
+      dmOnly: true,
+      forOthers: { action: 'items-updated', hiddenItems: itemsForPlayer(items) },
+    });
+  }
+
+  const TABLE_STATE_ID ='c8a04a12-4372-4c78-9abc-def012345601';
 
   // ── Waiting screens ─────────────────────────────────────────────────────────
   // A waiting screen parks the table on a full-bleed image. Players get the
@@ -264,7 +277,8 @@ export default function register(app, ctx) {
         // even with no login, and the page merely skipped drawing them.
         const cid = String(req.headers['x-character-id'] || '');
         const me = cid && (await charAuth(cid, req)) === 200 ? cid : '';
-        return res.json({ state, tokens: tokensForPlayer(tokens, me) });
+        return res.json({ state: { ...state, hiddenItems: itemsForPlayer(state.hiddenItems) },
+                          tokens: tokensForPlayer(tokens, me) });
       }
 
       // A player: prove who they are before handing back even their own token.
@@ -417,7 +431,7 @@ export default function register(app, ctx) {
       item.visible = true;
       const itemsJson = JSON.stringify(items);
       ldb.updateTableState({ hiddenItems: itemsJson });
-      broadcast('table', { action: 'items-updated', hiddenItems: items });
+      broadcastItems(items);
       res.json({ ok: true });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
   });
@@ -433,7 +447,7 @@ export default function register(app, ctx) {
       item.visible = false;
       const itemsJson = JSON.stringify(items);
       ldb.updateTableState({ hiddenItems: itemsJson });
-      broadcast('table', { action: 'items-updated', hiddenItems: items });
+      broadcastItems(items);
       res.json({ ok: true });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
   });
@@ -870,7 +884,7 @@ export default function register(app, ctx) {
       ldb.updateTableState(stateUpdate);
       broadcast('table', { action: 'map-updated' });
       broadcast('table', { action: 'fog-updated', fogRegions });
-      broadcast('table', { action: 'items-updated', hiddenItems });
+      broadcastItems(hiddenItems);
 
       // Clear all existing tokens and initiative before placing prepared tokens
       ldb.clearTableTokens();

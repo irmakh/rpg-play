@@ -21,6 +21,12 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [268] — 2026-10-15 — Security hardening
+
+- Security hardening.
+
+---
+
 ## [267] — 2026-10-15 — Creating characters works again
 
 - **New character** on the character sheet saves the character again. It appeared in

@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-09-27 11:13
+// Written by Irmak Hakman — 2026-10-15 13:06
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -542,5 +542,44 @@ describe('prepared maps are DM-only to read', () => {
     const { app } = withMap();
     // No image stored in the test media stub, so the DM gets the 404 behind the gate.
     expect((await dm(request(app).get('/api/prepared-maps/m1/image'))).status).toBe(404);
+  });
+});
+
+// ── Hidden items (v268) ───────────────────────────────────────────────────────
+
+describe('hidden items stay with the DM', () => {
+  const ITEMS = [
+    { id: 'trap',  label: 'Pit trap',   description: 'DC 15', x: 1, y: 1, visible: false },
+    { id: 'chest', label: 'Old chest',  description: 'Open',  x: 2, y: 2, visible: true  },
+  ];
+  const seed = (ldb) => ldb.updateTableState({ hiddenItems: JSON.stringify(ITEMS) });
+
+  it('GET /api/table sends a player only the revealed items', async () => {
+    const { app, ldb } = makeApp();
+    seed(ldb);
+    const res = await request(app).get('/api/table');
+    expect(res.status).toBe(200);
+    expect(res.body.state.hiddenItems.map(i => i.id)).toEqual(['chest']);
+  });
+
+  it('GET /api/table sends the DM every item', async () => {
+    const { app, ldb } = makeApp();
+    seed(ldb);
+    const res = await dm(request(app).get('/api/table'));
+    expect(res.body.state.hiddenItems.map(i => i.id)).toEqual(['trap', 'chest']);
+  });
+
+  it('revealing an item sends the full list to the DM and only revealed items to players', async () => {
+    const { app, ldb, broadcasts } = makeApp();
+    seed(ldb);
+    await dm(request(app).post('/api/table/items/chest/hide')).expect(200);
+    const ev = broadcasts.filter(b => b.payload?.action === 'items-updated').pop();
+    expect(ev.dmOnly).toBe(true);
+    expect(ev.payload.hiddenItems).toHaveLength(2);
+    expect(ev.opts.forOthers.hiddenItems).toEqual([]);
+
+    await dm(request(app).post('/api/table/items/trap/reveal')).expect(200);
+    const ev2 = broadcasts.filter(b => b.payload?.action === 'items-updated').pop();
+    expect(ev2.opts.forOthers.hiddenItems.map(i => i.id)).toEqual(['trap']);
   });
 });
