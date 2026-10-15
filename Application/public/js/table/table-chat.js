@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 14:32
+// Written by Irmak Hakman — 2026-10-15 14:35
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -155,7 +155,7 @@ function initChatDragDrop() {
 function toolbarToggle(show) {
   document.body.classList.toggle('toolbar-hidden', !show);
   try { localStorage.setItem('tbl_toolbarHidden', show ? '0' : '1'); } catch {}
-  // Things placed against the map's edge (the zoom buttons) re-measure on resize.
+  // Anything sized to the map area re-measures on resize.
   try { window.dispatchEvent(new Event('resize')); } catch {}
   document.getElementById(show ? 'btn-toolbar-hide' : 'toolbar-strip')?.focus();
 }

@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-09-26 16:50
+// Written by Irmak Hakman — 2026-10-15 14:35
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -26,17 +26,6 @@ function _updateDiceAnimBtn(on) {
   if (!btn) return;
   btn.classList.toggle('on', on);
   btn.setAttribute('aria-checked', on ? 'true' : 'false');
-}
-
-// ── Zoom float position sync (call after panel resize or open/close) ──────────
-function updateZoomFloat() {
-  const zf = document.getElementById('zoom-float');
-  const rp = document.getElementById('side-panel');
-  if (!zf || !rp) return;
-  const isModern = document.body.dataset.theme === 'modern';
-  const panelHidden = rp.style.display === 'none';
-  const panelClosed = isModern && !rp.classList.contains('rp-open');
-  zf.style.right = (panelHidden || panelClosed ? 12 : rp.offsetWidth + 12) + 'px';
 }
 
 // ── Resizable panels ──────────────────────────────────────────────────────────
@@ -92,7 +81,6 @@ function initResizablePanels() {
         const w = Math.max(120, Math.min(520, w0 - (e.clientX - x0))) + 'px';
         document.documentElement.style.setProperty('--rp-width', w);
         if (!_isModernTheme()) rp.style.width = w;
-        updateZoomFloat();
       }
       function onUp() {
         rhR.classList.remove('rh-active');
@@ -103,8 +91,6 @@ function initResizablePanels() {
       document.addEventListener('mousemove', onMove);
       document.addEventListener('mouseup', onUp);
     });
-    // Keep zoom float in sync when rp-open class changes (token selection)
-    new MutationObserver(updateZoomFloat).observe(rp, { attributes: true, attributeFilter: ['class','style'] });
   }
   // Chat bar
   const chatLog = document.querySelector('#chat-bar .chat-log');

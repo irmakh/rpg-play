@@ -1,4 +1,4 @@
-/* Written by Irmak Hakman — 2026-10-15 14:32 */
+/* Written by Irmak Hakman — 2026-10-15 14:35 */
 /* Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) */
 
 *{box-sizing:border-box;margin:0;padding:0}
@@ -14,19 +14,6 @@ body{display:flex;flex-direction:column}
 .draw-tb-sep{width:1px;height:calc(18px*var(--fs, 1));background:var(--rule-hi);margin:0 calc(2px*var(--fs, 1));flex-shrink:0}
 #table-wrap{display:flex;flex:1;overflow:hidden;position:relative}
 #canvas-area{flex:1;overflow:auto;position:relative;background:var(--sunken);cursor:crosshair}
-
-/* ── Floating zoom widget ── */
-#zoom-float{position:absolute;bottom:calc(14px*var(--fs, 1));right:calc(calc(240px*var(--fs, 1)) + calc(12px*var(--fs, 1)));z-index:50;display:flex;align-items:center;gap:calc(5px*var(--fs, 1));background:rgba(10,10,20,.82);border:1px solid rgba(180,140,60,.35);border-radius:calc(8px*var(--fs, 1));padding:calc(5px*var(--fs, 1)) calc(10px*var(--fs, 1));backdrop-filter:blur(6px);pointer-events:all}
-#zoom-float button{background:none;border:1px solid rgba(180,140,60,.4);color:var(--bone);border-radius:calc(4px*var(--fs, 1));width:calc(22px*var(--fs, 1));height:calc(22px*var(--fs, 1));cursor:pointer;font-size:calc(14px * var(--fs, 1));line-height:1;padding:0;flex-shrink:0;transition:background .1s,border-color .1s}
-#zoom-float button:hover{background:var(--arc-fill);border-color:var(--bone)}
-#zoom-float #slider-zoom{width:calc(70px*var(--fs, 1));cursor:pointer;accent-color:var(--bone)}
-#zoom-float #zoom-val{font-size:calc(11px * var(--fs, 1));color:var(--bone);min-width:calc(33px*var(--fs, 1));text-align:right}
-/* Classic theme: side panel always 240px */
-body:not([data-theme="modern"]) #zoom-float{right:calc(calc(240px*var(--fs, 1)) + calc(12px*var(--fs, 1)))}
-/* Modern theme: panel hidden by default */
-body[data-theme="modern"] #zoom-float{right:calc(12px*var(--fs, 1))}
-/* Modern theme: panel open (264px) — shift left */
-body[data-theme="modern"] #table-wrap:has(#side-panel.rp-open) #zoom-float{right:calc(calc(264px*var(--fs, 1)) + calc(12px*var(--fs, 1)))}
 
 /* ── Left panel ── */
 #left-panel{width:calc(240px*var(--fs, 1));flex-shrink:0;background:var(--slate);border-right:1px solid var(--rule-hi);overflow-y:auto;display:flex;flex-direction:column;scrollbar-width:thin;scrollbar-color:var(--rule-hi) transparent;font-size:calc(12px * var(--fs, 1))}
@@ -843,7 +830,12 @@ input[type=search].rp-sb-search{width:100%;box-sizing:border-box;background:var(
    The ▲ at the end of the toolbar hides it and leaves a thin strip, the way the
    chat collapses to its header bar; the strip brings it back. table-main.js
    sets body.toolbar-hidden and remembers it per browser. */
-#btn-toolbar-hide{order:99;margin-left:auto}
+#btn-toolbar-hide{order:99}
+/* Map zoom, at the toolbar's right end just before the hide button. */
+#tb-zoom{order:98;margin-left:auto;display:flex;align-items:center;gap:calc(4px*var(--fs, 1))}
+#tb-zoom .btn{min-width:calc(28px*var(--fs, 1));padding-left:0;padding-right:0;justify-content:center}
+#tb-zoom #slider-zoom{width:calc(80px*var(--fs, 1));cursor:pointer;accent-color:var(--arc)}
+#tb-zoom #zoom-val{font-size:calc(11px * var(--fs, 1));color:var(--ash);min-width:calc(36px*var(--fs, 1));text-align:right;font-variant-numeric:tabular-nums}
 #toolbar-strip{display:none}
 body.toolbar-hidden #toolbar{display:none}
 body.toolbar-hidden #toolbar-strip{

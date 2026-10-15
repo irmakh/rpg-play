@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 14:15
+// Written by Irmak Hakman — 2026-10-15 14:35
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -115,7 +115,6 @@
   }
 
   function _nudgeLayout() {
-    if (typeof updateZoomFloat === 'function') { try { updateZoomFloat(); } catch {} }
     try { window.dispatchEvent(new Event('resize')); } catch {}
   }
 

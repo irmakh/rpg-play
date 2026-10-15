@@ -1,4 +1,4 @@
-/* Written by Irmak Hakman — 2026-10-15 14:25 */
+/* Written by Irmak Hakman — 2026-10-15 14:35 */
 /* Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) */
 
 /* ════════════════════════════════════════════════════════════
@@ -546,24 +546,6 @@ body[data-theme="modern"] .rp-save-prof .rp-save-val { color: var(--bone) }
 .rp-mon-link { padding: calc(6px*var(--fs, 1)) calc(10px*var(--fs, 1)); border-top: 1px solid rgba(255,255,255,.04) }
 .rp-mon-link a { color:var(--bone); font-size: calc(10px * var(--fs, 1)); opacity: .55; text-decoration: none }
 .rp-mon-link a:hover { opacity: 1 }
-
-/* ── Floating zoom — modern polish ── */
-body[data-theme="modern"] #zoom-float {
-  background: rgba(9,12,20,.88);
-  border-color: var(--rule-hi);
-  border-radius: calc(10px*var(--fs, 1));
-  padding: calc(5px*var(--fs, 1)) calc(10px*var(--fs, 1));
-  box-shadow: 0 4px 20px rgba(0,0,0,.5), 0 0 0 1px var(--wash);
-  transition: right .18s ease;
-}
-body[data-theme="modern"] #zoom-float button {
-  border-color: var(--rule-hi);
-  border-radius: calc(5px*var(--fs, 1));
-}
-body[data-theme="modern"] #zoom-float button:hover {
-  background: var(--arc-fill);
-  border-color: var(--arc);
-}
 
 /* ── Modal box backgrounds ── */
 body[data-theme="modern"] #dice-roller-modal > div,

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Written by Irmak Hakman — 2026-10-15 14:32 -->
+<!-- Written by Irmak Hakman — 2026-10-15 14:35 -->
 <!-- Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) -->
 <html lang="en" class="lamplit">
 <head>
@@ -95,6 +95,13 @@
       <button type="button" id="ux-hints" role="menuitemcheckbox" aria-checked="true" onclick="uxToggleHints()" title="The line over the map that says what the current tool does">Tool hints</button>
       <button type="button" onclick="uxShowHelp()">Keyboard shortcuts <kbd>?</kbd></button>
     </div>
+  </div>
+  <!-- Map zoom. Lived in a box floating over the map's corner until v278. -->
+  <div id="tb-zoom" role="group" aria-label="Map zoom">
+    <button type="button" class="btn" id="btn-zoom-out" title="Zoom out" aria-label="Zoom out">−</button>
+    <input type="range" id="slider-zoom" min="50" max="200" value="100" title="Zoom" aria-label="Zoom">
+    <button type="button" class="btn" id="btn-zoom-in" title="Zoom in" aria-label="Zoom in">+</button>
+    <span id="zoom-val">100%</span>
   </div>
   <button type="button" class="btn" id="btn-toolbar-hide" onclick="toolbarToggle(false)" title="Hide the toolbar" aria-label="Hide the toolbar"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-up"></use></svg></button>
 </div>
@@ -402,13 +409,6 @@
   </div><!-- /#side-panel -->
 
   <!-- Floating zoom widget — bottom-right of map -->
-  <div id="zoom-float">
-    <button id="btn-zoom-out" title="Zoom out">−</button>
-    <input type="range" id="slider-zoom" min="50" max="200" value="100" title="Zoom">
-    <button id="btn-zoom-in" title="Zoom in">+</button>
-    <span id="zoom-val">100%</span>
-  </div>
-
 </div><!-- /#table-wrap -->
 
 <!-- Chat Bar -->

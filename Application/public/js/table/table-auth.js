@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-10-15 14:35
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -102,7 +102,6 @@ function toggleSidePanel() {
   const open = panel.style.display === 'none';
   panel.style.display = open ? '' : 'none';
   _setPanelToggleIcon(document.getElementById('btn-sidepanel-toggle'), { open, side: 'right' });
-  if (typeof updateZoomFloat === 'function') updateZoomFloat();
 }
 
 function applyDMControls() {
