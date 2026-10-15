@@ -21,6 +21,28 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [284] — 2026-10-15 — Headers stay on one row, with a ☰ menu on phones
+
+- **On a phone, every page header stays on one row** at any UI size. Buttons that
+  don't fit move into a **☰** menu at the end of the header, starting from the
+  right. Selects, sliders and buttons that open their own pop-up stay in place.
+- **The map toolbar and the character sheet's bar may use two rows on a phone**
+  before anything moves into the menu.
+- **The character sheet's "More" menu is gone.** Its items (Stories, Set password,
+  Export, Desktop app, Log out, Delete) are buttons in the bar while they fit, and
+  go into the ☰ menu when they don't, Delete first. This works at every width.
+- **The map screen's toolbar never wraps onto a second row.** When it runs out of
+  room it first shows icon-only buttons (Back, Move, Undo, Multi, My sheet; hover
+  still names them), then hides the weather text and the campaign and user
+  badges. After that a phone uses the ☰ menu, and a wider screen makes the
+  toolbar itself a little smaller.
+- **Map zoom floats over the map again**, in the bottom-right corner of the map
+  area, and stays there when panels open, resize or pop out. It sits above
+  everything drawn on the map (tokens, fog, drawings) and below panels, menus
+  and dialogs.
+
+---
+
 ## [278] — 2026-10-15 — UI size scales the whole interface; the map toolbar can hide
 
 - **UI size** (was "Text size") in the template pop-up now scales buttons, spacing, panels and

@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-10-15 15:08
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -98,42 +98,6 @@ document.addEventListener('keydown', function (e) {
   next.click();
 });
 }
-
-
-// ── Toolbar overflow menu ────────────────────────────────────────────────────
-function toggleCharMenu(force) {
-  const btn = document.getElementById('cb-more-btn');
-  const menu = document.getElementById('cb-menu');
-  if (!btn || !menu) return;
-  const open = force !== undefined ? force : menu.hasAttribute('hidden');
-  if (open) { menu.removeAttribute('hidden'); } else { menu.setAttribute('hidden', ''); }
-  btn.setAttribute('aria-expanded', open ? 'true' : 'false');
-}
-
-if (typeof document !== 'undefined' && document.addEventListener) {
-  // close on outside click
-  document.addEventListener('click', function (e) {
-    const menu = document.getElementById('cb-menu');
-    if (!menu || menu.hasAttribute('hidden')) return;
-    if (e.target.closest && e.target.closest('.cb-more')) return;
-    toggleCharMenu(false);
-  });
-  // Escape closes and puts focus back on the button that opened it
-  document.addEventListener('keydown', function (e) {
-    if (e.key !== 'Escape') return;
-    const menu = document.getElementById('cb-menu');
-    if (!menu || menu.hasAttribute('hidden')) return;
-    toggleCharMenu(false);
-    const btn = document.getElementById('cb-more-btn');
-    if (btn) btn.focus();
-  });
-  // choosing an item closes the menu
-  document.addEventListener('click', function (e) {
-    const item = e.target.closest && e.target.closest('#cb-menu [role="menuitem"]');
-    if (item) toggleCharMenu(false);
-  });
-}
-
 
 // ── Persistent vitals ────────────────────────────────────────────────────────
 // Mirrors the real HP/AC/Speed inputs (which stay the single source of truth,

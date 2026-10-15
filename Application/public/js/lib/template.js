@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 14:32
+// Written by Irmak Hakman — 2026-10-15 15:08
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -77,7 +77,7 @@
 
   // Where the button goes, first match wins. Each page's header is
   // different; anything without one gets a small button in the corner.
-  const SLOTS = ['.hdr-right', '.hdr', '.char-bar .cb-more', '#toolbar', '.top', '#hdr', '.stories-hdr', '.login-box'];
+  const SLOTS = ['.hdr-right', '.hdr', '.char-bar', '#toolbar', '.top', '#hdr', '.stories-hdr', '.login-box'];
   const ICON = '<svg class="lt-icon" viewBox="0 0 24 24" aria-hidden="true">' +
     '<path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.7-.9 1.4-1.8-.3-.9.3-2.2 1.6-2.2H17a4 4 0 0 0 4-4c0-5.5-4-10-9-10z"/>' +
     '<circle cx="7.5" cy="11" r="1.2"/><circle cx="10.5" cy="7" r="1.2"/><circle cx="15" cy="7.5" r="1.2"/></svg>';
@@ -168,8 +168,7 @@
     window.addEventListener('resize', close);
 
     const slot = SLOTS.map(q => document.querySelector(q)).find(Boolean);
-    if (slot && slot.matches('.char-bar .cb-more')) slot.before(btn);
-    else if (slot) slot.append(btn);
+    if (slot) slot.append(btn);
     else { btn.classList.add('tpl-btn-float'); document.body.append(btn); }
   }
 

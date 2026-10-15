@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Written by Irmak Hakman — 2026-10-15 14:16
+# Written by Irmak Hakman — 2026-10-15 15:00
 # Copyright (c) 2026 Irmak Hakman
 # SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 """Build public/css/templates.css — the ten large-text colour templates.
@@ -178,6 +178,27 @@ SELECT_CSS = """/* The template button and its pop-up, in every template includi
 .tpl-size:hover{background:var(--slate-hi)}
 .tpl-size[aria-checked="true"]{background:var(--arc); border-color:var(--arc); color:var(--ink)}
 .tpl-size:focus-visible{outline:2px solid var(--arc); outline-offset:1px}
+/* Header overflow (js/lib/header-fit.js): on a phone, a header stays on one
+   row; buttons that do not fit hide here and appear in the ☰ menu. */
+.hf-hidden{display:none!important}
+.hf-burger[hidden]{display:none!important}
+.hf-menu .tpl-item svg{flex:none; width:1.15em; height:1.15em}
+.hf-menu .tpl-item[aria-current="true"]{box-shadow:inset 3px 0 0 var(--arc)}
+.hf-menu .tpl-item:disabled{opacity:.45; cursor:default}
+.hf-row, .hf-row .cb-group, .hf-row .hdr-left, .hf-row .hdr-right{flex-wrap:nowrap!important}
+.hf-row > *, .hf-row .cb-group > *, .hf-row .hdr-right > *{flex-shrink:0}
+.hf-row :is(button, a){white-space:nowrap}
+.hf-row .hdr-left, .hf-row h1{min-width:0; flex-shrink:1}
+.hf-row h1{overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.hf-row .cb-nav{flex:0 0 auto!important; order:0!important; margin-left:0}
+/* A group never shrinks below its contents (the sheet's phone CSS allows it,
+   which let its buttons draw over each other); the select inside still can. */
+:is(.hf-row, .hf-wrap) :is(.cb-group, .hdr-right){min-width:min-content!important}
+/* A select's natural width is its longest option; start it at 8em instead, so
+   it can grow into spare room or give way down to 5em. */
+html :is(.hf-row, .hf-wrap) select{width:8em; flex:1 1 8em!important; min-width:5em; max-width:none}
+/* The map toolbar and the character sheet's bar may use two rows on a phone. */
+.hf-wrap{flex-wrap:wrap!important}
 .tpl-sw[data-tpl-default]{--ink:#080C15; --slate:#101A2C; --bone:#E6EDF7; --arc:#E0A93F; --rule-hi:#E6EDF733}
 """
 

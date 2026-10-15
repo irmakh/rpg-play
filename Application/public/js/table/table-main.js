@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 14:35
+// Written by Irmak Hakman — 2026-10-15 15:04
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -27,6 +27,32 @@ function _updateDiceAnimBtn(on) {
   btn.classList.toggle('on', on);
   btn.setAttribute('aria-checked', on ? 'true' : 'false');
 }
+
+// ── Map zoom: pinned to the map area's bottom-right corner ────────────────────
+// #map-zoom sits in #table-wrap (not in the scrolling #canvas-area, where it
+// would scroll away with the map). Its corner is measured from the map area
+// itself, inside its scrollbars, so the left/right panels opening, resizing or
+// popping out, the chat growing or the toolbar hiding never push it about.
+(function pinMapZoom() {
+  const zoom = document.getElementById('map-zoom');
+  const area = document.getElementById('canvas-area');
+  const wrap = document.getElementById('table-wrap');
+  if (!zoom || !area || !wrap) return;
+  const GAP = 12;
+  function place() {
+    const w = wrap.getBoundingClientRect(), a = area.getBoundingClientRect();
+    const right = w.right - (a.left + area.clientLeft + area.clientWidth) + GAP;
+    const bottom = w.bottom - (a.top + area.clientTop + area.clientHeight) + GAP;
+    zoom.style.right = Math.max(GAP, right) + 'px';
+    zoom.style.bottom = Math.max(GAP, bottom) + 'px';
+  }
+  if (typeof ResizeObserver === 'function') {
+    const ro = new ResizeObserver(place);
+    ro.observe(area); ro.observe(wrap);
+  }
+  window.addEventListener('resize', place);
+  place();
+})();
 
 // ── Resizable panels ──────────────────────────────────────────────────────────
 function _isModernTheme() { return document.body.dataset.theme === 'modern'; }

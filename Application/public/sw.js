@@ -1,8 +1,8 @@
-// Written by Irmak Hakman — 2026-10-15 14:35
+// Written by Irmak Hakman — 2026-10-15 15:08
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
-const CACHE = 'rpg-v278';
+const CACHE = 'rpg-v284';
 
 const STATIC = [
   // Core pages
@@ -10,6 +10,7 @@ const STATIC = [
   '/css/tokens.css',
   '/css/templates.css',
   '/js/lib/template.js',
+  '/js/lib/header-fit.js',
   '/css/app-shell.css',
   '/css/campaigns.css',
   '/js/campaigns.js',

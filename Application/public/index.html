@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Written by Irmak Hakman — 2026-10-15 14:25 -->
+<!-- Written by Irmak Hakman — 2026-10-15 15:08 -->
 <!-- Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) -->
 <html lang="en" class="lamplit">
 <head>
@@ -13,6 +13,7 @@
 <link rel="stylesheet" href="/css/tokens.css">
 <link rel="stylesheet" href="/css/templates.css">
 <script src="/js/lib/template.js"></script>
+<script src="/js/lib/header-fit.js" defer></script>
 <link rel="stylesheet" href="/css/fonts.css">
 <link rel="stylesheet" href="/css/base.css">
 <link rel="stylesheet" href="/css/index.css">
@@ -43,19 +44,17 @@
       <button class="char-btn" type="button" onclick="location.href='/table.html'">Map</button>
     </nav>
 
-    <div class="cb-group cb-more">
-      <button class="char-btn" id="cb-more-btn" type="button" aria-haspopup="true"
-              aria-expanded="false" aria-controls="cb-menu" onclick="toggleCharMenu()">More</button>
-      <div class="cb-menu" id="cb-menu" role="menu" hidden>
-        <a role="menuitem" href="/stories.html">Stories</a>
-        <button role="menuitem" type="button" onclick="managePassword()">Set password</button>
-        <button role="menuitem" type="button" onclick="exportCharacter()">Export character</button>
-        <a role="menuitem" id="desktop-app-link" data-desktop-link href="/downloads/RPG-Table-portable.exe" download style="display:none"
-           title="Windows desktop app - separate windows per screen, global hotkeys and a tray icon">Download desktop app</a>
-        <button role="menuitem" type="button" id="char-logout-btn" style="display:none" onclick="indexLogout()">Log out</button>
-        <hr class="cb-menu-sep">
-        <button role="menuitem" type="button" class="danger char-btn-dm-only" onclick="deleteCharacter()">Delete character...</button>
-      </div>
+    <!-- Everything that used to sit in a "More" menu (until v284). It shows in the
+         bar while it fits; what does not fit goes into the ☰ menu, from the end,
+         so Delete goes first (js/lib/header-fit.js). -->
+    <div class="cb-group cb-actions">
+      <a class="char-btn" href="/stories.html">Stories</a>
+      <button class="char-btn" type="button" onclick="managePassword()">Set password</button>
+      <button class="char-btn" type="button" onclick="exportCharacter()" title="Export character">Export</button>
+      <a class="char-btn" id="desktop-app-link" data-desktop-link href="/downloads/RPG-Table-portable.exe" download style="display:none"
+         title="Windows desktop app - separate windows per screen, global hotkeys and a tray icon">Desktop app</a>
+      <button class="char-btn" type="button" id="char-logout-btn" style="display:none" onclick="indexLogout()">Log out</button>
+      <button class="char-btn danger char-btn-dm-only" type="button" onclick="deleteCharacter()" title="Delete this character">Delete…</button>
     </div>
 
   </div>

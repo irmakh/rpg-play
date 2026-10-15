@@ -1,4 +1,4 @@
-/* Written by Irmak Hakman — 2026-10-15 14:35 */
+/* Written by Irmak Hakman — 2026-10-15 15:04 */
 /* Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) */
 
 *{box-sizing:border-box;margin:0;padding:0}
@@ -831,11 +831,6 @@ input[type=search].rp-sb-search{width:100%;box-sizing:border-box;background:var(
    chat collapses to its header bar; the strip brings it back. table-main.js
    sets body.toolbar-hidden and remembers it per browser. */
 #btn-toolbar-hide{order:99}
-/* Map zoom, at the toolbar's right end just before the hide button. */
-#tb-zoom{order:98;margin-left:auto;display:flex;align-items:center;gap:calc(4px*var(--fs, 1))}
-#tb-zoom .btn{min-width:calc(28px*var(--fs, 1));padding-left:0;padding-right:0;justify-content:center}
-#tb-zoom #slider-zoom{width:calc(80px*var(--fs, 1));cursor:pointer;accent-color:var(--arc)}
-#tb-zoom #zoom-val{font-size:calc(11px * var(--fs, 1));color:var(--ash);min-width:calc(36px*var(--fs, 1));text-align:right;font-variant-numeric:tabular-nums}
 #toolbar-strip{display:none}
 body.toolbar-hidden #toolbar{display:none}
 body.toolbar-hidden #toolbar-strip{
@@ -845,3 +840,34 @@ body.toolbar-hidden #toolbar-strip{
 }
 body.toolbar-hidden #toolbar-strip:hover{background:var(--slate-hi);color:var(--bone)}
 #toolbar-strip:focus-visible{outline:2px solid var(--arc);outline-offset:-2px}
+
+/* ── One-row toolbar ──────────────────────────────────────────────────────────
+   The toolbar never wraps (it used to, at larger UI sizes). Items keep their
+   size; js/lib/header-fit.js frees space in steps when the row is too
+   long, adding these classes in order, then moving buttons into a ☰ menu on a
+   phone or scaling the toolbar down on a wider screen.
+   Scoped to the map screen's toolbar (the one the strip follows): the console
+   loads this file too and has a #toolbar of its own. */
+#toolbar:has(+ #toolbar-strip){flex-wrap:nowrap}
+#toolbar:has(+ #toolbar-strip) > *{flex-shrink:0}
+#toolbar:has(+ #toolbar-strip) .btn{white-space:nowrap}
+#toolbar.tb-fit-1 .tb-lbl{display:none}
+#toolbar.tb-fit-2 #wx-toolbar-text,
+#toolbar.tb-fit-2 #campaign-badge,
+#toolbar.tb-fit-2 #user-badge{display:none!important}
+
+/* ── Map zoom ─────────────────────────────────────────────────────────────────
+   Floats over the bottom-right corner of the map area; table-main.js keeps it
+   pinned there as the area changes size. Stacking on this screen: the map's own
+   layers 3-20 (inside #canvas-content-wrap), the tool hint 40, THIS 50, the
+   waiting-screen cover 60, the side panel 70, dialogs and menus 200 and up. */
+#map-zoom{position:absolute;right:calc(12px*var(--fs, 1));bottom:calc(12px*var(--fs, 1));z-index:50;
+  display:flex;align-items:center;gap:calc(5px*var(--fs, 1));padding:calc(5px*var(--fs, 1)) calc(8px*var(--fs, 1));
+  background:var(--slate);border:1px solid var(--rule-hi);border-radius:var(--r-md);box-shadow:var(--cast)}
+#map-zoom button{display:grid;place-items:center;width:calc(26px*var(--fs, 1));height:calc(26px*var(--fs, 1));padding:0;
+  background:transparent;color:var(--bone);border:1px solid var(--rule-hi);border-radius:var(--r-sm);
+  font:inherit;font-size:calc(15px * var(--fs, 1));line-height:1;cursor:pointer}
+#map-zoom button:hover{background:var(--slate-hi);border-color:var(--arc-line)}
+#map-zoom button:focus-visible,#map-zoom input:focus-visible{outline:2px solid var(--arc);outline-offset:1px}
+#map-zoom #slider-zoom{width:calc(80px*var(--fs, 1));cursor:pointer;accent-color:var(--arc)}
+#map-zoom #zoom-val{font-size:calc(11px * var(--fs, 1));color:var(--ash);min-width:calc(36px*var(--fs, 1));text-align:right;font-variant-numeric:tabular-nums}
