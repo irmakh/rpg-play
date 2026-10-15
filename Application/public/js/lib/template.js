@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 14:27
+// Written by Irmak Hakman — 2026-10-15 14:32
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -94,8 +94,7 @@
   function onOutside(e) { if (pop && !pop.contains(e.target) && !btn.contains(e.target)) close(); }
   function onKey(e) { if (e.key === 'Escape') { close(); btn.focus(); } }
 
-  // Below the button, kept inside the window. Run again after a size change,
-  // since the pop-up grows with the text and the button may have moved.
+  // Below the button, kept inside the window.
   function place() {
     if (!pop || !btn) return;
     const r = btn.getBoundingClientRect(), w = pop.offsetWidth, h = pop.offsetHeight;
@@ -127,7 +126,7 @@
       pop.append(it);
     }
 
-    // UI size: stays open, so the effect can be seen before closing.
+    // UI size: like a template, choosing one closes the pop-up.
     const row = document.createElement('div');
     row.className = 'tpl-sizes';
     row.setAttribute('role', 'group');
@@ -142,7 +141,7 @@
       b.setAttribute('role', 'menuitemradio');
       b.setAttribute('aria-checked', String(n === now));
       b.textContent = Math.round(n * 100) + '%';
-      b.addEventListener('click', () => { chooseSize(n); place(); });
+      b.addEventListener('click', () => { chooseSize(n); close(); btn.focus(); });
       row.append(b);
     }
     pop.append(row);

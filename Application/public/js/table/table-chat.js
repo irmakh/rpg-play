@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 14:25
+// Written by Irmak Hakman — 2026-10-15 14:32
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -150,6 +150,21 @@ function initChatDragDrop() {
 }
 
 // ── Chat panel ────────────────────────────────────────────────────────────────
+// The toolbar hides the same way the chat collapses: a thin strip stays in its
+// place to bring it back. Remembered in this browser, like the panel widths.
+function toolbarToggle(show) {
+  document.body.classList.toggle('toolbar-hidden', !show);
+  try { localStorage.setItem('tbl_toolbarHidden', show ? '0' : '1'); } catch {}
+  // Things placed against the map's edge (the zoom buttons) re-measure on resize.
+  try { window.dispatchEvent(new Event('resize')); } catch {}
+  document.getElementById(show ? 'btn-toolbar-hide' : 'toolbar-strip')?.focus();
+}
+// Only on the map screen: the console loads this file too and has no strip.
+try {
+  if (document.getElementById('toolbar-strip') && localStorage.getItem('tbl_toolbarHidden') === '1')
+    document.body.classList.add('toolbar-hidden');
+} catch {}
+
 function chatToggle() {
   const body = document.getElementById('chat-body-wrap');
   const chev = document.getElementById('chat-chevron');

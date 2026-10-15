@@ -1,8 +1,8 @@
-// Written by Irmak Hakman — 2026-10-15 14:27
+// Written by Irmak Hakman — 2026-10-15 14:32
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
-const CACHE = 'rpg-v276';
+const CACHE = 'rpg-v277';
 
 const STATIC = [
   // Core pages

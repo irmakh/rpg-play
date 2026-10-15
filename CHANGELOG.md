@@ -21,12 +21,15 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
-## [276] — 2026-10-15 — UI size scales the whole interface
+## [277] — 2026-10-15 — UI size scales the whole interface; the map toolbar can hide
 
 - **UI size** (was "Text size") in the template pop-up now scales buttons, spacing, panels and
   other sizes along with the text, so a larger size no longer squeezes words into
   boxes made for the smaller one. The ten templates (120% unless changed) grow
   the same way. Borders stay hairlines; the default look at 100% is unchanged.
+- Picking a UI size closes the template pop-up, as picking a template does.
+- **The map screen's toolbar can be hidden** with the ▲ at its end, leaving a thin
+  "Toolbar" strip that brings it back, the way the chat collapses. Remembered per browser.
 
 ---
 

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Written by Irmak Hakman — 2026-10-15 14:25 -->
+<!-- Written by Irmak Hakman — 2026-10-15 14:32 -->
 <!-- Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) -->
 <html lang="en" class="lamplit">
 <head>
@@ -96,7 +96,10 @@
       <button type="button" onclick="uxShowHelp()">Keyboard shortcuts <kbd>?</kbd></button>
     </div>
   </div>
+  <button type="button" class="btn" id="btn-toolbar-hide" onclick="toolbarToggle(false)" title="Hide the toolbar" aria-label="Hide the toolbar"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-up"></use></svg></button>
 </div>
+<!-- Shown instead of the toolbar while it is hidden, like the chat's header bar. -->
+<button type="button" id="toolbar-strip" onclick="toolbarToggle(true)" aria-label="Show the toolbar"><span>Toolbar</span><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-down"></use></svg></button>
 
 <!-- Now Playing bar — visible to all clients when music is playing -->
 <div id="now-playing-bar" style="display:none;background:var(--slate);border-bottom:1px solid var(--rule-hi);padding:calc(4px*var(--fs, 1)) calc(10px*var(--fs, 1));align-items:center;gap:calc(7px*var(--fs, 1));font-size:calc(12px * var(--fs, 1))">
