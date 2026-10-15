@@ -22,7 +22,13 @@ Chrome refuses while another app from the same site is installed.
 - **The map's "Open info panel"** calls `RpgNative.openPanel()` and opens the
   panel on the bottom screen instead of a browser window.
 - **Back** on either screen opens the app menu: Reload, Server address, Open
-  info panel, Check for updates, Exit.
+  info panel, Maintenance, Check for updates, Exit.
+- **Maintenance** opens the super admin's maintenance page in a window of its
+  own (`MaintenanceActivity`) on the same screen. Its menu has **Back to
+  campaign**, which sends it behind the campaign screens without closing it, so
+  switching back and forth keeps the super admin logged in (that login lives
+  only in the page's memory, never on the device). Reload in either one leaves
+  the other alone.
 - Screens stay on, system bars are hidden (swipe to show), file pickers work for
   portraits, chat pictures and handouts, and links to other sites open in the
   browser.

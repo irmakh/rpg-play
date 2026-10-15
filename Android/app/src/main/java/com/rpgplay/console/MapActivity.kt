@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 19:01
+// Written by Irmak Hakman — 2026-10-15 19:16
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -20,5 +20,16 @@ class PanelActivity : ScreenActivity() {
  */
 class AppActivity : ScreenActivity() {
     override val path = "/"
+    override val readsPad = false
+}
+
+/**
+ * The super admin's maintenance page, in a window of its own beside the
+ * campaign screens. Its login lives only in the page's memory, so the window
+ * is kept rather than reloaded: Back menu → "Back to campaign" sends it behind
+ * the campaign, and "Maintenance" brings it back still logged in.
+ */
+class MaintenanceActivity : ScreenActivity() {
+    override val path = "/maintenance.html"
     override val readsPad = false
 }

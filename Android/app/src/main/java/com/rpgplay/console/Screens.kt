@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 19:02
+// Written by Irmak Hakman — 2026-10-15 19:16
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -26,11 +26,13 @@ object Screens {
     private var map: WeakReference<ScreenActivity>? = null
     private var panel: WeakReference<ScreenActivity>? = null
     private var app: WeakReference<ScreenActivity>? = null
+    private var maint: WeakReference<ScreenActivity>? = null
 
     fun register(a: ScreenActivity) {
         when (a) {
             is MapActivity -> map = WeakReference(a)
             is PanelActivity -> panel = WeakReference(a)
+            is MaintenanceActivity -> maint = WeakReference(a)
             else -> app = WeakReference(a)
         }
     }
@@ -39,6 +41,7 @@ object Screens {
         if (map?.get() === a) map = null
         if (panel?.get() === a) panel = null
         if (app?.get() === a) app = null
+        if (maint?.get() === a) maint = null
     }
 
     private fun alive(ref: WeakReference<ScreenActivity>?) = ref?.get()?.takeIf { !it.isFinishing && !it.isDestroyed }
@@ -49,7 +52,10 @@ object Screens {
     /** The page the controller is fed to: the map, or the panel when it is alone. */
     fun padTarget(): ScreenActivity? = alive(map) ?: alive(panel)
 
-    fun all(): List<ScreenActivity> = listOfNotNull(alive(map), alive(panel), alive(app))
+    fun all(): List<ScreenActivity> = listOfNotNull(alive(map), alive(panel), alive(app), alive(maint))
+
+    /** The campaign screens: everything but the maintenance window. */
+    fun campaignScreens(): List<ScreenActivity> = listOfNotNull(alive(map), alive(panel), alive(app))
 
     /** The display the info panel belongs on, or null when there is only one. */
     fun secondDisplay(a: Activity): Display? {
@@ -83,6 +89,14 @@ object Screens {
     /** The info panel, on the second display when there is one. */
     fun openPanel(from: Activity) {
         start(from, PanelActivity::class.java, secondDisplay(from)?.displayId)
+    }
+
+    /**
+     * The maintenance page on the screen it is asked from - the same window
+     * as before when it is still open (singleTask), so its login is kept.
+     */
+    fun openMaintenance(from: Activity) {
+        start(from, MaintenanceActivity::class.java, from.display?.displayId)
     }
 
     fun finishAll() { all().forEach { it.finish() } }

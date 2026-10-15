@@ -21,6 +21,13 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## Android app 1.2 — 2026-10-15 — Switch between a campaign and the maintenance page *(no frontend bump)*
+
+- **The app's Back menu has "Maintenance"**, which opens the super admin's maintenance page
+  in its own window, and the maintenance window's menu has **"Back to campaign"**. Both stay
+  open while you switch, so the campaign and the super admin login are kept on both sides.
+  Installed by the app's own update on its next start.
+
 ## [299] — 2026-10-15 — The console app remembers your login, updates itself, and opens the whole app on one screen
 
 - **In the Android app a login is remembered** until you log out, the super admin ends it

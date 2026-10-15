@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 19:02
+// Written by Irmak Hakman — 2026-10-15 19:16
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -100,7 +100,7 @@ abstract class ScreenActivity : Activity() {
         setContentView(web)
         Screens.register(this)
         load()
-        if (this !is PanelActivity) Updater.checkOnce(this)
+        if (this !is PanelActivity && this !is MaintenanceActivity) Updater.checkOnce(this)
     }
 
     private fun load() = web.loadUrl(Settings.server(this) + path)
@@ -171,15 +171,24 @@ abstract class ScreenActivity : Activity() {
     override fun onBackPressed() { if (web.canGoBack()) web.goBack() else showMenu() }
 
     private fun showMenu() {
-        val items = mutableListOf("Reload", "Server address…")
+        val maintenance = this is MaintenanceActivity
+        val items = mutableListOf<String>()
+        if (maintenance) items += "Back to campaign"
+        items += "Reload"
+        if (!maintenance) items += "Server address…"
         if (this is MapActivity && !Screens.panelOpen) items += "Open info panel"
+        if (!maintenance) items += "Maintenance"
         items += "Check for updates"
         items += "Exit"
         AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
             .setTitle(getString(R.string.app_name))
             .setItems(items.toTypedArray()) { _, which ->
                 when (items[which]) {
-                    "Reload" -> Screens.all().forEach { it.load() }
+                    // Reload never touches the other side: reloading the
+                    // maintenance page would log the super admin out.
+                    "Reload" -> if (maintenance) load() else Screens.campaignScreens().forEach { it.load() }
+                    "Back to campaign" -> moveTaskToBack(true)
+                    "Maintenance" -> Screens.openMaintenance(this)
                     "Server address…" -> askServer()
                     "Open info panel" -> Screens.openPanel(this)
                     "Check for updates" -> Updater.checkNow(this)
@@ -196,12 +205,12 @@ abstract class ScreenActivity : Activity() {
             .setMessage("Default: ${Settings.DEFAULT_SERVER}")
             .setView(field)
             .setPositiveButton("Save") { _, _ ->
-                if (Settings.setServer(this, field.text.toString())) Screens.all().forEach { it.load() }
+                if (Settings.setServer(this, field.text.toString())) Screens.campaignScreens().forEach { it.load() }
                 else Toast.makeText(this, "Start it with https:// or http://", Toast.LENGTH_LONG).show()
             }
             .setNeutralButton("Default") { _, _ ->
                 Settings.setServer(this, Settings.DEFAULT_SERVER)
-                Screens.all().forEach { it.load() }
+                Screens.campaignScreens().forEach { it.load() }
             }
             .setNegativeButton("Cancel", null)
             .show()

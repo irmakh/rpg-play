@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Written by Irmak Hakman — 2026-10-15 18:28 -->
+<!-- Written by Irmak Hakman — 2026-10-15 19:16 -->
 <!-- Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) -->
 <resources>
     <string name="app_name">RPG Console</string>
     <string name="map_label">RPG Console map</string>
     <string name="panel_label">RPG Console panel</string>
+    <string name="maintenance_label">RPG Console maintenance</string>
 </resources>
