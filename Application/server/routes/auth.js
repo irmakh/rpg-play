@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-09-26 16:25
+// Written by Irmak Hakman — 2026-10-15 18:57
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -91,8 +91,11 @@ export default function register(app, ctx) {
     return true;
   }
 
-  function startSession(req, { role, campaignId, charId = '', charName = '' }) {
-    return sessions.create({ campaignId, role, charId, charName, ip: ipOf(req), userAgent: uaOf(req) });
+  // remember: the Android console app asks for a login that lasts until logout
+  // (lib/sessions.js). Only the campaign login offers it; it only ever extends
+  // the caller's own session.
+  function startSession(req, { role, campaignId, charId = '', charName = '', remember = false }) {
+    return sessions.create({ campaignId, role, charId, charName, ip: ipOf(req), userAgent: uaOf(req), remember });
   }
 
   // ── Captcha ─────────────────────────────────────────────────────────────────
@@ -134,9 +137,9 @@ export default function register(app, ctx) {
           return res.status(401).json({ error: 'Wrong password' });
         }
         loginGuard.succeed(ip, account);
-        const s = startSession(req, { role: 'dm', campaignId });
+        const s = startSession(req, { role: 'dm', campaignId, remember: req.body?.remember === true });
         record(req, { ...ev, kind: 'login' });
-        return res.json({ ok: true, role: 'dm', token: s.token, expiresAt: s.expiresAt });
+        return res.json({ ok: true, role: 'dm', token: s.token, expiresAt: s.expiresAt, remembered: s.remembered });
       }
 
       const char = await getCharacter(characterId);
@@ -160,7 +163,7 @@ export default function register(app, ctx) {
         }
       }
       loginGuard.succeed(ip, account);
-      const s = startSession(req, { role: 'character', campaignId, charId: char.id, charName: char.name || '' });
+      const s = startSession(req, { role: 'character', campaignId, charId: char.id, charName: char.name || '', remember: req.body?.remember === true });
       record(req, { ...ev, kind: viaDm ? 'login-as-dm' : 'login' });
       return res.json({
         ok: true, role: 'character', characterId: char.id, characterName: char.name,

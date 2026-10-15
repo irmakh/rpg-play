@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-10-15 18:57
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -19,6 +19,11 @@
  * at most once a minute, so an active tab costs one small UPDATE per minute,
  * not one per request.
  *
+ * A REMEMBERED session (v299, asked for by the Android console app only) has
+ * no fixed end: it lasts until logout, until the super-admin ends it, until the
+ * password changes, or until it goes 90 days unused. Its own idle limit is kept
+ * on the row (idleMs); 0 means the store's default.
+ *
  * Lives in campaigns.db, the registry: it already spans campaigns, a super-admin
  * session belongs to none, and sessions must survive the owner's restarts.
  */
@@ -29,6 +34,9 @@ export const TOKEN_PREFIX = 'rpgs_';
 const IDLE_MS     = 24 * 60 * 60 * 1000;
 const ABSOLUTE_MS = 7 * 24 * 60 * 60 * 1000;
 const TOUCH_MS    = 60 * 1000;
+export const REMEMBER_IDLE_MS = 90 * 24 * 60 * 60 * 1000;
+// "No fixed end" still needs a number in expiresAt: a hundred years.
+const REMEMBER_ABSOLUTE_MS = 100 * 365 * 24 * 60 * 60 * 1000;
 
 export function isSessionToken(v) {
   return typeof v === 'string' && v.startsWith(TOKEN_PREFIX) && v.length > TOKEN_PREFIX.length && v.length <= 96;
@@ -62,41 +70,50 @@ export function createSessionStore(db, {
   // charName arrived after the table did: the logout audit row has only the
   // session to go on, and without it showed a bare character id.
   try { db.exec("ALTER TABLE sessions ADD COLUMN charName TEXT DEFAULT ''"); } catch { /* already there */ }
+  // A remembered session's own idle limit (0 = the default for this store).
+  try { db.exec('ALTER TABLE sessions ADD COLUMN idleMs INTEGER DEFAULT 0'); } catch { /* already there */ }
   db.exec('CREATE INDEX IF NOT EXISTS idx_sessions_owner ON sessions(campaignId, role, charId)');
 
   const st = {
-    insert: db.prepare(`INSERT INTO sessions (tokenHash, campaignId, role, charId, charName, createdAt, lastSeenAt, expiresAt, ip, userAgent)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`),
+    insert: db.prepare(`INSERT INTO sessions (tokenHash, campaignId, role, charId, charName, createdAt, lastSeenAt, expiresAt, ip, userAgent, idleMs)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`),
     get:    db.prepare('SELECT * FROM sessions WHERE tokenHash = ?'),
     touch:  db.prepare('UPDATE sessions SET lastSeenAt = ? WHERE tokenHash = ?'),
     del:    db.prepare('DELETE FROM sessions WHERE tokenHash = ?'),
     delChar: db.prepare(`DELETE FROM sessions WHERE campaignId = ? AND role = 'character' AND charId = ? AND tokenHash <> ?`),
     delRole: db.prepare('DELETE FROM sessions WHERE campaignId = ? AND role = ?'),
     delCampaign: db.prepare('DELETE FROM sessions WHERE campaignId = ?'),
-    sweep:  db.prepare('DELETE FROM sessions WHERE expiresAt <= ? OR lastSeenAt <= ?'),
+    // A row's idle limit is its own idleMs when set, else the store's default.
+    sweep:  db.prepare(`DELETE FROM sessions WHERE expiresAt <= ?
+                        OR lastSeenAt <= ? - (CASE WHEN idleMs > 0 THEN idleMs ELSE ? END)`),
     count:  db.prepare('SELECT COUNT(*) AS n FROM sessions'),
     // Live sessions only: the sweep runs every few minutes, so the table can
     // hold rows that are already dead and must not be offered to an admin as
     // something to end.
-    list:   db.prepare(`SELECT tokenHash, campaignId, role, charId, charName, createdAt, lastSeenAt, expiresAt, ip, userAgent
-                        FROM sessions WHERE expiresAt > ? AND lastSeenAt > ?
+    list:   db.prepare(`SELECT tokenHash, campaignId, role, charId, charName, createdAt, lastSeenAt, expiresAt, ip, userAgent,
+                               idleMs > 0 AS remembered
+                        FROM sessions WHERE expiresAt > ?
+                        AND lastSeenAt > ? - (CASE WHEN idleMs > 0 THEN idleMs ELSE ? END)
                         ORDER BY lastSeenAt DESC LIMIT ?`),
     delAll: db.prepare('DELETE FROM sessions WHERE tokenHash <> ?'),
   };
 
   /**
-   * @param {{campaignId?:string, role:'dm'|'character'|'admin', charId?:string, charName?:string, ip?:string, userAgent?:string}} s
-   * @returns {{token:string, tokenHash:string, expiresAt:number}}
+   * @param {{campaignId?:string, role:'dm'|'character'|'admin', charId?:string, charName?:string, ip?:string, userAgent?:string, remember?:boolean}} s
+   *   remember  no fixed end, 90 days idle (never for a super-admin session)
+   * @returns {{token:string, tokenHash:string, expiresAt:number, remembered:boolean}}
    */
-  function create({ campaignId = '', role, charId = '', charName = '', ip = '', userAgent = '' }) {
+  function create({ campaignId = '', role, charId = '', charName = '', ip = '', userAgent = '', remember = false }) {
     if (!['dm', 'character', 'admin'].includes(role)) throw new Error(`bad session role: ${role}`);
+    const remembered = !!remember && role !== 'admin';
     const token = TOKEN_PREFIX + crypto.randomBytes(32).toString('base64url');
     const tokenHash = hashToken(token);
     const t = now();
-    const expiresAt = t + absoluteMs;
+    const expiresAt = t + (remembered ? REMEMBER_ABSOLUTE_MS : absoluteMs);
     st.insert.run(tokenHash, String(campaignId || ''), role, String(charId || ''), String(charName || '').slice(0, 128),
-      t, t, expiresAt, String(ip || '').slice(0, 64), String(userAgent || '').slice(0, 256));
-    return { token, tokenHash, expiresAt };
+      t, t, expiresAt, String(ip || '').slice(0, 64), String(userAgent || '').slice(0, 256),
+      remembered ? REMEMBER_IDLE_MS : 0);
+    return { token, tokenHash, expiresAt, remembered };
   }
 
   /**
@@ -110,7 +127,7 @@ export function createSessionStore(db, {
     const row = st.get.get(tokenHash);
     if (!row) return null;
     const t = now();
-    if (t >= row.expiresAt || t - row.lastSeenAt >= idleMs) {
+    if (t >= row.expiresAt || t - row.lastSeenAt >= (row.idleMs > 0 ? row.idleMs : idleMs)) {
       st.del.run(tokenHash);
       return null;
     }
@@ -131,7 +148,8 @@ export function createSessionStore(db, {
    */
   function list({ limit = 500 } = {}) {
     const t = now();
-    return st.list.all(t, t - idleMs, Math.max(1, Math.min(5000, limit)));
+    return st.list.all(t, t, idleMs, Math.max(1, Math.min(5000, limit)))
+      .map(r => ({ ...r, remembered: !!r.remembered }));
   }
 
   /** Ends every session but one — the admin doing it keeps theirs. */
@@ -146,7 +164,7 @@ export function createSessionStore(db, {
 
   function sweep() {
     const t = now();
-    return st.sweep.run(t, t - idleMs).changes;
+    return st.sweep.run(t, t, idleMs).changes;
   }
 
   return {

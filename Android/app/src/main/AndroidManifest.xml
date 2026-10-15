@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Written by Irmak Hakman — 2026-10-15 19:01 -->
+<!-- Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Updating itself from the server (Updater.kt): Android still asks the
+         user to confirm every install. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+
+    <!-- usesCleartextTraffic: so the server address can point at a local dev
+         server over plain http (e.g. http://192.168.1.20:3000) for testing. -->
+    <application
+        android:label="@string/app_name"
+        android:icon="@mipmap/ic_launcher"
+        android:theme="@style/Theme.RpgConsole"
+        android:allowBackup="false"
+        android:hardwareAccelerated="true"
+        android:usesCleartextTraffic="true">
+
+        <!-- The one icon. Opens the map on the main display and the info panel
+             on the second one, then closes itself (LaunchActivity.kt). -->
+        <activity
+            android:name=".LaunchActivity"
+            android:exported="true"
+            android:theme="@style/Theme.RpgConsole.Launch"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:taskAffinity="">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- Each screen is its own task, so each can sit on its own display.
+             singleTask: tapping the icon again brings them back rather than
+             opening second copies. configChanges: the page is never reloaded
+             for a rotation or the keyboard appearing. -->
+        <activity
+            android:name=".MapActivity"
+            android:exported="false"
+            android:label="@string/map_label"
+            android:launchMode="singleTask"
+            android:taskAffinity="com.rpgplay.console.map"
+            android:resizeableActivity="true"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|navigation|density|uiMode" />
+
+        <!-- A one-screen device: the whole app instead of the two console screens. -->
+        <activity
+            android:name=".AppActivity"
+            android:exported="false"
+            android:label="@string/app_name"
+            android:launchMode="singleTask"
+            android:taskAffinity="com.rpgplay.console.app"
+            android:windowSoftInputMode="adjustResize"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|navigation|density|uiMode" />
+
+        <activity
+            android:name=".PanelActivity"
+            android:exported="false"
+            android:label="@string/panel_label"
+            android:launchMode="singleTask"
+            android:taskAffinity="com.rpgplay.console.panel"
+            android:resizeableActivity="true"
+            android:windowSoftInputMode="adjustResize"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|navigation|density|uiMode" />
+
+        <!-- Android's answer about an update install (Updater.kt). -->
+        <receiver android:name=".InstallStatusReceiver" android:exported="false" />
+    </application>
+</manifest>

@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-10-15 18:58
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -224,5 +224,74 @@ describe('listing and ending sessions (the maintenance page)', () => {
     const [row] = s.list();
     expect(s.revokeHash(row.tokenHash)).toBe(true);
     expect(s.resolve(token)).toBeNull();
+  });
+});
+
+// v299 — the Android console app's login lasts until logout, the super-admin
+// ends it, or 90 days without use.
+describe('remembered sessions', () => {
+  const DAY = 24 * HOUR;
+
+  it('outlives the 24-hour idle limit and the 7-day cap', () => {
+    const { s, tick } = make();
+    const { token, remembered } = s.create({ campaignId: 'c1', role: 'dm', remember: true });
+    expect(remembered).toBe(true);
+    tick(30 * DAY);                    // a month unused
+    expect(s.resolve(token)).not.toBeNull();
+    for (let i = 0; i < 12; i++) { tick(30 * DAY); expect(s.resolve(token)).not.toBeNull(); }   // a year of use
+  });
+
+  it('ends after 90 days unused', () => {
+    const { s, tick } = make();
+    const { token } = s.create({ campaignId: 'c1', role: 'character', charId: 'ch1', remember: true });
+    tick(90 * DAY);
+    expect(s.resolve(token)).toBeNull();
+  });
+
+  it('is kept by the sweep while an ordinary one beside it is collected', () => {
+    const { s, tick } = make();
+    const kept = s.create({ campaignId: 'c1', role: 'dm', remember: true }).token;
+    s.create({ campaignId: 'c1', role: 'dm' });
+    tick(2 * DAY);
+    expect(s.sweep()).toBe(1);
+    expect(s.resolve(kept)).not.toBeNull();
+    tick(90 * DAY);
+    expect(s.sweep()).toBe(1);
+  });
+
+  it('is listed, and marked, for the maintenance page', () => {
+    const { s, tick } = make();
+    s.create({ campaignId: 'c1', role: 'dm', remember: true });
+    s.create({ campaignId: 'c1', role: 'dm' });
+    expect(s.list().map(r => r.remembered).sort()).toEqual([false, true]);
+    tick(2 * DAY);
+    const left = s.list();
+    expect(left).toHaveLength(1);
+    expect(left[0].remembered).toBe(true);
+  });
+
+  it('can still be ended at any time', () => {
+    const { s } = make();
+    const { token } = s.create({ campaignId: 'c1', role: 'dm', remember: true });
+    expect(s.revoke(token)).toBe(true);
+    expect(s.resolve(token)).toBeNull();
+  });
+
+  it('is never granted to a super-admin', () => {
+    const { s, tick } = make();
+    const { token, remembered } = s.create({ role: 'admin', remember: true });
+    expect(remembered).toBe(false);
+    tick(DAY);
+    expect(s.resolve(token)).toBeNull();
+  });
+
+  it('adds the idleMs column to an older sessions table', () => {
+    const db = new Database(':memory:');
+    db.exec(`CREATE TABLE sessions (tokenHash TEXT PRIMARY KEY, campaignId TEXT DEFAULT '', role TEXT NOT NULL,
+      charId TEXT DEFAULT '', createdAt INTEGER NOT NULL, lastSeenAt INTEGER NOT NULL, expiresAt INTEGER NOT NULL,
+      ip TEXT DEFAULT '', userAgent TEXT DEFAULT '', charName TEXT DEFAULT '')`);
+    const s = createSessionStore(db);
+    const { token } = s.create({ campaignId: 'c1', role: 'dm', remember: true });
+    expect(s.resolve(token)).not.toBeNull();
   });
 });

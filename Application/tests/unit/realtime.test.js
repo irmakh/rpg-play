@@ -29,7 +29,7 @@ const SRC = readFileSync(resolve(__dirname, '../../public/js/lib/realtime.js'), 
 // stream with a session to present. Pass session: null for a signed-out tab.
 const CHAR_SESSION = { role: 'character', characterId: 'c1', charPw: 'rpgs_testtoken' };
 
-function load({ dbProvider = 'localdb', session = CHAR_SESSION } = {}) {
+function load({ dbProvider = 'localdb', session = CHAR_SESSION, wsUrl = null, protocol = 'http:' } = {}) {
   const store = new Map(session ? [['rpgSession', JSON.stringify(session)]] : []);
   const replaced = [];
   const sockets = [];
@@ -66,8 +66,8 @@ function load({ dbProvider = 'localdb', session = CHAR_SESSION } = {}) {
     setTimeout() { /* never reconnect during a test */ },
     WebSocket: FakeWebSocket,
     EventSource: FakeEventSource,
-    fetch: async () => ({ json: async () => ({ dbProvider, wsUrl: null }) }),
-    location: { pathname: '/table.html', host: 'table.test', search: '', replace(u) { replaced.push(u); }, reload() {} },
+    fetch: async () => ({ json: async () => ({ dbProvider, wsUrl }) }),
+    location: { pathname: '/table.html', host: 'table.test', protocol, search: '', replace(u) { replaced.push(u); }, reload() {} },
     sessionStorage: { getItem: (k) => store.get(k) ?? null, removeItem: (k) => { store.delete(k); } },
     document: {
       cookie: 'campaign=camp-1',
@@ -151,6 +151,26 @@ describe('connectRealtime — one connection per page', () => {
     const url = new URL(sockets[0].url.replace(/^ws:/, 'http:'));
     expect(url.searchParams.has('tpl')).toBe(false);
     expect(url.searchParams.has('fs')).toBe(false);
+  });
+
+  // v298 — production names the socket https://…/ws, which an older Android
+  // WebView (the console app) refuses to open; the page was never live there.
+  it('opens wss:// when the server names the socket with https://', async () => {
+    const { ctx, sockets } = load({ wsUrl: 'https://dnd.example/ws' });
+    await ctx.connectRealtime({});
+    expect(sockets[0].url.startsWith('wss://dnd.example/ws?')).toBe(true);
+  });
+
+  it('uses wss:// for its own address on an https page', async () => {
+    const { ctx, sockets } = load({ protocol: 'https:' });
+    await ctx.connectRealtime({});
+    expect(sockets[0].url.startsWith('wss://table.test/ws?')).toBe(true);
+  });
+
+  it('keeps a ws:// or wss:// address as given', async () => {
+    const { ctx, sockets } = load({ wsUrl: 'wss://dnd.example/ws' });
+    await ctx.connectRealtime({});
+    expect(sockets[0].url.startsWith('wss://dnd.example/ws?')).toBe(true);
   });
 
   // v237 — the live stream needs a login.

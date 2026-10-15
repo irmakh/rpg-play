@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-09-27 18:14
+// Written by Irmak Hakman — 2026-10-15 18:57
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -139,6 +139,7 @@ export default function register(app, ctx) {
       createdAt: s.createdAt,
       lastSeenAt: s.lastSeenAt,
       expiresAt: s.expiresAt,
+      remembered: !!s.remembered,       // the console app's lasting login (lib/sessions.js)
       ip: s.ip || '',
       userAgent: s.userAgent || '',
       isMine: s.tokenHash === mine,     // the page refuses to end this one by accident

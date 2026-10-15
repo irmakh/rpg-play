@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 17:39
+// Written by Irmak Hakman — 2026-10-15 18:57
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -149,10 +149,16 @@ function _dropStoredSession() {
   sessionStorage.removeItem('rpgSession');
   sessionStorage.removeItem('tableMasterPw');
   sessionStorage.removeItem('dmMasterPw');
+  // The Android console app's remembered login (js/console/console-login.js):
+  // a session the server has ended must not come back on the next start.
+  try { localStorage.removeItem('rpgConsoleSession'); } catch {}
 }
 
 /** Back to the login page, returning here afterwards. */
 function goToLogin() {
+  // A console screen has its own login form (js/console/console-login.js),
+  // which shows itself once the session is gone.
+  if (location.pathname.startsWith('/console/')) { location.reload(); return; }
   const next = encodeURIComponent(location.pathname + location.search);
   location.replace(`/login.html?next=${next}`);
 }
@@ -269,6 +275,18 @@ function _rtSubscribe(event) {
   _rtSource.addEventListener(event, e => _rtEmit(event, JSON.parse(e.data)));
 }
 
+/**
+ * The WebSocket address to open. The server may name it with http(s)://
+ * (production's WS_URL does). Recent Chrome turns that into ws(s):// itself,
+ * but an older Android WebView - the console app on the Thor - refuses it, so
+ * the page was never live there: music, turns and chat did not arrive. And a
+ * page served over https must use wss://, never ws://.
+ */
+function _wsBase(wsUrl) {
+  if (wsUrl) return String(wsUrl).replace(/^http(s?):\/\//i, 'ws$1://');
+  return `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`;
+}
+
 async function connectRealtime(handlers) {
   if (_rtHandlers) { _rtMerge(handlers); return; }   // already open, or opening
   _rtHandlers = {};
@@ -288,8 +306,17 @@ async function connectRealtime(handlers) {
   }
   if (provider === 'localdb') {
     function connect() {
-      const base = wsUrl || `ws://${location.host}/ws`;
-      const ws = new WebSocket(base + (base.includes('?') ? '&' : '?') + _realtimeParams());
+      const base = _wsBase(wsUrl);
+      let ws;
+      try {
+        ws = new WebSocket(base + (base.includes('?') ? '&' : '?') + _realtimeParams());
+      } catch (err) {
+        // A URL this browser will not open. Retry like a dropped connection
+        // rather than leaving the page silently not live.
+        console.warn('[realtime] cannot open', base, err);
+        setTimeout(connect, 3000);
+        return;
+      }
       ws.onmessage = e => {
         const { event, data } = JSON.parse(e.data);
         if (event === 'force-reload') return _onForceReload(data);   // handled for every page

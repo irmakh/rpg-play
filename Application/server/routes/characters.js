@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 17:44
+// Written by Irmak Hakman — 2026-10-15 18:57
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -497,7 +497,8 @@ export default function register(app, ctx) {
 
       const out = { ok: true, has_password: !!new_password };
       if (new_password && !callerIsDm && !callerIsChar) {
-        const s = sessions.create({ campaignId, role: 'character', charId: char.id, charName: char.name || '', ip, userAgent: req.headers['user-agent'] });
+        const s = sessions.create({ campaignId, role: 'character', charId: char.id, charName: char.name || '', ip, userAgent: req.headers['user-agent'],
+          remember: req.body?.remember === true });   // the console app's lasting login (lib/sessions.js)
         Object.assign(out, { token: s.token, expiresAt: s.expiresAt, role: 'character', characterId: char.id, characterName: char.name });
       }
       res.json(out);

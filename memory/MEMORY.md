@@ -137,6 +137,7 @@
 
 - Stories system: manual comic upload workflow. storiesdb.js (separate SQLite DB). Three screens: stories.html (dashboard), story-builder.html (panel editor with character cast multiselect by portrait), story-viewer.html (grid/strip + lightbox + cast strip). Password gate via POST /api/auth/verify-any accepts DM or any character password.
 - NEXT SESSION (as of 2026-10-15, after v267 - supersedes all earlier NEXT SESSION notes): v262-v267 are uploaded, committed and pushed; production confirmed serving v267 on 2026-10-15. Nothing is pending. v267 fixed DM 'New character' on the sheet (create request lacked the DM session header).
+- ANDROID CONSOLE APP SIGNING KEY (2026-10-15): Android/keystore/rpg-console.jks + Android/keystore.properties are outside git and were made on the Linux dev machine. Every APK must be signed with this key or Android refuses to update the installed app. Copy them to the other machine by hand; never regenerate (make-keystore.sh refuses if one exists).
 ---
 
 *Last updated: 2026-10-15*

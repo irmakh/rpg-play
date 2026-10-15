@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 17:40
+// Written by Irmak Hakman — 2026-10-15 18:57
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -162,6 +162,7 @@ function waitLeft(ms) {
 /** "Chrome 153 · Windows" from a user agent; the full string is on hover. */
 function shortBrowser(ua) {
   if (!ua) return '—';
+  if (/RpgConsoleApp\//.test(ua)) return 'Console app · Android';
   const b = /(Edg|OPR|Firefox|Chrome|Safari)\/(\d+)/.exec(ua);
   const os = /(Windows|Android|iPhone|iPad|Mac OS X|Linux)/.exec(ua);
   const name = b ? ({ Edg: 'Edge', OPR: 'Opera' }[b[1]] || b[1]) + ' ' + b[2] : 'Browser';
@@ -260,7 +261,7 @@ function renderSessions(list, now) {
     <thead><tr><th>Who</th><th>Campaign</th><th>Signed in</th><th>Last seen</th><th>Address</th><th>Browser</th><th></th></tr></thead>
     <tbody>${list.map(s => `
       <tr>
-        <td class="${s.isMine ? 'ev-ok' : ''}">${esc(s.scope)}${s.isMine ? ' <span class="muted">(you)</span>' : ''}</td>
+        <td class="${s.isMine ? 'ev-ok' : ''}">${esc(s.scope)}${s.isMine ? ' <span class="muted">(you)</span>' : ''}${s.remembered ? ' <span class="muted" title="Stays signed in until logged out or ended here (90 days unused)">(remembered)</span>' : ''}</td>
         <td>${esc(s.campaignName || '—')}</td>
         <td title="${esc(absTime(s.createdAt))}">${relTime(s.createdAt, now)}</td>
         <td title="${esc(absTime(s.lastSeenAt))}">${relTime(s.lastSeenAt, now)}</td>

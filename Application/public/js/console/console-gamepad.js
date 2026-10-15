@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-11 00:20
+// Written by Irmak Hakman — 2026-10-15 18:31
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -27,6 +27,11 @@
 //
 // A keyboard fallback (PAD_KEYS) makes the same actions reachable on a PC, and
 // covers handhelds that send their buttons as key presses.
+//
+// In the Android console app (Android/ in the repo) the app reads the
+// controller itself and keeps it on window.__rpgNativePad, shaped like a
+// Gamepad ({buttons:[{pressed, value}], axes:[]}) in the same standard layout.
+// It is read here like any other pad, so nothing below needs to know.
 
 // ── Tables ───────────────────────────────────────────────────────────────────
 // Standard-layout button index -> control name.
@@ -276,6 +281,7 @@ const ConsolePad = (function () {
   function frame() {
     let pads = [];
     try { pads = [...(navigator.getGamepads ? navigator.getGamepads() : [])].filter(Boolean); } catch {}
+    if (window.__rpgNativePad) pads.push(window.__rpgNativePad);
     // Every connected pad counts as one: the handheld may list its built-in
     // controls and a virtual device side by side.
     const held = new Set();
@@ -330,7 +336,7 @@ const ConsolePad = (function () {
       loadMap();
       // The other console screen changed the buttons: use them here at once.
       window.addEventListener('storage', e => { if (e.key === PAD_MAP_KEY) loadMap(); });
-      if (!_running && 'getGamepads' in navigator) { _running = true; requestAnimationFrame(frame); }
+      if (!_running && ('getGamepads' in navigator || window.RpgNative)) { _running = true; requestAnimationFrame(frame); }
     },
 
     /**

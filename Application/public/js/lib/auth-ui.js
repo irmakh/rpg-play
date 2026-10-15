@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 14:25
+// Written by Irmak Hakman — 2026-10-15 18:57
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -154,14 +154,15 @@
   /**
    * Sets a character's FIRST password with the ticket the login answered
    * `needsSetup` with. Resolves like post(); on success `data.token` is the new
-   * session, so the player is not asked for a second captcha.
+   * session, so the player is not asked for a second captcha. `extra` goes into
+   * the body as well (the console app's { remember: true }).
    */
-  async function setFirstPassword(charId, newPassword, setupTicket, headers = {}) {
+  async function setFirstPassword(charId, newPassword, setupTicket, headers = {}, extra = {}) {
     try {
       const res = await fetch(`/api/characters/${encodeURIComponent(charId)}/password`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', ...headers },
-        body: JSON.stringify({ new_password: newPassword, setupTicket }),
+        body: JSON.stringify({ ...extra, new_password: newPassword, setupTicket }),
       });
       const data = await res.json().catch(() => ({}));
       let message = '';

@@ -1,0 +1,12 @@
+# Written by Irmak Hakman — 2026-10-15 18:28
+# Build output and caches
+build/
+app/build/
+.gradle/
+.gradle-home/
+.home/
+dist/
+local.properties
+# The signing key: never in git (see make-keystore.sh)
+keystore/
+keystore.properties

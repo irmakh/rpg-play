@@ -267,6 +267,11 @@ char_sheet/
 │   ├── package.json                    # Dependencies & npm scripts
 │   ├── server.js                       # Express entry point — loads route modules + shared context
 │   └── vitest.config.js                # Vitest configuration
+├── Android/                            # Android console app for two-screen handhelds (AYN Thor), v297
+│   ├── app/src/main/java/com/rpgplay/console/  # LaunchActivity, Map/PanelActivity, ScreenActivity (WebView), Screens, NativePad, Settings
+│   ├── docker/Dockerfile               #   Android build tools image (JDK 17, SDK 34, Gradle 8.7)
+│   ├── build.sh                        #   Builds dist/rpg-console.apk in Docker
+│   └── make-keystore.sh                #   Makes the signing key once (keystore/, outside git)
 ├── Desktop/                            # Electron desktop client (thin client over the web app), v1.0.3
 │   ├── assets/                         #   Icons
 │   │   ├── icon.png                    #     App icon (512px, source for the Windows .ico)
@@ -361,6 +366,7 @@ char_sheet/
 | Path | Purpose |
 |---|---|
 | `Application/` | The web application — server, database layers, frontend, tests |
+| `Android/` | The Android console app: both console screens from one icon on a two-screen handheld |
 | `Desktop/` | The Windows desktop client (Electron thin client) |
 | `retired/` | Code kept for reference and not deployed — currently the AI DM |
 | `args/` `context/` `goals/` `hardprompts/` `tools/` | The [GOTCHA framework](CLAUDE.md) layers that drive how the project is built and maintained |

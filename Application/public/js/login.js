@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-09-26 16:25
+// Written by Irmak Hakman — 2026-10-15 19:00
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -15,6 +15,11 @@
 // headers keep working — and the password itself never leaves this page.
 
 let _campaign = null;   // { id, name, ... } once loaded
+// Inside the Android console app (window.RpgNative) a login is remembered: the
+// server gives it no fixed end (90 days unused, lib/sessions.js) and the app
+// keeps it on the device until logout. A browser keeps today's per-tab login.
+const IN_APP = !!window.RpgNative;
+
 let _capChar = null;    // captcha widgets (AuthUI.captcha)
 let _capDm = null;
 
@@ -41,7 +46,7 @@ async function loadCampaign() {
   if (logo && _campaign) logo.textContent = _campaign.name;
   const hint = document.querySelector('.hint');
   if (hint) {
-    hint.innerHTML = 'Session is stored in this browser tab only.<br>'
+    hint.innerHTML = (IN_APP ? 'You stay logged in on this device until you log out.<br>' : 'Session is stored in this browser tab only.<br>')
       + '<a href="/" style="color:var(--bone)">Switch campaign</a>';
   }
   return true;
@@ -103,7 +108,7 @@ async function loginCharacter() {
   const btn = document.getElementById('char-login-btn');
   btn.disabled = true;
   try {
-    const r = await AuthUI.login({ type: 'character', characterId, password }, _capChar);
+    const r = await AuthUI.login({ type: 'character', characterId, password, remember: IN_APP }, _capChar);
     if (r.data.needsSetup) {
       showSetupStep(r.data.characterId, r.data.characterName, r.data.setupTicket);
       return;
@@ -153,7 +158,7 @@ async function setupPassword() {
   const btn = document.getElementById('setup-btn');
   btn.disabled = true;
   try {
-    const r = await AuthUI.setFirstPassword(_setupCharId, pw1, _setupTicket);
+    const r = await AuthUI.setFirstPassword(_setupCharId, pw1, _setupTicket, {}, { remember: IN_APP });
     if (!r.ok) { errEl.textContent = r.message; return; }
     _storeSession({ role: 'character', characterId: r.data.characterId, characterName: r.data.characterName, charPw: r.data.token });
     location.replace(_nextUrl());
@@ -168,7 +173,7 @@ async function loginDM() {
   errEl.textContent = '';
   if (!password) { errEl.textContent = 'Enter the master password.'; return; }
 
-  const r = await AuthUI.login({ type: 'dm', password }, _capDm);
+  const r = await AuthUI.login({ type: 'dm', password, remember: IN_APP }, _capDm);
   if (!r.ok) { errEl.textContent = r.message; return; }
   _storeSession({ role: 'dm', masterPw: r.data.token });
   location.replace(_nextUrl());

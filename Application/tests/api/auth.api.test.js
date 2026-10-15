@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-09-26 16:25
+// Written by Irmak Hakman — 2026-10-15 18:58
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -300,5 +300,27 @@ describe('login audit', () => {
     const ok = auditEvents.find(e => e.kind === 'login');
     expect(ok).toMatchObject({ role: 'character', charId: 'c1', charName: 'Aliyr' });
     expect(ok).toHaveProperty('ip');
+  });
+});
+
+// v299 — the Android console app asks for a login that lasts until logout.
+describe('POST /api/auth/login — remember (the console app)', () => {
+  it('gives the DM a remembered session when asked', async () => {
+    const res = await login({ type: 'dm', password: masterPw, remember: true });
+    expect(res.status).toBe(200);
+    expect(res.body.remembered).toBe(true);
+    expect(sessions.list().find(s => s.role === 'dm').remembered).toBe(true);
+  });
+
+  it('gives a character one too', async () => {
+    const res = await login({ type: 'character', characterId: 'c1', password: 'secret', remember: true });
+    expect(res.status).toBe(200);
+    expect(sessions.list().find(s => s.charId === 'c1').remembered).toBe(true);
+  });
+
+  it('keeps the ordinary lifetime when not asked, or asked with anything but true', async () => {
+    await login({ type: 'dm', password: masterPw });
+    await login({ type: 'dm', password: masterPw, remember: 'yes' });
+    expect(sessions.list().every(s => !s.remembered)).toBe(true);
   });
 });

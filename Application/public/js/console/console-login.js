@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 17:36
+// Written by Irmak Hakman — 2026-10-15 19:02
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -22,6 +22,13 @@
 // Console screens on the SAME device share one login through a BroadcastChannel
 // (the Thor runs the map and the info panel as two windows). The session never
 // travels through the server relay.
+//
+// In the Android console app (window.RpgNative) the login is REMEMBERED: it asks
+// the server for a session with no fixed end (90 days unused, lib/sessions.js)
+// and keeps a copy in localStorage, which the app keeps between starts. It is
+// put back into sessionStorage as this file loads - before any other script
+// reads it - and is gone on logout, or when the server ends the session
+// (js/lib/realtime.js _dropStoredSession). A browser never does any of this.
 const ConsoleLogin = (function () {
   const CHANNEL = 'rpg-console-session';
   let _bc = null;
@@ -29,6 +36,9 @@ const ConsoleLogin = (function () {
   let _capChar = null, _capDm = null;
   let _setupId = null, _setupTicket = null;
   let _campaign = null;       // {id, name} of the campaign this login is for
+
+  const IN_APP = typeof window !== 'undefined' && !!window.RpgNative;
+  const REMEMBER_KEY = 'rpgConsoleSession';
 
   // ── Stored session ─────────────────────────────────────────────────────────
   function session() {
@@ -42,6 +52,7 @@ const ConsoleLogin = (function () {
 
   function store(sess) {
     sessionStorage.setItem('rpgSession', JSON.stringify(sess));
+    if (IN_APP) { try { localStorage.setItem(REMEMBER_KEY, JSON.stringify(sess)); } catch {} }
     // The table modules read the DM token from these two keys as well.
     if (sess.role === 'dm') {
       sessionStorage.setItem('tableMasterPw', sess.masterPw);
@@ -53,6 +64,7 @@ const ConsoleLogin = (function () {
   }
 
   function clear() {
+    try { localStorage.removeItem(REMEMBER_KEY); } catch {}
     sessionStorage.removeItem('rpgSession');
     sessionStorage.removeItem('tableMasterPw');
     sessionStorage.removeItem('dmMasterPw');
@@ -63,6 +75,14 @@ const ConsoleLogin = (function () {
   function sameLogin(a, b) {
     if (!a || !b || a.role !== b.role) return false;
     return a.role === 'dm' ? a.masterPw === b.masterPw : a.characterId === b.characterId;
+  }
+
+  // The app's remembered login, back in place before anything reads it.
+  if (IN_APP && !session()) {
+    try {
+      const saved = JSON.parse(localStorage.getItem(REMEMBER_KEY) || 'null');
+      if (saved && saved.role && String(tokenOf(saved)).startsWith('rpgs_')) store(saved);
+    } catch {}
   }
 
   // ── Same-device sync ───────────────────────────────────────────────────────
@@ -289,7 +309,7 @@ const ConsoleLogin = (function () {
       if (!characterId) { err.textContent = 'Choose a character.'; return; }
       if (!password)    { err.textContent = 'Enter your password.'; return; }
       guarded(e.target, async () => {
-        const r = await AuthUI.login({ type: 'character', characterId, password }, _capChar);
+        const r = await AuthUI.login({ type: 'character', characterId, password, remember: IN_APP }, _capChar);
         if (r.data.needsSetup) {
           _setupId = r.data.characterId;
           _setupTicket = r.data.setupTicket || null;
@@ -313,7 +333,7 @@ const ConsoleLogin = (function () {
       if (pw1 !== pw2)    { err.textContent = 'The two passwords do not match.'; return; }
       if (pw1.length < 3) { err.textContent = 'Use at least 3 characters.'; return; }
       guarded(e.target, async () => {
-        const r = await AuthUI.setFirstPassword(_setupId, pw1, _setupTicket);
+        const r = await AuthUI.setFirstPassword(_setupId, pw1, _setupTicket, {}, { remember: IN_APP });
         if (!r.ok) { err.textContent = r.message; return; }
         finish({ role: 'character', characterId: r.data.characterId, characterName: r.data.characterName, charPw: r.data.token });
       });
@@ -331,7 +351,7 @@ const ConsoleLogin = (function () {
       err.textContent = '';
       if (!password) { err.textContent = 'Enter the Dungeon Master password.'; return; }
       guarded(e.target, async () => {
-        const r = await AuthUI.login({ type: 'dm', password }, _capDm);
+        const r = await AuthUI.login({ type: 'dm', password, remember: IN_APP }, _capDm);
         if (!r.ok) { err.textContent = r.message; return; }
         finish({ role: 'dm', masterPw: r.data.token });
       });
@@ -371,10 +391,46 @@ const ConsoleLogin = (function () {
     if (sess && !String(tokenOf(sess)).startsWith('rpgs_')) { clear(); sess = null; }
     if (sess) return sess;
 
-    showGate();
+    // In the app with both screens open, only the top screen asks; this one
+    // waits for it (the app knows which is which).
+    if (IN_APP && typeof RpgNative.isLoginScreen === 'function' && !RpgNative.isLoginScreen()) showWaitGate();
+    else showGate();
     // Another console window on this device may already be logged in: ask it.
     announce('SESSION_REQUEST');
+    // In the app, a login on the other screen also lands in localStorage (the
+    // remembered copy). Follow it from there too, in case the channel between
+    // the two screens does not carry it.
+    if (IN_APP) {
+      window.addEventListener('storage', e => {
+        if (e.key !== REMEMBER_KEY && e.key !== 'rpgApp:rpgSession') return;
+        if (!session() && e.newValue) location.reload();
+      });
+    }
     return null;
+  }
+
+  /**
+   * The bottom screen while the top one shows the login form: one form, not
+   * two. It follows the login as soon as it happens; "Log in here instead" is
+   * for when the top screen is not there to use.
+   */
+  function showWaitGate() {
+    if (document.getElementById('c-gate')) return;
+    const gate = document.createElement('div');
+    gate.className = 'c-gate';
+    gate.id = 'c-gate';
+    gate.innerHTML = `
+      <div class="c-login">
+        <div class="lg-logo">
+          <h1><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-swords"></use></svg> RPG Play</h1>
+          <p data-el="title"></p>
+        </div>
+        <p class="lg-hint">Log in on the top screen. This screen follows as soon as you do.</p>
+        <button type="button" class="lg-btn lg-btn-back" data-el="here">Log in here instead</button>
+      </div>`;
+    gate.querySelector('[data-el="title"]').textContent = _opts.title || 'RPG Console';
+    gate.querySelector('[data-el="here"]').addEventListener('click', () => { gate.remove(); showGate(); });
+    document.body.appendChild(gate);
   }
 
   /** Ends the session on the server and on every console screen on this device. */

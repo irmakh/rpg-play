@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-11 00:25
+// Written by Irmak Hakman — 2026-10-15 18:31
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -67,6 +67,8 @@ function _consoleStartSSE() {
 }
 
 function consoleOpenSecondary() {
+  // In the Android console app the panel is the app's own second screen.
+  if (window.RpgNative && typeof RpgNative.openPanel === 'function') { RpgNative.openPanel(); return; }
   if (_secondaryWin && !_secondaryWin.closed) { _secondaryWin.focus(); return; }
   _secondaryWin = window.open('/console/table-secondary.html', 'rpg-secondary', 'width=620,height=900,menubar=no,toolbar=no,location=no,status=no,scrollbars=no,resizable=yes');
   _setDot('offline');

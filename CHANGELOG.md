@@ -21,6 +21,46 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [299] — 2026-10-15 — The console app remembers your login, updates itself, and opens the whole app on one screen
+
+- **In the Android app a login is remembered** until you log out, the super admin ends it
+  (maintenance page → Active sessions, now marked *remembered*), the password changes, or
+  it goes 90 days unused. Browsers keep the per-tab, 24-hour login. *(server: a session can
+  now be "remembered", asked for only by the app's login forms; never for the super admin)*
+- **With two screens, only the top one shows the login form.** The bottom screen says to log
+  in on the top one and follows as soon as you do ("Log in here instead" if the top screen is
+  not available).
+- **On a one-screen device the app opens the whole RPG Play app** (campaigns, sheet, table…)
+  instead of the console screens, and Back goes back a page there.
+- **The app updates itself**: on start it checks `/downloads/rpg-console.json` and offers a
+  newer version; one tap on Android's install screen updates it. Back menu → Check for updates.
+- The maintenance page names the app's sessions "Console app · Android".
+- A console screen whose session ends shows its own login form again instead of going to the
+  main login page.
+
+## [298] — 2026-10-15 — Live updates in the Android console app
+
+- **Fixed: in the Android console app nothing live arrived**, so the DM's music
+  buttons seemed to do nothing (the track only starts, and the panel only updates,
+  when the server's music event comes back). The server names its live connection
+  with an `https://` address; Chrome quietly turns that into `wss://`, but the
+  app's WebView refuses it. Pages now always open it as `wss://` (or `ws://` over
+  plain http), and a connection that cannot be opened is retried instead of
+  silently given up.
+
+## [297] — 2026-10-15 — An Android app for the two-screen console
+
+- **New: the RPG Console Android app** (`Android/` in the repo) for two-screen
+  handhelds such as the AYN Thor. One icon opens the map on the top screen and the
+  info panel on the bottom one, so the two pages no longer have to be installed as
+  web apps (Chrome refused the second while another app from the site was installed).
+  The app reads the handheld's controller itself and gives it to the map, so the
+  buttons work whichever screen was touched last; Back opens a menu with Reload,
+  Server address, Open info panel and Exit. Installed by sideloading the APK.
+- The console map's "Open info panel" opens the panel on the app's bottom screen when
+  it runs inside the app, and the console's gamepad code also reads the app's
+  controller. Nothing changes in a browser.
+
 ## [296] — 2026-10-15 — New portraits and waiting-screen changes show up live
 
 - **A character's new portrait now appears on its tokens straight away**, on every
