@@ -21,6 +21,13 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [302] — 2026-10-15 — Switch campaign works on the app's two console screens
+
+- **Fixed: the Android app's "Switch campaign" did nothing on the two console screens.** It
+  calls the console's login code from outside the page, which could not see it. Now it logs
+  the two screens out of the campaign and shows the login form with its campaign choice (and
+  "Enter as super admin" when that session is live). No app update needed.
+
 ## [301] — 2026-10-15 — A super admin enters a campaign without the login form
 
 - **With a live super admin session, choosing a campaign no longer shows the password form.**

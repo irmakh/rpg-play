@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 19:38
+// Written by Irmak Hakman — 2026-10-15 19:44
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -478,3 +478,7 @@ const ConsoleLogin = (function () {
 
   return { init, logout, session };
 })();
+
+// A top-level const is not a window property, and the Android app's "Switch
+// campaign" calls window.ConsoleLogin.logout() from outside the page.
+window.ConsoleLogin = ConsoleLogin;
