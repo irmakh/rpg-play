@@ -6,7 +6,8 @@
 [![Electron](https://img.shields.io/badge/Electron-44-47848F?style=flat-square&logo=electron&logoColor=white)](https://www.electronjs.org)
 [![JavaScript](https://img.shields.io/badge/Vanilla_JS-no_build_step-F7DF1E?style=flat-square&logo=javascript&logoColor=black)](#tech-stack)
 [![PWA](https://img.shields.io/badge/PWA-installable-5A0FC8?style=flat-square&logo=pwa&logoColor=white)](#mobile-companion-pwa-console)
-[![Vitest](https://img.shields.io/badge/Vitest-1341_passing-6E9F18?style=flat-square&logo=vitest&logoColor=white)](#tech-stack)
+[![Android](https://img.shields.io/badge/Android-console_app-3DDC84?style=flat-square&logo=android&logoColor=white)](#android-app-android--two-screen-handhelds-and-phones)
+[![Vitest](https://img.shields.io/badge/Vitest-1591_passing-6E9F18?style=flat-square&logo=vitest&logoColor=white)](#tech-stack)
 [![Docker](https://img.shields.io/badge/Docker-compose-2496ED?style=flat-square&logo=docker&logoColor=white)](#option-a--docker-recommended-for-local--lan-play)
 
 A self-hosted web app for running D&D 5e sessions. It hosts any number of **campaigns**, each a fully separate world with its own DM password and its own data. Every campaign bundles a full character sheet, a shared virtual battle map, a real-time initiative tracker, a monster library, a treasury for loot and shop items, a synced music player, handouts with blind skill checks, a comic-style story builder with image and video panels, and a mobile companion — all kept live across every connected browser with no external cloud required.
@@ -210,6 +211,7 @@ One catalogue for everything you hand out, replacing the separate Merchant and L
 - Lists every connected real-time client: IP, identity (DM or character name), login time, current page, transport (WebSocket / SSE), user agent
 - Shows the **frontend version each client has loaded** against the server's, highlighting anyone running stale assets
 - Shows the **display template and UI size** each client's page is showing (v295), updated live when they change it
+- Logs in by itself while the super admin session is still open (v300); Active sessions marks the Android app's remembered logins and names the app as *Console app · Android*
 - **Force reload** — push a refresh to every client, or only to the outdated ones, so a release reaches phones without chasing people
 - **Blocked addresses** — every address currently locked out of logging in, described in words ("Aliyr in Icewind Dale", "DM of Icewind Dale", "Whole address"), with a live countdown and **Unblock** / **Unblock address** buttons so a player who mistyped five times does not have to sit out the timer
 - **Login activity** — the rolling 30-day audit of every login, failure, lockout and unblock, paged on the server (25 / 50 / 100 per page, remembered between visits; auto-refresh only on page 1)
@@ -307,8 +309,9 @@ backup.
 <p align="center"><em>The map on the top screen; the info panel on the bottom one, as the DM sees it: Turn, then the Token tab's Health and Combat parts.</em></p>
 
 The console runs the table on a two-screen handheld (built for the AYN Thor): the **map**
-on the top screen and an **info panel** on the bottom one. Each is an installable PWA, and
-both also work as two browser windows on a PC. It has its own look, separate from the
+on the top screen and an **info panel** on the bottom one. On the handheld it runs in the
+**[Android app](#android-app-android--two-screen-handhelds-and-phones)** (one icon opens both
+screens); the two pages also work as two browser windows on a PC. It has its own look, separate from the
 rest of the app: true black for AMOLED screens, rows instead of cards, one condensed
 typeface, and four colours that each mean one thing (blue = focus, amber = whose turn,
 red = hostile or damage, green = health). The display templates and UI size from the
@@ -345,8 +348,37 @@ four meanings, and the map and the info panel follow one choice.
   Any button can be re-assigned on the More tab, for a device that numbers them differently.
 - **Device check** (`/console/probe.html`) — shows the screen size, pixel ratio and
   gamepad buttons exactly as the browser reports them. No login needed.
-- Installable, with safe-area padding for notched screens; pages and fonts are cached
-  for offline start-up.
+- Safe-area padding for notched screens; pages and fonts are cached for offline start-up.
+  The pages can still be installed as web apps, but Chrome refuses the second one while
+  another app from the same site is installed - the Android app avoids that.
+
+### Android App (`Android/`) — two-screen handhelds and phones
+
+A small native app for Android 11+, built for the AYN Thor. Download it from
+**`/downloads/rpg-console.apk`** on the server (e.g. https://dnd.kimse.me/downloads/rpg-console.apk)
+and install it (Android asks to allow installs from the browser the first time).
+
+- **One icon, both screens.** On a two-screen device it opens the console **map** on the top
+  screen and the **info panel** on the bottom one. On a one-screen device (a phone) it opens
+  the **whole RPG Play app** instead - campaigns, sheet, table and the rest.
+- **One login, remembered.** With two screens only the top one shows the login form; the bottom
+  one follows. A login in the app lasts until you log out, the super admin ends it, the password
+  changes, or it goes 90 days unused - closing the app does not log you out.
+- **The handheld's controller** is read by the app and handed to the map, so the console's
+  buttons (and their remapping) work whichever screen was touched last.
+- **Back opens the app menu**: Reload, Server address (defaults to `https://dnd.kimse.me`; can
+  point at a local server), Open info panel, Switch campaign, Maintenance, Check for updates, Exit.
+- **Super admin**: *Maintenance* opens the maintenance page in its own window and *Back to
+  campaign* returns without closing it, so both stay logged in. With a live super admin session,
+  choosing a campaign offers **Enter as super admin** - no DM password.
+- **Updates itself.** On start it reads `/downloads/rpg-console.json` and offers a newer version;
+  one tap on Android's install screen updates it (Back → Check for updates checks on demand).
+- **Closing any screen closes the app** - the other screens too - so nothing keeps running.
+- Screens stay on, system bars are hidden, file pickers work, and links to other sites open in
+  the browser.
+
+Build, signing and publishing are below - see **[Android/README.md](Android/README.md)** for the
+full picture.
 
 ### Desktop App (`Desktop/`) — Windows
 
@@ -369,6 +401,7 @@ Covered in full at the top of this file — **[Play it as a desktop app &uarr;](
 - **Character tab:** name + password (first-login setup for passwordless characters). **DM tab:** that campaign’s own DM password
 - **Two levels of DM authority:** a campaign DM password (hashed in `campaigns.db`, valid only in its own campaign) and the server-wide `MASTER_PASSWORD` super-admin key (unlocks any campaign, required to create or delete campaigns, and the recovery path for a lost DM password)
 - The DM can also log in **as any character** by using a DM password in the character tab
+- **The super admin can enter any campaign as its DM** without that campaign's DM password: with a live super admin session (logged in on the maintenance page), the campaign picker and the console login offer *Enter as super admin*. Logging out of that campaign leaves the super admin session alive
 - `/login.html` still works and reads the campaign already selected; it redirects to the picker when there is none
 - An API call made with no campaign selected answers `409 NO_CAMPAIGN`, and the frontend bounces to the picker
 - **Stories** use a separate gate (`/api/auth/verify-any`) accepting the DM or any character password; it starts the same kind of session as the normal login, and is bypassed when already logged in
@@ -398,6 +431,8 @@ accept.
 - Tokens are `rpgs_` + 32 random bytes. Only their **SHA-256 is stored**, in a `sessions` table in `campaigns.db` — a stolen database yields no usable tokens
 - **24 hours idle** (sliding) and **7 days absolute**, whichever comes first
 - Still kept in `sessionStorage`, so closing the tab still logs out; HTML pages keep their auth guards. An expired token answers `401 SESSION_EXPIRED` and the page returns to login
+- **Remembered sessions (the Android app only).** The app's login forms ask for `remember: true`: no fixed end, **90 days idle**. The app keeps the token on the device until logout. Never granted to a super admin session. The maintenance page lists them as *remembered*, and *End session* ends one like any other
+- **The super admin's maintenance login** is kept for the browser tab (and on the device in the app), so the maintenance page logs in by itself while that session is still alive (24 hours idle)
 - **`MASTER_PASSWORD` has no fallback.** The old hardcoded default is gone: if the env var is unset, the super-admin is simply disabled
 
 ### A maths problem on every login
@@ -449,6 +484,7 @@ after 5 minutes. No third-party service, no external request, no new dependency.
 | Story Viewer | `/story-viewer.html` | Any (password gated) |
 | Console (two-screen mode) | `/console/` | All users |
 | Console device check | `/console/probe.html` | Anyone, no login |
+| Android app download | `/downloads/rpg-console.apk` (+ `rpg-console.json`) | Anyone |
 
 ---
 
@@ -592,6 +628,29 @@ plain Node and crash. A normal PowerShell window is unaffected.
 
 ---
 
+## Android App
+
+The Android app is a client too: it opens pages of a running RPG Play server. Build it from
+`Android/`; everything builds inside Docker, so nothing is installed on the machine.
+
+```bash
+cd Android
+./make-keystore.sh   # once: the signing key (keystore/ + keystore.properties, outside git)
+./build.sh           # -> dist/rpg-console.apk + dist/rpg-console.json
+```
+
+The first build makes the `rpg-console-android:1` tools image (JDK 17, Android SDK 34,
+Gradle 8.7; about 2 GB).
+
+**Publishing a new version:** raise `versionCode` (and `versionName`) in
+`Android/app/build.gradle.kts`, run `./build.sh`, and upload both files from `Android/dist/`
+to `public/downloads/` on the server. No restart is needed: installed apps find the update
+on their next start.
+
+**Keep the signing key.** Android only installs an update signed with the same key as the
+installed app. Copy `Android/keystore/` and `Android/keystore.properties` to every machine
+that builds the app, and keep a backup.
+
 ## Environment Variables
 
 | Variable | Required | Default | Description |
@@ -646,7 +705,8 @@ desktop client, untick **Send an anonymous install report** in Settings.
 - **Dice:** 3D CSS dice (icosahedron d20, pentagonal-trapezohedron d10) driven by a shared `dice-engine.js`
 - **Image processing:** `sharp` — each upload generates `_thumb.webp` (80×80 crop) and `_medium.webp` (max 500 px); maps excluded
 - **PWA:** Service Worker (`sw.js`) — network-first for HTML, cache-first for versioned static assets
-- **Tests:** 1341 Vitest tests across 51 files (unit + API) covering the sheet, table, dice fairness, login security, per-route login rules, escaping of user text in the page renderers, and routes
+- **Android app:** Kotlin, plain Android `Activity` + `WebView` (one dependency: `androidx.webkit`), minSdk 30 / target 34; built in Docker with Gradle 8.7, self-updating through Android's `PackageInstaller`
+- **Tests:** 1591 Vitest tests across 61 files (unit + API) covering the sheet, table, dice fairness, login security, per-route login rules, escaping of user text in the page renderers, and routes
 - **Security:** in-house, no new dependencies — maths captcha (`lib/captcha.js`, rendered by `sharp`), opaque session tokens stored as SHA-256 (`lib/sessions.js`), failed-login lockout (`lib/login-guard.js`), async scrypt (`lib/passwords.js`), response headers and caller-dependent body limits (`lib/security-middleware.js`)
 - **SSL:** Node.js native `https` with Let's Encrypt certificates
 
@@ -670,7 +730,7 @@ char_sheet/
 │   ├── server/routes/      #   17 Express route modules
 │   ├── lib/                #   Campaign scoping, auth, sessions, captcha, lockout, hardening, upload paths, live-event audience
 │   ├── db/                 #   SQLite layers (campaignsdb, campaign-store, localdb, mediadb, storiesdb)
-│   ├── tests/              #   51 Vitest unit + API suites (1341 tests)
+│   ├── tests/              #   61 Vitest unit + API suites (1591 tests)
 │   └── public/             #   Served frontend
 │       ├── *.html          #     Page entry points (campaigns, index, table, dm, treasury, events, …)
 │       ├── js/index/       #     15 character-sheet modules
@@ -681,6 +741,10 @@ char_sheet/
 │       ├── css/  img/      #     Styles and static images
 │       ├── sw.js           #     Service worker (PWA cache)
 │       └── uploads/  story-images/   #   Runtime user uploads
+├── Android/               # Android console app: both console screens from one icon (Kotlin, WebView)
+│   ├── app/src/main/       #   Activities, controller, updater, manifest
+│   ├── docker/  build.sh   #   Builds the APK in Docker
+│   └── make-keystore.sh    #   The signing key, once
 ├── Desktop/               # Electron desktop client (thin client over the web app)
 │   ├── src/main/           #   Main process — windows, menu, tray, hotkeys, certs, downloads
 │   ├── src/preload/        #   Preloads — cross-window session mirror + settings bridge

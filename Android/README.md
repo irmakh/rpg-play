@@ -26,9 +26,15 @@ Chrome refuses while another app from the same site is installed.
 - **Maintenance** opens the super admin's maintenance page in a window of its
   own (`MaintenanceActivity`) on the same screen. Its menu has **Back to
   campaign**, which sends it behind the campaign screens without closing it, so
-  switching back and forth keeps the super admin logged in (that login lives
-  only in the page's memory, never on the device). Reload in either one leaves
-  the other alone.
+  switching back and forth keeps both logged in. Reload in either one leaves
+  the other alone. The super admin login is also kept on the device (see
+  Logging in), so the page logs in by itself after a restart while the server
+  still has that session.
+- **Switch campaign** goes back to choosing a campaign: the campaign list in the
+  whole app; on the console screens it logs both screens out of the campaign and
+  shows the login form with its campaign choice (it calls
+  `window.ConsoleLogin.logout()`). With a live super admin session either one
+  offers **Enter as super admin**, no password.
 - Screens stay on, system bars are hidden (swipe to show), file pickers work for
   portraits, chat pictures and handouts, and links to other sites open in the
   browser.
@@ -116,3 +122,18 @@ install the new APK over the old one.
 The WebViews can be inspected from a PC: connect the Thor over USB with USB
 debugging on and open `chrome://inspect` in Chrome. The app's user agent ends in
 `RpgConsoleApp/<version>`, which the maintenance page shows.
+
+## Versions
+
+| App | versionCode | What changed |
+|---|---|---|
+| 1.0 | 1 | Both console screens from one icon, native controller, Back menu |
+| 1.1 | 2 | Remembered login, one login form on two screens, the whole app on one screen, self-update |
+| 1.2 | 3 | Maintenance window with Back to campaign |
+| 1.3 | 4 | Switch campaign; the super admin login kept on the device |
+| 1.4 | 5 | Closing any screen closes the app |
+
+1.0 has no updater, so it is updated to 1.1 or later by installing the APK by hand once.
+The server-side changes the app relies on shipped in web releases v297–v302 (see
+CHANGELOG.md).
+
