@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 17:39
+// Written by Irmak Hakman — 2026-10-15 20:44
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -22,6 +22,10 @@
  * template there also keeps the console's own size (1, not 1.2) unless a UI
  * size is chosen. A console page marks where the button goes with
  * [data-tpl-slot]; RpgTemplate.remount() looks again after the page changes.
+ *
+ * Inside the Android app (window.RpgNative) every page keeps it in localStorage
+ * too: the app's WebView loses sessionStorage whenever the app closes, so the
+ * one-screen app would forget the template and UI size on every start.
  */
 (function () {
   const KEY = 'rpgTemplate';
@@ -59,7 +63,8 @@
   const TEMPLATE_FS = 1.2;   // must match FS in scripts/build_templates.py
 
   const isConsole = document.documentElement.hasAttribute('data-console');
-  function box() { return isConsole ? localStorage : sessionStorage; }
+  const keep = isConsole || !!window.RpgNative;
+  function box() { return keep ? localStorage : sessionStorage; }
 
   function read() {
     try { const v = box().getItem(KEY) || ''; return known.has(v) ? v : ''; } catch { return ''; }

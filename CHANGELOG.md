@@ -21,6 +21,13 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [303] — 2026-10-15 — The one-screen Android app remembers the template and UI size
+
+- **Fixed: on a one-screen device the Android app forgot the display template and UI size
+  every time it closed.** The app's pages kept them only for the open session, which the
+  app loses on close. Inside the app they are now kept on the device, as on the console
+  screens. No app update needed; choose them once more after this release.
+
 ## Android app 1.4 — 2026-10-15 — Closing one screen closes the app *(no frontend bump)*
 
 - **Closing any of the app's screens closes the others too** - swiping one away in Recents,
