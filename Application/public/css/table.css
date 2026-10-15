@@ -1,4 +1,4 @@
-/* Written by Irmak Hakman — 2026-10-15 15:23 */
+/* Written by Irmak Hakman — 2026-10-15 15:43 */
 /* Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) */
 
 *{box-sizing:border-box;margin:0;padding:0}
@@ -41,6 +41,12 @@ body{display:flex;flex-direction:column}
 #rp-token-details{display:flex;flex-direction:column}
 .rp-action-row{display:flex;align-items:center;justify-content:flex-end;gap:calc(3px*var(--fs, 1));padding:calc(5px*var(--fs, 1)) calc(8px*var(--fs, 1));border-bottom:1px solid var(--rule-hi)}
 .rp-portrait-area{display:flex;align-items:center;gap:calc(10px*var(--fs, 1));padding:calc(10px*var(--fs, 1)) calc(10px*var(--fs, 1)) calc(8px*var(--fs, 1))}
+.rp-name-actions{display:flex;gap:calc(3px*var(--fs, 1));flex:none;align-self:center}
+/* The name in the right panel wraps onto up to three lines, then ends in "…";
+   a labelled monster's type sits on its own line under its identifier. */
+#hp-panel-name{line-height:1.25;overflow-wrap:anywhere}
+#hp-panel-name .rp-name-main{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;line-clamp:3;overflow:hidden}
+#hp-panel-name .rp-name-type{display:block;margin-top:1px;color:var(--ash);font-weight:normal;font-size:calc(11px * var(--fs, 1));white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 /* Dice mode toggle (item 2) */
 .rp-dice-mode{display:inline-flex;gap:0;border:1px solid var(--rule-hi);border-radius:calc(6px*var(--fs, 1));overflow:hidden;vertical-align:middle}
 .rp-dice-mode .dm-seg{background:var(--slate);color:var(--ash);border:none;border-right:1px solid var(--rule-hi);padding:calc(5px*var(--fs, 1)) calc(9px*var(--fs, 1));font-size:calc(11px * var(--fs, 1));font-weight:bold;cursor:pointer;transition:background .12s,color .12s}
@@ -700,7 +706,7 @@ html.lamplit #toolbar select{
 html.lamplit #toolbar{row-gap:var(--s1)}
 
 /* The tool rail is mostly icon-only, so it keeps square targets. A few buttons
-   in it carry a label (My sheet, Move, Undo, Multi) - min-width, not width, or
+   in it carry a label (Move, Undo, Multi) - min-width, not width, or
    the label wraps inside the square and the button grows to two lines tall
    while its neighbours stay one. nowrap keeps a two-word label on one line. */
 html.lamplit .tool-btn{min-height:calc(38px*var(--fs, 1));min-width:calc(38px*var(--fs, 1));padding:0;justify-content:center;white-space:nowrap}
@@ -889,4 +895,21 @@ body.lp-collapsed #left-panel.lp-open + #left-strip{
 }
 body.lp-collapsed #left-panel.lp-open + #left-strip:hover{background:var(--slate-hi);color:var(--bone)}
 #left-strip .ls-label{writing-mode:vertical-rl;letter-spacing:.04em}
+
+/* ── Folding the right panel ──────────────────────────────────────────────────
+   The same as the left panel: its Details header folds it to a strip down the
+   map's right edge, and the strip opens it. Selecting a token opens it and
+   deselecting folds it (it used to vanish), via rightPanelFold in table-chat.js. */
+#rp-hdr{cursor:pointer}
+#rp-hdr:hover{background:var(--slate)}
+#rp-hdr:focus-visible, #right-strip:focus-visible{outline:2px solid var(--arc);outline-offset:-2px}
+#right-strip{display:none}
+body.rp-collapsed #side-panel, body.rp-collapsed #rh-right{display:none!important}
+body.rp-collapsed #right-strip{
+  display:flex;flex-direction:column;align-items:center;gap:calc(8px*var(--fs, 1));flex-shrink:0;
+  width:calc(28px*var(--fs, 1));padding:calc(10px*var(--fs, 1)) 0;border:0;border-left:1px solid var(--rule-hi);
+  background:var(--slate);color:var(--ash);font:inherit;font-size:calc(11px * var(--fs, 1));font-weight:600;cursor:pointer
+}
+body.rp-collapsed #right-strip:hover{background:var(--slate-hi);color:var(--bone)}
+#right-strip .ls-label{writing-mode:vertical-rl;letter-spacing:.04em}
 

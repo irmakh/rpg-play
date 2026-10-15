@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 15:08
+// Written by Irmak Hakman — 2026-10-15 15:37
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -53,7 +53,7 @@
   // Map toolbar: wrap the word of icon+word buttons so step 1 can hide it.
   // The dice-mode button and View keep theirs: the words are the information.
   function wrapToolbarLabels() {
-    const sel = '#toolbar > a.btn, #btn-dm-unlock, #btn-tool-move, #btn-undo-move, #btn-tool-multi, #btn-my-sheet';
+    const sel = '#toolbar > a.btn, #btn-dm-unlock, #btn-tool-move, #btn-undo-move, #btn-tool-multi';
     for (const b of document.querySelectorAll(sel)) {
       if (!b.querySelector('svg')) continue;
       for (const n of [...b.childNodes]) {

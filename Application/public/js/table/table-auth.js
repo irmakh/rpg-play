@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 15:31
+// Written by Irmak Hakman — 2026-10-15 15:37
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -108,6 +108,12 @@ function toggleLeftPanel() {
 function toggleSidePanel() {
   const panel = document.getElementById('side-panel');
   if (!panel) return;
+  // On the map screen it folds to its strip rather than vanishing, like the
+  // left panel; opening it from here is the same as clicking the strip.
+  if (document.getElementById('right-strip') && typeof rightPanelFold === 'function') {
+    if (document.body.classList.contains('rp-collapsed')) rightPanelOpen(); else rightPanelFold(true);
+    return;
+  }
   const open = panel.style.display === 'none';
   panel.style.display = open ? '' : 'none';
   _setPanelToggleIcon(document.getElementById('btn-sidepanel-toggle'), { open, side: 'right' });
@@ -134,7 +140,6 @@ function applyDMControls() {
     }
     dmControls.forEach(el => el.style.display = 'none');
   }
-  // A player can always reach their own sheet, token on the map or not.
-  const mySheetBtn = document.getElementById('btn-my-sheet');
-  if (mySheetBtn) mySheetBtn.style.display = isCharSession() ? '' : 'none';
+  // A player reaches their own sheet by opening the right panel (rightPanelOpen,
+  // table-chat.js); the toolbar's "My sheet" button is gone (v290).
 }

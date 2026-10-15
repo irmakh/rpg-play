@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Written by Irmak Hakman — 2026-10-15 15:29 -->
+<!-- Written by Irmak Hakman — 2026-10-15 15:43 -->
 <!-- Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) -->
 <html lang="en" class="lamplit">
 <head>
@@ -60,7 +60,6 @@
     <button class="btn tool-btn" id="btn-tool-multi" onclick="setTool('multi')" title="Multi-select tokens (drag to select area)"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-square"></use></svg> Multi</button>
   </div>
 
-  <button class="btn tool-btn" id="btn-my-sheet" onclick="showMySheet()" title="Open my character sheet — works with or without a token on the map" style="display:none;margin-left:calc(4px*var(--fs, 1))"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-clipboard"></use></svg> My sheet</button>
   <button class="btn tool-btn" id="btn-dice" onclick="openDiceRollerModal()" title="Dice Roller" style="margin-left:calc(4px*var(--fs, 1))"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg> </button>
   <!-- Dice settings: the button shows the roll mode in force; the mode switch
        and the animation switch live in its pop-over (js/table/table-ux.js). -->
@@ -282,6 +281,15 @@
   <!-- ── Right Panel — Token Details ───────────────────────────────────────── -->
   <div id="side-panel">
 
+    <!-- Folds the panel to a strip down the map's right edge, like the left
+         panel's Initiative header (rightPanelFold, js/table/table-chat.js). -->
+    <div class="lp-section-hdr" id="rp-hdr" role="button" tabindex="0" aria-expanded="true"
+         title="Collapse the details panel" onclick="rightPanelFold(true)"
+         onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();rightPanelFold(true)}">
+      <span><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-document"></use></svg> Details</span>
+      <svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-right"></use></svg>
+    </div>
+
     <!-- Empty state — shown when no token is selected -->
     <div id="rp-placeholder">
       <div style="font-size:calc(34px * var(--fs, 1));opacity:.2;margin-bottom:calc(10px*var(--fs, 1))"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-swords"></use></svg> </div>
@@ -291,13 +299,6 @@
     <!-- Token details — shown when a token is selected -->
     <div id="rp-token-details" style="display:none">
 
-      <!-- Action buttons row -->
-      <div class="rp-action-row">
-        <button id="hp-edit-label-btn" class="btn sm" onclick="openEditLabel()" style="display:none" title="Edit identifier"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-pencil"></use></svg> </button>
-        <button id="hp-del-btn" class="btn sm danger" onclick="deleteSelectedToken()" style="display:none" title="Delete token"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-trash"></use></svg> </button>
-        <button class="btn sm" onclick="closeHpPanel()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg> </button>
-      </div>
-
       <!-- Portrait + name / subtitle -->
       <div class="rp-portrait-area">
         <div id="rp-portrait-wrap">
@@ -305,8 +306,15 @@
           <div id="rp-portrait-ph" style="width:calc(56px*var(--fs, 1));height:calc(56px*var(--fs, 1));border-radius:50%;background:var(--slate-hi);border:2px solid var(--rule-hi);display:flex;align-items:center;justify-content:center;font-size:calc(22px * var(--fs, 1))"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-swords"></use></svg> </div>
         </div>
         <div style="min-width:0;flex:1">
-          <div id="hp-panel-name" style="font-weight:bold;font-size:calc(13px * var(--fs, 1));overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--bone)"></div>
+          <div id="hp-panel-name" style="font-weight:bold;font-size:calc(13px * var(--fs, 1));color:var(--bone)"></div>
           <div id="rp-subtitle" style="font-size:calc(10px * var(--fs, 1));color:var(--ash);margin-top:calc(2px*var(--fs, 1));line-height:1.4"></div>
+        </div>
+        <!-- DM only: rename the token's label and delete the token. They sat in a
+             row of their own above, with a close button the Details header has
+             replaced (v291). -->
+        <div class="rp-name-actions">
+          <button id="hp-edit-label-btn" class="btn sm" onclick="openEditLabel()" style="display:none" title="Edit identifier"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-pencil"></use></svg> </button>
+          <button id="hp-del-btn" class="btn sm danger" onclick="deleteSelectedToken()" style="display:none" title="Delete token"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-trash"></use></svg> </button>
         </div>
       </div>
 
@@ -414,6 +422,13 @@
   </div><!-- /#side-panel -->
 
   <!-- Floating zoom widget — bottom-right of map -->
+  <!-- Shown instead of the right panel while it is folded. A player opening it
+       gets their own sheet. -->
+  <button type="button" id="right-strip" onclick="rightPanelOpen()" aria-label="Show the details panel" title="Show the details panel">
+    <svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-left"></use></svg>
+    <span class="ls-label">Details</span>
+  </button>
+
   <!-- Map zoom, floating over the map's bottom-right corner. Pinned to the map
        area itself (js/table/table-main.js), so panels opening or popping out do
        not push it; above everything drawn on the map, below panels and dialogs. -->

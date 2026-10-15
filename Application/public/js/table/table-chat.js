@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 15:31
+// Written by Irmak Hakman — 2026-10-15 15:37
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -215,6 +215,35 @@ function leftPanelAuto(n) {
     if (bulk.style.display !== 'none' && document.body.classList.contains('lp-collapsed')) leftPanelCollapse(false);
   }).observe(bulk, { attributes: true, attributeFilter: ['style'] });
 })();
+
+// The right panel folds the same way. `auto` = it opened or folded by itself (a
+// token selected or deselected): no keyboard focus move.
+function rightPanelFold(fold, auto) {
+  const sp = document.getElementById('side-panel');
+  if (!sp || !document.getElementById('right-strip')) return;
+  sp.style.display = '';
+  sp.classList.add('rp-open');   // the modern theme's width; folding is rp-collapsed now
+  if (document.body.classList.contains('rp-collapsed') !== fold) {
+    document.body.classList.toggle('rp-collapsed', fold);
+    try { window.dispatchEvent(new Event('resize')); } catch {}
+  }
+  document.getElementById('rp-hdr')?.setAttribute('aria-expanded', String(!fold));
+  if (typeof _setPanelToggleIcon === 'function')
+    _setPanelToggleIcon(document.getElementById('btn-sidepanel-toggle'), { open: !fold, side: 'right' });
+  if (!auto) document.getElementById(fold ? 'right-strip' : 'rp-hdr')?.focus();
+}
+// Opened by hand (the strip, the View menu): a player always gets their own
+// sheet - this replaced the toolbar's "My sheet" button.
+function rightPanelOpen() {
+  rightPanelFold(false);
+  if (typeof isCharSession === 'function' && isCharSession() && typeof loadOwnCharacterSheet === 'function')
+    loadOwnCharacterSheet();
+}
+// Folded until something opens it, as the panel used to be hidden until then.
+if (document.getElementById('right-strip')) {
+  document.body.classList.add('rp-collapsed');
+  document.addEventListener('DOMContentLoaded', () => rightPanelFold(true, true));
+}
 
 function chatToggle() {
   const body = document.getElementById('chat-body-wrap');

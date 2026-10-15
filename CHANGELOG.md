@@ -21,6 +21,23 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [292] — 2026-10-15 — The right panel folds like the left; no "My sheet" button
+
+- **The map screen's right panel folds to a strip** down the map's right edge,
+  from its new Details header, and opens again from the strip, like the
+  initiative panel. Selecting a token opens it; deselecting folds it instead of
+  hiding it. View → Hide / Show right panel folds and opens it too.
+- **Players open their own sheet by opening the right panel**, so the toolbar's
+  "My sheet" button is gone.
+- **The ✕ at the top of the right panel's sheet is gone** (fold it from its header
+  instead), and the DM's edit-label and delete-token buttons now sit at the end
+  of the name row instead of in a row of their own above it.
+- **Names in the right panel wrap onto up to three lines** instead of being cut
+  off after one, and for the DM a monster's type now sits on its own line under
+  its identifier (it was in brackets after it).
+
+---
+
 ## [289] — 2026-10-15 — The initiative panel is always there, and folds like the chat
 
 - **The map screen's Initiative panel is always there now**, not only during

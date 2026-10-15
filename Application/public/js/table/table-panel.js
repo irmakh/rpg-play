@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 14:35
+// Written by Irmak Hakman — 2026-10-15 15:43
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -669,7 +669,12 @@ function _showOwnSheetChrome() {
   if (placeholder) placeholder.style.display = 'none';
 
   const nameEl = document.getElementById('hp-panel-name');
-  if (nameEl) nameEl.textContent = qrollCharName || '';
+  if (nameEl) {
+    const main = document.createElement('span');
+    main.className = 'rp-name-main';   // up to three lines, as for a token (table.css)
+    main.textContent = qrollCharName || '';
+    nameEl.replaceChildren(main);
+  }
   _fillOwnSheetStats();
   // No token portrait to show; fall back to the placeholder crest.
   const img = document.getElementById('rp-portrait-img');
@@ -682,6 +687,7 @@ function _showOwnSheetChrome() {
   }
   const sp = document.getElementById('side-panel');
   if (sp) { sp.style.display = ''; sp.classList.add('rp-open'); }
+  if (typeof rightPanelFold === 'function') rightPanelFold(false, true);
 }
 
 /**
@@ -732,11 +738,6 @@ function _sideSubtitleFor(d) {
 }
 
 /** Toolbar button: open my own sheet, with or without a token, any time. */
-function showMySheet() {
-  if (!isCharSession()) return;
-  loadOwnCharacterSheet();
-}
-
 async function loadSideQroll() {
   const content = document.getElementById('side-qroll-content');
   if (!content) return;

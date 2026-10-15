@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 15:29
+// Written by Irmak Hakman — 2026-10-15 15:43
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -19,6 +19,7 @@ async function openHpPanel(tok) {
   if (placeholder) placeholder.style.display = 'none';
   const sp = document.getElementById('side-panel');
   if (sp) { sp.style.display = ''; sp.classList.add('rp-open'); sp.scrollTop = 0; }
+  if (typeof rightPanelFold === 'function') rightPanelFold(false, true);
 
   _refreshHpPanel(tok);
 
@@ -65,8 +66,10 @@ function closeHpPanel() {
   if (details) details.style.display = 'none';
   if (placeholder) placeholder.style.display = '';
   _hpPanelAc = null;
-  const sp = document.getElementById('side-panel');
-  if (sp) sp.classList.remove('rp-open');
+  // Folds to its strip rather than vanishing (rightPanelFold, table-chat.js).
+  // (The console loads this file too and has no strip: its panel just closes.)
+  if (document.getElementById('right-strip') && typeof rightPanelFold === 'function') rightPanelFold(true, true);
+  else document.getElementById('side-panel')?.classList.remove('rp-open');
 }
 function _refreshHpPanel(tok) {
   const hpPct = (tok.hpMax || 0) > 0 ? Math.max(0, Math.min(1, (tok.hpCurrent || 0) / tok.hpMax)) : 0;
@@ -93,13 +96,15 @@ function _refreshHpPanel(tok) {
   const speedVal = document.getElementById('rp-speed-val');
   if (speedVal) speedVal.textContent = tok.speed || 30;
 
+  // The name wraps onto up to three lines (.rp-name-main, table.css). For the
+  // DM a labelled monster leads with its player-facing identifier, and its
+  // monster type sits on a line of its own underneath (was "[Type]" after it).
   const hpNameEl = document.getElementById('hp-panel-name');
   if (isDM() && tok.type === 'monster' && tok.label) {
-    // DM view: lead with the player-facing identifier, monster type in brackets.
     const baseName = tok.name.slice(0, tok.name.length - tok.label.length).trimEnd() || tok.name;
-    hpNameEl.innerHTML = esc(tok.label) + ` <span style="color:var(--ash);font-weight:normal;font-size:calc(11px * var(--fs, 1))">[${esc(baseName)}]</span>`;
+    hpNameEl.innerHTML = `<span class="rp-name-main">${esc(tok.label)}</span><span class="rp-name-type">${esc(baseName)}</span>`;
   } else {
-    hpNameEl.textContent = tokDisplayName(tok);
+    hpNameEl.innerHTML = `<span class="rp-name-main">${esc(tokDisplayName(tok))}</span>`;
   }
   const canEdit = isDM() || isMyToken(tok);
   const delBtn = document.getElementById('hp-del-btn');
