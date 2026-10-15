@@ -1,9 +1,9 @@
-// Written by Irmak Hakman — 2026-10-15 15:08
+// Written by Irmak Hakman — 2026-10-15 15:13
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
 /**
- * Display templates — the default look plus ten large-text colour templates
+ * Display templates — the default look plus twenty large-text colour templates
  * (css/templates.css, built by scripts/build_templates.py).
  *
  * Loaded as a plain, blocking script in <head>, straight after the stylesheets,
@@ -31,6 +31,16 @@
     ['gradient', 'Gradient Pop'],
     ['cosmic', 'Cosmic Artistry'],
     ['vibrant', 'Vibrant but Calm'],
+    ['lively', 'Lively and Inviting'],
+    ['striking', 'Striking and Simple'],
+    ['redlively', 'Red and Lively'],
+    ['artsy', 'Artsy and Creative'],
+    ['elegant', 'Elegant Yet Approachable'],
+    ['sleek', 'Sleek and Futuristic'],
+    ['audacious', 'Innovative and Audacious'],
+    ['texturized', 'Texturized and Dynamic'],
+    ['minimal', 'Minimal Yet Warm'],
+    ['vivid', 'Vivid and Sharp'],
   ];
   const known = new Set(TEMPLATES.map(t => t[0]));
 

@@ -21,6 +21,17 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [285] — 2026-10-15 — Ten more display templates
+
+- **Ten more templates** in the palette pop-up, from the next ten Visme website
+  colour schemes: Lively and Inviting, Striking and Simple, Red and Lively, Artsy
+  and Creative, Elegant Yet Approachable, Sleek and Futuristic, Innovative and
+  Audacious, Texturized and Dynamic, Minimal Yet Warm and Vivid and Sharp. Five
+  are light and five dark; like the first ten, they use 120% UI size unless
+  changed and keep every text colour readable.
+
+---
+
 ## [284] — 2026-10-15 — Headers stay on one row, with a ☰ menu on phones
 
 - **On a phone, every page header stays on one row** at any UI size. Buttons that
