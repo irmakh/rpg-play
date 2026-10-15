@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 18:28
+// Written by Irmak Hakman — 2026-10-15 20:19
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -6,9 +6,14 @@ package com.rpgplay.console
 
 import android.content.Context
 
-/** The one setting: which RPG Play server the two screens open. */
+/**
+ * The one setting: which RPG Play server the app opens. The default comes from
+ * the build (Android/server.properties, outside git - see build.gradle.kts), so
+ * no server address is kept in the repository; a build without one asks on
+ * first start.
+ */
 object Settings {
-    const val DEFAULT_SERVER = "https://dnd.kimse.me"
+    val DEFAULT_SERVER: String = BuildConfig.DEFAULT_SERVER.trimEnd('/')
     private const val PREFS = "rpg-console"
     private const val KEY_SERVER = "server"
 

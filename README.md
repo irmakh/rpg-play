@@ -98,7 +98,7 @@ Uploaded images and audio are split the same way: new uploads land in `public/up
 - Player-facing tabs: **Treasury** (one tab with a Free Loot / Shop switch — claim dropped items for free or buy with in-character currency; item images, and unidentified items shown as such), **Initiative** (slide-out tracker with roll submission), **Calendar** (Calendar of Harptos — DM events plus your own journals with media)
 - Real-time chat: free text or `/r NdS+M [label]` dice rolls (e.g. `/r 2d6+3`, `/r d20 Stealth`)
 - **Private messages** — every chat box (sheet, table, DM panel, both console screens) has a recipient picker. *Everyone* is the default; pick the DM or a character and only the sender, the recipient and the DM can read it. The picker returns to *Everyone* after each private message
-- Three themes: Dark Gold, Parchment, Midnight; quick-nav buttons to the Table and Stories
+- **Display templates and UI size** (every page): the default navy-and-gold look plus 20 colour templates, and a UI size from 50% to 135% that scales text and layout together - both from the palette button in the page header. The choice lasts for the browser tab (on the console screens, for the device); quick-nav buttons to the Table and Stories
 
 <p align="center">
   <img src="docs/screenshots/mobile-sheet.webp" width="280" alt="The character sheet at phone width — the same vitals bar, with the tab strip scrolled horizontally">
@@ -122,7 +122,7 @@ Uploaded images and audio are split the same way: new uploads land in `public/up
 - **Move tool also selects** — clicking a token selects it (a dedicated Select tool is no longer needed)
 - Monster names hidden from players — shown as an identifier (e.g. "Goblin #2"), editable by the DM from the side panel; per-monster visibility toggle in real time
 - **Token quick-roll side panel** — click a token for full dice rolling: saves, skills, ability checks, damage, initiative. A persistent **dice-mode setting** (Normal / Adv / Dis / Ask, default **Ask**) behind the button beside the dice roller applies to every roll; the button shows the mode in force
-- Right-panel sections use the same gold-bar headers as the character sheet (Conditions, HP, Temp HP, etc.), with the Bulk Edit panel mirroring the same controls for multi-token edits
+- Right-panel sections use the same section headers as the character sheet (Conditions, HP, Temp HP, etc.), with the Bulk Edit panel mirroring the same controls for multi-token edits
 - **Equipment wear/unwear** in the right panel — toggling items recomputes AC, initiative, speed, and spell DC and syncs to the token
 - **Monster actions panel** — each action has a **Use** button that posts the action text and a damage roll to chat; players' custom actions have the same **Use** button
 - Click a weapon row to roll the attack, then a **Miss / Roll Damage** prompt; click a spell name to post its full description to chat with a 5e.tools link
@@ -150,7 +150,7 @@ Uploaded images and audio are split the same way: new uploads land in `public/up
 - DM chat: free text or `/r` rolls (broadcasts the 3D animation to all screens); **per-message delete** removes it from every client live
 - Data backup / restore: per-section JSON export (characters, monsters, treasury, maps), non-destructive merge import; treasury backups carry item images, and older `shop` / `loot` backup files still restore
 - **Raw database backup:** one-click download of all SQLite databases (`localdb`, `media`, `stories`, plus any old `aiDM` file) as-is, bundled into a single streamed `.tar.gz` for full off-site backup (uploaded media under `uploads/` is stored separately and not yet included)
-- Multiple themes
+- Display templates and UI size, as on every page
 
 ### DM Calendar (`/events.html`) — DM only
 
@@ -355,8 +355,8 @@ four meanings, and the map and the info panel follow one choice.
 ### Android App (`Android/`) — two-screen handhelds and phones
 
 A small native app for Android 11+, built for the AYN Thor. Download it from
-**`/downloads/rpg-console.apk`** on the server (e.g. https://dnd.kimse.me/downloads/rpg-console.apk)
-and install it (Android asks to allow installs from the browser the first time).
+**`/downloads/rpg-console.apk`** on your server and install it (Android asks to allow
+installs from the browser the first time).
 
 - **One icon, both screens.** On a two-screen device it opens the console **map** on the top
   screen and the **info panel** on the bottom one. On a one-screen device (a phone) it opens
@@ -366,8 +366,9 @@ and install it (Android asks to allow installs from the browser the first time).
   changes, or it goes 90 days unused - closing the app does not log you out.
 - **The handheld's controller** is read by the app and handed to the map, so the console's
   buttons (and their remapping) work whichever screen was touched last.
-- **Back opens the app menu**: Reload, Server address (defaults to `https://dnd.kimse.me`; can
-  point at a local server), Open info panel, Switch campaign, Maintenance, Check for updates, Exit.
+- **Back opens the app menu**: Reload, Server address (the default is set at build time; it can
+  point at any server, a local one too), Open info panel, Switch campaign, Maintenance, Check for
+  updates, Exit.
 - **Super admin**: *Maintenance* opens the maintenance page in its own window and *Back to
   campaign* returns without closing it, so both stay logged in. With a live super admin session,
   choosing a campaign offers **Enter as super admin** - no DM password.
@@ -636,8 +637,12 @@ The Android app is a client too: it opens pages of a running RPG Play server. Bu
 ```bash
 cd Android
 ./make-keystore.sh   # once: the signing key (keystore/ + keystore.properties, outside git)
+echo 'defaultServer=https://your.server' > server.properties   # once: the default server, outside git
 ./build.sh           # -> dist/rpg-console.apk + dist/rpg-console.json
 ```
+
+Without `server.properties` the app has no default and asks for the server address on first
+start.
 
 The first build makes the `rpg-console-android:1` tools image (JDK 17, Android SDK 34,
 Gradle 8.7; about 2 GB).
@@ -648,8 +653,8 @@ to `public/downloads/` on the server. No restart is needed: installed apps find 
 on their next start.
 
 **Keep the signing key.** Android only installs an update signed with the same key as the
-installed app. Copy `Android/keystore/` and `Android/keystore.properties` to every machine
-that builds the app, and keep a backup.
+installed app. Copy `Android/keystore/`, `Android/keystore.properties` and
+`Android/server.properties` to every machine that builds the app, and keep a backup.
 
 ## Environment Variables
 

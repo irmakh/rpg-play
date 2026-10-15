@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 19:50
+// Written by Irmak Hakman — 2026-10-15 20:19
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -103,7 +103,12 @@ abstract class ScreenActivity : Activity() {
         if (this !is PanelActivity && this !is MaintenanceActivity) Updater.checkOnce(this)
     }
 
-    private fun load() = web.loadUrl(Settings.server(this) + path)
+    private fun load() {
+        val server = Settings.server(this)
+        // No address yet (a build without a default): ask once, from one screen.
+        if (server.isEmpty()) { if (this !is PanelActivity) askServer(); return }
+        web.loadUrl(server + path)
+    }
 
     override fun onDestroy() {
         // Closed for good (not a rotation): every other screen closes too.
@@ -217,15 +222,18 @@ abstract class ScreenActivity : Activity() {
         val field = EditText(this).apply { setText(Settings.server(this@ScreenActivity)); setSingleLine() }
         AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
             .setTitle("Server address")
-            .setMessage("Default: ${Settings.DEFAULT_SERVER}")
+            .setMessage(if (Settings.DEFAULT_SERVER.isEmpty()) "The address of your RPG Play server, e.g. https://example.com"
+                        else "Default: ${Settings.DEFAULT_SERVER}")
             .setView(field)
             .setPositiveButton("Save") { _, _ ->
                 if (Settings.setServer(this, field.text.toString())) Screens.campaignScreens().forEach { it.load() }
                 else Toast.makeText(this, "Start it with https:// or http://", Toast.LENGTH_LONG).show()
             }
-            .setNeutralButton("Default") { _, _ ->
-                Settings.setServer(this, Settings.DEFAULT_SERVER)
-                Screens.campaignScreens().forEach { it.load() }
+            .apply {
+                if (Settings.DEFAULT_SERVER.isNotEmpty()) setNeutralButton("Default") { _, _ ->
+                    Settings.setServer(this@ScreenActivity, Settings.DEFAULT_SERVER)
+                    Screens.campaignScreens().forEach { it.load() }
+                }
             }
             .setNegativeButton("Cancel", null)
             .show()

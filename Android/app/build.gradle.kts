@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 19:50
+// Written by Irmak Hakman — 2026-10-15 20:19
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -17,6 +17,15 @@ val keystoreProps = Properties().apply {
     if (f.exists()) f.inputStream().use { load(it) }
 }
 
+// The server the app opens until the user picks another (Back menu → Server
+// address). Kept out of git like the signing key: Android/server.properties,
+// one line `defaultServer=https://your.server`. Without it the app asks.
+val serverProps = Properties().apply {
+    val f = rootProject.file("server.properties")
+    if (f.exists()) f.inputStream().use { load(it) }
+}
+val defaultServer: String = serverProps.getProperty("defaultServer", "").trim()
+
 android {
     namespace = "com.rpgplay.console"
     compileSdk = 34
@@ -27,6 +36,7 @@ android {
         targetSdk = 34
         versionCode = 5
         versionName = "1.4"
+        buildConfigField("String", "DEFAULT_SERVER", "\"" + defaultServer.replace("\"", "") + "\"")
     }
 
     signingConfigs {

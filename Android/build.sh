@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Written by Irmak Hakman — 2026-10-15 19:01
+# Written by Irmak Hakman — 2026-10-15 20:19
 # Copyright (c) 2026 Irmak Hakman
 # SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 #
@@ -15,6 +15,10 @@ IMAGE=rpg-console-android:1
 if [ ! -f keystore.properties ]; then
   echo "No signing key yet: run ./make-keystore.sh first." >&2
   exit 1
+fi
+if [ ! -f server.properties ]; then
+  echo "Note: no server.properties - this build has no default server and asks on first start." >&2
+  echo "      (one line: defaultServer=https://your.server)" >&2
 fi
 docker image inspect "$IMAGE" > /dev/null 2>&1 || docker build -t "$IMAGE" docker
 

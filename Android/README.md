@@ -90,8 +90,12 @@ To publish a version: raise `versionCode` (and `versionName`) in
 
 ## Server address
 
-Defaults to `https://dnd.kimse.me`. Change it from the Back menu, e.g. to a
-local dev server such as `http://192.168.1.20:3000` (plain http is allowed).
+The default comes from the build: `server.properties` in this folder, one line
+`defaultServer=https://your.server`. It is outside git, like the signing key, so
+no server address is kept in the repository. A build without it has no default
+and asks for the address on first start. Change it any time from the Back menu,
+e.g. to a local dev server such as `http://192.168.1.20:3000` (plain http is
+allowed).
 
 ## Building
 
@@ -99,14 +103,16 @@ Everything builds inside Docker; nothing is installed on the machine.
 
 ```bash
 ./make-keystore.sh   # once: the signing key (keystore/ + keystore.properties)
-./build.sh           # every build -> dist/rpg-console.apk
+echo 'defaultServer=https://your.server' > server.properties   # once: the default server
+./build.sh           # every build -> dist/rpg-console.apk + dist/rpg-console.json
 ```
 
 The first build makes the `rpg-console-android:1` image (JDK 17, Android SDK
 platform 34, build-tools 34.0.0, Gradle 8.7; about 2 GB) and fills the Gradle
 cache in `.gradle-home/`.
 
-**Keep the signing key.** `keystore/` and `keystore.properties` are outside git.
+**Keep the signing key.** `keystore/` and `keystore.properties` are outside git
+(so is `server.properties`; copy all three to the other dev machine).
 Android only installs an update over the app when it is signed with the same
 key, so copy both to the other dev machine and keep a backup. With a new key the
 old app has to be uninstalled first.

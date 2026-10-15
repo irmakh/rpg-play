@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 19:01
+// Written by Irmak Hakman — 2026-10-15 20:19
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -51,6 +51,7 @@ object Updater {
 
     private fun check(activity: Activity, quiet: Boolean) {
         val server = Settings.server(activity)
+        if (server.isEmpty()) return
         Thread {
             val info = try { JSONObject(fetchText("$server$MANIFEST_PATH")) } catch (_: Exception) { null }
             activity.runOnUiThread {
