@@ -21,6 +21,12 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## Android app 1.4 — 2026-10-15 — Closing one screen closes the app *(no frontend bump)*
+
+- **Closing any of the app's screens closes the others too** - swiping one away in Recents,
+  or leaving it with Back - and the app then stops completely, so no screen or WebView is left
+  running in the background. Exit in the menu does the same.
+
 ## [302] — 2026-10-15 — Switch campaign works on the app's two console screens
 
 - **Fixed: the Android app's "Switch campaign" did nothing on the two console screens.** It

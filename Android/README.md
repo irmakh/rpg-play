@@ -37,6 +37,13 @@ Both screens share the app's cookies (the campaign) and localStorage (button
 layout, display template, the remembered login). Logging in on one logs in the
 other.
 
+## Closing
+
+The screens are separate windows, but they close together: closing any one
+(swiping it away in Recents, Exit in the menu) closes the others, removes them
+from Recents and ends the app's process (`Screens.screenClosed`). "Back to
+campaign" in the maintenance window only sends it behind, so it stays open.
+
 ## One screen
 
 On a device with one screen the icon opens the whole RPG Play app (`AppActivity`,

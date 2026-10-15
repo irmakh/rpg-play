@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 19:16
+// Written by Irmak Hakman — 2026-10-15 19:50
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -8,6 +8,9 @@ import android.app.Activity
 import android.app.ActivityOptions
 import android.content.Intent
 import android.hardware.display.DisplayManager
+import android.os.Handler
+import android.os.Looper
+import android.os.Process
 import android.view.Display
 import java.lang.ref.WeakReference
 
@@ -29,6 +32,7 @@ object Screens {
     private var maint: WeakReference<ScreenActivity>? = null
 
     fun register(a: ScreenActivity) {
+        closing = false          // a screen opening again after a close
         when (a) {
             is MapActivity -> map = WeakReference(a)
             is PanelActivity -> panel = WeakReference(a)
@@ -99,5 +103,37 @@ object Screens {
         start(from, MaintenanceActivity::class.java, from.display?.displayId)
     }
 
-    fun finishAll() { all().forEach { it.finish() } }
+    // ── Closing ─────────────────────────────────────────────────────────────
+    // The screens are separate windows (tasks), so closing one used to leave
+    // the others open - and the app running - behind it. Now closing any of
+    // them closes them all, takes them out of Recents, and ends the app.
+
+    private var closing = false
+
+    /** Every screen: the menu's Exit, and what closing any one screen does. */
+    fun finishAll() {
+        if (closing) return
+        closing = true
+        all().forEach { it.finishAndRemoveTask() }
+        stopWhenEmpty()
+    }
+
+    /** A screen was closed (swiped away, Back out of it): the rest go with it. */
+    fun screenClosed(a: ScreenActivity) {
+        unregister(a)
+        if (!closing) {
+            closing = true
+            all().forEach { it.finishAndRemoveTask() }
+        }
+        stopWhenEmpty()
+    }
+
+    // Once the last screen is gone, end the process too, so no WebView is left
+    // running in the background. Checked a moment later, after Android has
+    // destroyed the windows it was asked to.
+    private fun stopWhenEmpty() {
+        Handler(Looper.getMainLooper()).postDelayed({
+            if (all().isEmpty()) Process.killProcess(Process.myPid())
+        }, 600)
+    }
 }

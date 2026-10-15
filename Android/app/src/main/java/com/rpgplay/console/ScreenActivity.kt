@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 19:28
+// Written by Irmak Hakman — 2026-10-15 19:50
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -106,7 +106,9 @@ abstract class ScreenActivity : Activity() {
     private fun load() = web.loadUrl(Settings.server(this) + path)
 
     override fun onDestroy() {
-        Screens.unregister(this)
+        // Closed for good (not a rotation): every other screen closes too.
+        if (isFinishing && !isChangingConfigurations) Screens.screenClosed(this)
+        else Screens.unregister(this)
         web.destroy()
         super.onDestroy()
     }

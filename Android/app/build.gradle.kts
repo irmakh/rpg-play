@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 19:28
+// Written by Irmak Hakman — 2026-10-15 19:50
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -25,8 +25,8 @@ android {
         applicationId = "com.rpgplay.console"
         minSdk = 30
         targetSdk = 34
-        versionCode = 4
-        versionName = "1.3"
+        versionCode = 5
+        versionName = "1.4"
     }
 
     signingConfigs {
