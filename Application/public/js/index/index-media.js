@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-10-15 14:01
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -48,7 +48,7 @@ function renderMedia() {
   if (!gallery) return;
   if (mediaList.length === 0) {
     gallery.className = '';
-    gallery.innerHTML = '<div style="color:var(--ash);font-size:11px;padding:4px 0">No media yet — upload images or videos above.</div>';
+    gallery.innerHTML = '<div style="color:var(--ash);font-size:calc(11px * var(--fs, 1));padding:4px 0">No media yet — upload images or videos above.</div>';
     return;
   }
   gallery.className = 'media-gallery';
@@ -60,14 +60,14 @@ function renderMedia() {
       ? `<img src="${esc(cardSrc)}" alt="${esc(m.name)}" loading="lazy" onclick="_mediaLightbox('${escJs(m.id)}')">`
       : `<div class="media-vid-thumb" onclick="_mediaLightbox('${escJs(m.id)}')"><video src="${esc(m.dataUrl)}" preload="metadata" muted playsinline></video><div class="media-vid-play">&#9654;</div></div>`;
     const setPortBtn = isImg && !m.isPortrait
-      ? `<button class="char-btn" style="padding:2px 7px;font-size:10px" onclick="setPortrait('${escJs(m.id)}')">Set Portrait</button>`
+      ? `<button class="char-btn" style="padding:2px 7px;font-size:calc(10px * var(--fs, 1))" onclick="setPortrait('${escJs(m.id)}')">Set Portrait</button>`
       : '';
     return `<div class="media-card${m.isPortrait ? ' is-portrait' : ''}">
       ${badge}${media}
       <div class="media-card-name">${esc(m.name)}</div>
       <div class="media-card-actions">
         ${setPortBtn}
-        <button class="del-btn" style="font-size:11px;padding:2px 8px" onclick="deleteMedia('${escJs(m.id)}')"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg></button>
+        <button class="del-btn" style="font-size:calc(11px * var(--fs, 1));padding:2px 8px" onclick="deleteMedia('${escJs(m.id)}')"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg></button>
       </div>
     </div>`;
   }).join('');

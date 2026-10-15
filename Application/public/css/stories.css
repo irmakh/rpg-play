@@ -1,4 +1,4 @@
-/* Written by Irmak Hakman — 2026-09-26 17:55 */
+/* Written by Irmak Hakman — 2026-10-15 14:01 */
 /* Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) */
 
 /* ── Shared layout ───────────────────────────────────────────────────────────── */
@@ -21,9 +21,9 @@
   flex-shrink: 0;
   flex-wrap: wrap;
 }
-.stories-hdr h1 { font-size: 17px; margin: 0; }
+.stories-hdr h1 { font-size: calc(17px * var(--fs, 1)); margin: 0; }
 .hdr-right { margin-left: auto; display: flex; gap: 8px; align-items: center; }
-.status-msg { font-size: 11px; color: var(--ash); }
+.status-msg { font-size: calc(11px * var(--fs, 1)); color: var(--ash); }
 
 /* ── Dashboard ───────────────────────────────────────────────────────────────── */
 .stories-main {
@@ -42,7 +42,7 @@
   grid-column: 1 / -1;
   text-align: center;
   color: var(--ash);
-  font-size: 13px;
+  font-size: calc(13px * var(--fs, 1));
   padding: 60px 20px;
   line-height: 1.8;
 }
@@ -80,7 +80,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 36px;
+  font-size: calc(36px * var(--fs, 1));
   color: var(--rule-hi);
 }
 
@@ -89,23 +89,23 @@
   flex: 1;
 }
 .story-card-title {
-  font-size: 15px;
+  font-size: calc(15px * var(--fs, 1));
   font-weight: bold;
   color: var(--bone);
   margin-bottom: 3px;
   line-height: 1.3;
 }
 .story-card-char {
-  font-size: 11px;
+  font-size: calc(11px * var(--fs, 1));
   color: var(--bone);
   margin-bottom: 3px;
 }
 .story-card-meta {
-  font-size: 10px;
+  font-size: calc(10px * var(--fs, 1));
   color: var(--ash);
 }
 .story-card-desc {
-  font-size: 11px;
+  font-size: calc(11px * var(--fs, 1));
   color: var(--ash);
   margin-top: 6px;
   line-height: 1.5;
@@ -126,7 +126,7 @@
 
 /* Character filter */
 .stories-filter {
-  font-size: 11px;
+  font-size: calc(11px * var(--fs, 1));
   padding: 4px 8px;
   background: var(--slate-hi);
   border: 1px solid var(--rule-hi);
@@ -179,7 +179,7 @@
 .panel-card:focus-within { border-color: var(--arc); }
 
 .panel-num {
-  font-size: 11px;
+  font-size: calc(11px * var(--fs, 1));
   font-weight: bold;
   color: var(--bone);
   min-width: 30px;
@@ -212,7 +212,7 @@
 
 /* Progress while a video uploads — the percentage and bar are updated in place. */
 .panel-uploading { cursor: default; border-style: solid; }
-.panel-upload-pct { font-size: 18px; color: var(--bone); }
+.panel-upload-pct { font-size: calc(18px * var(--fs, 1)); color: var(--bone); }
 .panel-upload-bar {
   width: 80%;
   height: 4px;
@@ -239,7 +239,7 @@
   gap: 5px;
   cursor: pointer;
   color: var(--ash);
-  font-size: 11px;
+  font-size: calc(11px * var(--fs, 1));
   text-align: center;
   transition: border-color .15s, color .15s;
 }
@@ -249,7 +249,7 @@
 }
 
 .panel-img-clear {
-  font-size: 10px;
+  font-size: calc(10px * var(--fs, 1));
   padding: 2px 6px;
   background: none;
   border: 1px solid var(--rule-hi);
@@ -268,7 +268,7 @@
   border: none;
   border-bottom: 1px solid var(--rule-hi);
   color: var(--bone);
-  font-size: 13px;
+  font-size: calc(13px * var(--fs, 1));
   line-height: 1.7;
   resize: vertical;
   outline: none;
@@ -292,7 +292,7 @@
   border: none;
   color: var(--ash);
   cursor: pointer;
-  font-size: 14px;
+  font-size: calc(14px * var(--fs, 1));
   padding: 5px 7px;
   border-radius: 3px;
   line-height: 1;
@@ -306,14 +306,14 @@
 /* ── Viewer ──────────────────────────────────────────────────────────────────── */
 .viewer-hdr-info { flex: 1; min-width: 0; }
 .viewer-story-title {
-  font-size: 17px;
+  font-size: calc(17px * var(--fs, 1));
   font-weight: bold;
   color: var(--bone);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.viewer-story-meta { font-size: 11px; color: var(--ash); margin-top: 2px; }
+.viewer-story-meta { font-size: calc(11px * var(--fs, 1)); color: var(--ash); margin-top: 2px; }
 
 .viewer-body {
   flex: 1;
@@ -330,7 +330,7 @@
 }
 .layout-toggle button {
   padding: 4px 12px;
-  font-size: 11px;
+  font-size: calc(11px * var(--fs, 1));
   font-weight: bold;
   background: var(--slate-hi);
   border: none;
@@ -380,11 +380,11 @@
   justify-content: center;
   background: var(--slate-hi);
   color: var(--ash);
-  font-size: 11px;
+  font-size: calc(11px * var(--fs, 1));
 }
 .viewer-card-cap { padding: 10px 12px; }
 .viewer-panel-num {
-  font-size: 10px;
+  font-size: calc(10px * var(--fs, 1));
   color: var(--bone);
   font-weight: bold;
   
@@ -392,7 +392,7 @@
   margin-bottom: 5px;
 }
 .viewer-caption {
-  font-size: 13px;
+  font-size: calc(13px * var(--fs, 1));
   color: var(--bone);
   line-height: 1.7;
   white-space: pre-wrap;
@@ -423,10 +423,10 @@
   align-items: center;
   justify-content: center;
   color: var(--ash);
-  font-size: 12px;
+  font-size: calc(12px * var(--fs, 1));
 }
 .viewer-strip-cap { padding: 0 2px; }
-.viewer-strip-cap .viewer-caption { font-size: 14px; line-height: 1.8; }
+.viewer-strip-cap .viewer-caption { font-size: calc(14px * var(--fs, 1)); line-height: 1.8; }
 
 /* ── Builder cast bar ────────────────────────────────────────────────────────── */
 .builder-cast-bar {
@@ -440,7 +440,7 @@
   overflow-x: auto;
 }
 .cast-bar-label {
-  font-size: 10px;
+  font-size: calc(10px * var(--fs, 1));
   font-weight: bold;
   color: var(--ash);
   
@@ -454,7 +454,7 @@
   flex-wrap: wrap;
 }
 .cast-loading {
-  font-size: 11px;
+  font-size: calc(11px * var(--fs, 1));
   color: var(--ash);
 }
 .cast-chip {
@@ -490,12 +490,12 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
+  font-size: calc(16px * var(--fs, 1));
   font-weight: bold;
   color: var(--ash);
 }
 .cast-chip-name {
-  font-size: 10px;
+  font-size: calc(10px * var(--fs, 1));
   color: var(--bone);
   max-width: 60px;
   overflow: hidden;
@@ -541,20 +541,20 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
+  font-size: calc(18px * var(--fs, 1));
   font-weight: bold;
   color: var(--ash);
   flex-shrink: 0;
 }
 .viewer-cast-info { display: flex; flex-direction: column; gap: 2px; }
 .viewer-cast-name {
-  font-size: 13px;
+  font-size: calc(13px * var(--fs, 1));
   font-weight: bold;
   color: var(--bone);
   white-space: nowrap;
 }
 .viewer-cast-sub {
-  font-size: 10px;
+  font-size: calc(10px * var(--fs, 1));
   color: var(--ash);
   white-space: nowrap;
 }
@@ -580,7 +580,7 @@
   position: absolute;
   top: 16px;
   right: 20px;
-  font-size: 28px;
+  font-size: calc(28px * var(--fs, 1));
   color: #fff;
   cursor: pointer;
   background: none;

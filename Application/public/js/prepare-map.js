@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-09-27 12:15
+// Written by Irmak Hakman — 2026-10-15 14:01
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -454,8 +454,8 @@ function renderPrepFog() {
 // Undo affordance shown in place of a just-deleted row (fog / token / item).
 function _undoRowHTML(name) {
   return `<div style="display:flex;align-items:center;gap:6px;padding:5px 7px;margin-bottom:4px;border:1px dashed var(--rule-hi);border-radius:4px;background:var(--wash)">
-    <span style="flex:1;font-size:11px;color:var(--ash);overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-trash"></use></svg> Deleted "${esc(name)}"</span>
-    <button class="btn sm" onclick="undoDelete()" style="flex-shrink:0;font-size:10px;padding:2px 8px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-undo"></use></svg> Undo</button>
+    <span style="flex:1;font-size:calc(11px * var(--fs, 1));color:var(--ash);overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-trash"></use></svg> Deleted "${esc(name)}"</span>
+    <button class="btn sm" onclick="undoDelete()" style="flex-shrink:0;font-size:calc(10px * var(--fs, 1));padding:2px 8px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-undo"></use></svg> Undo</button>
   </div>`;
 }
 
@@ -490,8 +490,8 @@ function renderFogList() {
   const rows = prepState.fogRegions.map((r, i) => `
     <div class="fog-row">
       <input type="text" value="${esc(r.label)}" onchange="updateFogLabel(${i}, this.value)"
-        style="flex:1;padding:2px 5px;font-size:11px;background:var(--slate-hi);border:1px solid var(--rule-hi);color:var(--bone);border-radius:3px">
-      <span style="font-size:10px;color:var(--ash);white-space:nowrap">${esc(r.w)}×${esc(r.h)} cells</span>
+        style="flex:1;padding:2px 5px;font-size:calc(11px * var(--fs, 1));background:var(--slate-hi);border:1px solid var(--rule-hi);color:var(--bone);border-radius:3px">
+      <span style="font-size:calc(10px * var(--fs, 1));color:var(--ash);white-space:nowrap">${esc(r.w)}×${esc(r.h)} cells</span>
       <button class="btn danger sm" onclick="deleteFogRegion(${i})"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg></button>
     </div>`);
   if (_lastDeleted && _lastDeleted.type === 'fog') {
@@ -499,7 +499,7 @@ function renderFogList() {
   }
   el.innerHTML = rows.length
     ? rows.join('')
-    : '<div style="font-size:11px;color:var(--ash);padding:4px 0">No regions yet. Enable draw mode and drag on the map.</div>';
+    : '<div style="font-size:calc(11px * var(--fs, 1));color:var(--ash);padding:4px 0">No regions yet. Enable draw mode and drag on the map.</div>';
 }
 
 function updateFogLabel(i, val) {
@@ -530,17 +530,17 @@ function renderItemList() {
     return `
     <div style="border:1px solid var(--rule-hi);border-radius:4px;margin-bottom:4px;overflow:hidden">
       <div style="display:flex;align-items:center;gap:4px;padding:4px 5px">
-        <span style="font-size:12px;flex-shrink:0">${ITEM_TYPE_ICONS[item.type] || '?'}</span>
+        <span style="font-size:calc(12px * var(--fs, 1));flex-shrink:0">${ITEM_TYPE_ICONS[item.type] || '?'}</span>
         <input type="text" value="${esc(item.label)}" onchange="updateItemLabel(${i}, this.value)"
-          style="flex:1;min-width:0;padding:2px 5px;font-size:11px;background:var(--slate-hi);border:1px solid var(--rule-hi);color:var(--bone);border-radius:3px">
+          style="flex:1;min-width:0;padding:2px 5px;font-size:calc(11px * var(--fs, 1));background:var(--slate-hi);border:1px solid var(--rule-hi);color:var(--bone);border-radius:3px">
         <button class="btn sm" onclick="toggleItemExpand('${escJs(item.id)}')" title="${expanded ? 'Collapse' : 'Edit description'}"
-          style="padding:1px 6px;font-size:10px;flex-shrink:0;${hasDesc && !expanded ? 'color:var(--bone)' : ''}">${expanded ? '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-up"></use></svg>' : '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-down"></use></svg>'}</button>
+          style="padding:1px 6px;font-size:calc(10px * var(--fs, 1));flex-shrink:0;${hasDesc && !expanded ? 'color:var(--bone)' : ''}">${expanded ? '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-up"></use></svg>' : '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-down"></use></svg>'}</button>
         <button class="btn sm" onclick="cloneItem(${i})" title="Clone item" style="flex-shrink:0"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-popout"></use></svg></button>
         <button class="btn danger sm" onclick="deleteItem(${i})" style="flex-shrink:0"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg></button>
       </div>
       ${expanded ? `<div style="padding:0 5px 5px">
         <textarea placeholder="DM description (players never see this)…" rows="2" onchange="updateItemDesc(${i}, this.value)"
-          style="width:100%;box-sizing:border-box;font-size:10px;background:var(--slate-hi);border:1px solid var(--rule-hi);color:var(--ash);border-radius:3px;padding:3px 5px;resize:vertical">${esc(item.description || '')}</textarea>
+          style="width:100%;box-sizing:border-box;font-size:calc(10px * var(--fs, 1));background:var(--slate-hi);border:1px solid var(--rule-hi);color:var(--ash);border-radius:3px;padding:3px 5px;resize:vertical">${esc(item.description || '')}</textarea>
       </div>` : ''}
     </div>`;
   });
@@ -549,7 +549,7 @@ function renderItemList() {
   }
   el.innerHTML = rows.length
     ? rows.join('')
-    : '<div style="font-size:11px;color:var(--ash);padding:4px 0">No items yet. Enable place mode and drag on the map.</div>';
+    : '<div style="font-size:calc(11px * var(--fs, 1));color:var(--ash);padding:4px 0">No items yet. Enable place mode and drag on the map.</div>';
 }
 
 function updateItemLabel(i, val) {
@@ -1161,13 +1161,13 @@ function pmRenderMonsterList(query) {
   if (!el) return;
   const q = (query || '').toLowerCase().trim();
   const list = q ? pmMonsterList.filter(m => m.name.toLowerCase().includes(q)) : pmMonsterList;
-  if (!pmMonsterLoaded) { el.innerHTML = '<div style="padding:8px;font-size:11px;color:var(--ash)">Loading…</div>'; return; }
-  if (!list.length) { el.innerHTML = '<div style="padding:8px;font-size:11px;color:var(--ash)">No monsters found.</div>'; return; }
+  if (!pmMonsterLoaded) { el.innerHTML = '<div style="padding:8px;font-size:calc(11px * var(--fs, 1));color:var(--ash)">Loading…</div>'; return; }
+  if (!list.length) { el.innerHTML = '<div style="padding:8px;font-size:calc(11px * var(--fs, 1));color:var(--ash)">No monsters found.</div>'; return; }
   el.innerHTML = list.slice(0, 60).map(m =>
     `<div onclick="pmSelectMonster('${escJs(m.id)}')" data-mid="${esc(m.id)}"
-      style="padding:5px 8px;border-bottom:1px solid var(--rule);font-size:11px;cursor:pointer;display:flex;align-items:center;gap:6px">
+      style="padding:5px 8px;border-bottom:1px solid var(--rule);font-size:calc(11px * var(--fs, 1));cursor:pointer;display:flex;align-items:center;gap:6px">
       <span style="flex:1">${esc(m.name)}</span>
-      <span style="font-size:10px;color:var(--ash)">CR ${esc(String(m.cr||'?'))}</span>
+      <span style="font-size:calc(10px * var(--fs, 1));color:var(--ash)">CR ${esc(String(m.cr||'?'))}</span>
     </div>`
   ).join('');
   if (pmSelectedMonsterId) {
@@ -1529,11 +1529,11 @@ function renderTokenList() {
     return `<div style="display:flex;align-items:center;gap:4px;padding:3px 0;border-bottom:1px solid var(--rule)${sel ? ';background:var(--wash)' : ''}">
       <input type="checkbox" ${sel ? 'checked' : ''} onchange="toggleTokenSelect('${escJs(tok.id)}', this.checked)" title="Select for recolor" style="cursor:pointer;flex-shrink:0;width:13px;height:13px">
       <div style="width:11px;height:11px;border-radius:50%;background:${esc(tok.color)};flex-shrink:0;border:1px solid rgba(255,255,255,.3);${hidden ? 'opacity:0.4' : ''}"></div>
-      <span style="flex:1;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(tok.name)}">${esc(tok.name)}</span>
-      <span title="${hidden ? 'Hidden from players' : 'Visible to players'}" style="font-size:10px;flex-shrink:0;${hidden ? 'color:var(--ash)' : 'color:var(--verdigris)'}">${hidden ? '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-eye-off"></use></svg>' : '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-eye"></use></svg>'}</span>
-      <button class="btn sm" onclick="cloneToken(${i})" title="Duplicate token" style="padding:1px 5px;font-size:10px;flex-shrink:0"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-popout"></use></svg></button>
-      <button class="btn sm" onclick="openPmTokModal(${i})" style="padding:1px 5px;font-size:10px;flex-shrink:0" title="Edit"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-pencil"></use></svg></button>
-      <button class="btn danger sm" onclick="deleteToken(${i})" style="padding:1px 5px;font-size:10px;flex-shrink:0"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg></button>
+      <span style="flex:1;font-size:calc(11px * var(--fs, 1));overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(tok.name)}">${esc(tok.name)}</span>
+      <span title="${hidden ? 'Hidden from players' : 'Visible to players'}" style="font-size:calc(10px * var(--fs, 1));flex-shrink:0;${hidden ? 'color:var(--ash)' : 'color:var(--verdigris)'}">${hidden ? '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-eye-off"></use></svg>' : '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-eye"></use></svg>'}</span>
+      <button class="btn sm" onclick="cloneToken(${i})" title="Duplicate token" style="padding:1px 5px;font-size:calc(10px * var(--fs, 1));flex-shrink:0"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-popout"></use></svg></button>
+      <button class="btn sm" onclick="openPmTokModal(${i})" style="padding:1px 5px;font-size:calc(10px * var(--fs, 1));flex-shrink:0" title="Edit"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-pencil"></use></svg></button>
+      <button class="btn danger sm" onclick="deleteToken(${i})" style="padding:1px 5px;font-size:calc(10px * var(--fs, 1));flex-shrink:0"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg></button>
     </div>`;
   });
   if (_lastDeleted && _lastDeleted.type === 'token') {
@@ -1542,18 +1542,18 @@ function renderTokenList() {
   if (!count) {
     el.innerHTML = rows.length
       ? rows.join('')
-      : '<div style="font-size:11px;color:var(--ash);padding:4px 0">No tokens yet. Click + Add Token above.</div>';
+      : '<div style="font-size:calc(11px * var(--fs, 1));color:var(--ash);padding:4px 0">No tokens yet. Click + Add Token above.</div>';
     return;
   }
   const selCount = _selectedTokenCount();
   const allChecked = selCount > 0 && selCount === count;
   const controls = `<div style="display:flex;align-items:center;gap:6px;padding:2px 0 5px;border-bottom:1px solid var(--rule);margin-bottom:3px">
-    <label style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--ash);cursor:pointer">
+    <label style="display:flex;align-items:center;gap:4px;font-size:calc(10px * var(--fs, 1));color:var(--ash);cursor:pointer">
       <input type="checkbox" ${allChecked ? 'checked' : ''} onchange="toggleSelectAllTokens(this.checked)" style="cursor:pointer;width:13px;height:13px"> all
     </label>
     <span style="flex:1"></span>
     <button class="btn sm" onclick="openRecolorPopup()" ${selCount ? '' : 'disabled'} title="Recolor selected tokens"
-      style="font-size:10px;padding:2px 8px;flex-shrink:0;${selCount ? '' : 'opacity:.45'}"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-pencil"></use></svg> Recolor${selCount ? ` (${selCount})` : ''}</button>
+      style="font-size:calc(10px * var(--fs, 1));padding:2px 8px;flex-shrink:0;${selCount ? '' : 'opacity:.45'}"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-pencil"></use></svg> Recolor${selCount ? ` (${selCount})` : ''}</button>
   </div>`;
   el.innerHTML = controls + rows.join('');
 }

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Written by Irmak Hakman in 2026. -->
+<!-- Written by Irmak Hakman — 2026-10-15 14:01 -->
 <!-- Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) -->
 <html lang="en" class="lamplit app-page">
 <head>
@@ -11,6 +11,8 @@
 <meta name="theme-color" content="#080C15">
 <script>if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js');</script>
 <link rel="stylesheet" href="/css/tokens.css">
+<link rel="stylesheet" href="/css/templates.css">
+<script src="/js/lib/template.js"></script>
 <link rel="stylesheet" href="/css/fonts.css">
 <link rel="stylesheet" href="/css/base.css">
 <link rel="stylesheet" href="/css/app-shell.css">
@@ -24,7 +26,7 @@
 <script src="/js/lib/auth-ui.js"></script>
 <div class="gate" id="gate">
   <div class="gate-box">
-    <div style="font-size:36px;margin-bottom:10px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-swords"></use></svg> </div>
+    <div style="font-size:calc(36px * var(--fs, 1));margin-bottom:10px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-swords"></use></svg> </div>
     <h2>Monsters</h2>
     <p>Enter master password to manage monsters.</p>
     <input type="password" id="gate-pw" placeholder="Master password…" autocomplete="off"
@@ -81,7 +83,7 @@
     <div class="modal-body" style="padding:14px 16px">
       <div class="field">
         <label class="lbl" for="import-text">Paste monster JSON &mdash; a single object, an array, or 5etools format</label>
-        <textarea id="import-text" style="min-height:180px;font-family:ui-monospace,Consolas,monospace;font-size:12px" placeholder='{"name":"Goblin","cr":"1/4","dex":14,...}'></textarea>
+        <textarea id="import-text" style="min-height:180px;font-family:ui-monospace,Consolas,monospace;font-size:calc(12px * var(--fs, 1))" placeholder='{"name":"Goblin","cr":"1/4","dex":14,...}'></textarea>
       </div>
       <span id="import-status" style="font-size:var(--t-sm);color:var(--verdigris)"></span>
     </div>
@@ -123,7 +125,7 @@
       <div class="ef-sec">Portrait</div>
       <div style="display:flex;align-items:center;gap:12px;padding:4px 0 8px">
         <img id="ef-portrait-preview" loading="lazy" style="width:64px;height:64px;object-fit:cover;border-radius:50%;border:2px solid var(--rule-hi);display:none" alt="Portrait">
-        <div id="ef-portrait-none" style="font-size:11px;color:var(--ash)">No portrait set</div>
+        <div id="ef-portrait-none" style="font-size:calc(11px * var(--fs, 1));color:var(--ash)">No portrait set</div>
         <button class="btn sm" onclick="efPickPortrait()">Upload Portrait</button>
         <button class="btn sm danger" id="ef-portrait-clear" onclick="efClearPortrait()" style="display:none">Remove</button>
         <input type="file" id="ef-portrait-input" accept="image/*" style="display:none" onchange="efPortraitChosen(this)">
@@ -146,7 +148,7 @@
         <div class="field"><label class="lbl">Init Modifier</label><input type="number" id="ef-init-bonus" min="-20" max="20" placeholder="0"></div>
         <div class="field" style="display:flex;align-items:center;gap:6px;padding-bottom:4px">
           <input type="checkbox" id="ef-init-prof" style="margin:0;cursor:pointer">
-          <label for="ef-init-prof" style="font-size:12px;cursor:pointer;color:var(--ash)">Add proficiency bonus to initiative</label>
+          <label for="ef-init-prof" style="font-size:calc(12px * var(--fs, 1));cursor:pointer;color:var(--ash)">Add proficiency bonus to initiative</label>
         </div>
       </div>
 
@@ -188,7 +190,7 @@
       <div class="ef-sec">Legendary Actions <button class="btn sm" onclick="addEditRow('ef-legendary')">+ Add</button></div>
       <div id="ef-legendary"></div>
 
-      <div id="edit-err" style="color:var(--blood);font-size:11px;min-height:14px;margin-top:8px"></div>
+      <div id="edit-err" style="color:var(--blood);font-size:calc(11px * var(--fs, 1));min-height:14px;margin-top:8px"></div>
     </div>
     <div class="modal-btns">
       <button class="btn" onclick="closeEditMonsterModal()">Cancel</button>
@@ -202,7 +204,7 @@
   <div class="modal-box">
     <div class="ct" id="init-modal-title">Add to Initiative</div>
     <div class="modal-body">
-      <div style="margin-bottom:10px;font-size:12px;color:var(--ash)" id="init-modal-desc"></div>
+      <div style="margin-bottom:10px;font-size:calc(12px * var(--fs, 1));color:var(--ash)" id="init-modal-desc"></div>
       <div class="field">
         <label class="lbl">Name (optional override)</label>
         <input type="text" id="init-name-override" placeholder="">
@@ -211,7 +213,7 @@
         <label class="lbl">Initiative Bonus</label>
         <input type="number" id="init-bonus-val" min="-10" max="30">
       </div>
-      <div id="init-modal-err" style="color:var(--blood);font-size:11px;min-height:14px"></div>
+      <div id="init-modal-err" style="color:var(--blood);font-size:calc(11px * var(--fs, 1));min-height:14px"></div>
     </div>
     <div class="modal-btns">
       <button class="btn" onclick="closeInitModal()">Cancel</button>

@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-10-15 14:15
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -163,10 +163,15 @@
       // token block used to live inside table.css, so linking table.css alone
       // was enough; once tokens moved to their own file this window was left
       // with 363 var() references and nothing defining them.
-      '<!DOCTYPE html><html lang="en" class="lamplit"><head><meta charset="utf-8">' +
+      // The display template (js/lib/template.js) is copied across as it is now.
+      '<!DOCTYPE html><html lang="en" class="lamplit"' +
+        (document.documentElement.dataset.template ? ' data-template="' + document.documentElement.dataset.template + '"' : '') +
+        (document.documentElement.style.getPropertyValue('--fs') ? ' style="--fs:' + Number(document.documentElement.style.getPropertyValue('--fs')) + '"' : '') +
+        '><head><meta charset="utf-8">' +
       '<meta name="viewport" content="width=device-width,initial-scale=1">' +
       '<title>' + cfg.title + '</title>' +
       '<link rel="stylesheet" href="/css/tokens.css' + v + '">' +
+      '<link rel="stylesheet" href="/css/templates.css' + v + '">' +
       '<link rel="stylesheet" href="/css/fonts.css' + v + '">' +
       '<link rel="stylesheet" href="/css/base.css' + v + '">' +
       '<link rel="stylesheet" href="/css/table.css' + v + '">' +

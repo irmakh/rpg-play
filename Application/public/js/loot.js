@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-10-15 14:01
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -63,7 +63,7 @@ async function loadLogs() {
     const logs = await res.json();
     loadEl.style.display = 'none';
     if (logs.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="3" style="color:var(--ash);padding:12px;font-size:11px">No claims yet.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="3" style="color:var(--ash);padding:12px;font-size:calc(11px * var(--fs, 1))">No claims yet.</td></tr>';
       return;
     }
     tbody.innerHTML = logs.map(l => {
@@ -71,7 +71,7 @@ async function loadLogs() {
       const dateStr = dt.toLocaleDateString();
       const timeStr = dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       return `<tr>
-        <td style="white-space:nowrap;color:var(--ash);font-size:11px">${dateStr} ${timeStr}</td>
+        <td style="white-space:nowrap;color:var(--ash);font-size:calc(11px * var(--fs, 1))">${dateStr} ${timeStr}</td>
         <td><strong>${esc(l.charName)}</strong></td>
         <td>${esc(l.itemName)}</td>
       </tr>`;
@@ -135,13 +135,13 @@ function renderItemRow(item) {
     ? `<button class="btn sm danger" onclick="toggleVisible('${escJs(item.id)}', false)">Hide</button>`
     : `<button class="btn sm success" onclick="toggleVisible('${escJs(item.id)}', true)">Show</button>`;
   const descBadge = item.descVisible
-    ? `<span class="vis-badge visible" style="font-size:9px">Desc Visible</span>`
-    : `<span class="vis-badge hidden" style="font-size:9px">Desc Hidden</span>`;
+    ? `<span class="vis-badge visible" style="font-size:calc(9px * var(--fs, 1))">Desc Visible</span>`
+    : `<span class="vis-badge hidden" style="font-size:calc(9px * var(--fs, 1))">Desc Hidden</span>`;
   const descBtn = item.descVisible
     ? `<button class="btn sm danger" onclick="toggleDescVisible('${escJs(item.id)}', false)" style="margin-left:4px">Hide Desc</button>`
     : `<button class="btn sm success" onclick="toggleDescVisible('${escJs(item.id)}', true)" style="margin-left:4px">Show Desc</button>`;
   const descPreview = item.description
-    ? `<span style="color:var(--ash);font-size:11px">${esc(item.description.length > 80 ? item.description.slice(0,80)+'…' : item.description)}</span>`
+    ? `<span style="color:var(--ash);font-size:calc(11px * var(--fs, 1))">${esc(item.description.length > 80 ? item.description.slice(0,80)+'…' : item.description)}</span>`
     : '<span style="color:var(--rule)">—</span>';
   const checked = selectedItems.has(item.id) ? 'checked' : '';
   return `<tr>

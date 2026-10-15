@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-11 18:00
+// Written by Irmak Hakman — 2026-10-15 14:01
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -557,11 +557,11 @@ function weatherRenderHistory() {
   const el = document.getElementById('weather-history');
   const log = Object.values(calWeather);
   if (!log.length) {
-    el.innerHTML = '<div style="font-size:12px;color:var(--ash);padding:6px 0">No weather recorded yet.</div>';
+    el.innerHTML = '<div style="font-size:calc(12px * var(--fs, 1));color:var(--ash);padding:6px 0">No weather recorded yet.</div>';
     return;
   }
   el.innerHTML = log.map(e => `
-    <div style="display:flex;justify-content:space-between;gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid var(--rule);font-size:12px">
+    <div style="display:flex;justify-content:space-between;gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid var(--rule);font-size:calc(12px * var(--fs, 1))">
       <span style="flex:1;min-width:0;cursor:pointer" onclick="weatherEditFromHistory('${escJs(e.id)}')" title="Edit this day">
         ${weatherIconSpan(weatherTempIconClass(e), 18)}
         <b style="margin-left:4px">${esc(e.dateLabel || frFormatDate(e))}</b>

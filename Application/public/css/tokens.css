@@ -1,4 +1,4 @@
-/* Written by Irmak Hakman in 2026. */
+/* Written by Irmak Hakman — 2026-10-15 14:01 */
 /* Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) */
 
 /* ============================================================================
@@ -75,9 +75,16 @@
   --display:'Fraunces', Georgia, 'Times New Roman', serif;
 
   /* Base is 15px, up from 13px. 13px is too small for a phone in a dark
-     room, which is where this app is actually read.                        */
-  --t-xs:12px; --t-sm:13px; --t-base:15px; --t-md:18px;
-  --t-lg:21px; --t-xl:26px; --t-2xl:34px; --t-3xl:48px;
+     room, which is where this app is actually read.
+
+     --fs scales every font size in the app. It is unset here, so each size
+     falls back to 1 and renders exactly as written; a template in
+     templates.css sets it (1.2 = everything a fifth larger). Fixed sizes
+     elsewhere are written calc(Npx * var(--fs, 1)) for the same reason.   */
+  --t-xs:calc(12px * var(--fs, 1)); --t-sm:calc(13px * var(--fs, 1));
+  --t-base:calc(15px * var(--fs, 1)); --t-md:calc(18px * var(--fs, 1));
+  --t-lg:calc(21px * var(--fs, 1)); --t-xl:calc(26px * var(--fs, 1));
+  --t-2xl:calc(34px * var(--fs, 1)); --t-3xl:calc(48px * var(--fs, 1));
 
   /* ── Space, 4px base ──────────────────────────────────────────────────── */
   --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:32px; --s7:48px;

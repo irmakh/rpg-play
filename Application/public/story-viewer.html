@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Written by Irmak Hakman — 2026-09-27 12:18 -->
+<!-- Written by Irmak Hakman — 2026-10-15 14:01 -->
 <!-- Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) -->
 <html lang="en" class="lamplit">
 <head>
@@ -11,6 +11,8 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <script>if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js');</script>
 <link rel="stylesheet" href="/css/tokens.css">
+<link rel="stylesheet" href="/css/templates.css">
+<script src="/js/lib/template.js"></script>
 <link rel="stylesheet" href="/css/fonts.css">
 <link rel="stylesheet" href="/css/base.css">
 <link rel="stylesheet" href="/css/dm.css">
@@ -24,13 +26,13 @@
 <!-- Stories password gate -->
 <div class="gate" id="stories-gate" style="display:none">
   <div class="gate-box">
-    <div style="font-size:36px;margin-bottom:10px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-book"></use></svg> </div>
+    <div style="font-size:calc(36px * var(--fs, 1));margin-bottom:10px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-book"></use></svg> </div>
     <h2>Stories</h2>
     <p>Enter your password to continue.</p>
     <input type="password" id="gate-pw" placeholder="Password…" autocomplete="off"
            onkeydown="if(event.key==='Enter')storiesGateSubmit()">
     <div id="gate-cap" style="margin-top:12px;text-align:left"></div>
-    <div id="gate-err" style="color:var(--blood);font-size:12px;min-height:16px;margin-top:6px"></div>
+    <div id="gate-err" style="color:var(--blood);font-size:calc(12px * var(--fs, 1));min-height:16px;margin-top:6px"></div>
     <button class="btn primary" style="width:100%;margin-top:8px" onclick="storiesGateSubmit()">Enter</button>
   </div>
 </div>
@@ -67,7 +69,7 @@ async function storiesGateSubmit() {
 <div class="viewer-wrap">
 
   <div class="stories-hdr">
-    <a href="/stories.html" class="btn" style="padding:4px 10px;font-size:11px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-arrow-left"></use></svg> Stories</a>
+    <a href="/stories.html" class="btn" style="padding:4px 10px;font-size:calc(11px * var(--fs, 1))"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-arrow-left"></use></svg> Stories</a>
     <div class="viewer-hdr-info">
       <div id="story-title" class="viewer-story-title">Loading…</div>
       <div id="story-meta" class="viewer-story-meta"></div>

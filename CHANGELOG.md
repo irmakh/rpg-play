@@ -21,6 +21,25 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [274] — 2026-10-15 — Ten large-text display templates, and a text size choice
+
+- **A small palette button** in the header of every page (except the handheld
+  console) opens a list of templates, each with a colour preview, and switches the
+  whole app between the default look and ten new templates.
+- **Every new template uses bigger text**, a fifth larger throughout, and its own
+  colour scheme: Metallic Chic, Deep Vintage Mood, Cool and Collected, Earthy and
+  Serene, Texture and Contrast, Mechanical and Floaty, Pixel Intensity, Gradient
+  Pop, Cosmic Artistry and Vibrant but Calm. Two are light, eight are dark, and
+  all keep text readable on every surface.
+- **Text size** at the bottom of the same pop-up: 50%, 75%, 100%, 110%, 120% or 135%, for any
+  template including the default. Until one is picked, the new templates use 120%.
+- Both choices are kept for the browser session and carry into a table pop-out.
+  The default look is unchanged.
+- With larger text, the character sheet's top bar stays on one row.
+- **Stories** moved from the character sheet's top bar into its **More** menu.
+
+---
+
 ## [269] — 2026-10-15 — The HTTPS certificate renews itself again
 
 - The site's certificate renews automatically again, and a renewed certificate is

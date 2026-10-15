@@ -1,4 +1,4 @@
-/* Written by Irmak Hakman — 2026-10-11 18:10 */
+/* Written by Irmak Hakman — 2026-10-15 14:01 */
 /* Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) */
 
 /* Weather sprite + tooltip — shared by events.html, index.html, table.html.
@@ -58,7 +58,7 @@
   background: var(--slate);
   border: 1px solid var(--rule-hi);
   box-shadow: 0 8px 28px rgba(0, 0, 0, .45);
-  font-size: 12px;
+  font-size: calc(12px * var(--fs, 1));
   color: var(--bone);
 }
 #wx-tooltip .wx-tip-date { font-weight: bold; margin-bottom: 6px; }
@@ -78,7 +78,7 @@
   background: var(--wash);
   border: 1px solid var(--rule-hi);
   cursor: default;
-  font-size: 12px;
+  font-size: calc(12px * var(--fs, 1));
   white-space: nowrap;
 }
 #wx-toolbar .wx-tb-icons { display: flex; gap: 3px; }
@@ -88,16 +88,16 @@
    What the weather is, in pictures and words. The dials that change it are
    folded away under "Edit details". */
 .wx-now{border:1px solid var(--rule-hi);border-radius:6px;background:var(--wash);padding:var(--s3);margin-bottom:var(--s3)}
-.wx-now-date{font-size:12px;color:var(--ash);margin-bottom:var(--s2)}
+.wx-now-date{font-size:calc(12px * var(--fs, 1));color:var(--ash);margin-bottom:var(--s2)}
 .wx-now-date b{color:var(--bone)}
-.wx-now-date a{font-size:11px;margin-left:var(--s2)}
+.wx-now-date a{font-size:calc(11px * var(--fs, 1));margin-left:var(--s2)}
 .wx-now-main{display:flex;align-items:center;gap:var(--s2);margin-bottom:var(--s2)}
-.wx-now-line{font-size:15px;font-weight:bold;color:var(--bone);margin-left:var(--s1)}
-.wx-now-words{font-size:13px;color:var(--bone);line-height:1.45}
-.wx-now-detail{font-size:11px;color:var(--ash);margin-top:var(--s2)}
+.wx-now-line{font-size:calc(15px * var(--fs, 1));font-weight:bold;color:var(--bone);margin-left:var(--s1)}
+.wx-now-words{font-size:calc(13px * var(--fs, 1));color:var(--bone);line-height:1.45}
+.wx-now-detail{font-size:calc(11px * var(--fs, 1));color:var(--ash);margin-top:var(--s2)}
 .wx-now-btns{margin-top:var(--s3)}
 .wx-details{border:1px solid var(--rule);border-radius:6px;padding:0 var(--s3);margin-bottom:var(--s3)}
-.wx-details > summary{cursor:pointer;font-size:12px;color:var(--ash);padding:var(--s2) 0}
+.wx-details > summary{cursor:pointer;font-size:calc(12px * var(--fs, 1));color:var(--ash);padding:var(--s2) 0}
 .wx-details > summary:hover{color:var(--bone)}
 .wx-details[open]{padding-bottom:var(--s2)}
 .wx-details[open] > summary{color:var(--bone);margin-bottom:var(--s2)}

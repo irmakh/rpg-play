@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-09-27 11:13
+// Written by Irmak Hakman — 2026-10-15 14:01
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -97,7 +97,7 @@ function _refreshHpPanel(tok) {
   if (isDM() && tok.type === 'monster' && tok.label) {
     // DM view: lead with the player-facing identifier, monster type in brackets.
     const baseName = tok.name.slice(0, tok.name.length - tok.label.length).trimEnd() || tok.name;
-    hpNameEl.innerHTML = esc(tok.label) + ` <span style="color:var(--ash);font-weight:normal;font-size:11px">[${esc(baseName)}]</span>`;
+    hpNameEl.innerHTML = esc(tok.label) + ` <span style="color:var(--ash);font-weight:normal;font-size:calc(11px * var(--fs, 1))">[${esc(baseName)}]</span>`;
   } else {
     hpNameEl.textContent = tokDisplayName(tok);
   }
@@ -548,7 +548,7 @@ async function confirmGroupInitRoll() {
     const color = r.isCrit ? 'var(--verdigris)' : r.isFail ? 'var(--blood)' : 'inherit';
     html += `<div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline">`
       + `<span>${esc(r.name)}</span>`
-      + `<span><span style="font-size:10px;opacity:.55">${esc(r.detail)}</span> <strong style="color:${color};font-size:14px">${r.total}</strong></span></div>`;
+      + `<span><span style="font-size:calc(10px * var(--fs, 1));opacity:.55">${esc(r.detail)}</span> <strong style="color:${color};font-size:calc(14px * var(--fs, 1))">${r.total}</strong></span></div>`;
   }
   html += `</div>`;
   // Credential attached: html:true is honoured only from a logged-in sender (v235).
@@ -732,7 +732,7 @@ function renderBulkPanel() {
   const namesList = document.getElementById('bulk-names-list');
   if (namesList) {
     namesList.innerHTML = selected.map(tok =>
-      `<span style="font-size:10px;background:var(--slate-hi);border:1px solid #00e5ff44;border-radius:2px;padding:1px 5px;cursor:pointer;display:inline-flex;align-items:center;gap:3px" onclick="bulkDeselectToken('${escJs(tok.id)}')" title="Remove from selection">${esc(tokDisplayName(tok))} <span style="color:var(--ash);font-size:9px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg></span></span>`
+      `<span style="font-size:calc(10px * var(--fs, 1));background:var(--slate-hi);border:1px solid #00e5ff44;border-radius:2px;padding:1px 5px;cursor:pointer;display:inline-flex;align-items:center;gap:3px" onclick="bulkDeselectToken('${escJs(tok.id)}')" title="Remove from selection">${esc(tokDisplayName(tok))} <span style="color:var(--ash);font-size:calc(9px * var(--fs, 1))"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg></span></span>`
     ).join('');
   }
 
@@ -945,7 +945,7 @@ async function confirmGroupCheckRoll() {
       const color = r.isCrit ? 'var(--verdigris)' : r.isFail ? 'var(--blood)' : 'inherit';
       html += `<div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline">`
         + `<span>${esc(r.name)}</span>`
-        + `<span><span style="font-size:10px;opacity:.55">${esc(r.detail)}</span> <strong style="color:${color};font-size:14px">${r.total}</strong></span></div>`;
+        + `<span><span style="font-size:calc(10px * var(--fs, 1));opacity:.55">${esc(r.detail)}</span> <strong style="color:${color};font-size:calc(14px * var(--fs, 1))">${r.total}</strong></span></div>`;
     }
   }
   html += `</div>`;

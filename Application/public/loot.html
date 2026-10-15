@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Written by Irmak Hakman in 2026. -->
+<!-- Written by Irmak Hakman — 2026-10-15 14:01 -->
 <!-- Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) -->
 <html lang="en" class="lamplit">
 <head>
@@ -11,6 +11,8 @@
 <meta name="theme-color" content="#080C15">
 <script>if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js');</script>
 <link rel="stylesheet" href="/css/tokens.css">
+<link rel="stylesheet" href="/css/templates.css">
+<script src="/js/lib/template.js"></script>
 <link rel="stylesheet" href="/css/fonts.css">
 <link rel="stylesheet" href="/css/base.css">
 <link rel="stylesheet" href="/css/loot.css">
@@ -21,7 +23,7 @@
 <!-- Password gate -->
 <div class="gate" id="gate">
   <div class="gate-box">
-    <div style="font-size:36px;margin-bottom:10px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-swords"></use></svg> </div>
+    <div style="font-size:calc(36px * var(--fs, 1));margin-bottom:10px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-swords"></use></svg> </div>
     <h2>Loot Manager</h2>
     <p>Enter master password to manage dungeon loot.</p>
     <input type="password" id="gate-pw" placeholder="Master password…" autocomplete="off"
@@ -69,7 +71,7 @@
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <input type="text" id="import-tag" placeholder="Tag (optional)" style="width:160px;flex:0 0 auto">
         <button class="btn primary" onclick="importItems()">Import</button>
-        <span id="import-status" style="font-size:11px;color:var(--verdigris)"></span>
+        <span id="import-status" style="font-size:calc(11px * var(--fs, 1));color:var(--verdigris)"></span>
       </div>
     </div>
   </div>
@@ -82,14 +84,14 @@
 
     <!-- Loot Items tab -->
     <div class="tab-panel active" id="tab-items">
-      <div id="loot-loading" style="padding:12px;font-size:11px;color:var(--ash)">Loading…</div>
+      <div id="loot-loading" style="padding:12px;font-size:calc(11px * var(--fs, 1));color:var(--ash)">Loading…</div>
       <div id="table-wrap" style="display:none"></div>
-      <div id="empty-msg" style="padding:12px;font-size:11px;color:var(--ash);display:none">No loot items yet. Use the import tool or click "+ Add Item".</div>
+      <div id="empty-msg" style="padding:12px;font-size:calc(11px * var(--fs, 1));color:var(--ash);display:none">No loot items yet. Use the import tool or click "+ Add Item".</div>
     </div>
 
     <!-- Claim Logs tab -->
     <div class="tab-panel" id="tab-logs">
-      <div id="logs-loading" style="padding:12px;font-size:11px;color:var(--ash);display:none">Loading…</div>
+      <div id="logs-loading" style="padding:12px;font-size:calc(11px * var(--fs, 1));color:var(--ash);display:none">Loading…</div>
       <div id="logs-table-wrap" style="overflow-x:auto">
         <table>
           <thead>
@@ -99,7 +101,7 @@
               <th>Item</th>
             </tr>
           </thead>
-          <tbody id="logs-tbody"><tr><td colspan="3" style="color:var(--ash);padding:12px;font-size:11px">No claims yet.</td></tr></tbody>
+          <tbody id="logs-tbody"><tr><td colspan="3" style="color:var(--ash);padding:12px;font-size:calc(11px * var(--fs, 1))">No claims yet.</td></tr></tbody>
         </table>
       </div>
     </div>

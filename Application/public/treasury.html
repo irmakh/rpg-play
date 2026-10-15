@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Written by Irmak Hakman — 2026-10-11 23:55 -->
+<!-- Written by Irmak Hakman — 2026-10-15 14:01 -->
 <!-- Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) -->
 <html lang="en" class="lamplit app-page">
 <head>
@@ -11,6 +11,8 @@
 <meta name="theme-color" content="#080C15">
 <script>if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js');</script>
 <link rel="stylesheet" href="/css/tokens.css">
+<link rel="stylesheet" href="/css/templates.css">
+<script src="/js/lib/template.js"></script>
 <link rel="stylesheet" href="/css/fonts.css">
 <link rel="stylesheet" href="/css/base.css">
 <link rel="stylesheet" href="/css/app-shell.css">
@@ -24,7 +26,7 @@
 <script src="/js/lib/auth-ui.js"></script>
 <div class="gate" id="gate">
   <div class="gate-box">
-    <div style="font-size:36px;margin-bottom:10px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-coins"></use></svg> </div>
+    <div style="font-size:calc(36px * var(--fs, 1));margin-bottom:10px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-coins"></use></svg> </div>
     <h2>Treasury</h2>
     <p>Enter master password to manage loot and shop stock.</p>
     <input type="password" id="gate-pw" placeholder="Master password…" autocomplete="off"

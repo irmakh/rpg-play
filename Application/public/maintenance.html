@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Written by Irmak Hakman — 2026-09-27 18:13 -->
+<!-- Written by Irmak Hakman — 2026-10-15 14:01 -->
 <!-- Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) -->
 <html lang="en">
 <head>
@@ -8,6 +8,8 @@
   <meta name="robots" content="noindex, nofollow">
   <title>Maintenance</title>
   <link rel="stylesheet" href="/css/tokens.css">
+<link rel="stylesheet" href="/css/templates.css">
+<script src="/js/lib/template.js"></script>
 <link rel="stylesheet" href="/css/fonts.css">
 <style>
 *{box-sizing:border-box}
@@ -18,34 +20,34 @@
     /* Login gate */
     #gate{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
     #gate .card{background:var(--slate);border:1px solid var(--rule);border-radius:12px;padding:28px;width:100%;max-width:360px}
-    #gate h1{margin:0 0 4px;font-size:20px;color:var(--bone)}
-    #gate p{margin:0 0 18px;color:var(--ash);font-size:13px}
-    #gate input{width:100%;padding:11px 12px;border-radius:8px;border:1px solid var(--rule);background:var(--sunken);color:var(--bone);font-size:15px}
-    #gate button{width:100%;margin-top:12px;padding:11px;border:0;border-radius:8px;background:var(--arc);color:var(--ink);font-weight:700;font-size:15px;cursor:pointer}
+    #gate h1{margin:0 0 4px;font-size:calc(20px * var(--fs, 1));color:var(--bone)}
+    #gate p{margin:0 0 18px;color:var(--ash);font-size:calc(13px * var(--fs, 1))}
+    #gate input{width:100%;padding:11px 12px;border-radius:8px;border:1px solid var(--rule);background:var(--sunken);color:var(--bone);font-size:calc(15px * var(--fs, 1))}
+    #gate button{width:100%;margin-top:12px;padding:11px;border:0;border-radius:8px;background:var(--arc);color:var(--ink);font-weight:700;font-size:calc(15px * var(--fs, 1));cursor:pointer}
     #gate button:hover{background:var(--arc-hi)}
-    #gate-err{color:var(--blood);font-size:13px;margin-top:10px;min-height:16px}
+    #gate-err{color:var(--blood);font-size:calc(13px * var(--fs, 1));margin-top:10px;min-height:16px}
 
     /* Dashboard */
     #panel{display:none}
     .top{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:16px}
-    .top h1{margin:0;font-size:19px;color:var(--bone)}
-    .pill{background:var(--slate-hi);border:1px solid var(--rule);border-radius:999px;padding:4px 12px;font-size:13px;color:var(--bone)}
+    .top h1{margin:0;font-size:calc(19px * var(--fs, 1));color:var(--bone)}
+    .pill{background:var(--slate-hi);border:1px solid var(--rule);border-radius:999px;padding:4px 12px;font-size:calc(13px * var(--fs, 1));color:var(--bone)}
     .top .spacer{flex:1}
-    .top button{background:var(--slate-hi);border:1px solid var(--rule);color:var(--bone);padding:7px 14px;border-radius:8px;cursor:pointer;font-size:13px}
+    .top button{background:var(--slate-hi);border:1px solid var(--rule);color:var(--bone);padding:7px 14px;border-radius:8px;cursor:pointer;font-size:calc(13px * var(--fs, 1))}
     .top button:hover{border-color:var(--arc)}
-    .muted{color:var(--ash);font-size:12px}
+    .muted{color:var(--ash);font-size:calc(12px * var(--fs, 1))}
 
     .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
     .client{background:var(--slate);border:1px solid var(--rule);border-radius:10px;padding:14px;border-left:4px solid var(--ash-dim)}
     .client.dm{border-left-color:var(--bone)}
     .client.character{border-left-color:var(--verdigris)}
     .client .who{display:flex;align-items:center;gap:8px;margin-bottom:8px}
-    .badge{font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;letter-spacing:.4px}
+    .badge{font-size:calc(11px * var(--fs, 1));font-weight:700;padding:2px 8px;border-radius:999px;letter-spacing:.4px}
     .badge.dm{background:var(--bone);color:var(--ink)}
     .badge.character{background:var(--verdigris);color:#08210f}
     .badge.none{background:var(--ash-dim);color:var(--ink)}
-    .client .name{font-weight:600;font-size:15px}
-    .row{display:flex;justify-content:space-between;gap:10px;font-size:13px;padding:3px 0;border-top:1px dashed var(--rule)}
+    .client .name{font-weight:600;font-size:calc(15px * var(--fs, 1))}
+    .row{display:flex;justify-content:space-between;gap:10px;font-size:calc(13px * var(--fs, 1));padding:3px 0;border-top:1px dashed var(--rule)}
     .row:first-of-type{border-top:0}
     .row .k{color:var(--ash)}
     .row .v{text-align:right;word-break:break-word}
@@ -57,10 +59,10 @@
     #btn-reload-all:hover{background:#9a3a3a}
     #btn-reload-outdated{background:var(--slate-hi)}
     .top button:disabled{opacity:.45;cursor:not-allowed}
-    .ua{color:var(--ash);font-size:11px;margin-top:8px;word-break:break-word}
+    .ua{color:var(--ash);font-size:calc(11px * var(--fs, 1));margin-top:8px;word-break:break-word}
     #empty{color:var(--ash);padding:40px;text-align:center}
     .events-wrap{overflow-x:auto;margin-top:10px;border:1px solid var(--rule-hi);border-radius:var(--r-md)}
-    .events{width:100%;border-collapse:collapse;font-size:12px}
+    .events{width:100%;border-collapse:collapse;font-size:calc(12px * var(--fs, 1))}
     .events th,.events td{padding:7px 10px;text-align:left;border-bottom:1px solid var(--rule);white-space:nowrap}
     .events th{color:var(--ash);font-weight:600}
     .events tr:last-child td{border-bottom:none}
@@ -69,11 +71,11 @@
     .muted-hdr{margin-top:32px}
     .events td.actions{display:flex;gap:6px}
     .events button{background:var(--slate-hi);color:var(--bone);border:1px solid var(--rule-hi);
-      border-radius:var(--r-sm);padding:4px 10px;font:inherit;font-size:12px;cursor:pointer}
+      border-radius:var(--r-sm);padding:4px 10px;font:inherit;font-size:calc(12px * var(--fs, 1));cursor:pointer}
     .events button:hover,.events button:focus-visible{border-color:var(--arc)}
     .events .countdown{font-variant-numeric:tabular-nums}
     .events .ua-v{color:var(--ash)}
-    .pager{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:10px;font-size:12px}
+    .pager{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:10px;font-size:calc(12px * var(--fs, 1))}
     .pager[hidden],.pager [hidden]{display:none}
     .pager button{background:var(--slate-hi);color:var(--bone);border:1px solid var(--rule-hi);
       border-radius:var(--r-sm);padding:5px 12px;font:inherit;cursor:pointer}

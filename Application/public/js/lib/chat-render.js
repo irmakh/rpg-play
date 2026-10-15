@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-09-27 12:05
+// Written by Irmak Hakman — 2026-10-15 14:01
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -17,7 +17,7 @@ function scrollChatLog() {
 function _pmHeaderSuffix(e) {
   if (!e.to) return '';
   const who = e.toName || (e.to === 'dm' ? 'DM' : 'someone');
-  return `<span style="font-size:10px;color:var(--arc);font-weight:normal"> 🔒 → ${esc(who)}</span>`;
+  return `<span style="font-size:calc(10px * var(--fs, 1));color:var(--arc);font-weight:normal"> 🔒 → ${esc(who)}</span>`;
 }
 
 // ── HTML chat messages: what may survive ─────────────────────────────────────
@@ -124,7 +124,7 @@ function appendChatEntry(e) {
       : `<div style="word-break:break-word;white-space:pre-wrap">${esc(e.message || '')}</div>`;
     div.innerHTML = `<div style="display:flex;justify-content:space-between;margin-bottom:2px">
       <span class="ce-sender">${esc(e.sender || '?')}${_pmHeaderSuffix(e)}</span>
-      <span style="color:var(--ash);font-size:10px">${time}</span>
+      <span style="color:var(--ash);font-size:calc(10px * var(--fs, 1))">${time}</span>
     </div>${body}`;
     log.appendChild(div);
     return;
@@ -138,17 +138,17 @@ function appendChatEntry(e) {
       const displayUrl = e.mediumUrl || url;
       mediaEl = `<img loading="lazy" src="${esc(displayUrl)}" style="max-width:100%;max-height:200px;width:auto;object-fit:contain;border-radius:4px;margin-top:4px;display:block;cursor:pointer" onclick="lightboxOpen('${escJs(url)}','${escJs(e.mimeType || '')}')">`;
     } else if (e.mimeType && e.mimeType.startsWith('video/')) {
-      mediaEl = `<div style="position:relative;max-width:100%;cursor:pointer;overflow:hidden;background:#000;border-radius:4px;margin-top:4px;display:inline-block" onclick="lightboxOpen('${escJs(url)}','${escJs(e.mimeType || '')}')"><video src="${esc(url)}" preload="metadata" muted playsinline style="max-width:100%;max-height:200px;display:block;pointer-events:none"></video><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:28px;text-shadow:0 2px 8px #000;pointer-events:none">&#9654;</div></div>`;
+      mediaEl = `<div style="position:relative;max-width:100%;cursor:pointer;overflow:hidden;background:#000;border-radius:4px;margin-top:4px;display:inline-block" onclick="lightboxOpen('${escJs(url)}','${escJs(e.mimeType || '')}')"><video src="${esc(url)}" preload="metadata" muted playsinline style="max-width:100%;max-height:200px;display:block;pointer-events:none"></video><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:calc(28px * var(--fs, 1));text-shadow:0 2px 8px #000;pointer-events:none">&#9654;</div></div>`;
     } else if (e.mimeType && e.mimeType.startsWith('audio/')) {
       mediaEl = `<audio src="${esc(url)}" controls style="max-width:100%;margin-top:6px;display:block"></audio>`;
     } else {
-      mediaEl = `<a href="${esc(url)}" target="_blank" style="display:inline-block;margin-top:6px;padding:4px 8px;background:var(--slate-hi);border-radius:4px;color:var(--bone);font-size:11px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-paperclip"></use></svg> Open file</a>`;
+      mediaEl = `<a href="${esc(url)}" target="_blank" style="display:inline-block;margin-top:6px;padding:4px 8px;background:var(--slate-hi);border-radius:4px;color:var(--bone);font-size:calc(11px * var(--fs, 1))"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-paperclip"></use></svg> Open file</a>`;
     }
-    const cap = e.caption ? `<div style="font-size:10px;color:var(--ash);margin-top:4px">${esc(e.caption)}</div>` : '';
+    const cap = e.caption ? `<div style="font-size:calc(10px * var(--fs, 1));color:var(--ash);margin-top:4px">${esc(e.caption)}</div>` : '';
     div.className = 'chat-entry';
     div.innerHTML = `<div style="display:flex;justify-content:space-between;margin-bottom:4px">
-      <span class="ce-sender">${esc(e.sender || 'DM')} <span style="font-size:10px;color:var(--ash);font-weight:normal">media</span></span>
-      <span style="color:var(--ash);font-size:10px">${time}</span>
+      <span class="ce-sender">${esc(e.sender || 'DM')} <span style="font-size:calc(10px * var(--fs, 1));color:var(--ash);font-weight:normal">media</span></span>
+      <span style="color:var(--ash);font-size:calc(10px * var(--fs, 1))">${time}</span>
     </div>${mediaEl}${cap}`;
     log.appendChild(div);
     return;
@@ -159,20 +159,20 @@ function appendChatEntry(e) {
   const cls = isNat20 ? ' nat20' : isNat1 ? ' nat1' : '';
   const modStr = e.modifier ? (e.modifier > 0 ? `+${e.modifier}` : `${e.modifier}`) : '';
   const multiStr = e.results && e.results.length > 1
-    ? ` <span style="font-size:10px;color:var(--ash)">[${e.results.join(', ')}]</span>` : '';
+    ? ` <span style="font-size:calc(10px * var(--fs, 1));color:var(--ash)">[${e.results.join(', ')}]</span>` : '';
   const labelStr = e.label ? ` — ${esc(e.label)}` : '';
   const natStr = isNat20 ? ' <span style="color:var(--verdigris)"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-star"></use></svg> NAT 20!</span>'
                : isNat1  ? ' <span style="color:var(--blood)"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-skull"></use></svg> NAT 1</span>' : '';
   const descStr = e.description
-    ? `<div style="font-size:10px;color:var(--ash);margin-top:3px;font-style:italic;line-height:1.4;white-space:pre-wrap">${esc(e.description)}</div>`
+    ? `<div style="font-size:calc(10px * var(--fs, 1));color:var(--ash);margin-top:3px;font-style:italic;line-height:1.4;white-space:pre-wrap">${esc(e.description)}</div>`
     : '';
   const partsStr = chatDamageParts(e);
   div.className = `chat-entry${cls}`;
   div.innerHTML = `<div style="display:flex;justify-content:space-between;margin-bottom:2px">
     <span class="ce-sender">${esc(e.sender || '?')}</span>
-    <span style="color:var(--ash);font-size:10px">${time}</span>
+    <span style="color:var(--ash);font-size:calc(10px * var(--fs, 1))">${time}</span>
   </div>
-  ${partsStr ? '' : `<span style="color:var(--ash);font-size:11px">${esc(e.dice || '')}${modStr}${labelStr}</span>${multiStr}`}
+  ${partsStr ? '' : `<span style="color:var(--ash);font-size:calc(11px * var(--fs, 1))">${esc(e.dice || '')}${modStr}${labelStr}</span>${multiStr}`}
   ${partsStr}
   <div class="ce-total" style="color:${isNat20 ? 'var(--verdigris)' : isNat1 ? 'var(--blood)' : 'var(--bone)'}">${e.total}${natStr}</div>${descStr}`;
   log.appendChild(div);

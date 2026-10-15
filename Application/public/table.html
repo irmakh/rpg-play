@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Written by Irmak Hakman — 2026-10-11 00:58 -->
+<!-- Written by Irmak Hakman — 2026-10-15 14:01 -->
 <!-- Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) -->
 <html lang="en" class="lamplit">
 <head>
@@ -11,6 +11,8 @@
 <meta name="theme-color" content="#080C15">
 <script>if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js');</script>
 <link rel="stylesheet" href="/css/tokens.css">
+<link rel="stylesheet" href="/css/templates.css">
+<script src="/js/lib/template.js"></script>
 <link rel="stylesheet" href="/css/fonts.css">
 <link rel="stylesheet" href="/css/base.css">
 <link rel="stylesheet" href="/css/table.css">
@@ -23,9 +25,9 @@
 
 <div id="toolbar">
   <a href="/dm.html" class="btn" style="text-decoration:none"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-arrow-left"></use></svg> Back</a>
-  <span id="dm-badge" style="display:none;background:var(--bone);color:var(--ink);padding:2px 8px;border-radius:3px;font-size:11px;font-weight:bold">DM</span>
-  <span id="campaign-badge" style="display:none;background:var(--slate-hi);border:1px solid var(--rule-hi);color:var(--ash);padding:2px 8px;border-radius:3px;font-size:11px;cursor:pointer"></span>
-  <span id="user-badge" style="display:none;background:var(--rule-hi);border:1px solid var(--rule-hi);color:var(--bone);padding:2px 8px;border-radius:3px;font-size:11px;font-weight:bold"></span>
+  <span id="dm-badge" style="display:none;background:var(--bone);color:var(--ink);padding:2px 8px;border-radius:3px;font-size:calc(11px * var(--fs, 1));font-weight:bold">DM</span>
+  <span id="campaign-badge" style="display:none;background:var(--slate-hi);border:1px solid var(--rule-hi);color:var(--ash);padding:2px 8px;border-radius:3px;font-size:calc(11px * var(--fs, 1));cursor:pointer"></span>
+  <span id="user-badge" style="display:none;background:var(--rule-hi);border:1px solid var(--rule-hi);color:var(--bone);padding:2px 8px;border-radius:3px;font-size:calc(11px * var(--fs, 1));font-weight:bold"></span>
   <button class="btn" id="btn-dm-unlock" style="display:none" onclick="unlockDM()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-key"></use></svg> DM</button>
 
   <div class="dm-controls" style="display:none;display:contents">
@@ -97,17 +99,17 @@
 </div>
 
 <!-- Now Playing bar — visible to all clients when music is playing -->
-<div id="now-playing-bar" style="display:none;background:var(--slate);border-bottom:1px solid var(--rule-hi);padding:4px 10px;align-items:center;gap:7px;font-size:12px">
-  <span id="now-playing-state" style="font-size:10px;color:var(--ash);white-space:nowrap">Now playing:</span>
+<div id="now-playing-bar" style="display:none;background:var(--slate);border-bottom:1px solid var(--rule-hi);padding:4px 10px;align-items:center;gap:7px;font-size:calc(12px * var(--fs, 1))">
+  <span id="now-playing-state" style="font-size:calc(10px * var(--fs, 1));color:var(--ash);white-space:nowrap">Now playing:</span>
   <span style="color:var(--bone)"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-music"></use></svg> </span>
   <span id="now-playing-name" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
-  <span id="now-playing-pos" style="font-size:10px;color:var(--bone);white-space:nowrap;min-width:26px;text-align:right">0:00</span>
+  <span id="now-playing-pos" style="font-size:calc(10px * var(--fs, 1));color:var(--bone);white-space:nowrap;min-width:26px;text-align:right">0:00</span>
   <input type="range" id="now-playing-seek" min="0" max="100" value="0" step="0.5" style="width:80px;cursor:pointer" oninput="musicSeekInput(this.value)" onchange="musicSeekSend(this.value)">
-  <span id="now-playing-dur" style="font-size:10px;color:var(--ash);white-space:nowrap;min-width:26px">0:00</span>
-  <span style="font-size:10px;color:var(--ash);white-space:nowrap">Vol</span>
+  <span id="now-playing-dur" style="font-size:calc(10px * var(--fs, 1));color:var(--ash);white-space:nowrap;min-width:26px">0:00</span>
+  <span style="font-size:calc(10px * var(--fs, 1));color:var(--ash);white-space:nowrap">Vol</span>
   <input type="range" id="local-vol-slider" min="0" max="100" value="100" style="width:60px;cursor:pointer" oninput="setLocalVolume(this.value)" onchange="setLocalVolume(this.value)">
-  <span id="local-vol-pct" style="font-size:11px;color:var(--bone);min-width:28px;text-align:right">100%</span>
-  <button onclick="openMusicPopup()" title="Pop out player to separate window" style="background:none;border:1px solid var(--rule-hi);color:var(--bone);border-radius:3px;padding:1px 6px;cursor:pointer;font-size:11px;flex-shrink:0;line-height:1.6"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-external"></use></svg> </button>
+  <span id="local-vol-pct" style="font-size:calc(11px * var(--fs, 1));color:var(--bone);min-width:28px;text-align:right">100%</span>
+  <button onclick="openMusicPopup()" title="Pop out player to separate window" style="background:none;border:1px solid var(--rule-hi);color:var(--bone);border-radius:3px;padding:1px 6px;cursor:pointer;font-size:calc(11px * var(--fs, 1));flex-shrink:0;line-height:1.6"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-external"></use></svg> </button>
 </div>
 
 <!-- Draw sub-toolbar (shown when draw tool active) -->
@@ -156,7 +158,7 @@
     <!-- Bulk edit section (DM only, appears when tokens are shift+clicked) -->
     <div class="lp-section" id="lp-bulk-section" style="display:none">
       <div class="lp-section-hdr">
-        <span style="font-size:12px;font-weight:bold"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-target"></use></svg> Bulk Edit — <span id="bulk-count">0 selected</span></span>
+        <span style="font-size:calc(12px * var(--fs, 1));font-weight:bold"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-target"></use></svg> Bulk Edit — <span id="bulk-count">0 selected</span></span>
         <button class="btn sm" onclick="clearBulkSelection()" title="Clear selection" style="flex-shrink:0"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg> Clear</button>
       </div>
       <div class="lp-body open">
@@ -196,15 +198,15 @@
         <div class="rp-flat-hdr">Group roll</div>
         <div class="rp-blk-body">
           <div class="rp-btn-row">
-            <button class="btn sm" onclick="openGroupCheckModal('check')" style="font-size:11px" title="All selected tokens roll an ability check individually"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg> Ability Check</button>
-            <button class="btn sm" onclick="openGroupCheckModal('save')" style="font-size:11px" title="All selected tokens roll a saving throw individually"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-shield"></use></svg> Saving Throw</button>
+            <button class="btn sm" onclick="openGroupCheckModal('check')" style="font-size:calc(11px * var(--fs, 1))" title="All selected tokens roll an ability check individually"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg> Ability Check</button>
+            <button class="btn sm" onclick="openGroupCheckModal('save')" style="font-size:calc(11px * var(--fs, 1))" title="All selected tokens roll a saving throw individually"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-shield"></use></svg> Saving Throw</button>
           </div>
         </div>
         <!-- Initiative (DM only, monster tokens) -->
         <div id="bulk-init-row" style="display:none">
           <div class="rp-flat-hdr">Initiative</div>
           <div class="rp-blk-body">
-            <button class="btn sm" onclick="rollBulkInitiative()" style="width:100%;font-size:12px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg> Roll Monster Initiative</button>
+            <button class="btn sm" onclick="rollBulkInitiative()" style="width:100%;font-size:calc(12px * var(--fs, 1))"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg> Roll Monster Initiative</button>
           </div>
         </div>
       </div>
@@ -241,7 +243,7 @@
 
   <div id="canvas-area" style="position:relative">
     <div id="map-loading-overlay" style="display:none;position:absolute;inset:0;background:rgba(0,0,0,.55);z-index:500;align-items:center;justify-content:center;flex-direction:column;gap:12px;pointer-events:none">
-      <div style="color:var(--bone);font-size:13px;font-weight:bold;">Loading map…</div>
+      <div style="color:var(--bone);font-size:calc(13px * var(--fs, 1));font-weight:bold;">Loading map…</div>
       <div style="width:200px;height:3px;background:rgba(255,255,255,.12);border-radius:2px;overflow:hidden"><div style="height:100%;width:35%;background:var(--bone);border-radius:2px;animation:chat-upslide 1.1s ease-in-out infinite"></div></div>
     </div>
     <!-- What the current tool does (js/table/table-ux.js). A sticky box of no
@@ -257,7 +259,7 @@
       <div id="token-label-layer" style="position:absolute;top:0;left:0;pointer-events:none;z-index:11"></div>
       <canvas id="drawing-canvas" style="position:absolute;top:0;left:0;pointer-events:none;z-index:15"></canvas>
       <canvas id="overlay-canvas" style="position:absolute;top:0;left:0;z-index:20"></canvas>
-      <div id="placement-hint" style="display:none;position:absolute;top:16px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.8);color:var(--bone);padding:8px 18px;border-radius:6px;font-size:13px;font-weight:bold;pointer-events:none;z-index:30;white-space:nowrap;border:1px solid var(--rule-hi)">Click on map to place token &nbsp;·&nbsp; Esc to cancel</div>
+      <div id="placement-hint" style="display:none;position:absolute;top:16px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.8);color:var(--bone);padding:8px 18px;border-radius:6px;font-size:calc(13px * var(--fs, 1));font-weight:bold;pointer-events:none;z-index:30;white-space:nowrap;border:1px solid var(--rule-hi)">Click on map to place token &nbsp;·&nbsp; Esc to cancel</div>
     </div>
   </div>
   <div class="resize-handle-v" id="rh-right"></div>
@@ -267,8 +269,8 @@
 
     <!-- Empty state — shown when no token is selected -->
     <div id="rp-placeholder">
-      <div style="font-size:34px;opacity:.2;margin-bottom:10px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-swords"></use></svg> </div>
-      <div style="font-size:12px;line-height:1.6">Select a token<br>to see details</div>
+      <div style="font-size:calc(34px * var(--fs, 1));opacity:.2;margin-bottom:10px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-swords"></use></svg> </div>
+      <div style="font-size:calc(12px * var(--fs, 1));line-height:1.6">Select a token<br>to see details</div>
     </div>
 
     <!-- Token details — shown when a token is selected -->
@@ -285,11 +287,11 @@
       <div class="rp-portrait-area">
         <div id="rp-portrait-wrap">
           <img id="rp-portrait-img" style="width:56px;height:56px;border-radius:50%;object-fit:cover;border:2px solid var(--bone);display:none" alt="">
-          <div id="rp-portrait-ph" style="width:56px;height:56px;border-radius:50%;background:var(--slate-hi);border:2px solid var(--rule-hi);display:flex;align-items:center;justify-content:center;font-size:22px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-swords"></use></svg> </div>
+          <div id="rp-portrait-ph" style="width:56px;height:56px;border-radius:50%;background:var(--slate-hi);border:2px solid var(--rule-hi);display:flex;align-items:center;justify-content:center;font-size:calc(22px * var(--fs, 1))"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-swords"></use></svg> </div>
         </div>
         <div style="min-width:0;flex:1">
-          <div id="hp-panel-name" style="font-weight:bold;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--bone)"></div>
-          <div id="rp-subtitle" style="font-size:10px;color:var(--ash);margin-top:2px;line-height:1.4"></div>
+          <div id="hp-panel-name" style="font-weight:bold;font-size:calc(13px * var(--fs, 1));overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--bone)"></div>
+          <div id="rp-subtitle" style="font-size:calc(10px * var(--fs, 1));color:var(--ash);margin-top:2px;line-height:1.4"></div>
         </div>
       </div>
 
@@ -299,7 +301,7 @@
           <div class="rp-stat-nums">
             <span id="hp-cur-display" class="rp-stat-cur" style="color:var(--verdigris)">0</span><span class="rp-stat-sep">/</span><span id="hp-max-display" class="rp-stat-max">0</span>
           </div>
-          <div id="hp-temp-display-wrap" style="display:none;font-size:9px;color:var(--arc);text-align:center;margin-bottom:1px">+<span id="hp-temp-display">0</span> temp</div>
+          <div id="hp-temp-display-wrap" style="display:none;font-size:calc(9px * var(--fs, 1));color:var(--arc);text-align:center;margin-bottom:1px">+<span id="hp-temp-display">0</span> temp</div>
           <div class="rp-stat-lbl">HIT POINTS</div>
         </div>
         <div class="rp-stat-divider"></div>
@@ -312,7 +314,7 @@
         <div class="rp-stat-divider" id="rp-speed-div"></div>
         <div class="rp-stat-block" id="rp-speed-block">
           <div class="rp-stat-nums">
-            <span id="rp-speed-val" class="rp-stat-cur">30</span><span class="rp-stat-sep" style="font-size:10px">ft</span>
+            <span id="rp-speed-val" class="rp-stat-cur">30</span><span class="rp-stat-sep" style="font-size:calc(10px * var(--fs, 1))">ft</span>
           </div>
           <div class="rp-stat-lbl">SPEED</div>
         </div>
@@ -347,8 +349,8 @@
 
       <!-- Initiative roll + edit label (DM only) — directly below Temp HP -->
       <div id="hp-init-row" style="display:none;border-top:1px solid var(--rule-hi);padding:6px 8px">
-        <button id="hp-init-btn" class="btn sm" onclick="rollTokenInitiative()" style="width:100%;font-size:12px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg> Roll Initiative</button>
-        <button class="btn sm" onclick="openEditLabel()" style="width:100%;font-size:12px;margin-top:4px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-pencil"></use></svg> Edit Identifier</button>
+        <button id="hp-init-btn" class="btn sm" onclick="rollTokenInitiative()" style="width:100%;font-size:calc(12px * var(--fs, 1))"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg> Roll Initiative</button>
+        <button class="btn sm" onclick="openEditLabel()" style="width:100%;font-size:calc(12px * var(--fs, 1));margin-top:4px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-pencil"></use></svg> Edit Identifier</button>
       </div>
 
       <!-- Character / Monster sheet content -->
@@ -356,17 +358,17 @@
 
       <!-- Visibility toggle (DM only) -->
       <div id="hp-vis-row" style="display:none;border-top:1px solid var(--rule-hi);padding:6px 8px">
-        <button id="hp-vis-btn" class="btn sm" onclick="toggleTokenVisibility()" style="width:100%;font-size:12px"></button>
+        <button id="hp-vis-btn" class="btn sm" onclick="toggleTokenVisibility()" style="width:100%;font-size:calc(12px * var(--fs, 1))"></button>
       </div>
 
       <!-- Token portrait upload (DM only, monster tokens) -->
       <div id="hp-portrait-row" style="display:none;border-top:1px solid var(--rule-hi);padding:6px 8px">
-        <div style="font-size:10px;color:var(--ash);margin-bottom:6px">Token Portrait</div>
+        <div style="font-size:calc(10px * var(--fs, 1));color:var(--ash);margin-bottom:6px">Token Portrait</div>
         <div style="display:flex;align-items:center;gap:8px">
           <img id="hp-portrait-preview" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:1px solid var(--rule-hi);display:none" alt="">
           <div style="display:flex;flex-direction:column;gap:4px;flex:1">
-            <button class="btn sm" onclick="openTokenPortraitUpload()" style="font-size:11px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-camera"></use></svg> Upload Portrait</button>
-            <button id="hp-portrait-reset-btn" class="btn sm" onclick="removeTokenCustomPortrait()" style="font-size:11px;display:none"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-undo"></use></svg> Reset to Default</button>
+            <button class="btn sm" onclick="openTokenPortraitUpload()" style="font-size:calc(11px * var(--fs, 1))"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-camera"></use></svg> Upload Portrait</button>
+            <button id="hp-portrait-reset-btn" class="btn sm" onclick="removeTokenCustomPortrait()" style="font-size:calc(11px * var(--fs, 1));display:none"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-undo"></use></svg> Reset to Default</button>
           </div>
         </div>
         <input type="file" id="hp-portrait-input" accept="image/*" style="display:none" onchange="onTokenPortraitChosen(this)">
@@ -374,9 +376,9 @@
 
       <!-- Edit label inline -->
       <div id="hp-label-row" style="display:none;border-top:1px solid var(--rule-hi);padding:6px 8px">
-        <div style="font-size:10px;color:var(--ash);margin-bottom:4px">Identifier (shown to players)</div>
+        <div style="font-size:calc(10px * var(--fs, 1));color:var(--ash);margin-bottom:4px">Identifier (shown to players)</div>
         <div style="display:flex;gap:4px">
-          <input id="hp-label-input" type="text" style="flex:1;background:var(--slate-hi);border:1px solid var(--rule-hi);color:var(--bone);border-radius:3px;padding:3px 6px;font-size:12px" placeholder="e.g. A3" onkeydown="if(event.key==='Enter')saveEditLabel();else if(event.key==='Escape')cancelEditLabel();">
+          <input id="hp-label-input" type="text" style="flex:1;background:var(--slate-hi);border:1px solid var(--rule-hi);color:var(--bone);border-radius:3px;padding:3px 6px;font-size:calc(12px * var(--fs, 1))" placeholder="e.g. A3" onkeydown="if(event.key==='Enter')saveEditLabel();else if(event.key==='Escape')cancelEditLabel();">
           <button class="btn sm success" onclick="saveEditLabel()">Save</button>
           <button class="btn sm" onclick="cancelEditLabel()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg> </button>
         </div>
@@ -384,9 +386,9 @@
 
       <!-- Token assignment (DM only) -->
       <div id="hp-assign-row" style="display:none;border-top:1px solid var(--rule-hi);padding:6px 8px">
-        <div style="font-size:10px;color:var(--ash);margin-bottom:4px">Assign to character</div>
+        <div style="font-size:calc(10px * var(--fs, 1));color:var(--ash);margin-bottom:4px">Assign to character</div>
         <div style="display:flex;gap:4px">
-          <select id="hp-assign-sel" style="flex:1;background:var(--slate-hi);border:1px solid var(--rule-hi);color:var(--bone);border-radius:3px;padding:3px 6px;font-size:12px"></select>
+          <select id="hp-assign-sel" style="flex:1;background:var(--slate-hi);border:1px solid var(--rule-hi);color:var(--bone);border-radius:3px;padding:3px 6px;font-size:calc(12px * var(--fs, 1))"></select>
           <button class="btn sm success" onclick="saveTokenAssignment()">Assign</button>
           <button id="hp-unassign-btn" class="btn sm" onclick="unassignToken()" style="display:none">Unassign</button>
         </div>
@@ -425,7 +427,7 @@
       <div class="chat-upload-track"><div class="chat-upload-fill"></div></div>
     </div>
     <div class="chat-input-row">
-      <select id="chat-to" class="chat-to-sel" style="flex:0 0 auto;width:auto;max-width:118px;min-width:74px;font-size:11px;padding:4px 5px" title="Who can read this message" aria-label="Message recipient"><option value="">Everyone</option></select>
+      <select id="chat-to" class="chat-to-sel" style="flex:0 0 auto;width:auto;max-width:118px;min-width:74px;font-size:calc(11px * var(--fs, 1));padding:4px 5px" title="Who can read this message" aria-label="Message recipient"><option value="">Everyone</option></select>
       <input type="text" id="chat-input" class="chat-input" placeholder="Message, /r 2d6+5 or /dmg 1d6 piercing, 2d8 fire…" autocomplete="off" onkeydown="if(event.key==='Enter')sendChatInput()">
       <label class="dice-btn chat-img-btn" id="chat-img-label" title="Share image" style="cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0 7px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-paperclip"></use></svg> <input type="file" id="chat-img-input" accept="image/*" style="display:none" onchange="handleChatImageFile(this.files[0])"></label>
       <button class="dice-btn chat-send-btn" id="chat-send-btn" onclick="sendChatInput()">Send</button>
@@ -438,14 +440,14 @@
   <div style="background:var(--slate);border:1px solid var(--rule-hi);border-radius:8px;padding:16px 20px;min-width:220px;max-width:280px" onclick="event.stopPropagation()">
     <div class="lt-modal-title" style="margin-bottom:var(--s3)"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg> Roll Initiative</div>
     <div style="margin-bottom:8px">
-      <div style="font-size:10px;color:var(--ash);margin-bottom:3px">Name</div>
-      <input id="init-roll-name" type="text" style="width:100%;background:var(--slate-hi);border:1px solid var(--rule-hi);color:var(--bone);border-radius:4px;padding:5px 7px;font-size:12px;box-sizing:border-box" placeholder="Your name">
+      <div style="font-size:calc(10px * var(--fs, 1));color:var(--ash);margin-bottom:3px">Name</div>
+      <input id="init-roll-name" type="text" style="width:100%;background:var(--slate-hi);border:1px solid var(--rule-hi);color:var(--bone);border-radius:4px;padding:5px 7px;font-size:calc(12px * var(--fs, 1));box-sizing:border-box" placeholder="Your name">
     </div>
     <div style="margin-bottom:10px">
-      <div style="font-size:10px;color:var(--ash);margin-bottom:3px">Initiative Bonus</div>
-      <input id="init-roll-bonus" type="number" value="0" style="width:80px;background:var(--slate-hi);border:1px solid var(--rule-hi);color:var(--bone);border-radius:4px;padding:5px 7px;font-size:12px" oninput="_updateInitRollPreview()">
+      <div style="font-size:calc(10px * var(--fs, 1));color:var(--ash);margin-bottom:3px">Initiative Bonus</div>
+      <input id="init-roll-bonus" type="number" value="0" style="width:80px;background:var(--slate-hi);border:1px solid var(--rule-hi);color:var(--bone);border-radius:4px;padding:5px 7px;font-size:calc(12px * var(--fs, 1))" oninput="_updateInitRollPreview()">
     </div>
-    <div id="init-roll-preview" style="font-size:11px;color:var(--ash);margin-bottom:12px;text-align:center">1d20 + 0</div>
+    <div id="init-roll-preview" style="font-size:calc(11px * var(--fs, 1));color:var(--ash);margin-bottom:12px;text-align:center">1d20 + 0</div>
     <div style="display:flex;gap:6px">
       <button class="btn sm" onclick="confirmInitRoll()" style="flex:1;font-weight:bold">Roll</button>
       <button class="btn sm" onclick="closeInitRollModal()" style="flex:1">Cancel</button>
@@ -457,25 +459,25 @@
 <div id="group-init-modal" style="position:fixed;inset:0;background:var(--scrim);display:none;align-items:center;justify-content:center;z-index:2500" onclick="closeMonsterGroupInitModal()">
   <div style="background:var(--slate);border:1px solid var(--rule-hi);border-radius:8px;padding:16px 20px;min-width:240px;max-width:300px" onclick="event.stopPropagation()">
     <div class="lt-modal-title" style="margin-bottom:var(--s2)"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg> Roll Monster Initiative</div>
-    <div id="group-init-desc" style="font-size:11px;color:var(--ash);margin-bottom:10px"></div>
+    <div id="group-init-desc" style="font-size:calc(11px * var(--fs, 1));color:var(--ash);margin-bottom:10px"></div>
     <div id="group-init-mode-row" style="margin-bottom:8px">
-      <div style="font-size:10px;color:var(--ash);margin-bottom:4px">Mode</div>
+      <div style="font-size:calc(10px * var(--fs, 1));color:var(--ash);margin-bottom:4px">Mode</div>
       <div style="display:flex;gap:4px">
-        <button id="group-init-btn-merged" class="btn sm" onclick="setGroupInitMode('merged')" style="flex:1;font-size:11px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-swords"></use></svg> Merged</button>
-        <button id="group-init-btn-individual" class="btn sm" onclick="setGroupInitMode('individual')" style="flex:1;font-size:11px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg> Individual</button>
+        <button id="group-init-btn-merged" class="btn sm" onclick="setGroupInitMode('merged')" style="flex:1;font-size:calc(11px * var(--fs, 1))"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-swords"></use></svg> Merged</button>
+        <button id="group-init-btn-individual" class="btn sm" onclick="setGroupInitMode('individual')" style="flex:1;font-size:calc(11px * var(--fs, 1))"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg> Individual</button>
       </div>
     </div>
     <div style="margin-bottom:12px">
-      <div style="font-size:10px;color:var(--ash);margin-bottom:4px">Roll</div>
+      <div style="font-size:calc(10px * var(--fs, 1));color:var(--ash);margin-bottom:4px">Roll</div>
       <div style="display:flex;gap:4px">
-        <button id="group-init-btn-normal" class="btn sm" onclick="setGroupInitRollType('normal')" style="flex:1;font-size:11px">Normal</button>
-        <button id="group-init-btn-adv" class="btn sm" onclick="setGroupInitRollType('adv')" style="flex:1;font-size:11px">Adv</button>
-        <button id="group-init-btn-dis" class="btn sm" onclick="setGroupInitRollType('dis')" style="flex:1;font-size:11px">Dis</button>
+        <button id="group-init-btn-normal" class="btn sm" onclick="setGroupInitRollType('normal')" style="flex:1;font-size:calc(11px * var(--fs, 1))">Normal</button>
+        <button id="group-init-btn-adv" class="btn sm" onclick="setGroupInitRollType('adv')" style="flex:1;font-size:calc(11px * var(--fs, 1))">Adv</button>
+        <button id="group-init-btn-dis" class="btn sm" onclick="setGroupInitRollType('dis')" style="flex:1;font-size:calc(11px * var(--fs, 1))">Dis</button>
       </div>
     </div>
     <div style="display:flex;gap:4px">
-      <button class="btn sm success" onclick="confirmGroupInitRoll()" style="flex:1;font-size:12px">Roll Initiative</button>
-      <button class="btn sm" onclick="closeMonsterGroupInitModal()" style="font-size:12px">Cancel</button>
+      <button class="btn sm success" onclick="confirmGroupInitRoll()" style="flex:1;font-size:calc(12px * var(--fs, 1))">Roll Initiative</button>
+      <button class="btn sm" onclick="closeMonsterGroupInitModal()" style="font-size:calc(12px * var(--fs, 1))">Cancel</button>
     </div>
   </div>
 </div>
@@ -484,29 +486,29 @@
 <div id="group-check-modal" style="position:fixed;inset:0;background:var(--scrim);display:none;align-items:center;justify-content:center;z-index:2500" onclick="closeGroupCheckModal()">
   <div style="background:var(--slate);border:1px solid var(--rule-hi);border-radius:8px;padding:16px 20px;min-width:260px;max-width:320px" onclick="event.stopPropagation()">
     <div id="group-check-title" class="lt-modal-title" style="margin-bottom:var(--s2)"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg> Group Ability Check</div>
-    <div id="group-check-desc" style="font-size:11px;color:var(--ash);margin-bottom:10px"></div>
+    <div id="group-check-desc" style="font-size:calc(11px * var(--fs, 1));color:var(--ash);margin-bottom:10px"></div>
     <div style="margin-bottom:8px">
-      <div style="font-size:10px;color:var(--ash);margin-bottom:4px">Ability</div>
+      <div style="font-size:calc(10px * var(--fs, 1));color:var(--ash);margin-bottom:4px">Ability</div>
       <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:3px">
-        <button id="group-check-ab-0" class="btn sm" onclick="setGroupCheckAbility(0)" style="font-size:11px;padding:4px 0">STR</button>
-        <button id="group-check-ab-1" class="btn sm" onclick="setGroupCheckAbility(1)" style="font-size:11px;padding:4px 0">DEX</button>
-        <button id="group-check-ab-2" class="btn sm" onclick="setGroupCheckAbility(2)" style="font-size:11px;padding:4px 0">CON</button>
-        <button id="group-check-ab-3" class="btn sm" onclick="setGroupCheckAbility(3)" style="font-size:11px;padding:4px 0">INT</button>
-        <button id="group-check-ab-4" class="btn sm" onclick="setGroupCheckAbility(4)" style="font-size:11px;padding:4px 0">WIS</button>
-        <button id="group-check-ab-5" class="btn sm" onclick="setGroupCheckAbility(5)" style="font-size:11px;padding:4px 0">CHA</button>
+        <button id="group-check-ab-0" class="btn sm" onclick="setGroupCheckAbility(0)" style="font-size:calc(11px * var(--fs, 1));padding:4px 0">STR</button>
+        <button id="group-check-ab-1" class="btn sm" onclick="setGroupCheckAbility(1)" style="font-size:calc(11px * var(--fs, 1));padding:4px 0">DEX</button>
+        <button id="group-check-ab-2" class="btn sm" onclick="setGroupCheckAbility(2)" style="font-size:calc(11px * var(--fs, 1));padding:4px 0">CON</button>
+        <button id="group-check-ab-3" class="btn sm" onclick="setGroupCheckAbility(3)" style="font-size:calc(11px * var(--fs, 1));padding:4px 0">INT</button>
+        <button id="group-check-ab-4" class="btn sm" onclick="setGroupCheckAbility(4)" style="font-size:calc(11px * var(--fs, 1));padding:4px 0">WIS</button>
+        <button id="group-check-ab-5" class="btn sm" onclick="setGroupCheckAbility(5)" style="font-size:calc(11px * var(--fs, 1));padding:4px 0">CHA</button>
       </div>
     </div>
     <div style="margin-bottom:12px">
-      <div style="font-size:10px;color:var(--ash);margin-bottom:4px">Roll</div>
+      <div style="font-size:calc(10px * var(--fs, 1));color:var(--ash);margin-bottom:4px">Roll</div>
       <div style="display:flex;gap:4px">
-        <button id="group-check-rt-normal" class="btn sm" onclick="setGroupCheckRollType('normal')" style="flex:1;font-size:11px">Normal</button>
-        <button id="group-check-rt-adv" class="btn sm" onclick="setGroupCheckRollType('adv')" style="flex:1;font-size:11px">Adv</button>
-        <button id="group-check-rt-dis" class="btn sm" onclick="setGroupCheckRollType('dis')" style="flex:1;font-size:11px">Dis</button>
+        <button id="group-check-rt-normal" class="btn sm" onclick="setGroupCheckRollType('normal')" style="flex:1;font-size:calc(11px * var(--fs, 1))">Normal</button>
+        <button id="group-check-rt-adv" class="btn sm" onclick="setGroupCheckRollType('adv')" style="flex:1;font-size:calc(11px * var(--fs, 1))">Adv</button>
+        <button id="group-check-rt-dis" class="btn sm" onclick="setGroupCheckRollType('dis')" style="flex:1;font-size:calc(11px * var(--fs, 1))">Dis</button>
       </div>
     </div>
     <div style="display:flex;gap:4px">
-      <button class="btn sm success" onclick="confirmGroupCheckRoll()" style="flex:1;font-size:12px">Roll</button>
-      <button class="btn sm" onclick="closeGroupCheckModal()" style="font-size:12px">Cancel</button>
+      <button class="btn sm success" onclick="confirmGroupCheckRoll()" style="flex:1;font-size:calc(12px * var(--fs, 1))">Roll</button>
+      <button class="btn sm" onclick="closeGroupCheckModal()" style="font-size:calc(12px * var(--fs, 1))">Cancel</button>
     </div>
   </div>
 </div>
@@ -521,9 +523,9 @@
       <button class="adv-btn dis" onclick="confirmRoll('dis')">Disadvantage</button>
     </div>
     <div style="margin-top:10px;text-align:center">
-      <button class="btn" onclick="advClose()" style="font-size:11px;padding:3px 12px">Cancel</button>
+      <button class="btn" onclick="advClose()" style="font-size:calc(11px * var(--fs, 1));padding:3px 12px">Cancel</button>
     </div>
-    <div style="font-size:10px;color:var(--ash);margin-top:8px;text-align:center">A / N / D · Esc to cancel</div>
+    <div style="font-size:calc(10px * var(--fs, 1));color:var(--ash);margin-top:8px;text-align:center">A / N / D · Esc to cancel</div>
   </div>
 </div>
 
@@ -539,7 +541,7 @@
     <div id="tok-monster-search-wrap" style="display:none;padding:6px 8px 0">
       <input type="text" id="tok-monster-search" placeholder="Search monsters…" autocomplete="off"
         oninput="filterMonsterList(this.value)"
-        style="width:100%;box-sizing:border-box;background:var(--slate-hi);border:1px solid var(--rule-hi);color:var(--bone);border-radius:4px;padding:5px 10px;font-size:12px;outline:none">
+        style="width:100%;box-sizing:border-box;background:var(--slate-hi);border:1px solid var(--rule-hi);color:var(--bone);border-radius:4px;padding:5px 10px;font-size:calc(12px * var(--fs, 1));outline:none">
     </div>
     <div style="max-height:340px;overflow-y:auto;padding:8px">
       <div id="tok-tab-chars"></div>
@@ -552,8 +554,8 @@
       </div>
     </div>
     <div style="padding:8px 8px 0;border-top:1px solid var(--rule-hi);display:flex;align-items:center;gap:8px">
-      <label class="lbl" style="font-size:11px;color:var(--ash);white-space:nowrap">Token Size:</label>
-      <select id="tok-size-sel" style="background:var(--slate-hi);border:1px solid var(--rule-hi);color:var(--bone);border-radius:3px;padding:3px 6px;font-size:12px">
+      <label class="lbl" style="font-size:calc(11px * var(--fs, 1));color:var(--ash);white-space:nowrap">Token Size:</label>
+      <select id="tok-size-sel" style="background:var(--slate-hi);border:1px solid var(--rule-hi);color:var(--bone);border-radius:3px;padding:3px 6px;font-size:calc(12px * var(--fs, 1))">
         <option value="1">Medium (1×1)</option>
         <option value="2">Large (2×2)</option>
         <option value="3">Huge (3×3)</option>
@@ -561,9 +563,9 @@
       </select>
     </div>
     <div id="tok-identifier-row" style="display:none;padding:4px 8px 0;align-items:center;gap:8px">
-      <label class="lbl" style="font-size:11px;color:var(--ash);white-space:nowrap">Identifier:</label>
+      <label class="lbl" style="font-size:calc(11px * var(--fs, 1));color:var(--ash);white-space:nowrap">Identifier:</label>
       <input type="text" id="tok-identifier" maxlength="12" placeholder="A, B, #1 … (auto if blank)"
-        style="background:var(--slate-hi);border:1px solid var(--rule-hi);color:var(--bone);border-radius:3px;padding:3px 6px;font-size:12px;flex:1">
+        style="background:var(--slate-hi);border:1px solid var(--rule-hi);color:var(--bone);border-radius:3px;padding:3px 6px;font-size:calc(12px * var(--fs, 1));flex:1">
     </div>
     <div class="modal-btns">
       <!-- Wiping the map is the opposite of this modal's job, so it sits apart on
@@ -586,9 +588,9 @@
       <button class="btn sm" onclick="closeDiceRollerModal()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg> </button>
     </div>
     <div style="overflow-y:auto;padding:12px 16px">
-      <table style="width:100%;border-collapse:collapse;font-size:13px">
+      <table style="width:100%;border-collapse:collapse;font-size:calc(13px * var(--fs, 1))">
         <thead>
-          <tr style="color:var(--ash);font-size:11px">
+          <tr style="color:var(--ash);font-size:calc(11px * var(--fs, 1))">
             <th style="text-align:left;padding:3px 6px;font-weight:normal"></th>
             <th style="padding:3px 4px;text-align:center;font-weight:normal">1</th>
             <th style="padding:3px 4px;text-align:center;font-weight:normal">2</th>
@@ -601,12 +603,12 @@
         <tbody id="dice-roller-tbody"></tbody>
       </table>
       <div style="border-top:1px solid var(--rule-hi);margin-top:10px;padding-top:10px">
-        <div style="color:var(--bone);font-weight:bold;font-size:13px;margin-bottom:8px">Adv. Roller</div>
+        <div style="color:var(--bone);font-weight:bold;font-size:calc(13px * var(--fs, 1));margin-bottom:8px">Adv. Roller</div>
         <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
-          <span style="font-size:11px;color:var(--ash);white-space:nowrap">Mod:</span>
-          <input type="number" id="dice-roller-mod" value="0" style="width:52px;background:var(--slate-hi);border:1px solid var(--rule-hi);color:var(--bone);border-radius:3px;padding:3px 5px;font-size:12px">
-          <span style="font-size:11px;color:var(--ash);white-space:nowrap">Label:</span>
-          <input type="text" id="dice-roller-label" placeholder="d20 roll" style="flex:1;background:var(--slate-hi);border:1px solid var(--rule-hi);color:var(--bone);border-radius:3px;padding:3px 5px;font-size:12px">
+          <span style="font-size:calc(11px * var(--fs, 1));color:var(--ash);white-space:nowrap">Mod:</span>
+          <input type="number" id="dice-roller-mod" value="0" style="width:52px;background:var(--slate-hi);border:1px solid var(--rule-hi);color:var(--bone);border-radius:3px;padding:3px 5px;font-size:calc(12px * var(--fs, 1))">
+          <span style="font-size:calc(11px * var(--fs, 1));color:var(--ash);white-space:nowrap">Label:</span>
+          <input type="text" id="dice-roller-label" placeholder="d20 roll" style="flex:1;background:var(--slate-hi);border:1px solid var(--rule-hi);color:var(--bone);border-radius:3px;padding:3px 5px;font-size:calc(12px * var(--fs, 1))">
         </div>
         <div style="display:flex;gap:6px">
           <button class="btn sm success" onclick="diceRollerD20('adv')" style="flex:1">Advantage</button>
@@ -625,7 +627,7 @@
       <span id="monster-info-table-title"></span>
       <button class="btn sm" onclick="closeMonsterInfoTableModal()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg> </button>
     </div>
-    <div id="monster-info-table-body" style="overflow-y:auto;padding:16px;flex:1;font-size:13px"></div>
+    <div id="monster-info-table-body" style="overflow-y:auto;padding:16px;flex:1;font-size:calc(13px * var(--fs, 1))"></div>
   </div>
 </div>
 
@@ -639,7 +641,7 @@
 </div>
 
 <!-- Toast notification -->
-<div id="toast" style="display:none;position:fixed;top:18px;left:50%;transform:translateX(-50%);background:var(--slate);border:1px solid var(--rule-hi);color:var(--bone);padding:8px 20px;border-radius:6px;font-size:13px;z-index:3000;pointer-events:none;box-shadow:0 2px 12px #0008;white-space:nowrap"></div>
+<div id="toast" style="display:none;position:fixed;top:18px;left:50%;transform:translateX(-50%);background:var(--slate);border:1px solid var(--rule-hi);color:var(--bone);padding:8px 20px;border-radius:6px;font-size:calc(13px * var(--fs, 1));z-index:3000;pointer-events:none;box-shadow:0 2px 12px #0008;white-space:nowrap"></div>
 
 <!-- DM image reveal modal (item 10) — dramatic central reveal, closes per-client -->
 <div id="image-reveal-modal" style="display:none;position:fixed;inset:0;z-index:4000;align-items:center;justify-content:center;padding:24px;pointer-events:none">
@@ -651,7 +653,7 @@
 
 <!-- Weapon attack <svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-arrow-right"></use></svg> Miss / Roll Damage prompt (item 3) -->
 <div id="weapon-dmg-prompt" style="display:none;position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--slate);border:1px solid var(--rule-hi);border-radius:8px;padding:10px 16px;z-index:3200;align-items:center;gap:12px;box-shadow:0 4px 18px #000a">
-  <span id="weapon-dmg-prompt-label" style="font-size:13px;color:var(--bone);font-weight:bold"></span>
+  <span id="weapon-dmg-prompt-label" style="font-size:calc(13px * var(--fs, 1));color:var(--bone);font-weight:bold"></span>
   <button class="btn sm" onclick="weaponDmgMiss()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg> Miss</button>
   <button class="btn primary sm" onclick="weaponDmgRoll()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg> Roll Damage</button>
 </div>
@@ -659,7 +661,7 @@
 <!-- Confirm modal -->
 <div id="confirm-modal" style="display:none;position:fixed;inset:0;background:var(--scrim);align-items:center;justify-content:center;z-index:2800">
   <div style="background:var(--slate);border:1px solid var(--rule-hi);border-radius:6px;padding:20px 24px;min-width:260px;max-width:90vw;text-align:center">
-    <div id="confirm-msg" style="font-size:13px;margin-bottom:16px;color:var(--bone)"></div>
+    <div id="confirm-msg" style="font-size:calc(13px * var(--fs, 1));margin-bottom:16px;color:var(--bone)"></div>
     <div style="display:flex;gap:8px;justify-content:center">
       <button class="btn danger" id="confirm-ok">Confirm</button>
       <button class="btn" id="confirm-cancel">Cancel</button>
@@ -684,7 +686,7 @@
       <button class="btn sm" onclick="closeWaitingPicker()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg> </button>
     </div>
     <div style="padding:12px 16px;overflow-y:auto">
-      <div style="font-size:11px;color:var(--ash);margin-bottom:9px">
+      <div style="font-size:calc(11px * var(--fs, 1));color:var(--ash);margin-bottom:9px">
         Players see the image instead of the map and keep their character panel. You keep the map.
       </div>
       <div id="waiting-picker-body"></div>

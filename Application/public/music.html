@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Written by Irmak Hakman in 2026. -->
+<!-- Written by Irmak Hakman — 2026-10-15 14:01 -->
 <!-- Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) -->
 <html lang="en">
 <head>
@@ -9,13 +9,15 @@
 <link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#080C15">
 <link rel="stylesheet" href="/css/tokens.css">
+<link rel="stylesheet" href="/css/templates.css">
+<script src="/js/lib/template.js"></script>
 <link rel="stylesheet" href="/css/fonts.css">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{height:100%}
 body{
   background:var(--slate); color:var(--bone);
-  font-family:var(--ui); font-size:12px;
+  font-family:var(--ui); font-size:calc(12px * var(--fs, 1));
   display:flex; flex-direction:column; overflow:hidden;
 }
 /* Embedded in the table modal the page is framed by the modal chrome, so it
@@ -38,7 +40,7 @@ body.embed #tracks{flex:none; max-height:46vh; overflow-y:auto}
   flex-shrink:0; display:flex; align-items:center; gap:8px;
   padding:8px 12px; background:var(--wash); border-bottom:1px solid var(--rule);
 }
-#hdr h1{font-size:13px; font-weight:bold; flex:1; white-space:nowrap}
+#hdr h1{font-size:calc(13px * var(--fs, 1)); font-weight:bold; flex:1; white-space:nowrap}
 body.embed #hdr{display:none}
 /* A short window (the desktop Now Playing window) drops the title bar — the
    native window frame already says what this is — and centres the few rows it
@@ -56,23 +58,23 @@ body.embed #hdr{display:none}
 
 /* Now playing */
 #np{display:flex; align-items:center; gap:7px; min-height:18px}
-#np-state{font-size:10px; color:var(--ash); white-space:nowrap; flex-shrink:0}
+#np-state{font-size:calc(10px * var(--fs, 1)); color:var(--ash); white-space:nowrap; flex-shrink:0}
 #np-icon{color:var(--bone); flex-shrink:0}
 #np-name{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
 
 /* Seek + volume */
-#pos,#dur{font-size:10px; white-space:nowrap; min-width:30px; font-variant-numeric:tabular-nums}
+#pos,#dur{font-size:calc(10px * var(--fs, 1)); white-space:nowrap; min-width:30px; font-variant-numeric:tabular-nums}
 #pos{color:var(--bone); text-align:right}
 #dur{color:var(--ash)}
 input[type=range]{cursor:pointer; accent-color:var(--bone); min-width:0}
 #seek{flex:1}
 #vol{width:80px; flex:1; max-width:120px}
-#vol-pct{font-size:10px; color:var(--bone); min-width:30px; text-align:right}
+#vol-pct{font-size:calc(10px * var(--fs, 1)); color:var(--bone); min-width:30px; text-align:right}
 body.readonly #seek{pointer-events:none; cursor:default; opacity:.75}
 
 select,.btn{
   background:var(--slate-hi); border:1px solid var(--rule-hi); color:var(--bone);
-  border-radius:3px; padding:5px 8px; font-size:12px; font-family:inherit;
+  border-radius:3px; padding:5px 8px; font-size:calc(12px * var(--fs, 1)); font-family:inherit;
 }
 select{width:100%}
 .btn{cursor:pointer; white-space:nowrap}
@@ -80,8 +82,8 @@ select{width:100%}
 .btn:disabled{opacity:.45; cursor:default}
 .btn.primary{background:var(--rule); border-color:var(--bone); color:var(--bone); font-weight:bold}
 .btn.danger{color:var(--blood); border-color:rgba(255,136,136,.4)}
-.btn.sm{padding:3px 7px; font-size:11px}
-.btn.lnk{background:none; border:none; color:var(--bone); text-decoration:none; padding:3px 4px; font-size:11px}
+.btn.sm{padding:3px 7px; font-size:calc(11px * var(--fs, 1))}
+.btn.lnk{background:none; border:none; color:var(--bone); text-decoration:none; padding:3px 4px; font-size:calc(11px * var(--fs, 1))}
 .btn.lnk:hover{text-decoration:underline; background:none}
 
 #transport{display:flex; justify-content:center; gap:8px}
@@ -90,13 +92,13 @@ select{width:100%}
 /* Track list */
 #tracks-wrap{flex:1; min-height:0; display:flex; flex-direction:column; border-top:1px solid var(--rule); padding-top:8px}
 #tracks{flex:1; min-height:0; overflow-y:auto; scrollbar-width:thin; scrollbar-color:var(--rule) transparent; margin-top:5px}
-.trk{display:flex; align-items:center; gap:6px; padding:5px 8px; border-radius:3px; cursor:pointer; font-size:12px}
+.trk{display:flex; align-items:center; gap:6px; padding:5px 8px; border-radius:3px; cursor:pointer; font-size:calc(12px * var(--fs, 1))}
 .trk:hover{background:var(--wash)}
 .trk.active{background:var(--rule)}
-.trk-idx{font-size:11px; color:var(--ash); flex-shrink:0; min-width:14px}
+.trk-idx{font-size:calc(11px * var(--fs, 1)); color:var(--ash); flex-shrink:0; min-width:14px}
 .trk.active .trk-idx{color:var(--bone)}
 .trk-name{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
-.empty{font-size:11px; color:var(--ash); text-align:center; padding:10px}
+.empty{font-size:calc(11px * var(--fs, 1)); color:var(--ash); text-align:center; padding:10px}
 
 /* Anything DM-only is hidden up front and removed from the DOM entirely for
    players, so a compact player window is exactly as tall as the three rows it
@@ -108,7 +110,7 @@ body.dm #loops{display:flex}
 body.dm #tracks-wrap{display:flex}
 body.dm #lnk-playlists{display:inline-block}
 
-#owner-note{font-size:10px; color:var(--ash); text-align:center; min-height:12px}
+#owner-note{font-size:calc(10px * var(--fs, 1)); color:var(--ash); text-align:center; min-height:12px}
 </style>
 </head>
 <body>
@@ -163,7 +165,7 @@ body.dm #lnk-playlists{display:inline-block}
 
   <!-- Everyone: this machine's own volume (never broadcast to other players) -->
   <div class="row">
-    <span style="font-size:10px;color:var(--ash);flex-shrink:0">Vol</span>
+    <span style="font-size:calc(10px * var(--fs, 1));color:var(--ash);flex-shrink:0">Vol</span>
     <input type="range" id="vol" min="0" max="100" value="100"
            oninput="onVolInput(this.value)" onchange="onVolInput(this.value)">
     <span id="vol-pct">100%</span>

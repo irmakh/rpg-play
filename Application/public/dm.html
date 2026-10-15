@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Written by Irmak Hakman — 2026-09-26 15:58 -->
+<!-- Written by Irmak Hakman — 2026-10-15 14:01 -->
 <!-- Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) -->
 <html lang="en" class="lamplit">
 <head>
@@ -11,6 +11,8 @@
 <meta name="theme-color" content="#080C15">
 <script>if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js');</script>
 <link rel="stylesheet" href="/css/tokens.css">
+<link rel="stylesheet" href="/css/templates.css">
+<script src="/js/lib/template.js"></script>
 <link rel="stylesheet" href="/css/fonts.css">
 <link rel="stylesheet" href="/css/base.css">
 <link rel="stylesheet" href="/css/dm.css">
@@ -23,7 +25,7 @@
 <script src="/js/lib/auth-ui.js"></script>
 <div class="gate" id="gate">
   <div class="gate-box">
-    <div style="font-size:36px;margin-bottom:10px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg> </div>
+    <div style="font-size:calc(36px * var(--fs, 1));margin-bottom:10px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg> </div>
     <h2>DM Panel</h2>
     <p>Enter master password to access the DM controls.</p>
     <input type="password" id="gate-pw" placeholder="Master password…" autocomplete="off"
@@ -176,7 +178,7 @@
       <div style="display:flex;gap:8px;align-items:center;margin-top:8px">
         <button class="btn primary" id="media-share-btn" onclick="shareMedia()" style="display:none"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-upload"></use></svg> Share to Chat</button>
         <button class="btn" id="media-clear-btn" onclick="clearMedia()" style="display:none"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg> Clear</button>
-        <span id="media-status" style="font-size:11px;min-height:14px"></span>
+        <span id="media-status" style="font-size:calc(11px * var(--fs, 1));min-height:14px"></span>
       </div>
     </div>
   </div>
@@ -187,12 +189,12 @@
     <div class="cb">
       <div class="chat-log" id="chat-log"></div>
       <div class="chat-input-row">
-        <select id="chat-to" class="chat-to-sel" style="flex:0 0 auto;width:auto;max-width:118px;min-width:74px;font-size:11px;padding:4px 5px" title="Who can read this message" aria-label="Message recipient"><option value="">Everyone</option></select>
+        <select id="chat-to" class="chat-to-sel" style="flex:0 0 auto;width:auto;max-width:118px;min-width:74px;font-size:calc(11px * var(--fs, 1));padding:4px 5px" title="Who can read this message" aria-label="Message recipient"><option value="">Everyone</option></select>
         <input type="text" id="chat-input" class="chat-input" placeholder="Message, /r 2d6+5 or /dmg 1d6 piercing, 2d8 fire…" autocomplete="off" onkeydown="if(event.key==='Enter')sendChatInput()">
         <button class="dice-btn chat-send-btn" onclick="sendChatInput()">Send</button>
       </div>
       <div style="margin-top:6px">
-        <button class="btn" onclick="clearChat()" style="color:var(--blood);border-color:var(--blood);font-size:11px;padding:3px 10px" title="Clear all chat messages"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-trash"></use></svg> Clear Chat</button>
+        <button class="btn" onclick="clearChat()" style="color:var(--blood);border-color:var(--blood);font-size:calc(11px * var(--fs, 1));padding:3px 10px" title="Clear all chat messages"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-trash"></use></svg> Clear Chat</button>
       </div>
     </div>
   </div>
@@ -212,7 +214,7 @@
         <label class="lbl">Initiative Bonus</label>
         <input type="number" id="npc-bonus" value="0" min="-10" max="30">
       </div>
-      <div id="npc-err" style="color:var(--blood);font-size:11px;min-height:14px;margin-top:4px"></div>
+      <div id="npc-err" style="color:var(--blood);font-size:calc(11px * var(--fs, 1));min-height:14px;margin-top:4px"></div>
     </div>
     <div class="modal-btns">
       <button class="btn" onclick="closeAddNpcModal()">Cancel</button>
@@ -234,7 +236,7 @@
         <label class="lbl">Roll</label>
         <input type="number" id="edit-roll" min="-10" max="50">
       </div>
-      <div id="edit-err" style="color:var(--blood);font-size:11px;min-height:14px;margin-top:4px"></div>
+      <div id="edit-err" style="color:var(--blood);font-size:calc(11px * var(--fs, 1));min-height:14px;margin-top:4px"></div>
     </div>
     <div class="modal-btns">
       <button class="btn" onclick="closeEditModal()">Cancel</button>
@@ -248,49 +250,49 @@
   <div class="modal-box" style="max-width:360px">
     <div class="ct"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-save"></use></svg> Backup</div>
     <div class="modal-body">
-      <div class="ct" style="font-size:14px;margin-bottom:6px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-save"></use></svg> Records Archive</div>
-      <p style="font-size:12px;color:var(--ash);margin:0 0 12px">
+      <div class="ct" style="font-size:calc(14px * var(--fs, 1));margin-bottom:6px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-save"></use></svg> Records Archive</div>
+      <p style="font-size:calc(12px * var(--fs, 1));color:var(--ash);margin:0 0 12px">
         The sections you tick, as one <code>.tar.gz</code> of JSON files with no images inside — small and quick.
         Images travel in their own archive below. Restore either through <strong>Import</strong>.
       </p>
       <div style="display:flex;flex-direction:column;gap:10px">
-        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px">
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:calc(13px * var(--fs, 1))">
           <input type="checkbox" id="bk-characters" checked style="width:15px;height:15px;accent-color:var(--bone)">
           <span><strong>Characters</strong> — sheets, portraits &amp; media</span>
         </label>
-        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px">
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:calc(13px * var(--fs, 1))">
           <input type="checkbox" id="bk-monsters" checked style="width:15px;height:15px;accent-color:var(--bone)">
           <span><strong>Monsters</strong> — library &amp; portraits</span>
         </label>
-        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px">
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:calc(13px * var(--fs, 1))">
           <input type="checkbox" id="bk-treasury" checked style="width:15px;height:15px;accent-color:var(--bone)">
           <span><strong>Treasury</strong> — items, images, claim &amp; purchase logs</span>
         </label>
-        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px">
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:calc(13px * var(--fs, 1))">
           <input type="checkbox" id="bk-maps" checked style="width:15px;height:15px;accent-color:var(--bone)">
           <span><strong>Maps</strong> — prepared maps, fog &amp; hidden items</span>
         </label>
-        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px">
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:calc(13px * var(--fs, 1))">
           <input type="checkbox" id="bk-waiting" checked style="width:15px;height:15px;accent-color:var(--bone)">
           <span><strong>Waiting screens</strong> — the park pages &amp; their images</span>
         </label>
-        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px">
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:calc(13px * var(--fs, 1))">
           <input type="checkbox" id="bk-handouts" checked style="width:15px;height:15px;accent-color:var(--bone)">
           <span><strong>Handouts</strong> — prompts, reveals, images &amp; who has seen them</span>
         </label>
-        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px">
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:calc(13px * var(--fs, 1))">
           <input type="checkbox" id="bk-events" checked style="width:15px;height:15px;accent-color:var(--bone)">
           <span><strong>Events</strong> — event log, calendar &amp; weather history</span>
         </label>
-        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px">
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:calc(13px * var(--fs, 1))">
           <input type="checkbox" id="bk-music" checked style="width:15px;height:15px;accent-color:var(--bone)">
           <span><strong>Music</strong> — playlists &amp; the sound library</span>
         </label>
-        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px">
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:calc(13px * var(--fs, 1))">
           <input type="checkbox" id="bk-chat" style="width:15px;height:15px;accent-color:var(--bone)">
           <span><strong>Chat log</strong> — the message history</span>
         </label>
-        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px">
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:calc(13px * var(--fs, 1))">
           <input type="checkbox" id="bk-chatmedia" style="width:15px;height:15px;accent-color:var(--bone)">
           <span><strong>Chat media</strong> — every image shared in chat</span>
         </label>
@@ -299,19 +301,19 @@
         <button class="btn success" id="arc-dl-btn" onclick="downloadArchive('records')" style="width:100%"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-arrow-down"></use></svg> Download Records (.tar.gz)</button>
         <button class="btn" id="arc-img-btn" onclick="downloadArchive('images')" style="width:100%"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-image"></use></svg> Download Images (.tar.gz)</button>
       </div>
-      <p style="font-size:11px;color:var(--ash);margin:8px 0 0">
+      <p style="font-size:calc(11px * var(--fs, 1));color:var(--ash);margin:8px 0 0">
         Both downloads follow the ticks above: the images archive carries the pictures, portraits, maps and sound files that the selected sections refer to.
       </p>
-      <div id="arc-status" style="margin-top:10px;font-size:12px;min-height:18px;color:var(--ash)"></div>
+      <div id="arc-status" style="margin-top:10px;font-size:calc(12px * var(--fs, 1));min-height:18px;color:var(--ash)"></div>
 
       <div style="border-top:1px solid var(--rule-hi);margin:16px 0 12px"></div>
-      <div class="ct" style="font-size:14px;margin-bottom:6px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-folder"></use></svg> Raw Database Files</div>
-      <p style="font-size:12px;color:var(--ash);margin:0 0 10px">
+      <div class="ct" style="font-size:calc(14px * var(--fs, 1));margin-bottom:6px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-folder"></use></svg> Raw Database Files</div>
+      <p style="font-size:calc(12px * var(--fs, 1));color:var(--ash);margin:0 0 10px">
         Downloads this campaign's SQLite database files as-is, bundled into one <code>.tar.gz</code> — for a full off-site backup.
         <br><span style="color:var(--blood)">Note:</span> uploaded images &amp; audio are not in here — take the images archive above alongside it.
       </p>
       <button class="btn" id="dbbk-dl-btn" onclick="downloadRawDbBackup()" style="width:100%"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-arrow-down"></use></svg> Download Raw DB Files (.tar.gz)</button>
-      <div id="dbbk-status" style="margin-top:10px;font-size:12px;min-height:18px;color:var(--ash)"></div>
+      <div id="dbbk-status" style="margin-top:10px;font-size:calc(12px * var(--fs, 1));min-height:18px;color:var(--ash)"></div>
     </div>
     <div class="modal-btns">
       <button class="btn" onclick="closeBackupModal()">Close</button>

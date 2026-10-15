@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-10-15 14:01
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -181,8 +181,8 @@ function renderDetail() {
         </div>
 
         <div id="char-setup-step" style="display:none">
-          <div style="font-size:13px;color:var(--bone);font-weight:bold;margin-bottom:4px" id="setup-char-name"></div>
-          <div style="font-size:11px;color:var(--ash);margin-bottom:14px">This character has no password yet.<br>Set one to continue.</div>
+          <div style="font-size:calc(13px * var(--fs, 1));color:var(--bone);font-weight:bold;margin-bottom:4px" id="setup-char-name"></div>
+          <div style="font-size:calc(11px * var(--fs, 1));color:var(--ash);margin-bottom:14px">This character has no password yet.<br>Set one to continue.</div>
           <div class="field">
             <label>New Password</label>
             <input type="password" id="setup-pw1" autocomplete="new-password"

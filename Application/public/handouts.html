@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Written by Irmak Hakman in 2026. -->
+<!-- Written by Irmak Hakman — 2026-10-15 14:01 -->
 <!-- Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) -->
 <html lang="en" class="lamplit">
 <head>
@@ -10,6 +10,8 @@
 <link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#080C15">
 <link rel="stylesheet" href="/css/tokens.css">
+<link rel="stylesheet" href="/css/templates.css">
+<script src="/js/lib/template.js"></script>
 <link rel="stylesheet" href="/css/fonts.css">
 <link rel="stylesheet" href="/css/base.css">
 <link rel="stylesheet" href="/css/handouts.css">
@@ -22,7 +24,7 @@
 <div class="top">
   <a href="/dm.html" class="btn ghost sm" style="text-decoration:none"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-arrow-left"></use></svg> Back</a>
   <h1><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-document"></use></svg> Handouts</h1>
-  <span id="campaign-badge" style="display:none;background:var(--slate-hi);border:1px solid var(--rule-hi);color:var(--ash);padding:2px 8px;border-radius:3px;font-size:11px;cursor:pointer"></span>
+  <span id="campaign-badge" style="display:none;background:var(--slate-hi);border:1px solid var(--rule-hi);color:var(--ash);padding:2px 8px;border-radius:3px;font-size:calc(11px * var(--fs, 1));cursor:pointer"></span>
   <button class="btn sm" data-notif-bell title="Notifications"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-bell"></use></svg> </button>
   <span class="spacer"></span>
   <button class="btn sm" onclick="newHandout()">+ New Handout</button>

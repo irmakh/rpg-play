@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-11 21:20
+// Written by Irmak Hakman — 2026-10-15 14:01
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -340,7 +340,7 @@ function _buildSidePanelItems(d, canEdit) {
       + `<span class="rp-item-box${worn ? ' on' : ''}"></span>`
       + `<span class="rp-item-name">${esc(it.name || 'Item')}</span>${_sideItemChip(it)}${charge}</div>`;
   }).join('');
-  return `<div class="rp-flat-hdr">Items${canEdit ? ' <span style="font-size:8px;opacity:.5;font-weight:normal;letter-spacing:0">(click to wear / remove)</span>' : ''}</div>`
+  return `<div class="rp-flat-hdr">Items${canEdit ? ' <span style="font-size:calc(8px * var(--fs, 1));opacity:.5;font-weight:normal;letter-spacing:0">(click to wear / remove)</span>' : ''}</div>`
     + `<div class="rp-item-grid">${cells}</div>`;
 }
 
@@ -470,9 +470,9 @@ function _renderSidePanelSpell(s, idx, d) {
   const spAtk = d['sp-atk'];
   const nameSpan = `<span class="rp-spell-name" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px" onclick="postSpellInfoFromAll(${idx})" title="Send to chat">${esc(sName)}</span>`;
   const atk = (spAtk !== undefined && spAtk !== null && spAtk !== '')
-    ? `<span class="qroll-val" onclick="event.stopPropagation();qroll('Spell Attack','${escJs(String(spAtk))}')" style="font-size:11px;cursor:pointer" title="Spell attack"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-bolt"></use></svg></span>`
+    ? `<span class="qroll-val" onclick="event.stopPropagation();qroll('Spell Attack','${escJs(String(spAtk))}')" style="font-size:calc(11px * var(--fs, 1));cursor:pointer" title="Spell attack"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-bolt"></use></svg></span>`
     : '';
-  return `<div class="qroll-row" style="padding:3px 10px;font-size:11px">${nameSpan} <span style="font-size:10px;color:var(--ash)">${lvl}</span> ${atk}</div>`;
+  return `<div class="qroll-row" style="padding:3px 10px;font-size:calc(11px * var(--fs, 1))">${nameSpan} <span style="font-size:calc(10px * var(--fs, 1));color:var(--ash)">${lvl}</span> ${atk}</div>`;
 }
 
 function _renderSidePanelCustom(a, canEdit) {

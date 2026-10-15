@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-09-27 12:03
+// Written by Irmak Hakman — 2026-10-15 14:01
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -710,14 +710,14 @@ function appendChatEntry(e) {
   const time = dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   const div = document.createElement('div');
   if (e.id) div.dataset.entryId = e.id;
-  const delBtn = e.id ? `<button onclick="deleteChatMsg('${escJs(e.id)}')" style="background:none;border:none;cursor:pointer;color:var(--ash);font-size:11px;padding:0 0 0 4px;opacity:.6;line-height:1;flex-shrink:0" title="Delete message">✕</button>` : '';
-  const timeCol = `<span style="display:flex;align-items:center"><span style="color:var(--ash);font-size:10px">${time}</span>${delBtn}</span>`;
+  const delBtn = e.id ? `<button onclick="deleteChatMsg('${escJs(e.id)}')" style="background:none;border:none;cursor:pointer;color:var(--ash);font-size:calc(11px * var(--fs, 1));padding:0 0 0 4px;opacity:.6;line-height:1;flex-shrink:0" title="Delete message">✕</button>` : '';
+  const timeCol = `<span style="display:flex;align-items:center"><span style="color:var(--ash);font-size:calc(10px * var(--fs, 1))">${time}</span>${delBtn}</span>`;
 
   if (e.type === 'text') {
     div.className = 'chat-entry chat-text';
     if (e.to) { div.style.borderLeft = '2px solid var(--arc)'; div.style.paddingLeft = '6px'; }
     const pmTag = e.to
-      ? `<span style="font-size:10px;color:var(--arc);font-weight:normal"> 🔒 → ${esc(e.toName || (e.to === 'dm' ? 'DM' : 'someone'))}</span>`
+      ? `<span style="font-size:calc(10px * var(--fs, 1));color:var(--arc);font-weight:normal"> 🔒 → ${esc(e.toName || (e.to === 'dm' ? 'DM' : 'someone'))}</span>`
       : '';
     // Messages flagged html:true (e.g. spell descriptions with 5e.tools links)
     // render as HTML — but only what sanitizeChatHtml() (js/lib/chat-render.js)
@@ -747,10 +747,10 @@ function appendChatEntry(e) {
     } else {
       mediaEl = `<audio class="chat-media-audio" src="${esc(url)}" controls></audio>`;
     }
-    const cap = e.caption ? `<div style="font-size:11px;color:var(--ash);margin-top:4px">${esc(e.caption)}</div>` : '';
+    const cap = e.caption ? `<div style="font-size:calc(11px * var(--fs, 1));color:var(--ash);margin-top:4px">${esc(e.caption)}</div>` : '';
     div.className = 'chat-entry';
     div.innerHTML = `<div style="display:flex;justify-content:space-between;margin-bottom:4px">
-      <span class="ce-sender">${esc(e.sender)} <span style="font-size:10px;color:var(--ash);font-weight:normal">shared media</span></span>
+      <span class="ce-sender">${esc(e.sender)} <span style="font-size:calc(10px * var(--fs, 1));color:var(--ash);font-weight:normal">shared media</span></span>
       ${timeCol}
     </div>${mediaEl}${cap}`;
     log.appendChild(div);
@@ -763,10 +763,10 @@ function appendChatEntry(e) {
   const modStr   = e.modifier ? (e.modifier > 0 ? `+${e.modifier}` : `${e.modifier}`) : '';
   const multiStr = e.results && e.results.length > 1 ? ` <span style="color:var(--ash)">[${e.results.join(', ')}]</span>` : '';
   const labelStr = e.label ? ` <span style="color:var(--ash)">— ${esc(e.label)}</span>` : '';
-  const natStr   = isNat20 ? '<span style="color:var(--verdigris);font-size:10px;font-weight:bold"> ✨ NAT 20!</span>'
-                 : isNat1  ? '<span style="color:var(--blood);font-size:10px;font-weight:bold"> 💀 NAT 1</span>' : '';
+  const natStr   = isNat20 ? '<span style="color:var(--verdigris);font-size:calc(10px * var(--fs, 1));font-weight:bold"> ✨ NAT 20!</span>'
+                 : isNat1  ? '<span style="color:var(--blood);font-size:calc(10px * var(--fs, 1));font-weight:bold"> 💀 NAT 1</span>' : '';
   const descStr = e.description
-    ? `<div style="font-size:10px;color:var(--ash);margin-top:3px;font-style:italic;line-height:1.4;white-space:pre-wrap">${esc(e.description)}</div>`
+    ? `<div style="font-size:calc(10px * var(--fs, 1));color:var(--ash);margin-top:3px;font-style:italic;line-height:1.4;white-space:pre-wrap">${esc(e.description)}</div>`
     : '';
   // chatDamageParts() comes from js/lib/chat-render.js; '' for an ordinary roll,
   // in which case the original single-line dice/label row is kept.
@@ -828,11 +828,11 @@ function renderDmMonsters() {
     return m.name.toLowerCase().includes(q) || t.toLowerCase().includes(q);
   });
   if (dmMonsters.length === 0) {
-    wrap.innerHTML = '<div style="text-align:center;color:var(--ash);font-size:12px;padding:10px 0">No monsters imported yet. Use the <a href="monsters.html" style="color:var(--bone)">Monsters</a> page to import.</div>';
+    wrap.innerHTML = '<div style="text-align:center;color:var(--ash);font-size:calc(12px * var(--fs, 1));padding:10px 0">No monsters imported yet. Use the <a href="monsters.html" style="color:var(--bone)">Monsters</a> page to import.</div>';
     return;
   }
   if (filtered.length === 0) {
-    wrap.innerHTML = '<div style="text-align:center;color:var(--ash);font-size:12px;padding:10px 0">No monsters match your search.</div>';
+    wrap.innerHTML = '<div style="text-align:center;color:var(--ash);font-size:calc(12px * var(--fs, 1));padding:10px 0">No monsters match your search.</div>';
     return;
   }
   const rows = filtered.map(m => {
@@ -844,7 +844,7 @@ function renderDmMonsters() {
     return `<tr>
       <td><strong>${esc(m.name)}</strong></td>
       <td><span class="cr-badge">${esc(m.cr || '?')}</span></td>
-      <td style="color:var(--ash);font-style:italic;font-size:11px">${esc(typeStr)}</td>
+      <td style="color:var(--ash);font-style:italic;font-size:calc(11px * var(--fs, 1))">${esc(typeStr)}</td>
       <td>${esc(String(acVal))}</td>
       <td>${esc(String(hpVal))}</td>
       <td>${esc(spd)}</td>

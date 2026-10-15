@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-09-26 16:38
+// Written by Irmak Hakman — 2026-10-15 14:01
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -27,7 +27,7 @@
 
   const STYLE = `
 .authui-cap{margin-bottom:14px}
-.authui-cap-lbl{display:block;font-size:10px;color:var(--bone,#E6EDF7);margin-bottom:4px}
+.authui-cap-lbl{display:block;font-size:calc(10px * var(--fs, 1));color:var(--bone,#E6EDF7);margin-bottom:4px}
 .authui-cap-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
 .authui-cap-img{display:block;width:220px;max-width:calc(100% - 48px);height:auto;aspect-ratio:22/7;
   border-radius:var(--r-md,6px);background:var(--slate-hi,#1B2740);transition:opacity .15s}

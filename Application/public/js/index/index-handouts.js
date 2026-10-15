@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-09-27 11:13
+// Written by Irmak Hakman — 2026-10-15 14:01
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -52,7 +52,7 @@ function renderHandouts() {
   if (!box) return;
 
   if (!_handouts.length) {
-    box.innerHTML = '<div style="color:var(--ash);font-size:12px;padding:14px 0;text-align:center">'
+    box.innerHTML = '<div style="color:var(--ash);font-size:calc(12px * var(--fs, 1));padding:14px 0;text-align:center">'
       + 'Nothing has been handed to you yet.</div>';
     return;
   }

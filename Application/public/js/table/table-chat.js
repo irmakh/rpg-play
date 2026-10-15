@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-09-27 11:13
+// Written by Irmak Hakman — 2026-10-15 14:01
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -237,7 +237,7 @@ function getChatSender() {
 function postChatInfoCard({ name, meta, text, html, sender } = {}) {
   let body = `<strong>${esc(name || '')}</strong>`;
   const parts = (meta || []).filter(Boolean);
-  if (parts.length) body += `<div style="font-size:10px;opacity:.7;margin-top:1px">${esc(parts.join(' · '))}</div>`;
+  if (parts.length) body += `<div style="font-size:calc(10px * var(--fs, 1));opacity:.7;margin-top:1px">${esc(parts.join(' · '))}</div>`;
   const descHtml = html != null && html !== ''
     ? html
     : (text ? esc(String(text)).replace(/\n/g, '<br>') : '');
@@ -340,7 +340,7 @@ function openDiceRollerModal() {
   if (tbody && !tbody.hasChildNodes()) {
     tbody.innerHTML = DICE_ROLLER_TYPES.map(sides => {
       const cells = [1,2,3,4,5,6].map(n =>
-        `<td style="padding:2px 3px;text-align:center"><button class="btn sm" onclick="rollDiceModal(${n},${sides})" style="min-width:28px;font-size:11px">${n}</button></td>`
+        `<td style="padding:2px 3px;text-align:center"><button class="btn sm" onclick="rollDiceModal(${n},${sides})" style="min-width:28px;font-size:calc(11px * var(--fs, 1))">${n}</button></td>`
       ).join('');
       return `<tr><td style="padding:4px 6px;color:var(--bone);font-weight:bold;white-space:nowrap">d${sides}</td>${cells}</tr>`;
     }).join('');

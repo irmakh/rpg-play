@@ -1,39 +1,39 @@
-/* Written by Irmak Hakman in 2026. */
+/* Written by Irmak Hakman — 2026-10-15 14:01 */
 /* Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) */
 
 *{box-sizing:border-box;margin:0;padding:0}
 
 
-body{font-family:'Segoe UI',sans-serif;background:var(--ink);color:var(--bone);font-size:13px;min-height:100vh}
-h1{color:var(--bone);font-size:22px;margin:0}
+body{font-family:'Segoe UI',sans-serif;background:var(--ink);color:var(--bone);font-size:calc(13px * var(--fs, 1));min-height:100vh}
+h1{color:var(--bone);font-size:calc(22px * var(--fs, 1));margin:0}
 .sheet{max-width:900px;margin:0 auto;padding:16px}
 .card{background:var(--slate);border:1px solid var(--rule-hi);border-radius:6px;overflow:hidden;margin-bottom:14px}
 .cb{padding:12px}
-input[type=text],input[type=number],textarea,select{background:var(--slate-hi);border:1px solid var(--rule-hi);color:var(--bone);border-radius:3px;padding:4px 7px;font-size:12px;font-family:inherit;width:100%}
+input[type=text],input[type=number],textarea,select{background:var(--slate-hi);border:1px solid var(--rule-hi);color:var(--bone);border-radius:3px;padding:4px 7px;font-size:calc(12px * var(--fs, 1));font-family:inherit;width:100%}
 input:focus,textarea:focus,select:focus{outline:none;border-color:var(--arc);background:var(--slate-hi)}
 textarea{resize:vertical;min-height:54px}
-label.lbl{display:block;font-size:10px;color:var(--bone);margin-bottom:2px}
+label.lbl{display:block;font-size:calc(10px * var(--fs, 1));color:var(--bone);margin-bottom:2px}
 .field{margin-bottom:8px}
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
 .g4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px}
 table{width:100%;border-collapse:collapse}
-th{color:var(--bone);font-size:10px;padding:5px 6px;border-bottom:1px solid var(--rule-hi);text-align:left;white-space:nowrap}
-td{padding:5px 6px;border-bottom:1px solid var(--rule);vertical-align:middle;font-size:12px}
-.btn{background:var(--wash);border:1px solid var(--rule-hi);color:var(--bone);padding:5px 14px;border-radius:3px;cursor:pointer;font-size:12px;font-weight:bold}
+th{color:var(--bone);font-size:calc(10px * var(--fs, 1));padding:5px 6px;border-bottom:1px solid var(--rule-hi);text-align:left;white-space:nowrap}
+td{padding:5px 6px;border-bottom:1px solid var(--rule);vertical-align:middle;font-size:calc(12px * var(--fs, 1))}
+.btn{background:var(--wash);border:1px solid var(--rule-hi);color:var(--bone);padding:5px 14px;border-radius:3px;cursor:pointer;font-size:calc(12px * var(--fs, 1));font-weight:bold}
 .btn:hover{background:var(--rule-hi)}
 .btn.primary{background:var(--bone);color:var(--ink);border-color:var(--bone)}
 .btn.primary:hover{background:var(--arc-hi)}
 .btn.danger{border-color:color-mix(in srgb, var(--blood) 40%, transparent);color:var(--blood);background:color-mix(in srgb, var(--blood) 7%, transparent)}
 .btn.danger:hover{background:color-mix(in srgb, var(--blood) 20%, transparent)}
-.btn.sm{padding:2px 8px;font-size:11px}
+.btn.sm{padding:2px 8px;font-size:calc(11px * var(--fs, 1))}
 /* Gate overlay */
 .gate{position:fixed;inset:0;background:var(--ink);display:flex;align-items:center;justify-content:center;z-index:100}
 .gate-box{background:var(--slate);border:1px solid var(--bone);border-radius:8px;padding:32px 36px;min-width:320px;text-align:center}
-.gate-box h2{color:var(--bone);font-size:18px;margin-bottom:6px}
-.gate-box p{font-size:11px;color:var(--ash);margin-bottom:20px}
-.gate-box input{text-align:center;font-size:15px;margin-bottom:10px}
-#gate-err{color:var(--blood);font-size:11px;min-height:16px;margin-bottom:10px}
+.gate-box h2{color:var(--bone);font-size:calc(18px * var(--fs, 1));margin-bottom:6px}
+.gate-box p{font-size:calc(11px * var(--fs, 1));color:var(--ash);margin-bottom:20px}
+.gate-box input{text-align:center;font-size:calc(15px * var(--fs, 1));margin-bottom:10px}
+#gate-err{color:var(--blood);font-size:calc(11px * var(--fs, 1));min-height:16px;margin-bottom:10px}
 /* Modal */
 .modal-overlay{position:fixed;inset:0;background:var(--scrim);display:flex;align-items:center;justify-content:center;z-index:200}
 .modal-box{overflow:hidden;min-width:340px;max-width:480px;width:95%}
@@ -41,17 +41,17 @@ td{padding:5px 6px;border-bottom:1px solid var(--rule);vertical-align:middle;fon
 .modal-btns{display:flex;gap:8px;justify-content:flex-end;padding:10px 16px}
 #armor-fields{display:none}
 #weapon-fields{display:none}
-#item-err{color:var(--blood);font-size:11px;min-height:14px;margin-top:4px}
+#item-err{color:var(--blood);font-size:calc(11px * var(--fs, 1));min-height:14px;margin-top:4px}
 .hdr{display:flex;align-items:center;gap:8px;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap}
 .hdr-left{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .hdr-right{display:flex;align-items:center;gap:6px;flex-shrink:0}
-#theme-sel{background:var(--slate-hi);border:1px solid var(--rule-hi);color:var(--bone);border-radius:3px;padding:3px 4px;font-size:12px;cursor:pointer;width:auto;max-width:46px}
-#status-msg{font-size:11px;color:var(--verdigris);min-height:16px;margin-top:8px}
+#theme-sel{background:var(--slate-hi);border:1px solid var(--rule-hi);color:var(--bone);border-radius:3px;padding:3px 4px;font-size:calc(12px * var(--fs, 1));cursor:pointer;width:auto;max-width:46px}
+#status-msg{font-size:calc(11px * var(--fs, 1));color:var(--verdigris);min-height:16px;margin-top:8px}
 #status-msg.error{color:var(--blood)}
 .price-row{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
-.price-preview{font-size:11px;color:var(--bone);margin-top:4px;min-height:15px}
+.price-preview{font-size:calc(11px * var(--fs, 1));color:var(--bone);margin-top:4px;min-height:15px}
 .tabs{display:flex;gap:6px;margin-bottom:0}
-.tab{background:var(--slate);border:1px solid var(--rule-hi);border-bottom:none;color:var(--ash);padding:6px 18px;border-radius:4px 4px 0 0;cursor:pointer;font-size:12px;font-weight:bold}
+.tab{background:var(--slate);border:1px solid var(--rule-hi);border-bottom:none;color:var(--ash);padding:6px 18px;border-radius:4px 4px 0 0;cursor:pointer;font-size:calc(12px * var(--fs, 1));font-weight:bold}
 .tab.active{background:var(--arc);color:var(--ink);border-color:var(--arc)}
 .tab-panel{display:none}.tab-panel.active{display:block}
 .tab-wrap{background:var(--slate);border:1px solid var(--rule-hi);border-radius:0 4px 6px 6px;overflow:hidden;margin-bottom:14px}

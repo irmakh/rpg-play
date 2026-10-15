@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-10-15 14:01
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -220,7 +220,7 @@ function renderRecipients(h) {
       <tr>
         <td>${esc(charName(r.charId))}</td>
         <td>${rolled
-              ? `<span class="roll-total">${r.rollTotal}</span> <span class="muted" style="font-size:10px">${esc(r.rollDetail || '')}</span>`
+              ? `<span class="roll-total">${r.rollTotal}</span> <span class="muted" style="font-size:calc(10px * var(--fs, 1))">${esc(r.rollDetail || '')}</span>`
               : '<span class="muted">—</span>'}</td>
         <td><span class="pill ${esc(r.outcome)}">${esc(r.outcome)}</span>${
               r.suggested && r.outcome === 'rolled'
