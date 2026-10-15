@@ -21,6 +21,14 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [269] — 2026-10-15 — The HTTPS certificate renews itself again
+
+- The site's certificate renews automatically again, and a renewed certificate is
+  picked up without restarting the server.
+- The server can run as a normal user instead of root.
+
+---
+
 ## [268] — 2026-10-15 — Security hardening
 
 - Security hardening.

@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 13:07
+// Written by Irmak Hakman — 2026-10-15 13:31
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -494,7 +494,7 @@ const MAX_MEDIA_BYTES = 25 * 1024 * 1024;
 // Bump this number whenever frontend JS or CSS files change.
 // Also bump CACHE in public/sw.js to the same value.
 // Both must always match. See deployment notes in CLAUDE.md.
-const FRONTEND_VERSION = 268;
+const FRONTEND_VERSION = 269;
 
 // ── Express app ───────────────────────────────────────────────────────────────
 const app = express();
@@ -983,9 +983,46 @@ httpServer.listen(PORT, () => {
 });
 
 if (useSSL) {
+  // Let's Encrypt renewal (certbot --webroot) proves the domain by placing a
+  // token file under ACME_WEBROOT and fetching it over plain HTTP on port 80.
+  // certbot's 'standalone' mode wanted port 80 for itself, which this redirect
+  // already holds, so every automatic renewal failed until v269. The token name
+  // is checked against the ACME alphabet, so nothing outside that one folder
+  // can be read.
+  const ACME_WEBROOT = process.env.ACME_WEBROOT || path.join(__dirname, 'acme');
+  const ACME_PREFIX  = '/.well-known/acme-challenge/';
   const redirectServer = createHttpServer((req, res) => {
+    const url = (req.url || '').split('?')[0];
+    if (url.startsWith(ACME_PREFIX)) {
+      const token = url.slice(ACME_PREFIX.length);
+      if (/^[A-Za-z0-9_-]+$/.test(token)) {
+        const file = path.join(ACME_WEBROOT, '.well-known', 'acme-challenge', token);
+        return fs.readFile(file, (err, data) => {
+          if (err) { res.writeHead(404); return res.end(); }
+          res.writeHead(200, { 'Content-Type': 'text/plain' });
+          res.end(data);
+        });
+      }
+      res.writeHead(404); return res.end();
+    }
     res.writeHead(301, { Location: `https://${req.headers.host}${req.url}` });
     res.end();
   });
   redirectServer.listen(HTTP_PORT, () => console.log(`HTTP redirect listening on port ${HTTP_PORT}`));
+
+  // A renewed certificate is picked up without a restart: twice a day, if the
+  // files have changed, the HTTPS server swaps them in for new connections.
+  let certStamp = '';
+  const stampOf = () => { try { return [SSL_KEY, SSL_CERT].map(f => fs.statSync(f).mtimeMs).join(':'); } catch { return ''; } };
+  certStamp = stampOf();
+  const certReload = setInterval(() => {
+    const now = stampOf();
+    if (!now || now === certStamp) return;
+    try {
+      httpServer.setSecureContext({ key: fs.readFileSync(SSL_KEY), cert: fs.readFileSync(SSL_CERT) });
+      certStamp = now;
+      console.log('[ssl] renewed certificate loaded');
+    } catch (err) { console.error('[ssl] could not load the renewed certificate:', err.message); }
+  }, 12 * 60 * 60 * 1000);
+  certReload.unref?.();
 }
