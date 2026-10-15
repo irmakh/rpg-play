@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 14:01
+// Written by Irmak Hakman — 2026-10-15 14:25
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -241,7 +241,7 @@ function postChatInfoCard({ name, meta, text, html, sender } = {}) {
   const descHtml = html != null && html !== ''
     ? html
     : (text ? esc(String(text)).replace(/\n/g, '<br>') : '');
-  if (descHtml) body += `<div style="margin-top:4px">${descHtml}</div>`;
+  if (descHtml) body += `<div style="margin-top:calc(4px*var(--fs, 1))">${descHtml}</div>`;
   // The server keeps html:true only from a logged-in sender (v235), so the card
   // carries our credential; without it the card would arrive as escaped text.
   return fetch('/api/chat', {
@@ -340,9 +340,9 @@ function openDiceRollerModal() {
   if (tbody && !tbody.hasChildNodes()) {
     tbody.innerHTML = DICE_ROLLER_TYPES.map(sides => {
       const cells = [1,2,3,4,5,6].map(n =>
-        `<td style="padding:2px 3px;text-align:center"><button class="btn sm" onclick="rollDiceModal(${n},${sides})" style="min-width:28px;font-size:calc(11px * var(--fs, 1))">${n}</button></td>`
+        `<td style="padding:calc(2px*var(--fs, 1)) calc(3px*var(--fs, 1));text-align:center"><button class="btn sm" onclick="rollDiceModal(${n},${sides})" style="min-width:calc(28px*var(--fs, 1));font-size:calc(11px * var(--fs, 1))">${n}</button></td>`
       ).join('');
-      return `<tr><td style="padding:4px 6px;color:var(--bone);font-weight:bold;white-space:nowrap">d${sides}</td>${cells}</tr>`;
+      return `<tr><td style="padding:calc(4px*var(--fs, 1)) calc(6px*var(--fs, 1));color:var(--bone);font-weight:bold;white-space:nowrap">d${sides}</td>${cells}</tr>`;
     }).join('');
   }
   document.getElementById('dice-roller-modal').style.display = 'flex';

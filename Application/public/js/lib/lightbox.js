@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 14:01
+// Written by Irmak Hakman — 2026-10-15 14:25
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -14,7 +14,7 @@ function lightboxOpen(src, mimeType) {
 
   const closeBtn = document.createElement('button');
   closeBtn.innerHTML = '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg>';
-  closeBtn.style.cssText = 'position:absolute;top:14px;right:18px;background:none;border:none;color:#fff;font-size:calc(22px * var(--fs, 1));cursor:pointer;line-height:1;padding:4px;opacity:.8';
+  closeBtn.style.cssText = 'position:absolute;top:calc(14px*var(--fs, 1));right:calc(18px*var(--fs, 1));background:none;border:none;color:#fff;font-size:calc(22px * var(--fs, 1));cursor:pointer;line-height:1;padding:calc(4px*var(--fs, 1));opacity:.8';
   closeBtn.onmouseenter = () => { closeBtn.style.opacity = '1'; };
   closeBtn.onmouseleave = () => { closeBtn.style.opacity = '.8'; };
   closeBtn.onclick = e => { e.stopPropagation(); lb.remove(); };
@@ -25,13 +25,13 @@ function lightboxOpen(src, mimeType) {
     vid.src = src;
     vid.controls = true;
     vid.autoplay = true;
-    vid.style.cssText = 'max-width:92vw;max-height:88vh;border-radius:6px;box-shadow:0 8px 40px #000;cursor:default';
+    vid.style.cssText = 'max-width:92vw;max-height:88vh;border-radius:calc(6px*var(--fs, 1));box-shadow:0 8px 40px #000;cursor:default';
     vid.onclick = e => e.stopPropagation();
     lb.appendChild(vid);
   } else {
     const img = document.createElement('img');
     img.src = src;
-    img.style.cssText = 'max-width:94vw;max-height:94vh;border-radius:6px;box-shadow:0 8px 40px #000';
+    img.style.cssText = 'max-width:94vw;max-height:94vh;border-radius:calc(6px*var(--fs, 1));box-shadow:0 8px 40px #000';
     lb.appendChild(img);
   }
 

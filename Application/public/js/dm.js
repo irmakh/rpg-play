@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 14:01
+// Written by Irmak Hakman — 2026-10-15 14:25
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -540,11 +540,11 @@ function handleMediaFile(file) {
     const previewEl   = document.getElementById('media-preview-el');
     previewWrap.style.display = 'block';
     if (mimeType.startsWith('image/')) {
-      previewEl.innerHTML = `<img src="${pendingMediaDataUrl}" style="max-width:100%;max-height:180px;border-radius:4px;object-fit:contain;border:1px solid var(--rule-hi);display:block">`;
+      previewEl.innerHTML = `<img src="${pendingMediaDataUrl}" style="max-width:100%;max-height:calc(180px*var(--fs, 1));border-radius:calc(4px*var(--fs, 1));object-fit:contain;border:1px solid var(--rule-hi);display:block">`;
     } else if (mimeType.startsWith('video/')) {
-      previewEl.innerHTML = `<video src="${pendingMediaDataUrl}" controls style="max-width:100%;max-height:180px;border-radius:4px;display:block"></video>`;
+      previewEl.innerHTML = `<video src="${pendingMediaDataUrl}" controls style="max-width:100%;max-height:calc(180px*var(--fs, 1));border-radius:calc(4px*var(--fs, 1));display:block"></video>`;
     } else {
-      previewEl.innerHTML = `<audio src="${pendingMediaDataUrl}" controls style="width:100%;margin-top:4px;display:block"></audio>`;
+      previewEl.innerHTML = `<audio src="${pendingMediaDataUrl}" controls style="width:100%;margin-top:calc(4px*var(--fs, 1));display:block"></audio>`;
     }
     document.getElementById('media-caption-row').style.display = 'block';
     document.getElementById('media-share-btn').style.display = '';
@@ -710,7 +710,7 @@ function appendChatEntry(e) {
   const time = dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   const div = document.createElement('div');
   if (e.id) div.dataset.entryId = e.id;
-  const delBtn = e.id ? `<button onclick="deleteChatMsg('${escJs(e.id)}')" style="background:none;border:none;cursor:pointer;color:var(--ash);font-size:calc(11px * var(--fs, 1));padding:0 0 0 4px;opacity:.6;line-height:1;flex-shrink:0" title="Delete message">✕</button>` : '';
+  const delBtn = e.id ? `<button onclick="deleteChatMsg('${escJs(e.id)}')" style="background:none;border:none;cursor:pointer;color:var(--ash);font-size:calc(11px * var(--fs, 1));padding:0 0 0 calc(4px*var(--fs, 1));opacity:.6;line-height:1;flex-shrink:0" title="Delete message">✕</button>` : '';
   const timeCol = `<span style="display:flex;align-items:center"><span style="color:var(--ash);font-size:calc(10px * var(--fs, 1))">${time}</span>${delBtn}</span>`;
 
   if (e.type === 'text') {
@@ -726,7 +726,7 @@ function appendChatEntry(e) {
     const body = e.html
       ? `<div class="chat-html" style="word-break:break-word;line-height:1.45">${sanitizeChatHtml(e.message || '')}</div>`
       : `<div style="word-break:break-word;white-space:pre-wrap">${esc(e.message || '')}</div>`;
-    div.innerHTML = `<div style="display:flex;justify-content:space-between;margin-bottom:2px">
+    div.innerHTML = `<div style="display:flex;justify-content:space-between;margin-bottom:calc(2px*var(--fs, 1))">
       <span class="ce-sender">${esc(e.sender || '?')}${pmTag}</span>
       ${timeCol}
     </div>${body}`;
@@ -741,15 +741,15 @@ function appendChatEntry(e) {
     let mediaEl = '';
     if (e.mimeType.startsWith('image/')) {
       const inlineUrl = (e.mediumUrl && e.mimeType.startsWith('image/')) ? e.mediumUrl : url;
-      mediaEl = `<img class="chat-media-img" loading="lazy" src="${esc(inlineUrl)}" style="max-height:220px;object-fit:contain" onclick="window.open('${escJs(url)}','_blank')" title="Click to open full size">`;
+      mediaEl = `<img class="chat-media-img" loading="lazy" src="${esc(inlineUrl)}" style="max-height:calc(220px*var(--fs, 1));object-fit:contain" onclick="window.open('${escJs(url)}','_blank')" title="Click to open full size">`;
     } else if (e.mimeType.startsWith('video/')) {
-      mediaEl = `<video class="chat-media-video" src="${esc(url)}" controls style="max-height:220px"></video>`;
+      mediaEl = `<video class="chat-media-video" src="${esc(url)}" controls style="max-height:calc(220px*var(--fs, 1))"></video>`;
     } else {
       mediaEl = `<audio class="chat-media-audio" src="${esc(url)}" controls></audio>`;
     }
-    const cap = e.caption ? `<div style="font-size:calc(11px * var(--fs, 1));color:var(--ash);margin-top:4px">${esc(e.caption)}</div>` : '';
+    const cap = e.caption ? `<div style="font-size:calc(11px * var(--fs, 1));color:var(--ash);margin-top:calc(4px*var(--fs, 1))">${esc(e.caption)}</div>` : '';
     div.className = 'chat-entry';
-    div.innerHTML = `<div style="display:flex;justify-content:space-between;margin-bottom:4px">
+    div.innerHTML = `<div style="display:flex;justify-content:space-between;margin-bottom:calc(4px*var(--fs, 1))">
       <span class="ce-sender">${esc(e.sender)} <span style="font-size:calc(10px * var(--fs, 1));color:var(--ash);font-weight:normal">shared media</span></span>
       ${timeCol}
     </div>${mediaEl}${cap}`;
@@ -766,13 +766,13 @@ function appendChatEntry(e) {
   const natStr   = isNat20 ? '<span style="color:var(--verdigris);font-size:calc(10px * var(--fs, 1));font-weight:bold"> ✨ NAT 20!</span>'
                  : isNat1  ? '<span style="color:var(--blood);font-size:calc(10px * var(--fs, 1));font-weight:bold"> 💀 NAT 1</span>' : '';
   const descStr = e.description
-    ? `<div style="font-size:calc(10px * var(--fs, 1));color:var(--ash);margin-top:3px;font-style:italic;line-height:1.4;white-space:pre-wrap">${esc(e.description)}</div>`
+    ? `<div style="font-size:calc(10px * var(--fs, 1));color:var(--ash);margin-top:calc(3px*var(--fs, 1));font-style:italic;line-height:1.4;white-space:pre-wrap">${esc(e.description)}</div>`
     : '';
   // chatDamageParts() comes from js/lib/chat-render.js; '' for an ordinary roll,
   // in which case the original single-line dice/label row is kept.
   const partsStr = typeof chatDamageParts === 'function' ? chatDamageParts(e) : '';
   div.className = `chat-entry${cls}`;
-  div.innerHTML = `<div style="display:flex;justify-content:space-between;margin-bottom:2px">
+  div.innerHTML = `<div style="display:flex;justify-content:space-between;margin-bottom:calc(2px*var(--fs, 1))">
     <span class="ce-sender">${esc(e.sender)}</span>
     ${timeCol}
   </div>
@@ -828,11 +828,11 @@ function renderDmMonsters() {
     return m.name.toLowerCase().includes(q) || t.toLowerCase().includes(q);
   });
   if (dmMonsters.length === 0) {
-    wrap.innerHTML = '<div style="text-align:center;color:var(--ash);font-size:calc(12px * var(--fs, 1));padding:10px 0">No monsters imported yet. Use the <a href="monsters.html" style="color:var(--bone)">Monsters</a> page to import.</div>';
+    wrap.innerHTML = '<div style="text-align:center;color:var(--ash);font-size:calc(12px * var(--fs, 1));padding:calc(10px*var(--fs, 1)) 0">No monsters imported yet. Use the <a href="monsters.html" style="color:var(--bone)">Monsters</a> page to import.</div>';
     return;
   }
   if (filtered.length === 0) {
-    wrap.innerHTML = '<div style="text-align:center;color:var(--ash);font-size:calc(12px * var(--fs, 1));padding:10px 0">No monsters match your search.</div>';
+    wrap.innerHTML = '<div style="text-align:center;color:var(--ash);font-size:calc(12px * var(--fs, 1));padding:calc(10px*var(--fs, 1)) 0">No monsters match your search.</div>';
     return;
   }
   const rows = filtered.map(m => {

@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 14:01
+// Written by Irmak Hakman — 2026-10-15 14:25
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -103,24 +103,24 @@ function renderMonsterActionsPanel(data, tok) {
     const atkMatch = entryText.match(/\{@hit\s([+-]?\d+)\}/i);
     const dmgStr = _monsterDamageStr(entryText);
     const sn = escJs(item.name || '');
-    const useBtn = `<button class="btn sm" onclick="useMonsterAction('${section}',${idx})" style="font-size:calc(10px * var(--fs, 1));padding:1px 5px;flex-shrink:0;background:rgba(100,150,255,.18);color:#aaf">Use</button>`;
+    const useBtn = `<button class="btn sm" onclick="useMonsterAction('${section}',${idx})" style="font-size:calc(10px * var(--fs, 1));padding:1px calc(5px*var(--fs, 1));flex-shrink:0;background:rgba(100,150,255,.18);color:#aaf">Use</button>`;
 
     if (atkMatch) {
       const bonus = parseInt(atkMatch[1]);
       const dmgRow = dmgStr
-        ? `<div class="qroll-row" onclick="rollMonsterDamage('${section}',${idx},'${escJs(dmgStr)}')" style="padding-left:20px;background:rgba(0,0,0,.15)"><span style="font-size:calc(11px * var(--fs, 1));color:var(--ash)"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-right"></use></svg> Damage</span><span class="qroll-val" style="color:#ff9966;font-size:calc(13px * var(--fs, 1))">${esc(dmgStr)}</span></div>`
+        ? `<div class="qroll-row" onclick="rollMonsterDamage('${section}',${idx},'${escJs(dmgStr)}')" style="padding-left:calc(20px*var(--fs, 1));background:rgba(0,0,0,.15)"><span style="font-size:calc(11px * var(--fs, 1));color:var(--ash)"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-right"></use></svg> Damage</span><span class="qroll-val" style="color:#ff9966;font-size:calc(13px * var(--fs, 1))">${esc(dmgStr)}</span></div>`
         : '';
-      return `<div style="display:flex;align-items:center;gap:2px"><div class="qroll-row" style="flex:1;min-width:0;margin:0" onclick="qroll('${sn} atk','${bonus}')" title="${esc(entryText.slice(0, 120))}"><span>${parseEntry(item.name || '')}</span><span class="qroll-val">${bonus >= 0 ? '+' : ''}${bonus}</span></div>${useBtn}</div>${dmgRow}`;
+      return `<div style="display:flex;align-items:center;gap:calc(2px*var(--fs, 1))"><div class="qroll-row" style="flex:1;min-width:0;margin:0" onclick="qroll('${sn} atk','${bonus}')" title="${esc(entryText.slice(0, 120))}"><span>${parseEntry(item.name || '')}</span><span class="qroll-val">${bonus >= 0 ? '+' : ''}${bonus}</span></div>${useBtn}</div>${dmgRow}`;
     }
 
-    return `<div style="display:flex;align-items:center;gap:2px;padding:2px 4px"><span style="flex:1;font-size:calc(11px * var(--fs, 1));color:var(--bone);font-weight:bold;font-style:italic">${parseEntry(item.name || '')}</span>${useBtn}</div>`;
+    return `<div style="display:flex;align-items:center;gap:calc(2px*var(--fs, 1));padding:calc(2px*var(--fs, 1)) calc(4px*var(--fs, 1))"><span style="flex:1;font-size:calc(11px * var(--fs, 1));color:var(--bone);font-weight:bold;font-style:italic">${parseEntry(item.name || '')}</span>${useBtn}</div>`;
   }
 
-  const HR2 = '<hr style="border:none;border-top:1px solid var(--rule-hi);margin:4px 0">';
+  const HR2 = '<hr style="border:none;border-top:1px solid var(--rule-hi);margin:calc(4px*var(--fs, 1)) 0">';
 
   function rActionGroup(items, title, section) {
     if (!items || !items.length) return '';
-    return `${HR2}<div style="font-size:calc(10px * var(--fs, 1));color:var(--bone);text-transform:uppercase;font-weight:bold;letter-spacing:.5px;margin-bottom:2px">${title}</div>` +
+    return `${HR2}<div style="font-size:calc(10px * var(--fs, 1));color:var(--bone);text-transform:uppercase;font-weight:bold;letter-spacing:.5px;margin-bottom:calc(2px*var(--fs, 1))">${title}</div>` +
       items.map((item, idx) => rActionItem(item, section, idx)).join('');
   }
 
@@ -165,7 +165,7 @@ function renderMonsterFullStats(data, tok) {
   // parseInt: a text initBonus would otherwise turn the sum into that text.
   const initTotal=dexMod+initProfBonus+(parseInt(data.initBonus)||0);
   const initStr=(initTotal>=0?'+':'')+initTotal;
-  function rEntries(entries){return(entries||[]).map(e=>{if(typeof e==='string')return'<p style="margin:2px 0 3px;white-space:pre-wrap">'+parseEntry(e)+'</p>';if(e&&e.type==='list'&&Array.isArray(e.items))return'<ul style="margin:2px 0 3px;padding-left:14px">'+e.items.map(i=>'<li>'+parseEntry(typeof i==='string'?i:(i.name||''))+'</li>').join('')+'</ul>';return'';}).join('');}
+  function rEntries(entries){return(entries||[]).map(e=>{if(typeof e==='string')return'<p style="margin:calc(2px*var(--fs, 1)) 0 calc(3px*var(--fs, 1));white-space:pre-wrap">'+parseEntry(e)+'</p>';if(e&&e.type==='list'&&Array.isArray(e.items))return'<ul style="margin:calc(2px*var(--fs, 1)) 0 calc(3px*var(--fs, 1));padding-left:calc(14px*var(--fs, 1))">'+e.items.map(i=>'<li>'+parseEntry(typeof i==='string'?i:(i.name||''))+'</li>').join('')+'</ul>';return'';}).join('');}
 
   // Set _currentMonsterData for useMonsterAction (needed by both themes)
   const hasActions=(data.action?.length||0)+(data.bonus?.length||0)+(data.reaction?.length||0)+(data.legendary?.length||0)>0;
@@ -178,8 +178,8 @@ function renderMonsterFullStats(data, tok) {
   if(document.body.dataset.theme==='modern'){
     // Action row: Init (primary) + Info button
     const actionRowHtml=`<div class="rp-action-row">`
-      +(tok?.linkedId?`<button class="btn sm" onclick="showMonsterInfoModal('${escJs(tok.linkedId)}')" style="font-size:calc(10px * var(--fs, 1));padding:2px 7px">Info</button>`:'')
-      +`<button class="btn sm primary" onclick="rollMonsterInitiativeFromPanel()" title="Roll Initiative (d20${initStr})" style="font-size:calc(10px * var(--fs, 1));padding:2px 7px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg> Init ${initStr}</button>`
+      +(tok?.linkedId?`<button class="btn sm" onclick="showMonsterInfoModal('${escJs(tok.linkedId)}')" style="font-size:calc(10px * var(--fs, 1));padding:calc(2px*var(--fs, 1)) calc(7px*var(--fs, 1))">Info</button>`:'')
+      +`<button class="btn sm primary" onclick="rollMonsterInitiativeFromPanel()" title="Roll Initiative (d20${initStr})" style="font-size:calc(10px * var(--fs, 1));padding:calc(2px*var(--fs, 1)) calc(7px*var(--fs, 1))"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg> Init ${initStr}</button>`
       +`</div>`;
 
     // Secondary stats bar: CR | Initiative (clickable) | Speed | Passive Perc
@@ -298,37 +298,37 @@ function renderMonsterFullStats(data, tok) {
   }
 
   // ── Classic path (unchanged) ─────────────────────────────────────────────────
-  const HR='<hr style="border:none;border-top:1px solid var(--rule-hi);margin:6px 0">';
-  function rSection(items,title){if(!items||!items.length)return'';return HR+'<div style="font-size:calc(10px * var(--fs, 1));color:var(--bone);text-transform:uppercase;font-weight:bold;letter-spacing:.5px;margin-bottom:3px">'+title+'</div>'+items.map(item=>'<div style="margin:4px 0"><span style="color:var(--bone);font-weight:bold;font-style:italic">'+parseEntry(item.name||'')+'</span> '+rEntries(item.entries)+'</div>').join('');}
-  function rSectionRollable(items,title){if(!items||!items.length)return'';const HR2=HR+'<div style="font-size:calc(10px * var(--fs, 1));color:var(--bone);text-transform:uppercase;font-weight:bold;letter-spacing:.5px;margin-bottom:3px">'+title+'</div>';return HR2+items.map(item=>{const entryText=[].concat(item.entries||[]).join(' ');const atkMatch=entryText.match(/\{@hit\s([+-]?\d+)\}|([+-]\d+)\s+to\s+hit/i);if(atkMatch){const bonus=parseInt(atkMatch[1]||atkMatch[2]);const dmgStr=_monsterDamageStr(entryText);const sn=escJs(item.name||'');const dmgRow=dmgStr?'<div class="qroll-row" onclick="rollDamageStr(\''+sn+' Dmg\',\''+escJs(dmgStr)+'\')" style="padding-left:20px;background:rgba(0,0,0,.15)"><span style="font-size:calc(11px * var(--fs, 1));color:var(--ash)">↳ Damage</span><span class="qroll-val" style="color:#ff9966;font-size:calc(13px * var(--fs, 1))">'+esc(dmgStr)+'</span></div>':'';return'<div class="qroll-row" onclick="qroll(\''+sn+' atk\',\''+bonus+'\')" title="'+esc(entryText.slice(0,120))+'">'+'<span>'+parseEntry(item.name||'')+'</span>'+'<span class="qroll-val">'+(bonus>=0?'+':'')+bonus+'</span></div>'+dmgRow;}return'<div style="margin:4px 0"><span style="color:var(--bone);font-weight:bold;font-style:italic">'+parseEntry(item.name||'')+'</span> '+rEntries(item.entries)+'</div>';}).join('');}
+  const HR='<hr style="border:none;border-top:1px solid var(--rule-hi);margin:calc(6px*var(--fs, 1)) 0">';
+  function rSection(items,title){if(!items||!items.length)return'';return HR+'<div style="font-size:calc(10px * var(--fs, 1));color:var(--bone);text-transform:uppercase;font-weight:bold;letter-spacing:.5px;margin-bottom:calc(3px*var(--fs, 1))">'+title+'</div>'+items.map(item=>'<div style="margin:calc(4px*var(--fs, 1)) 0"><span style="color:var(--bone);font-weight:bold;font-style:italic">'+parseEntry(item.name||'')+'</span> '+rEntries(item.entries)+'</div>').join('');}
+  function rSectionRollable(items,title){if(!items||!items.length)return'';const HR2=HR+'<div style="font-size:calc(10px * var(--fs, 1));color:var(--bone);text-transform:uppercase;font-weight:bold;letter-spacing:.5px;margin-bottom:calc(3px*var(--fs, 1))">'+title+'</div>';return HR2+items.map(item=>{const entryText=[].concat(item.entries||[]).join(' ');const atkMatch=entryText.match(/\{@hit\s([+-]?\d+)\}|([+-]\d+)\s+to\s+hit/i);if(atkMatch){const bonus=parseInt(atkMatch[1]||atkMatch[2]);const dmgStr=_monsterDamageStr(entryText);const sn=escJs(item.name||'');const dmgRow=dmgStr?'<div class="qroll-row" onclick="rollDamageStr(\''+sn+' Dmg\',\''+escJs(dmgStr)+'\')" style="padding-left:calc(20px*var(--fs, 1));background:rgba(0,0,0,.15)"><span style="font-size:calc(11px * var(--fs, 1));color:var(--ash)">↳ Damage</span><span class="qroll-val" style="color:#ff9966;font-size:calc(13px * var(--fs, 1))">'+esc(dmgStr)+'</span></div>':'';return'<div class="qroll-row" onclick="qroll(\''+sn+' atk\',\''+bonus+'\')" title="'+esc(entryText.slice(0,120))+'">'+'<span>'+parseEntry(item.name||'')+'</span>'+'<span class="qroll-val">'+(bonus>=0?'+':'')+bonus+'</span></div>'+dmgRow;}return'<div style="margin:calc(4px*var(--fs, 1)) 0"><span style="color:var(--bone);font-weight:bold;font-style:italic">'+parseEntry(item.name||'')+'</span> '+rEntries(item.entries)+'</div>';}).join('');}
 
   const actionsPanel = renderMonsterActionsPanel(data, tok);
   let html='<div style="font-size:calc(11px * var(--fs, 1));line-height:1.5">';
-  if(size||typeStr||align)html+='<div style="font-size:calc(10px * var(--fs, 1));font-style:italic;color:var(--ash);margin-bottom:4px">'+esc([size,typeStr,align].filter(Boolean).join(', '))+'</div>';
+  if(size||typeStr||align)html+='<div style="font-size:calc(10px * var(--fs, 1));font-style:italic;color:var(--ash);margin-bottom:calc(4px*var(--fs, 1))">'+esc([size,typeStr,align].filter(Boolean).join(', '))+'</div>';
   html+=HR;
   html+='<div><span style="color:var(--bone);font-weight:bold">HP</span> <span style="color:'+hpBarColor(hpFrac)+'">'+tok.hpCurrent+'/'+tok.hpMax+'</span> <span style="color:var(--ash);font-size:calc(10px * var(--fs, 1))">('+esc(hpStr)+')</span></div>';
   html+='<div><span style="color:var(--bone);font-weight:bold">AC</span> '+esc(acStr)+'</div>';
   html+='<div><span style="color:var(--bone);font-weight:bold">Speed</span> '+esc(speedStr)+'</div>';
   html+='<div><span style="color:var(--bone);font-weight:bold">CR</span> '+esc(String(cr))+'</div>';
-  html+=HR+'<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:2px;text-align:center;margin:4px 0">';
-  for(let i=0;i<6;i++){const sc=scores[i];const val=data[sc]||10;const m=Math.floor((val-10)/2);const ms=(m>=0?'+':'')+m;html+='<div onclick="qroll(\''+snames[i]+' Check\',\''+ms+'\')" title="'+snames[i]+' ability check" style="background:var(--slate-hi);border-radius:3px;padding:3px 1px;cursor:pointer"><div style="font-size:calc(8px * var(--fs, 1));color:var(--bone);font-weight:bold">'+snames[i]+'</div><div style="font-size:calc(12px * var(--fs, 1));font-weight:bold">'+esc(val)+'</div><div style="font-size:calc(9px * var(--fs, 1));color:var(--ash)">'+ms+'</div></div>';}
+  html+=HR+'<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:calc(2px*var(--fs, 1));text-align:center;margin:calc(4px*var(--fs, 1)) 0">';
+  for(let i=0;i<6;i++){const sc=scores[i];const val=data[sc]||10;const m=Math.floor((val-10)/2);const ms=(m>=0?'+':'')+m;html+='<div onclick="qroll(\''+snames[i]+' Check\',\''+ms+'\')" title="'+snames[i]+' ability check" style="background:var(--slate-hi);border-radius:calc(3px*var(--fs, 1));padding:calc(3px*var(--fs, 1)) 1px;cursor:pointer"><div style="font-size:calc(8px * var(--fs, 1));color:var(--bone);font-weight:bold">'+snames[i]+'</div><div style="font-size:calc(12px * var(--fs, 1));font-weight:bold">'+esc(val)+'</div><div style="font-size:calc(9px * var(--fs, 1));color:var(--ash)">'+ms+'</div></div>';}
   html+='</div>'+HR;
-  html+=HR+'<div style="font-size:calc(10px * var(--fs, 1));color:var(--bone);text-transform:uppercase;font-weight:bold;letter-spacing:.5px;margin-bottom:3px">Saves</div>';
+  html+=HR+'<div style="font-size:calc(10px * var(--fs, 1));color:var(--bone);text-transform:uppercase;font-weight:bold;letter-spacing:.5px;margin-bottom:calc(3px*var(--fs, 1))">Saves</div>';
   html+=scores.map((sc,i)=>{const profVal=data.save&&data.save[sc];const rawMod=Math.floor(((data[sc]||10)-10)/2);const val=profVal||(rawMod>=0?'+'+rawMod:''+rawMod);const prof=!!profVal;return'<div class="qroll-row" onclick="qroll(\''+snames[i]+' Save\',\''+escJs(val)+'\')" title="'+snames[i]+' Saving Throw'+(prof?' (proficient)':'')+'" style="'+(prof?'':'opacity:0.75')+'"><span>'+snames[i]+(prof?' ★':'')+'</span><span class="qroll-val">'+esc(val)+'</span></div>';}).join('');
-  if(data.skill&&Object.keys(data.skill).length){html+=HR+'<div style="font-size:calc(10px * var(--fs, 1));color:var(--bone);text-transform:uppercase;font-weight:bold;letter-spacing:.5px;margin-bottom:3px">Skills</div>';html+=Object.entries(data.skill).map(([key,val])=>{const label=key.charAt(0).toUpperCase()+key.slice(1);return'<div class="qroll-row" onclick="qroll(\''+escJs(label)+'\',\''+escJs(val)+'\')" title="'+esc(label)+'"><span>'+esc(label)+'</span><span class="qroll-val">'+esc(val)+'</span></div>';}).join('');}
+  if(data.skill&&Object.keys(data.skill).length){html+=HR+'<div style="font-size:calc(10px * var(--fs, 1));color:var(--bone);text-transform:uppercase;font-weight:bold;letter-spacing:.5px;margin-bottom:calc(3px*var(--fs, 1))">Skills</div>';html+=Object.entries(data.skill).map(([key,val])=>{const label=key.charAt(0).toUpperCase()+key.slice(1);return'<div class="qroll-row" onclick="qroll(\''+escJs(label)+'\',\''+escJs(val)+'\')" title="'+esc(label)+'"><span>'+esc(label)+'</span><span class="qroll-val">'+esc(val)+'</span></div>';}).join('');}
   if(immuneStr)html+='<div><span style="color:var(--bone);font-weight:bold">Immune</span> '+esc(immuneStr)+'</div>';
   if(resistStr)html+='<div><span style="color:var(--bone);font-weight:bold">Resist</span> '+esc(resistStr)+'</div>';
   if(condImmStr)html+='<div><span style="color:var(--bone);font-weight:bold">Cond. Immune</span> '+esc(condImmStr)+'</div>';
   if(sensesStr)html+='<div><span style="color:var(--bone);font-weight:bold">Senses</span> '+esc(sensesStr)+'</div>';
   html+='<div><span style="color:var(--bone);font-weight:bold">Languages</span> '+esc(langStr)+'</div>';
   html+=rSection(data.trait,'Traits');
-  html+='<div style="margin-top:8px"><a href="/monsters.html" target="_blank" style="color:var(--bone);font-size:calc(10px * var(--fs, 1))">📖 Full view →</a></div>';
+  html+='<div style="margin-top:calc(8px*var(--fs, 1))"><a href="/monsters.html" target="_blank" style="color:var(--bone);font-size:calc(10px * var(--fs, 1))">📖 Full view →</a></div>';
   html+='</div>';
-  return `<div style="padding:2px 0 4px;display:flex;align-items:center;justify-content:space-between">
+  return `<div style="padding:calc(2px*var(--fs, 1)) 0 calc(4px*var(--fs, 1));display:flex;align-items:center;justify-content:space-between">
     <span style="font-size:calc(12px * var(--fs, 1));color:var(--blood);font-weight:bold">${esc(data.name||'Monster')}${tok&&tok.label?` <span style="color:var(--ash);font-weight:normal;font-size:calc(11px * var(--fs, 1))">[${esc(tok.label)}]</span>`:''}</span>
-    <div style="display:flex;gap:4px">
-      ${tok&&tok.linkedId?`<button class="btn sm" onclick="showMonsterInfoModal('${escJs(tok.linkedId)}')" title="View full stat block" style="font-size:calc(10px * var(--fs, 1));padding:2px 6px">Info</button>`:''}
-      <button class="btn sm" onclick="rollMonsterInitiativeFromPanel()" title="Roll Initiative (d20${initStr})" style="font-size:calc(10px * var(--fs, 1));padding:2px 6px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg> Init ${initStr}</button>
+    <div style="display:flex;gap:calc(4px*var(--fs, 1))">
+      ${tok&&tok.linkedId?`<button class="btn sm" onclick="showMonsterInfoModal('${escJs(tok.linkedId)}')" title="View full stat block" style="font-size:calc(10px * var(--fs, 1));padding:calc(2px*var(--fs, 1)) calc(6px*var(--fs, 1))">Info</button>`:''}
+      <button class="btn sm" onclick="rollMonsterInitiativeFromPanel()" title="Roll Initiative (d20${initStr})" style="font-size:calc(10px * var(--fs, 1));padding:calc(2px*var(--fs, 1)) calc(6px*var(--fs, 1))"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg> Init ${initStr}</button>
     </div>
   </div>
   ${actionsPanel}

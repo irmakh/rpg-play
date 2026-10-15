@@ -1,4 +1,4 @@
-/* Written by Irmak Hakman — 2026-10-15 14:01 */
+/* Written by Irmak Hakman — 2026-10-15 14:25 */
 /* Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) */
 
 /* ── Table screen: ease of use ──────────────────────────────────────────────
@@ -24,10 +24,10 @@
    (the map's own coordinates are measured from its wrapper, not from here). */
 #ux-hint-anchor{position:sticky;top:0;left:0;width:0;height:0;z-index:40;pointer-events:none}
 #ux-hint{
-  position:absolute;top:10px;left:10px;
+  position:absolute;top:calc(10px*var(--fs, 1));left:calc(10px*var(--fs, 1));
   display:flex;align-items:center;gap:var(--s2);
   white-space:nowrap;
-  padding:4px 10px 4px 6px;
+  padding:calc(4px*var(--fs, 1)) calc(10px*var(--fs, 1)) calc(4px*var(--fs, 1)) calc(6px*var(--fs, 1));
   background:color-mix(in srgb, var(--ink) 82%, transparent);
   border:1px solid var(--rule);
   border-radius:var(--r-full);
@@ -41,7 +41,7 @@
 .ux-help-row kbd,
 .ux-pop kbd{
   font:inherit;font-weight:700;
-  min-width:18px;padding:0 5px;
+  min-width:calc(18px*var(--fs, 1));padding:0 calc(5px*var(--fs, 1));
   text-align:center;
   color:var(--bone);
   background:var(--slate-hi);
@@ -56,20 +56,20 @@
 /* ── Toolbar pop-overs: View menu and dice settings ── */
 .ux-anchor{position:relative;display:inline-flex}
 .ux-pop{
-  position:absolute;top:calc(100% + 6px);right:0;z-index:600;
-  display:flex;flex-direction:column;gap:2px;
-  min-width:210px;
-  padding:6px;
+  position:absolute;top:calc(100% + calc(6px*var(--fs, 1)));right:0;z-index:600;
+  display:flex;flex-direction:column;gap:calc(2px*var(--fs, 1));
+  min-width:calc(210px*var(--fs, 1));
+  padding:calc(6px*var(--fs, 1));
   background:var(--slate);
   border:1px solid var(--rule-hi);
   border-radius:var(--r-md);
   box-shadow:var(--cast);
 }
 .ux-pop[hidden]{display:none}
-.ux-pop-lbl{padding:2px 6px 4px;font-size:calc(10px * var(--fs, 1));letter-spacing:1px;text-transform:uppercase;color:var(--ash)}
-.ux-pop-sep{height:1px;margin:4px 0;background:var(--rule)}
-.ux-pop-row{display:flex;align-items:center;justify-content:space-between;gap:var(--s3);padding:6px 6px 2px;font-size:calc(12px * var(--fs, 1));color:var(--bone);cursor:pointer}
-.ux-pop .rp-dice-mode{align-self:flex-start;margin:0 6px}
+.ux-pop-lbl{padding:calc(2px*var(--fs, 1)) calc(6px*var(--fs, 1)) calc(4px*var(--fs, 1));font-size:calc(10px * var(--fs, 1));letter-spacing:1px;text-transform:uppercase;color:var(--ash)}
+.ux-pop-sep{height:1px;margin:calc(4px*var(--fs, 1)) 0;background:var(--rule)}
+.ux-pop-row{display:flex;align-items:center;justify-content:space-between;gap:var(--s3);padding:calc(6px*var(--fs, 1)) calc(6px*var(--fs, 1)) calc(2px*var(--fs, 1));font-size:calc(12px * var(--fs, 1));color:var(--bone);cursor:pointer}
+.ux-pop .rp-dice-mode{align-self:flex-start;margin:0 calc(6px*var(--fs, 1))}
 
 /* Menu rows. The five panel buttons moved in here keep their ids and handlers
    (table-auth.js, table-popout.js and table-waiting.js still find them); they
@@ -77,8 +77,8 @@
    The #toolbar id is needed to outrank the toolbar's own density rule. */
 html.lamplit #toolbar .ux-menu > button{
   display:flex;align-items:center;justify-content:flex-start;gap:var(--s2);
-  width:100%;min-height:32px;
-  padding:4px 8px;
+  width:100%;min-height:calc(32px*var(--fs, 1));
+  padding:calc(4px*var(--fs, 1)) calc(8px*var(--fs, 1));
   background:none;border:1px solid transparent;border-radius:var(--r-sm);
   color:var(--bone);
   font-size:calc(12px * var(--fs, 1));font-weight:400;text-align:left;white-space:nowrap;
@@ -97,7 +97,7 @@ html.lamplit #toolbar .ux-menu > button.pop-active{color:var(--arc)}
 /* Switch rows: a tick on the right when on. */
 .ux-menu > button[role="menuitemcheckbox"]::before{
   content:'';order:2;margin-left:auto;
-  width:14px;height:8px;
+  width:calc(14px*var(--fs, 1));height:calc(8px*var(--fs, 1));
   border-left:2px solid var(--verdigris);border-bottom:2px solid var(--verdigris);
   transform:rotate(-45deg) translateY(-2px);
   opacity:0;
@@ -106,14 +106,14 @@ html.lamplit #toolbar .ux-menu > button.pop-active{color:var(--arc)}
 
 /* The dice settings button wears the current roll mode, and takes a colour
    while advantage or disadvantage is left switched on. */
-html.lamplit #toolbar #btn-dice-opts{gap:2px;padding:4px 6px 4px 9px;font-weight:700}
+html.lamplit #toolbar #btn-dice-opts{gap:calc(2px*var(--fs, 1));padding:calc(4px*var(--fs, 1)) calc(6px*var(--fs, 1)) calc(4px*var(--fs, 1)) calc(9px*var(--fs, 1));font-weight:700}
 html.lamplit #toolbar #btn-dice-opts[data-mode="adv"]{color:var(--verdigris);border-color:var(--verdigris)}
 html.lamplit #toolbar #btn-dice-opts[data-mode="dis"]{color:var(--blood);border-color:var(--blood)}
 html.lamplit #toolbar #btn-dice-opts[data-mode="norm"]{color:var(--arc)}
 
 /* ── Token right-click menu (on the shared .mctx card from table.css) ── */
-.mctx.ux-ctx{min-width:200px}
-.ux-ctx-hp{display:flex;align-items:center;gap:4px;margin-bottom:6px}
+.mctx.ux-ctx{min-width:calc(200px*var(--fs, 1))}
+.ux-ctx-hp{display:flex;align-items:center;gap:calc(4px*var(--fs, 1));margin-bottom:calc(6px*var(--fs, 1))}
 .ux-ctx-hp input,
 #ux-hp-input{
   min-width:0;
@@ -123,43 +123,43 @@ html.lamplit #toolbar #btn-dice-opts[data-mode="norm"]{color:var(--arc)}
   color:var(--bone);
   font-size:calc(13px * var(--fs, 1));font-weight:700;
 }
-.ux-ctx-hp input{flex:1;width:60px;padding:3px 6px}
+.ux-ctx-hp input{flex:1;width:calc(60px*var(--fs, 1));padding:calc(3px*var(--fs, 1)) calc(6px*var(--fs, 1))}
 .ux-ctx-hp input:focus,
 #ux-hp-input:focus{outline:none;border-color:var(--arc)}
 .ux-ctx-hp input.ux-bad,
 #ux-hp-input.ux-bad{border-color:var(--blood)}
-html.lamplit .mctx .ux-ctx-hp .btn{min-height:26px;padding:2px 8px;font-size:calc(11px * var(--fs, 1))}
+html.lamplit .mctx .ux-ctx-hp .btn{min-height:calc(26px*var(--fs, 1));padding:calc(2px*var(--fs, 1)) calc(8px*var(--fs, 1));font-size:calc(11px * var(--fs, 1))}
 html.lamplit .mctx .ux-ctx-item{
   display:flex;align-items:center;justify-content:flex-start;gap:var(--s2);
-  width:100%;min-height:28px;
-  margin-top:3px;padding:3px 8px;
+  width:100%;min-height:calc(28px*var(--fs, 1));
+  margin-top:calc(3px*var(--fs, 1));padding:calc(3px*var(--fs, 1)) calc(8px*var(--fs, 1));
   font-size:calc(12px * var(--fs, 1));text-align:left;
 }
 html.lamplit .mctx .ux-ctx-item .lt-icon:last-child{margin-left:auto}
-.ux-ctx-conds{margin:6px 0 4px}
+.ux-ctx-conds{margin:calc(6px*var(--fs, 1)) 0 calc(4px*var(--fs, 1))}
 .ux-ctx-conds[hidden]{display:none}
-html.lamplit .mctx .cond-btn{min-height:22px;padding:2px 5px;font-size:calc(10px * var(--fs, 1))}
+html.lamplit .mctx .cond-btn{min-height:calc(22px*var(--fs, 1));padding:calc(2px*var(--fs, 1)) calc(5px*var(--fs, 1));font-size:calc(10px * var(--fs, 1))}
 
 /* ── Quick damage box ── */
 #ux-hp-box{
   position:fixed;z-index:9998;
-  width:170px;
-  padding:6px 8px 7px;
+  width:calc(170px*var(--fs, 1));
+  padding:calc(6px*var(--fs, 1)) calc(8px*var(--fs, 1)) calc(7px*var(--fs, 1));
   background:var(--slate);
   border:1px solid var(--arc-line);
   border-radius:var(--r-md);
   box-shadow:var(--cast);
 }
 #ux-hp-box[hidden]{display:none}
-.ux-hp-name{margin-bottom:4px;font-size:calc(10px * var(--fs, 1));letter-spacing:1px;text-transform:uppercase;color:var(--ash);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-#ux-hp-input{width:100%;padding:4px 8px;font-size:calc(18px * var(--fs, 1));text-align:center}
-.ux-hp-help{margin-top:4px;font-size:calc(10px * var(--fs, 1));color:var(--ash);text-align:center}
+.ux-hp-name{margin-bottom:calc(4px*var(--fs, 1));font-size:calc(10px * var(--fs, 1));letter-spacing:1px;text-transform:uppercase;color:var(--ash);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#ux-hp-input{width:100%;padding:calc(4px*var(--fs, 1)) calc(8px*var(--fs, 1));font-size:calc(18px * var(--fs, 1));text-align:center}
+.ux-hp-help{margin-top:calc(4px*var(--fs, 1));font-size:calc(10px * var(--fs, 1));color:var(--ash);text-align:center}
 
 /* ── Hover summary ── */
 #ux-hover{
   position:fixed;z-index:9000;
-  min-width:150px;max-width:230px;
-  padding:7px 10px 8px;
+  min-width:calc(150px*var(--fs, 1));max-width:calc(230px*var(--fs, 1));
+  padding:calc(7px*var(--fs, 1)) calc(10px*var(--fs, 1)) calc(8px*var(--fs, 1));
   background:color-mix(in srgb, var(--slate) 96%, transparent);
   border:1px solid var(--rule-hi);
   border-radius:var(--r-md);
@@ -172,22 +172,22 @@ html.lamplit .mctx .cond-btn{min-height:22px;padding:2px 5px;font-size:calc(10px
 .ux-hv-kind{font-size:calc(9px * var(--fs, 1));letter-spacing:1px;text-transform:uppercase;color:var(--ash)}
 .ux-hv-name{font-weight:700;word-break:break-word}
 .ux-hv-sub{font-size:calc(10px * var(--fs, 1));color:var(--ash)}
-.ux-hv-bar{height:4px;margin:6px 0 4px;background:var(--sunken);border-radius:2px;overflow:hidden}
+.ux-hv-bar{height:calc(4px*var(--fs, 1));margin:calc(6px*var(--fs, 1)) 0 calc(4px*var(--fs, 1));background:var(--sunken);border-radius:calc(2px*var(--fs, 1));overflow:hidden}
 .ux-hv-bar > div{height:100%}
 .ux-hv-row{display:flex;justify-content:space-between;gap:var(--s3);line-height:1.6}
 .ux-hv-row span{color:var(--ash)}
 .ux-hv-row b{color:var(--arc)}
 .ux-hv-row i{font-style:normal;font-weight:400;color:var(--ash)}
-.ux-hv-conds{display:flex;flex-wrap:wrap;gap:3px;margin-top:5px}
-.ux-hv-conds span{padding:0 5px;border-radius:2px;background:rgba(255,140,0,.92);color:#000;font-size:calc(10px * var(--fs, 1));font-weight:700;line-height:1.5}
+.ux-hv-conds{display:flex;flex-wrap:wrap;gap:calc(3px*var(--fs, 1));margin-top:calc(5px*var(--fs, 1))}
+.ux-hv-conds span{padding:0 calc(5px*var(--fs, 1));border-radius:calc(2px*var(--fs, 1));background:rgba(255,140,0,.92);color:#000;font-size:calc(10px * var(--fs, 1));font-weight:700;line-height:1.5}
 
 /* ── Keyboard shortcut sheet ── */
 #ux-help{position:fixed;inset:0;z-index:3000;display:flex;align-items:center;justify-content:center;background:var(--scrim)}
 #ux-help[hidden]{display:none}
-#ux-help .modal-box{width:420px;max-width:94vw;max-height:86vh;display:flex;flex-direction:column}
+#ux-help .modal-box{width:calc(420px*var(--fs, 1));max-width:94vw;max-height:86vh;display:flex;flex-direction:column}
 .ux-help-body{padding:var(--s2) var(--s3) var(--s3);overflow-y:auto;scrollbar-width:thin}
-.ux-help-grp{margin:10px 0 4px;font-size:calc(10px * var(--fs, 1));letter-spacing:1px;text-transform:uppercase;color:var(--ash)}
-.ux-help-grp:first-child{margin-top:2px}
-.ux-help-row{display:flex;align-items:baseline;gap:var(--s3);padding:3px 0;font-size:calc(12px * var(--fs, 1))}
-.ux-help-row kbd{flex:0 0 108px;text-align:left;font-size:calc(11px * var(--fs, 1));white-space:nowrap}
+.ux-help-grp{margin:calc(10px*var(--fs, 1)) 0 calc(4px*var(--fs, 1));font-size:calc(10px * var(--fs, 1));letter-spacing:1px;text-transform:uppercase;color:var(--ash)}
+.ux-help-grp:first-child{margin-top:calc(2px*var(--fs, 1))}
+.ux-help-row{display:flex;align-items:baseline;gap:var(--s3);padding:calc(3px*var(--fs, 1)) 0;font-size:calc(12px * var(--fs, 1))}
+.ux-help-row kbd{flex:0 0 calc(108px*var(--fs, 1));text-align:left;font-size:calc(11px * var(--fs, 1));white-space:nowrap}
 .ux-help-row span{color:var(--bone)}

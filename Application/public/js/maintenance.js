@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-09-27 18:13
+// Written by Irmak Hakman — 2026-10-15 14:25
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -171,7 +171,7 @@ function shortBrowser(ua) {
 function renderBlocked(locks) {
   const host = $('blocked');
   $('blocked-pill').textContent = locks.length + ' blocked';
-  if (!locks.length) { host.innerHTML = '<div class="muted" style="padding:14px">No addresses are blocked.</div>'; return; }
+  if (!locks.length) { host.innerHTML = '<div class="muted" style="padding:calc(14px*var(--fs, 1))">No addresses are blocked.</div>'; return; }
 
   // "Unblock address" once per address that has more than one lock.
   const perIp = {};
@@ -254,7 +254,7 @@ function renderSessions(list, now) {
   // Only other people's sessions can be ended here, so the button is pointless
   // when there are none — ending your own is what Lock is for.
   $('btn-end-all').disabled = !list.some(s => !s.isMine);
-  if (!list.length) { host.innerHTML = '<div class="muted" style="padding:14px">Nobody is signed in.</div>'; return; }
+  if (!list.length) { host.innerHTML = '<div class="muted" style="padding:calc(14px*var(--fs, 1))">Nobody is signed in.</div>'; return; }
 
   host.innerHTML = `<table class="events">
     <thead><tr><th>Who</th><th>Campaign</th><th>Signed in</th><th>Last seen</th><th>Address</th><th>Browser</th><th></th></tr></thead>
@@ -379,7 +379,7 @@ $('auth-page-size').addEventListener('change', (e) => {
 
 function renderAuthEvents(events) {
   const host = $('auth-events');
-  if (!events.length) { host.innerHTML = '<div class="muted" style="padding:14px">No login activity recorded yet.</div>'; return; }
+  if (!events.length) { host.innerHTML = '<div class="muted" style="padding:calc(14px*var(--fs, 1))">No login activity recorded yet.</div>'; return; }
   const now = Date.now();
   const who = e => e.kind === 'unblocked' ? (e.charName || 'Whole address')
     : e.role === 'admin' ? 'Admin'
@@ -474,7 +474,7 @@ function renderInstalls(list, now, collector) {
   const host = $('installs');
   $('installs-pill').textContent = list.length + (list.length === 1 ? ' install' : ' installs');
   if (!list.length) {
-    host.innerHTML = '<div class="muted" style="padding:14px">No install has reported in yet.</div>';
+    host.innerHTML = '<div class="muted" style="padding:calc(14px*var(--fs, 1))">No install has reported in yet.</div>';
     return;
   }
   const num = v => (v === null || v === undefined ? '—' : esc(v));

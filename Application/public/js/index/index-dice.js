@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 14:01
+// Written by Irmak Hakman — 2026-10-15 14:25
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -125,7 +125,7 @@ function renderRollHistory() {
   const list = document.getElementById('rh-list');
   if (!list) return;
   if (rollHistory.length === 0) {
-    list.innerHTML = '<li style="color:var(--ash);font-size:calc(12px * var(--fs, 1));padding:8px">No rolls yet — click any modifier on the sheet to roll!</li>';
+    list.innerHTML = '<li style="color:var(--ash);font-size:calc(12px * var(--fs, 1));padding:calc(8px*var(--fs, 1))">No rolls yet — click any modifier on the sheet to roll!</li>';
     return;
   }
   const pad = n => String(n).padStart(2,'0');

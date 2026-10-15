@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Written by Irmak Hakman — 2026-10-15 14:01 -->
+<!-- Written by Irmak Hakman — 2026-10-15 14:25 -->
 <!-- Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) -->
 <html lang="en" class="lamplit">
 <head>
@@ -17,12 +17,12 @@
 <link rel="stylesheet" href="/css/base.css">
 <link rel="stylesheet" href="/css/merchant.css">
 <style>
-  .tag-group { margin-bottom: 2px; }
-  .tag-hdr { display:flex; align-items:center; padding:6px 10px; background:var(--slate); border-radius:4px; cursor:pointer; user-select:none; font-size:calc(12px * var(--fs, 1)); font-weight:bold; color:var(--bone); }
+  .tag-group { margin-bottom: calc(2px*var(--fs, 1)); }
+  .tag-hdr { display:flex; align-items:center; padding:calc(6px*var(--fs, 1)) calc(10px*var(--fs, 1)); background:var(--slate); border-radius:calc(4px*var(--fs, 1)); cursor:pointer; user-select:none; font-size:calc(12px * var(--fs, 1)); font-weight:bold; color:var(--bone); }
   .tag-hdr:hover { background:var(--slate-hi); }
   .tag-body { display:none; }
   .tag-body.open { display:block; }
-  .bulk-bar { display:none; align-items:center; gap:8px; padding:7px 10px; background:var(--slate); border-radius:4px; margin-bottom:8px; flex-wrap:wrap; }
+  .bulk-bar { display:none; align-items:center; gap:calc(8px*var(--fs, 1)); padding:calc(7px*var(--fs, 1)) calc(10px*var(--fs, 1)); background:var(--slate); border-radius:calc(4px*var(--fs, 1)); margin-bottom:calc(8px*var(--fs, 1)); flex-wrap:wrap; }
   .bulk-bar.visible { display:flex; }
   .bulk-bar-label { font-size:calc(11px * var(--fs, 1)); color:var(--ash); white-space:nowrap; }
 </style>
@@ -33,7 +33,7 @@
 <!-- Password gate -->
 <div class="gate" id="gate">
   <div class="gate-box">
-    <div style="font-size:calc(36px * var(--fs, 1));margin-bottom:10px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-coins"></use></svg> </div>
+    <div style="font-size:calc(36px * var(--fs, 1));margin-bottom:calc(10px*var(--fs, 1))"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-coins"></use></svg> </div>
     <h2>Merchant Manager</h2>
     <p>Enter master password to access the shop.</p>
     <input type="password" id="gate-pw" placeholder="Master password…" autocomplete="off"
@@ -53,9 +53,9 @@
       
     </div>
     <div class="hdr-right">
-      <button class="btn" id="shop-status-btn" onclick="toggleShopStatus()" style="min-width:130px">Loading…</button>
-      <div style="display:flex;align-items:center;gap:4px">
-        <select id="open-tag-input" style="font-size:calc(12px * var(--fs, 1));padding:4px 7px;border:1px solid var(--rule-hi);border-radius:4px;background:var(--slate);color:var(--bone)"><option value="">— Tag —</option></select>
+      <button class="btn" id="shop-status-btn" onclick="toggleShopStatus()" style="min-width:calc(130px*var(--fs, 1))">Loading…</button>
+      <div style="display:flex;align-items:center;gap:calc(4px*var(--fs, 1))">
+        <select id="open-tag-input" style="font-size:calc(12px * var(--fs, 1));padding:calc(4px*var(--fs, 1)) calc(7px*var(--fs, 1));border:1px solid var(--rule-hi);border-radius:calc(4px*var(--fs, 1));background:var(--slate);color:var(--bone)"><option value="">— Tag —</option></select>
         <button class="btn" onclick="openShopByTag()" title="Open shop for this tag">Open</button>
       </div>
       <button class="btn" onclick="refreshAll()" title="Refresh data"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-refresh"></use></svg> Refresh</button>
@@ -73,22 +73,22 @@
 
     <!-- Shop Items tab -->
     <div class="tab-panel active" id="tab-items">
-      <div id="shop-loading" style="padding:12px;font-size:calc(11px * var(--fs, 1));color:var(--ash)">Loading…</div>
+      <div id="shop-loading" style="padding:calc(12px*var(--fs, 1));font-size:calc(11px * var(--fs, 1));color:var(--ash)">Loading…</div>
       <div class="bulk-bar" id="bulk-bar">
         <span class="bulk-bar-label" id="bulk-count">0 selected</span>
-        <input type="text" id="bulk-tag" placeholder="Tag…" list="tag-datalist-bulk" style="flex:1;min-width:100px">
+        <input type="text" id="bulk-tag" placeholder="Tag…" list="tag-datalist-bulk" style="flex:1;min-width:calc(100px*var(--fs, 1))">
         <datalist id="tag-datalist-bulk"></datalist>
         <button class="btn" onclick="applyBulkTag()">Apply Tag</button>
         <button class="btn danger" onclick="bulkDeleteSelected()">Delete Selected</button>
         <button class="btn" onclick="clearSelection()">Clear</button>
       </div>
       <div id="shop-groups"></div>
-      <div id="empty-msg" style="padding:12px;font-size:calc(11px * var(--fs, 1));color:var(--ash);display:none">No items in the shop yet. Click "+ Add Item" to add one.</div>
+      <div id="empty-msg" style="padding:calc(12px*var(--fs, 1));font-size:calc(11px * var(--fs, 1));color:var(--ash);display:none">No items in the shop yet. Click "+ Add Item" to add one.</div>
     </div>
 
     <!-- Purchase Logs tab -->
     <div class="tab-panel" id="tab-logs">
-      <div id="logs-loading" style="padding:12px;font-size:calc(11px * var(--fs, 1));color:var(--ash);display:none">Loading…</div>
+      <div id="logs-loading" style="padding:calc(12px*var(--fs, 1));font-size:calc(11px * var(--fs, 1));color:var(--ash);display:none">Loading…</div>
       <div id="logs-table-wrap" style="overflow-x:auto">
         <table>
           <thead>
@@ -100,7 +100,7 @@
               <th>Amount</th>
             </tr>
           </thead>
-          <tbody id="logs-tbody"><tr><td colspan="5" style="color:var(--ash);padding:12px;font-size:calc(11px * var(--fs, 1))">No purchases yet.</td></tr></tbody>
+          <tbody id="logs-tbody"><tr><td colspan="5" style="color:var(--ash);padding:calc(12px*var(--fs, 1));font-size:calc(11px * var(--fs, 1))">No purchases yet.</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -165,10 +165,10 @@
             <input type="text" id="f-weapon-dmg" placeholder="e.g. 1d8 slashing">
           </div>
         </div>
-        <div class="field" style="margin-top:6px">
+        <div class="field" style="margin-top:calc(6px*var(--fs, 1))">
           <label class="lbl">Properties <span style="text-transform:none;letter-spacing:0;font-weight:normal">(max 3)</span></label>
-          <div id="props-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;margin-top:6px"></div>
-          <div id="f-props-err" style="font-size:calc(10px * var(--fs, 1));color:var(--blood);min-height:12px;margin-top:2px"></div>
+          <div id="props-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:calc(4px*var(--fs, 1)) calc(12px*var(--fs, 1));margin-top:calc(6px*var(--fs, 1))"></div>
+          <div id="f-props-err" style="font-size:calc(10px * var(--fs, 1));color:var(--blood);min-height:calc(12px*var(--fs, 1));margin-top:calc(2px*var(--fs, 1))"></div>
         </div>
       </div>
 
@@ -176,23 +176,23 @@
         <label class="lbl">Price</label>
         <div class="price-row">
           <div>
-            <label class="lbl" style="margin-bottom:2px">PP</label>
+            <label class="lbl" style="margin-bottom:calc(2px*var(--fs, 1))">PP</label>
             <input type="number" id="f-pp" value="0" min="0" oninput="updatePricePreview()">
           </div>
           <div>
-            <label class="lbl" style="margin-bottom:2px">GP</label>
+            <label class="lbl" style="margin-bottom:calc(2px*var(--fs, 1))">GP</label>
             <input type="number" id="f-gp" value="0" min="0" oninput="updatePricePreview()">
           </div>
           <div>
-            <label class="lbl" style="margin-bottom:2px">EP</label>
+            <label class="lbl" style="margin-bottom:calc(2px*var(--fs, 1))">EP</label>
             <input type="number" id="f-ep" value="0" min="0" oninput="updatePricePreview()">
           </div>
           <div>
-            <label class="lbl" style="margin-bottom:2px">SP</label>
+            <label class="lbl" style="margin-bottom:calc(2px*var(--fs, 1))">SP</label>
             <input type="number" id="f-sp" value="0" min="0" oninput="updatePricePreview()">
           </div>
           <div>
-            <label class="lbl" style="margin-bottom:2px">CP</label>
+            <label class="lbl" style="margin-bottom:calc(2px*var(--fs, 1))">CP</label>
             <input type="number" id="f-cp" value="0" min="0" oninput="updatePricePreview()">
           </div>
         </div>

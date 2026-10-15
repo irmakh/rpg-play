@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 14:01
+// Written by Irmak Hakman — 2026-10-15 14:25
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -36,11 +36,11 @@ function renderInitiativeTracker(showBadge) {
     const canEdit  = isDM() || !e.monsterId;
     const rollHtml = canEdit
       ? `<input type="number" class="init-roll-input" value="${esc(e.roll)}" data-id="${esc(e.id)}" data-monster="${e.monsterId ? '1' : ''}"
-           style="width:36px;background:var(--slate-hi);border:1px solid var(--rule-hi);color:var(--bone);border-radius:3px;padding:2px 3px;font-size:calc(11px * var(--fs, 1));font-weight:bold;text-align:center"
+           style="width:calc(36px*var(--fs, 1));background:var(--slate-hi);border:1px solid var(--rule-hi);color:var(--bone);border-radius:calc(3px*var(--fs, 1));padding:calc(2px*var(--fs, 1)) calc(3px*var(--fs, 1));font-size:calc(11px * var(--fs, 1));font-weight:bold;text-align:center"
            onchange="updateInitRoll(this)" onclick="event.stopPropagation()">`
       : `<span class="init-row-roll">${e.roll}</span>`;
     const delHtml  = isDM()
-      ? `<button class="btn sm danger" style="padding:1px 5px;font-size:calc(11px * var(--fs, 1));line-height:1.2;margin-left:4px" onclick="event.stopPropagation();removeInitEntry('${escJs(e.id)}')" title="Remove from initiative"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg></button>`
+      ? `<button class="btn sm danger" style="padding:1px calc(5px*var(--fs, 1));font-size:calc(11px * var(--fs, 1));line-height:1.2;margin-left:calc(4px*var(--fs, 1))" onclick="event.stopPropagation();removeInitEntry('${escJs(e.id)}')" title="Remove from initiative"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg></button>`
       : '';
     const clickAttr = canView ? `onclick="viewInitEntry('${escJs(e.id)}')"` : '';
 

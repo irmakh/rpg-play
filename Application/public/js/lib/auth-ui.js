@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 14:01
+// Written by Irmak Hakman — 2026-10-15 14:25
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -26,14 +26,14 @@
   if (window.AuthUI) return;
 
   const STYLE = `
-.authui-cap{margin-bottom:14px}
-.authui-cap-lbl{display:block;font-size:calc(10px * var(--fs, 1));color:var(--bone,#E6EDF7);margin-bottom:4px}
-.authui-cap-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
-.authui-cap-img{display:block;width:220px;max-width:calc(100% - 48px);height:auto;aspect-ratio:22/7;
-  border-radius:var(--r-md,6px);background:var(--slate-hi,#1B2740);transition:opacity .15s}
+.authui-cap{margin-bottom:calc(14px*var(--fs, 1))}
+.authui-cap-lbl{display:block;font-size:calc(10px * var(--fs, 1));color:var(--bone,#E6EDF7);margin-bottom:calc(4px*var(--fs, 1))}
+.authui-cap-row{display:flex;align-items:center;gap:calc(8px*var(--fs, 1));margin-bottom:calc(6px*var(--fs, 1))}
+.authui-cap-img{display:block;width:calc(220px*var(--fs, 1));max-width:calc(100% - calc(48px*var(--fs, 1)));height:auto;aspect-ratio:22/7;
+  border-radius:var(--r-md,calc(6px*var(--fs, 1)));background:var(--slate-hi,#1B2740);transition:opacity .15s}
 .authui-cap-img.loading{opacity:.35}
-.authui-cap-new{flex:none;width:40px;height:40px;display:inline-flex;align-items:center;justify-content:center;
-  padding:0;border-radius:var(--r-sm,3px);border:1px solid var(--rule-hi,#E6EDF733);background:transparent;
+.authui-cap-new{flex:none;width:calc(40px*var(--fs, 1));height:calc(40px*var(--fs, 1));display:inline-flex;align-items:center;justify-content:center;
+  padding:0;border-radius:var(--r-sm,calc(3px*var(--fs, 1)));border:1px solid var(--rule-hi,#E6EDF733);background:transparent;
   color:var(--ash,#7F8FA8);cursor:pointer}
 .authui-cap-new:hover,.authui-cap-new:focus-visible{color:var(--bone,#E6EDF7);background:var(--wash,#E6EDF70F)}
 .authui-cap input.authui-cap-ans{letter-spacing:.06em}

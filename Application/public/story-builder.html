@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Written by Irmak Hakman — 2026-10-15 14:01 -->
+<!-- Written by Irmak Hakman — 2026-10-15 14:25 -->
 <!-- Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) -->
 <html lang="en" class="lamplit">
 <head>
@@ -26,14 +26,14 @@
 <!-- Stories password gate -->
 <div class="gate" id="stories-gate" style="display:none">
   <div class="gate-box">
-    <div style="font-size:calc(36px * var(--fs, 1));margin-bottom:10px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-book"></use></svg> </div>
+    <div style="font-size:calc(36px * var(--fs, 1));margin-bottom:calc(10px*var(--fs, 1))"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-book"></use></svg> </div>
     <h2>Stories</h2>
     <p>Enter your password to continue.</p>
     <input type="password" id="gate-pw" placeholder="Password…" autocomplete="off"
            onkeydown="if(event.key==='Enter')storiesGateSubmit()">
-    <div id="gate-cap" style="margin-top:12px;text-align:left"></div>
-    <div id="gate-err" style="color:var(--blood);font-size:calc(12px * var(--fs, 1));min-height:16px;margin-top:6px"></div>
-    <button class="btn primary" style="width:100%;margin-top:8px" onclick="storiesGateSubmit()">Enter</button>
+    <div id="gate-cap" style="margin-top:calc(12px*var(--fs, 1));text-align:left"></div>
+    <div id="gate-err" style="color:var(--blood);font-size:calc(12px * var(--fs, 1));min-height:calc(16px*var(--fs, 1));margin-top:calc(6px*var(--fs, 1))"></div>
+    <button class="btn primary" style="width:100%;margin-top:calc(8px*var(--fs, 1))" onclick="storiesGateSubmit()">Enter</button>
   </div>
 </div>
 <script>
@@ -70,7 +70,7 @@ async function storiesGateSubmit() {
 
   <!-- Header -->
   <div class="stories-hdr">
-    <a href="/stories.html" class="btn" style="padding:4px 10px;font-size:calc(11px * var(--fs, 1))"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-arrow-left"></use></svg> Stories</a>
+    <a href="/stories.html" class="btn" style="padding:calc(4px*var(--fs, 1)) calc(10px*var(--fs, 1));font-size:calc(11px * var(--fs, 1))"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-arrow-left"></use></svg> Stories</a>
     <h1 id="page-title">Story Editor</h1>
     <div class="hdr-right">
       <span id="save-status" class="status-msg"></span>
@@ -80,12 +80,12 @@ async function storiesGateSubmit() {
 
   <!-- Story metadata bar -->
   <div class="builder-meta-bar">
-    <div class="field" style="flex:2;min-width:160px;margin:0">
+    <div class="field" style="flex:2;min-width:calc(160px*var(--fs, 1));margin:0">
       <label class="lbl">Title</label>
       <input type="text" id="meta-title" maxlength="120" placeholder="Story title…"
              oninput="scheduleSave()">
     </div>
-    <div class="field" style="flex:3;min-width:200px;margin:0">
+    <div class="field" style="flex:3;min-width:calc(200px*var(--fs, 1));margin:0">
       <label class="lbl">Description</label>
       <input type="text" id="meta-desc" maxlength="300" placeholder="Short description…"
              oninput="scheduleSave()">
@@ -113,7 +113,7 @@ async function storiesGateSubmit() {
 
 <!-- Delete panel confirm modal -->
 <div class="modal-overlay" id="del-panel-modal" style="display:none" onclick="if(event.target===this)closeDelPanel()">
-  <div class="modal-box" style="max-width:340px;width:96%">
+  <div class="modal-box" style="max-width:calc(340px*var(--fs, 1));width:96%">
     <div class="ct">Delete Panel</div>
     <div class="modal-body">
       <p style="font-size:calc(13px * var(--fs, 1));color:var(--bone)">Delete this panel and its image or video? This cannot be undone.</p>
@@ -249,7 +249,7 @@ async function saveMetadata() {
 function renderPanels() {
   const el = document.getElementById('panels');
   if (!sequences.length) {
-    el.innerHTML = '<div class="empty-hint" style="padding:40px">No panels yet. Click "+ Add Panel" to start.</div>';
+    el.innerHTML = '<div class="empty-hint" style="padding:calc(40px*var(--fs, 1))">No panels yet. Click "+ Add Panel" to start.</div>';
     updatePanelCount();
     return;
   }

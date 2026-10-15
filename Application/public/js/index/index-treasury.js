@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 14:01
+// Written by Irmak Hakman — 2026-10-15 14:25
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -56,7 +56,7 @@ function requesterLine(item) {
   // Contested loot is worth pointing at — that is the whole reason the names
   // are on screen rather than hidden in the DM's queue.
   const color = count > 1 ? 'var(--bone)' : 'var(--ash)';
-  return `<div style="font-size:calc(10px * var(--fs, 1));color:${color};margin-top:2px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-users"></use></svg> ${esc(names)}</div>`;
+  return `<div style="font-size:calc(10px * var(--fs, 1));color:${color};margin-top:calc(2px*var(--fs, 1))"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-users"></use></svg> ${esc(names)}</div>`;
 }
 
 // ── Wallet ───────────────────────────────────────────────────────────────────
@@ -163,13 +163,13 @@ function renderTreasuryItems() {
   if (!body) return;
 
   if (treasurySeg === 'shop' && !treasuryData.shopOpen) {
-    body.innerHTML = '<div style="text-align:center;padding:32px 0;color:var(--ash);font-size:calc(13px * var(--fs, 1))"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-lock"></use></svg> The shop is currently closed.</div>';
+    body.innerHTML = '<div style="text-align:center;padding:calc(32px*var(--fs, 1)) 0;color:var(--ash);font-size:calc(13px * var(--fs, 1))"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-lock"></use></svg> The shop is currently closed.</div>';
     return;
   }
 
   const list = treasurySeg === 'shop' ? treasuryData.shop : treasuryData.loot;
   if (list.length === 0) {
-    body.innerHTML = `<div style="color:var(--ash);font-size:calc(11px * var(--fs, 1));padding:4px 0">${
+    body.innerHTML = `<div style="color:var(--ash);font-size:calc(11px * var(--fs, 1));padding:calc(4px*var(--fs, 1)) 0">${
       treasurySeg === 'shop' ? 'The shop is empty.' : 'No loot available yet.'}</div>`;
     return;
   }
@@ -190,13 +190,13 @@ function renderTreasuryItems() {
         <span class="shop-item-price">${cpToGp(item.valueCp)}</span>
         <span class="shop-item-qty">Stock: ${qtyText}</span>
         ${bonuses ? `<span class="shop-item-bonuses">${esc(bonuses)}</span>` : ''}
-        <button class="add-btn" style="width:auto;padding:3px 10px;margin:0"
+        <button class="add-btn" style="width:auto;padding:calc(3px*var(--fs, 1)) calc(10px*var(--fs, 1));margin:0"
                 onclick="addToCart('${escJs(item.id)}')">+ Cart</button>
       </div>`;
     }
 
     const requested = hasRequested(item.id);
-    return `<div class="shop-item-row" style="align-items:flex-start;flex-wrap:nowrap;gap:8px">
+    return `<div class="shop-item-row" style="align-items:flex-start;flex-wrap:nowrap;gap:calc(8px*var(--fs, 1))">
       ${treasuryThumb(item)}
       <div style="flex:1;min-width:0">
         <div class="shop-item-name" style="cursor:pointer;text-decoration:underline dotted"
@@ -205,16 +205,16 @@ function renderTreasuryItems() {
         ${isUnidentified(item)
           ? unidentifiedHTML()
           : item.description
-            ? `<div style="font-size:calc(10px * var(--fs, 1));color:var(--ash);margin-top:2px;white-space:pre-wrap">${esc(item.description)}</div>`
+            ? `<div style="font-size:calc(10px * var(--fs, 1));color:var(--ash);margin-top:calc(2px*var(--fs, 1));white-space:pre-wrap">${esc(item.description)}</div>`
             : ''}
-        ${bonuses ? `<div class="shop-item-bonuses" style="margin-top:2px">${esc(bonuses)}</div>` : ''}
+        ${bonuses ? `<div class="shop-item-bonuses" style="margin-top:calc(2px*var(--fs, 1))">${esc(bonuses)}</div>` : ''}
       </div>
-      ${claimed ? '<span style="font-size:calc(10px * var(--fs, 1));color:var(--verdigris);flex-shrink:0;padding-top:2px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-check"></use></svg> Claimed</span>' : ''}
+      ${claimed ? '<span style="font-size:calc(10px * var(--fs, 1));color:var(--verdigris);flex-shrink:0;padding-top:calc(2px*var(--fs, 1))"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-check"></use></svg> Claimed</span>' : ''}
       ${requested
-        ? `<span style="font-size:calc(10px * var(--fs, 1));color:var(--bone);flex-shrink:0;padding-top:2px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-hourglass"></use></svg> Requested</span>
-           <button class="add-btn" style="width:auto;padding:3px 10px;margin:0;flex-shrink:0"
+        ? `<span style="font-size:calc(10px * var(--fs, 1));color:var(--bone);flex-shrink:0;padding-top:calc(2px*var(--fs, 1))"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-hourglass"></use></svg> Requested</span>
+           <button class="add-btn" style="width:auto;padding:calc(3px*var(--fs, 1)) calc(10px*var(--fs, 1));margin:0;flex-shrink:0"
                    onclick="withdrawLootRequest('${escJs(item.id)}')" title="Take your name off this item">Withdraw</button>`
-        : `<button class="add-btn" style="width:auto;padding:3px 10px;margin:0;flex-shrink:0"
+        : `<button class="add-btn" style="width:auto;padding:calc(3px*var(--fs, 1)) calc(10px*var(--fs, 1));margin:0;flex-shrink:0"
                    onclick="addToLootCart('${escJs(item.id)}')" ${inCart ? 'disabled' : ''}>${inCart ? 'Selected' : '+ Select'}</button>`}
     </div>`;
   }).join('');
@@ -259,18 +259,18 @@ function openTreasuryDetail(id) {
   let html = '';
   if (item.imageMedium || item.imageUrl) {
     html += `<img src="${esc(item.imageMedium || item.imageUrl)}" alt=""
-                  style="width:100%;max-height:260px;object-fit:contain;border-radius:5px;margin-bottom:10px;cursor:zoom-in"
+                  style="width:100%;max-height:calc(260px*var(--fs, 1));object-fit:contain;border-radius:calc(5px*var(--fs, 1));margin-bottom:calc(10px*var(--fs, 1));cursor:zoom-in"
                   onclick="openTreasuryImage('${escJs(item.id)}')">`;
   }
   html += '<table style="width:100%;border-collapse:collapse;font-size:calc(12px * var(--fs, 1))">' +
     rows.map(([k, v]) =>
-      `<tr><td style="padding:4px 6px;color:var(--ash);width:42%">${k}</td><td style="padding:4px 6px;font-weight:bold">${esc(String(v))}</td></tr>`
+      `<tr><td style="padding:calc(4px*var(--fs, 1)) calc(6px*var(--fs, 1));color:var(--ash);width:42%">${k}</td><td style="padding:calc(4px*var(--fs, 1)) calc(6px*var(--fs, 1));font-weight:bold">${esc(String(v))}</td></tr>`
     ).join('') + '</table>';
   if (unknown) {
-    html += `<div style="margin-top:10px"><div class="lbl" style="margin-bottom:4px">Description</div>
+    html += `<div style="margin-top:calc(10px*var(--fs, 1))"><div class="lbl" style="margin-bottom:calc(4px*var(--fs, 1))">Description</div>
       <div class="tr-unid">This ${esc(typeLabel.toLowerCase())} has not been identified — its properties are unknown.</div></div>`;
   } else if (item.description) {
-    html += `<div style="margin-top:10px"><div class="lbl" style="margin-bottom:4px">Description</div>
+    html += `<div style="margin-top:calc(10px*var(--fs, 1))"><div class="lbl" style="margin-bottom:calc(4px*var(--fs, 1))">Description</div>
       <div style="font-size:calc(12px * var(--fs, 1));white-space:pre-wrap;line-height:1.5">${esc(item.description)}</div></div>`;
   }
   document.getElementById('shop-detail-body').innerHTML = html;
@@ -278,9 +278,9 @@ function openTreasuryDetail(id) {
   // Free loot lists who else is after it, right where the player is deciding.
   if (!forSale) {
     const names = requesterNames(item);
-    html += `<div style="margin-top:10px"><div class="lbl" style="margin-bottom:4px">Requested by</div>
+    html += `<div style="margin-top:calc(10px*var(--fs, 1))"><div class="lbl" style="margin-bottom:calc(4px*var(--fs, 1))">Requested by</div>
       <div style="font-size:calc(12px * var(--fs, 1));color:${names ? 'var(--bone)' : 'var(--ash)'}">${names ? '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-users"></use></svg> ' + esc(names) : 'Nobody yet.'}</div>
-      <div style="font-size:calc(10px * var(--fs, 1));color:var(--ash);margin-top:4px">The DM decides who receives it.</div></div>`;
+      <div style="font-size:calc(10px * var(--fs, 1));color:var(--ash);margin-top:calc(4px*var(--fs, 1))">The DM decides who receives it.</div></div>`;
     document.getElementById('shop-detail-body').innerHTML = html;
   }
 
@@ -459,13 +459,13 @@ function renderClaimedLoots() {
     body.innerHTML = '<div style="color:var(--ash);font-size:calc(11px * var(--fs, 1))">No loots claimed yet.</div>';
     return;
   }
-  body.innerHTML = claimedLoots.map((l, i) => `<div style="padding:6px 0;display:flex;align-items:flex-start;gap:8px;${i < claimedLoots.length - 1 ? 'border-bottom:1px solid var(--rule)' : ''}">
+  body.innerHTML = claimedLoots.map((l, i) => `<div style="padding:calc(6px*var(--fs, 1)) 0;display:flex;align-items:flex-start;gap:calc(8px*var(--fs, 1));${i < claimedLoots.length - 1 ? 'border-bottom:1px solid var(--rule)' : ''}">
     <div style="flex:1;min-width:0">
       <div style="font-weight:bold;font-size:calc(12px * var(--fs, 1))">${esc(treasuryDisplayName(l))}</div>
       ${l.descVisible === false
         ? unidentifiedHTML()
         : l.description
-          ? `<div style="font-size:calc(11px * var(--fs, 1));color:var(--ash);margin-top:2px;white-space:pre-wrap">${esc(l.description)}</div>`
+          ? `<div style="font-size:calc(11px * var(--fs, 1));color:var(--ash);margin-top:calc(2px*var(--fs, 1));white-space:pre-wrap">${esc(l.description)}</div>`
           : ''}
     </div>
     <button class="del-btn" onclick="removeLoot(${i})" title="Remove loot"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg></button>

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Written by Irmak Hakman — 2026-10-15 14:01 -->
+<!-- Written by Irmak Hakman — 2026-10-15 14:25 -->
 <!-- Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) -->
 <html lang="en">
 <head>
@@ -17,34 +17,34 @@
 *{box-sizing:border-box;margin:0;padding:0}
 
 body{font-family:var(--ui);background:var(--ink);color:var(--bone);min-height:100vh;display:flex;align-items:center;justify-content:center}
-.login-wrap{width:100%;max-width:380px;padding:16px}
-.login-box{background:var(--slate);border:1px solid var(--rule-hi);border-radius:10px;padding:32px 28px}
-.logo{text-align:center;margin-bottom:24px}
+.login-wrap{width:100%;max-width:calc(380px*var(--fs, 1));padding:calc(16px*var(--fs, 1))}
+.login-box{background:var(--slate);border:1px solid var(--rule-hi);border-radius:calc(10px*var(--fs, 1));padding:calc(32px*var(--fs, 1)) calc(28px*var(--fs, 1))}
+.logo{text-align:center;margin-bottom:calc(24px*var(--fs, 1))}
 .logo h1{color:var(--bone);font-family:var(--display);font-variation-settings:'opsz' 72,'WONK' 1;font-size:var(--t-xl);font-weight:600}
-.logo p{color:var(--ash);font-size:calc(11px * var(--fs, 1));margin-top:4px;}
-.tabs{display:flex;gap:0;margin-bottom:24px;border-radius:5px;overflow:hidden;border:1px solid var(--rule-hi)}
-.tab-btn{flex:1;padding:8px;background:transparent;border:none;color:var(--ash);font-size:calc(12px * var(--fs, 1));font-weight:bold;cursor:pointer;transition:background .15s}
+.logo p{color:var(--ash);font-size:calc(11px * var(--fs, 1));margin-top:calc(4px*var(--fs, 1));}
+.tabs{display:flex;gap:0;margin-bottom:calc(24px*var(--fs, 1));border-radius:calc(5px*var(--fs, 1));overflow:hidden;border:1px solid var(--rule-hi)}
+.tab-btn{flex:1;padding:calc(8px*var(--fs, 1));background:transparent;border:none;color:var(--ash);font-size:calc(12px * var(--fs, 1));font-weight:bold;cursor:pointer;transition:background .15s}
 .tab-btn.active{background:var(--arc);color:var(--ink)}
 .tab-btn:not(.active):hover{background:var(--wash);color:var(--bone)}
 .tab-content{display:none}
 .tab-content.active{display:block}
-.field{margin-bottom:14px}
-label{display:block;font-size:calc(10px * var(--fs, 1));color:var(--bone);margin-bottom:4px}
-input,select{width:100%;background:var(--slate-hi);border:1px solid var(--rule-hi);color:var(--bone);border-radius:4px;padding:8px 10px;font-size:calc(13px * var(--fs, 1));font-family:inherit}
+.field{margin-bottom:calc(14px*var(--fs, 1))}
+label{display:block;font-size:calc(10px * var(--fs, 1));color:var(--bone);margin-bottom:calc(4px*var(--fs, 1))}
+input,select{width:100%;background:var(--slate-hi);border:1px solid var(--rule-hi);color:var(--bone);border-radius:calc(4px*var(--fs, 1));padding:calc(8px*var(--fs, 1)) calc(10px*var(--fs, 1));font-size:calc(13px * var(--fs, 1));font-family:inherit}
 input:focus,select:focus{outline:none;border-color:var(--arc);background:var(--slate-hi)}
 select option{background:var(--slate-hi)}
-.btn{width:100%;padding:12px;background:var(--arc);border:none;color:var(--ink);border-radius:4px;font-size:calc(13px * var(--fs, 1));font-weight:bold;cursor:pointer;margin-top:4px}
+.btn{width:100%;padding:calc(12px*var(--fs, 1));background:var(--arc);border:none;color:var(--ink);border-radius:calc(4px*var(--fs, 1));font-size:calc(13px * var(--fs, 1));font-weight:bold;cursor:pointer;margin-top:calc(4px*var(--fs, 1))}
 .btn:hover{background:var(--arc-hi)}
 .btn:disabled{opacity:.5;cursor:not-allowed}
-.err-msg{color:var(--blood);font-size:calc(11px * var(--fs, 1));min-height:16px;margin-bottom:10px;text-align:center}
-.ok-msg{color:var(--verdigris);font-size:calc(11px * var(--fs, 1));min-height:16px;margin-bottom:10px;text-align:center}
-.divider{border:none;border-top:1px solid var(--rule);margin:16px 0}
-.hint{font-size:calc(11px * var(--fs, 1));color:var(--ash);text-align:center;margin-top:12px}
+.err-msg{color:var(--blood);font-size:calc(11px * var(--fs, 1));min-height:calc(16px*var(--fs, 1));margin-bottom:calc(10px*var(--fs, 1));text-align:center}
+.ok-msg{color:var(--verdigris);font-size:calc(11px * var(--fs, 1));min-height:calc(16px*var(--fs, 1));margin-bottom:calc(10px*var(--fs, 1));text-align:center}
+.divider{border:none;border-top:1px solid var(--rule);margin:calc(16px*var(--fs, 1)) 0}
+.hint{font-size:calc(11px * var(--fs, 1));color:var(--ash);text-align:center;margin-top:calc(12px*var(--fs, 1))}
 /* Setup step */
 #char-setup-step{display:none}
 #char-login-step{display:block}
-.step-title{font-size:calc(13px * var(--fs, 1));color:var(--bone);font-weight:bold;margin-bottom:4px}
-.step-sub{font-size:calc(11px * var(--fs, 1));color:var(--ash);margin-bottom:16px}
+.step-title{font-size:calc(13px * var(--fs, 1));color:var(--bone);font-weight:bold;margin-bottom:calc(4px*var(--fs, 1))}
+.step-sub{font-size:calc(11px * var(--fs, 1));color:var(--ash);margin-bottom:calc(16px*var(--fs, 1))}
 </style>
 </head>
 <body>
@@ -96,7 +96,7 @@ select option{background:var(--slate-hi)}
         </div>
         <div class="err-msg" id="setup-err"></div>
         <button class="btn" onclick="setupPassword()" id="setup-btn">Set Password &amp; Login</button>
-        <button class="btn" style="margin-top:8px;background:transparent;border:1px solid var(--rule-hi);color:var(--ash)"
+        <button class="btn" style="margin-top:calc(8px*var(--fs, 1));background:transparent;border:1px solid var(--rule-hi);color:var(--ash)"
                 onclick="cancelSetup()">Back</button>
       </div>
     </div>

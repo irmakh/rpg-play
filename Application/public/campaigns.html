@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Written by Irmak Hakman — 2026-10-15 14:01 -->
+<!-- Written by Irmak Hakman — 2026-10-15 14:25 -->
 <!-- Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) -->
 <html lang="en" class="lamplit">
 <head>
@@ -95,7 +95,7 @@
         <label>DM Password (to authorise these changes)</label>
         <input type="password" id="mg-auth" placeholder="This campaign's DM password" autocomplete="current-password">
       </div>
-      <hr style="border:none;border-top:1px solid var(--rule);margin:14px 0">
+      <hr style="border:none;border-top:1px solid var(--rule);margin:calc(14px*var(--fs, 1)) 0">
       <div class="field">
         <label>Campaign Name</label>
         <input id="mg-name" maxlength="80">
@@ -115,13 +115,13 @@
       <div id="mg-cap"></div>
       <div class="err-msg" id="mg-err"></div>
       <div class="ok-msg" id="mg-ok"></div>
-      <hr style="border:none;border-top:1px solid var(--rule);margin:14px 0">
+      <hr style="border:none;border-top:1px solid var(--rule);margin:calc(14px*var(--fs, 1)) 0">
       <label>Danger Zone</label>
-      <div class="hint" style="margin-top:2px">
+      <div class="hint" style="margin-top:calc(2px*var(--fs, 1))">
         Deleting a campaign permanently destroys its characters, table, treasury,
         monsters, calendar, stories and AI DM sessions. Needs the admin password.
       </div>
-      <button class="btn btn-danger btn-sm" style="margin-top:10px" onclick="openDelete()">Delete this campaign…</button>
+      <button class="btn btn-danger btn-sm" style="margin-top:calc(10px*var(--fs, 1))" onclick="openDelete()">Delete this campaign…</button>
     </div>
     <div class="modal-ft">
       <button class="btn" onclick="saveCampaign()" id="mg-btn">Save Changes</button>
@@ -141,7 +141,7 @@
       <div class="hint" style="margin-top:0">
         This cannot be undone. Type the campaign name exactly to confirm.
       </div>
-      <div class="field" style="margin-top:12px">
+      <div class="field" style="margin-top:calc(12px*var(--fs, 1))">
         <label>Campaign Name</label>
         <input id="del-name" placeholder="Type the name…">
       </div>

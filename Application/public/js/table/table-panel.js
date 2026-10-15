@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 14:01
+// Written by Irmak Hakman — 2026-10-15 14:25
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -472,7 +472,7 @@ function _renderSidePanelSpell(s, idx, d) {
   const atk = (spAtk !== undefined && spAtk !== null && spAtk !== '')
     ? `<span class="qroll-val" onclick="event.stopPropagation();qroll('Spell Attack','${escJs(String(spAtk))}')" style="font-size:calc(11px * var(--fs, 1));cursor:pointer" title="Spell attack"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-bolt"></use></svg></span>`
     : '';
-  return `<div class="qroll-row" style="padding:3px 10px;font-size:calc(11px * var(--fs, 1))">${nameSpan} <span style="font-size:calc(10px * var(--fs, 1));color:var(--ash)">${lvl}</span> ${atk}</div>`;
+  return `<div class="qroll-row" style="padding:calc(3px*var(--fs, 1)) calc(10px*var(--fs, 1));font-size:calc(11px * var(--fs, 1))">${nameSpan} <span style="font-size:calc(10px * var(--fs, 1));color:var(--ash)">${lvl}</span> ${atk}</div>`;
 }
 
 function _renderSidePanelCustom(a, canEdit) {
@@ -959,7 +959,7 @@ function _postSpellInfo(s) {
   if (s[2])  meta.push(`⏱ ${s[2]}`);
   if (s[3])  meta.push(`🎯 ${s[3]}`);
   if (s[14]) meta.push(`⏳ ${s[14]}`);
-  const link = `<div style="margin-top:4px"><a href="${esc(_spell5eUrl(name))}" target="_blank" rel="noopener"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-book"></use></svg> Open on 5e.tools <svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-external"></use></svg></a></div>`;
+  const link = `<div style="margin-top:calc(4px*var(--fs, 1))"><a href="${esc(_spell5eUrl(name))}" target="_blank" rel="noopener"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-book"></use></svg> Open on 5e.tools <svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-external"></use></svg></a></div>`;
   postChatInfoCard({ name, meta, html: (desc || '') + link });
 }
 

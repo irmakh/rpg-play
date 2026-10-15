@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 14:01
+// Written by Irmak Hakman — 2026-10-15 14:25
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -133,7 +133,7 @@ function renderDetail(h) {
     .join('');
 
   document.getElementById('detail').innerHTML = `
-    <button class="btn ghost sm back-btn" style="margin-bottom:12px" onclick="clearDetail()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-arrow-left"></use></svg> All handouts</button>
+    <button class="btn ghost sm back-btn" style="margin-bottom:calc(12px*var(--fs, 1))" onclick="clearDetail()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-arrow-left"></use></svg> All handouts</button>
 
     <div class="sect">
       <div class="sect-hdr">
@@ -141,27 +141,27 @@ function renderDetail(h) {
         <span class="status" id="save-status"></span>
       </div>
       <div class="row">
-        <div class="field" style="flex:3 1 240px">
+        <div class="field" style="flex:3 1 calc(240px*var(--fs, 1))">
           <label>Title</label>
           <input id="f-title" value="${esc(h.title)}" maxlength="200" oninput="markDirty()">
         </div>
-        <div class="field" style="flex:1 1 120px">
+        <div class="field" style="flex:1 1 calc(120px*var(--fs, 1))">
           <label>Tag</label>
           <input id="f-tag" value="${esc(h.tag || '')}" maxlength="40" oninput="markDirty()">
         </div>
       </div>
       <div class="field">
         <label>Prompt — shown before the check resolves (optional)</label>
-        <textarea id="f-prompt" style="min-height:56px" maxlength="20000"
+        <textarea id="f-prompt" style="min-height:calc(56px*var(--fs, 1))" maxlength="20000"
                   placeholder="You find a weathered stone half-buried in the ash."
                   oninput="markDirty()">${esc(h.promptText || '')}</textarea>
       </div>
       <div class="row">
-        <div class="field" style="flex:2 1 180px">
+        <div class="field" style="flex:2 1 calc(180px*var(--fs, 1))">
           <label>Skill check</label>
           <select id="f-skill" onchange="markDirty()">${skillOpts}</select>
         </div>
-        <div class="field" style="flex:1 1 100px">
+        <div class="field" style="flex:1 1 calc(100px*var(--fs, 1))">
           <label>DC (0 = judge by eye)</label>
           <input type="number" id="f-dc" value="${h.checkDc || 0}" min="0" max="50" oninput="markDirty()">
         </div>
@@ -171,7 +171,7 @@ function renderDetail(h) {
         The DC only pre-selects an outcome for you below; nothing reaches a player
         until you press <b>Success</b> or <b>Fail</b>.
       </div>
-      <div class="row" style="margin-top:12px">
+      <div class="row" style="margin-top:calc(12px*var(--fs, 1))">
         <button class="btn" onclick="saveHandout()">Save</button>
         <button class="btn danger sm" onclick="deleteHandout()">Delete</button>
       </div>
@@ -235,7 +235,7 @@ function renderRecipients(h) {
   }).join('');
 
   return `
-    ${anySuggested ? '<div class="row" style="margin-bottom:8px"><button class="btn sm" onclick="applySuggested()">Apply all suggested</button></div>' : ''}
+    ${anySuggested ? '<div class="row" style="margin-bottom:calc(8px*var(--fs, 1))"><button class="btn sm" onclick="applySuggested()">Apply all suggested</button></div>' : ''}
     <div style="overflow-x:auto">
       <table class="recips">
         <thead><tr><th>Character</th><th>Roll</th><th>Outcome</th><th></th></tr></thead>

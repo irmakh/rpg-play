@@ -1,16 +1,16 @@
-/* Written by Irmak Hakman — 2026-10-15 14:01 */
+/* Written by Irmak Hakman — 2026-10-15 14:25 */
 /* Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) */
 
 /* ── Forgotten Realms Calendar ───────────────────────────────────────────────── */
 
-.cal-wrap { max-width: 860px; margin: 0 auto; }
+.cal-wrap { max-width: calc(860px*var(--fs, 1)); margin: 0 auto; }
 
 /* Player calendar tab — wrap gets a card background */
 #tab-calendar .cal-wrap {
   background: var(--slate);
   border: 1px solid var(--a33);
-  border-radius: 6px;
-  padding: 16px 18px 18px;
+  border-radius: calc(6px*var(--fs, 1));
+  padding: calc(16px*var(--fs, 1)) calc(18px*var(--fs, 1)) calc(18px*var(--fs, 1));
 }
 
 /* Selected day (player calendar day click) */
@@ -25,12 +25,12 @@
 .cal-today-bar {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: calc(10px*var(--fs, 1));
   background: var(--wash);
   border: 1px solid var(--rule-hi);
-  border-radius: 4px;
-  padding: 8px 12px;
-  margin-bottom: 14px;
+  border-radius: calc(4px*var(--fs, 1));
+  padding: calc(8px*var(--fs, 1)) calc(12px*var(--fs, 1));
+  margin-bottom: calc(14px*var(--fs, 1));
   flex-wrap: wrap;
 }
 .cal-today-label { font-size: calc(10px * var(--fs, 1)); color: var(--ash);   flex-shrink: 0; }
@@ -41,16 +41,16 @@
 .cal-nav {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 6px;
+  gap: calc(8px*var(--fs, 1));
+  margin-bottom: calc(6px*var(--fs, 1));
 }
 .cal-nav-btn {
   background: var(--slate-hi);
   border: 1px solid var(--rule-hi);
   color: var(--bone);
   cursor: pointer;
-  padding: 5px 13px;
-  border-radius: 3px;
+  padding: calc(5px*var(--fs, 1)) calc(13px*var(--fs, 1));
+  border-radius: calc(3px*var(--fs, 1));
   font-size: calc(15px * var(--fs, 1));
   line-height: 1;
   flex-shrink: 0;
@@ -58,17 +58,17 @@
 .cal-nav-btn:hover { background: var(--a33); border-color: var(--bone); }
 .cal-nav-title    { flex: 1; text-align: center; }
 .cal-nav-month    { font-size: calc(18px * var(--fs, 1)); font-weight: bold; color: var(--bone); display: block; }
-.cal-nav-subtitle { font-size: calc(11px * var(--fs, 1)); color: var(--ash); display: block; margin-top: 2px; }
+.cal-nav-subtitle { font-size: calc(11px * var(--fs, 1)); color: var(--ash); display: block; margin-top: calc(2px*var(--fs, 1)); }
 
 /* Month tenday grid */
-.cal-grid { width: 100%; border-collapse: collapse; margin-bottom: 16px; table-layout: fixed; background: var(--slate); border: 1px solid var(--a33); border-radius: 4px; }
+.cal-grid { width: 100%; border-collapse: collapse; margin-bottom: calc(16px*var(--fs, 1)); table-layout: fixed; background: var(--slate); border: 1px solid var(--a33); border-radius: calc(4px*var(--fs, 1)); }
 .cal-tenday-lbl {
   font-size: calc(9px * var(--fs, 1));
   color: var(--ash);
   
   
-  padding: 6px 7px;
-  width: 76px;
+  padding: calc(6px*var(--fs, 1)) calc(7px*var(--fs, 1));
+  width: calc(76px*var(--fs, 1));
   vertical-align: middle;
   border-right: 1px solid var(--a33);
   white-space: nowrap;
@@ -77,11 +77,11 @@
 .cal-grid tbody tr:nth-child(even) .cal-tenday-lbl { background: var(--a33); }
 .cal-day-cell {
   text-align: center;
-  padding: 5px 2px 4px;
+  padding: calc(5px*var(--fs, 1)) calc(2px*var(--fs, 1)) calc(4px*var(--fs, 1));
   border: 1px solid var(--wash);
   cursor: pointer;
   vertical-align: top;
-  min-height: 42px;
+  min-height: calc(42px*var(--fs, 1));
   transition: background .1s;
   background: var(--slate-hi);
 }
@@ -99,8 +99,8 @@
 .cal-is-today .cal-day-num { color: var(--bone); font-weight: bold; }
 
 /* Dot markers on calendar cells */
-.cal-dots { display: flex; flex-wrap: wrap; gap: 2px; justify-content: center; padding: 0 2px; }
-.cal-dot   { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+.cal-dots { display: flex; flex-wrap: wrap; gap: calc(2px*var(--fs, 1)); justify-content: center; padding: 0 calc(2px*var(--fs, 1)); }
+.cal-dot   { width: calc(5px*var(--fs, 1)); height: calc(5px*var(--fs, 1)); border-radius: 50%; flex-shrink: 0; }
 .cal-dot.pub  { background: #5a9; }
 .cal-dot.priv { background: #c55; }
 
@@ -108,12 +108,12 @@
 .cal-festival-row {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: calc(10px*var(--fs, 1));
   background: var(--wash);
   border: 1px solid var(--rule-hi);
-  border-radius: 4px;
-  padding: 11px 14px;
-  margin-bottom: 16px;
+  border-radius: calc(4px*var(--fs, 1));
+  padding: calc(11px*var(--fs, 1)) calc(14px*var(--fs, 1));
+  margin-bottom: calc(16px*var(--fs, 1));
   cursor: pointer;
   transition: background .1s;
 }
@@ -128,64 +128,64 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 6px 0 8px;
+  padding: calc(6px*var(--fs, 1)) 0 calc(8px*var(--fs, 1));
   border-bottom: 1px solid var(--a33);
-  margin-bottom: 8px;
+  margin-bottom: calc(8px*var(--fs, 1));
 }
 .cal-events-title { font-size: calc(11px * var(--fs, 1)); color: var(--bone);   font-weight: bold; }
 .cal-event-item {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
-  padding: 8px 10px;
+  gap: calc(8px*var(--fs, 1));
+  padding: calc(8px*var(--fs, 1)) calc(10px*var(--fs, 1));
   background: var(--slate-hi);
   border: 1px solid var(--a33);
-  border-radius: 4px;
-  margin-bottom: 5px;
+  border-radius: calc(4px*var(--fs, 1));
+  margin-bottom: calc(5px*var(--fs, 1));
 }
 .cal-event-info  { flex: 1; min-width: 0; }
 .cal-event-title { font-size: calc(13px * var(--fs, 1)); color: var(--bone); font-weight: bold; }
 .cal-event-date  { font-size: calc(10px * var(--fs, 1)); color: var(--ash); margin-top: 1px; }
-.cal-event-desc  { font-size: calc(11px * var(--fs, 1)); color: var(--ash); margin-top: 4px; white-space: pre-wrap; word-break: break-word; }
+.cal-event-desc  { font-size: calc(11px * var(--fs, 1)); color: var(--ash); margin-top: calc(4px*var(--fs, 1)); white-space: pre-wrap; word-break: break-word; }
 .cal-event-badge {
   font-size: calc(9px * var(--fs, 1));
-  padding: 2px 6px;
-  border-radius: 3px;
+  padding: calc(2px*var(--fs, 1)) calc(6px*var(--fs, 1));
+  border-radius: calc(3px*var(--fs, 1));
   font-weight: bold;
   
   flex-shrink: 0;
-  margin-top: 2px;
+  margin-top: calc(2px*var(--fs, 1));
 }
 .cal-event-badge.pub  { background: rgba(90,170,120,.18); color: #5a9; border: 1px solid rgba(90,170,120,.35); }
 .cal-event-badge.priv { background: rgba(200,80,80,.15);  color: #c55; border: 1px solid rgba(200,80,80,.3);  }
-.cal-event-actions { display: flex; gap: 4px; flex-shrink: 0; align-items: flex-start; padding-top: 2px; }
-.cal-event-author { font-size: calc(10px * var(--fs, 1)); color: var(--a); margin-top: 2px; font-style: italic; }
+.cal-event-actions { display: flex; gap: calc(4px*var(--fs, 1)); flex-shrink: 0; align-items: flex-start; padding-top: calc(2px*var(--fs, 1)); }
+.cal-event-author { font-size: calc(10px * var(--fs, 1)); color: var(--a); margin-top: calc(2px*var(--fs, 1)); font-style: italic; }
 
 /* Event media attachments (image/audio/video) */
-.cal-media-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.cal-media-row { display: flex; flex-wrap: wrap; gap: calc(6px*var(--fs, 1)); margin-top: calc(6px*var(--fs, 1)); }
 .cal-media-thumb {
-  width: 64px; height: 64px; object-fit: cover; border-radius: 4px;
+  width: calc(64px*var(--fs, 1)); height: calc(64px*var(--fs, 1)); object-fit: cover; border-radius: calc(4px*var(--fs, 1));
   border: 1px solid var(--a33); cursor: zoom-in;
 }
-.cal-media-audio { height: 30px; max-width: 220px; }
-.cal-media-video { max-width: 220px; max-height: 140px; border-radius: 4px; border: 1px solid var(--a33); }
+.cal-media-audio { height: calc(30px*var(--fs, 1)); max-width: calc(220px*var(--fs, 1)); }
+.cal-media-video { max-width: calc(220px*var(--fs, 1)); max-height: calc(140px*var(--fs, 1)); border-radius: calc(4px*var(--fs, 1)); border: 1px solid var(--a33); }
 
 /* Pending media chips inside the journal modal */
-.cal-media-pending { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.cal-media-pending { display: flex; flex-wrap: wrap; gap: calc(6px*var(--fs, 1)); margin-top: calc(6px*var(--fs, 1)); }
 .cal-media-chip {
   position: relative; display: inline-flex; align-items: center; justify-content: center;
-  width: 48px; height: 48px; border-radius: 4px; border: 1px solid var(--a33);
+  width: calc(48px*var(--fs, 1)); height: calc(48px*var(--fs, 1)); border-radius: calc(4px*var(--fs, 1)); border: 1px solid var(--a33);
   background: var(--slate-hi); overflow: hidden;
 }
 .cal-media-chip img { width: 100%; height: 100%; object-fit: cover; }
 .cal-media-chip-icon { font-size: calc(20px * var(--fs, 1)); }
 .cal-media-chip button {
-  position: absolute; top: -6px; right: -6px; width: 18px; height: 18px;
+  position: absolute; top: calc(-6px*var(--fs, 1)); right: calc(-6px*var(--fs, 1)); width: calc(18px*var(--fs, 1)); height: calc(18px*var(--fs, 1));
   border-radius: 50%; border: none; background: #c44; color: #fff;
   font-size: calc(11px * var(--fs, 1)); line-height: 1; cursor: pointer; padding: 0;
 }
 
-.cal-empty { font-size: calc(12px * var(--fs, 1)); color: var(--ash); padding: 6px 0; }
+.cal-empty { font-size: calc(12px * var(--fs, 1)); color: var(--ash); padding: calc(6px*var(--fs, 1)) 0; }
 
 /* Modal overlay */
 .cal-modal {
@@ -200,16 +200,16 @@
 .cal-modal-box {
   background: var(--slate);
   border: 1px solid var(--rule-hi);
-  border-radius: 6px;
-  padding: 22px 20px 18px;
-  width: 440px;
+  border-radius: calc(6px*var(--fs, 1));
+  padding: calc(22px*var(--fs, 1)) calc(20px*var(--fs, 1)) calc(18px*var(--fs, 1));
+  width: calc(440px*var(--fs, 1));
   max-width: 95vw;
   max-height: 90vh;
   overflow-y: auto;
 }
 
-.cal-form-row { margin-bottom: 11px; }
-.cal-form-row label { display: block; font-size: calc(10px * var(--fs, 1)); color: var(--bone);   margin-bottom: 4px; }
+.cal-form-row { margin-bottom: calc(11px*var(--fs, 1)); }
+.cal-form-row label { display: block; font-size: calc(10px * var(--fs, 1)); color: var(--bone);   margin-bottom: calc(4px*var(--fs, 1)); }
 .cal-form-row input,
 .cal-form-row textarea,
 .cal-form-row select {
@@ -218,23 +218,23 @@
   background: var(--slate-hi);
   border: 1px solid var(--rule-hi);
   color: var(--bone);
-  border-radius: 3px;
-  padding: 6px 8px;
+  border-radius: calc(3px*var(--fs, 1));
+  padding: calc(6px*var(--fs, 1)) calc(8px*var(--fs, 1));
   font-size: calc(12px * var(--fs, 1));
   font-family: inherit;
 }
-.cal-form-row textarea { resize: vertical; min-height: 60px; }
-.cal-form-inline { display: flex; gap: 8px; }
+.cal-form-row textarea { resize: vertical; min-height: calc(60px*var(--fs, 1)); }
+.cal-form-inline { display: flex; gap: calc(8px*var(--fs, 1)); }
 .cal-form-inline > .cal-form-row { flex: 1; margin-bottom: 0; }
-.cal-form-row.cal-form-inline { margin-bottom: 11px; }
+.cal-form-row.cal-form-inline { margin-bottom: calc(11px*var(--fs, 1)); }
 .cal-toggle-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 11px;
+  gap: calc(8px*var(--fs, 1));
+  margin-bottom: calc(11px*var(--fs, 1));
 }
 .cal-toggle-row label { font-size: calc(12px * var(--fs, 1)); color: var(--bone); cursor: pointer; user-select: none; }
-.cal-modal-btns { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+.cal-modal-btns { display: flex; gap: calc(8px*var(--fs, 1)); justify-content: flex-end; margin-top: calc(16px*var(--fs, 1)); }
 
 
 /* ── Shell layout ───────────────────────────────────────────────────────────
@@ -264,26 +264,26 @@
 /* ── Events list: search, filters, days ──────────────────────────────────────
    Built by js/lib/calendar-list.js for both calendars. */
 .cal-tools{display:flex;flex-wrap:wrap;gap:var(--s2);align-items:center;margin-bottom:var(--s3)}
-.cal-tools input.cal-tool-search{flex:1 1 180px;min-width:0;width:auto;background:var(--slate);border:1px solid var(--rule-hi);border-radius:4px;color:var(--bone);font:inherit;font-size:calc(12px * var(--fs, 1));padding:5px 8px}
-.cal-tools select{flex:0 1 auto;width:auto;max-width:100%;background:var(--slate);border:1px solid var(--rule-hi);border-radius:4px;color:var(--bone);font:inherit;font-size:calc(12px * var(--fs, 1));padding:5px 6px}
-.cal-tool-scope{display:inline-flex;border:1px solid var(--rule-hi);border-radius:4px;overflow:hidden;flex-shrink:0}
-.cal-tool-scope button{background:transparent;border:0;border-right:1px solid var(--rule-hi);color:var(--ash);font:inherit;font-size:calc(12px * var(--fs, 1));padding:5px 10px;cursor:pointer}
+.cal-tools input.cal-tool-search{flex:1 1 calc(180px*var(--fs, 1));min-width:0;width:auto;background:var(--slate);border:1px solid var(--rule-hi);border-radius:calc(4px*var(--fs, 1));color:var(--bone);font:inherit;font-size:calc(12px * var(--fs, 1));padding:calc(5px*var(--fs, 1)) calc(8px*var(--fs, 1))}
+.cal-tools select{flex:0 1 auto;width:auto;max-width:100%;background:var(--slate);border:1px solid var(--rule-hi);border-radius:calc(4px*var(--fs, 1));color:var(--bone);font:inherit;font-size:calc(12px * var(--fs, 1));padding:calc(5px*var(--fs, 1)) calc(6px*var(--fs, 1))}
+.cal-tool-scope{display:inline-flex;border:1px solid var(--rule-hi);border-radius:calc(4px*var(--fs, 1));overflow:hidden;flex-shrink:0}
+.cal-tool-scope button{background:transparent;border:0;border-right:1px solid var(--rule-hi);color:var(--ash);font:inherit;font-size:calc(12px * var(--fs, 1));padding:calc(5px*var(--fs, 1)) calc(10px*var(--fs, 1));cursor:pointer}
 .cal-tool-scope button:last-child{border-right:0}
 .cal-tool-scope button:hover{color:var(--bone)}
 .cal-tool-scope button.on{background:var(--arc-fill);color:var(--arc);font-weight:bold}
 
 .cal-day-group{margin-bottom:var(--s3)}
-.cal-day-hdr{display:flex;align-items:center;gap:var(--s2);padding:4px 0;border-bottom:1px solid var(--rule-hi);margin-bottom:4px;cursor:pointer}
+.cal-day-hdr{display:flex;align-items:center;gap:var(--s2);padding:calc(4px*var(--fs, 1)) 0;border-bottom:1px solid var(--rule-hi);margin-bottom:calc(4px*var(--fs, 1));cursor:pointer}
 .cal-day-hdr:hover .cal-day-hdr-date{color:var(--arc)}
 .cal-day-hdr-date{font-size:calc(12px * var(--fs, 1));font-weight:bold;color:var(--bone)}
-.cal-day-hdr-today{font-size:calc(9px * var(--fs, 1));font-weight:bold;color:var(--ink);background:var(--arc);border-radius:3px;padding:1px 5px}
+.cal-day-hdr-today{font-size:calc(9px * var(--fs, 1));font-weight:bold;color:var(--ink);background:var(--arc);border-radius:calc(3px*var(--fs, 1));padding:1px calc(5px*var(--fs, 1))}
 .cal-day-hdr-count{margin-left:auto;font-size:calc(10px * var(--fs, 1));color:var(--ash)}
 .cal-day-group.is-today .cal-day-hdr{border-bottom-color:var(--arc)}
 
-.cal-row{border:1px solid var(--a33);border-radius:4px;background:var(--slate-hi);margin-bottom:4px}
-.cal-row > summary{display:flex;align-items:center;gap:var(--s2);padding:6px 10px;cursor:pointer;list-style:none;min-width:0}
+.cal-row{border:1px solid var(--a33);border-radius:calc(4px*var(--fs, 1));background:var(--slate-hi);margin-bottom:calc(4px*var(--fs, 1))}
+.cal-row > summary{display:flex;align-items:center;gap:var(--s2);padding:calc(6px*var(--fs, 1)) calc(10px*var(--fs, 1));cursor:pointer;list-style:none;min-width:0}
 .cal-row > summary::-webkit-details-marker{display:none}
-.cal-row > summary::before{content:'▸';color:var(--ash);font-size:calc(10px * var(--fs, 1));flex-shrink:0;width:8px}
+.cal-row > summary::before{content:'▸';color:var(--ash);font-size:calc(10px * var(--fs, 1));flex-shrink:0;width:calc(8px*var(--fs, 1))}
 .cal-row[open] > summary::before{content:'▾'}
 .cal-row[open] > summary{border-bottom:1px solid var(--a33)}
 .cal-row-title{flex:1;min-width:0;font-size:calc(13px * var(--fs, 1));font-weight:bold;color:var(--bone);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -292,12 +292,12 @@
 .cal-row-author{font-size:calc(10px * var(--fs, 1));color:var(--arc);font-style:italic;flex-shrink:0;max-width:14ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cal-row-media{font-size:calc(10px * var(--fs, 1));color:var(--ash);flex-shrink:0}
 .cal-row > summary .cal-event-badge{margin-top:0}
-.cal-row-body{padding:8px 10px 10px 26px}
+.cal-row-body{padding:calc(8px*var(--fs, 1)) calc(10px*var(--fs, 1)) calc(10px*var(--fs, 1)) calc(26px*var(--fs, 1))}
 .cal-row-body .cal-event-desc{margin-top:0;font-size:calc(12px * var(--fs, 1))}
 .cal-row-body .cal-event-actions{margin-top:var(--s2);padding-top:0}
 
 @media (max-width:560px){
   .cal-row-kind{display:none}
-  .cal-row-body{padding-left:10px}
+  .cal-row-body{padding-left:calc(10px*var(--fs, 1))}
 }
 .cal-festival-row.cal-selected{box-shadow:inset 0 0 0 2px var(--arc)}

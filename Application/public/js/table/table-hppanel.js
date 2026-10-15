@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 14:01
+// Written by Irmak Hakman — 2026-10-15 14:25
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -543,10 +543,10 @@ async function confirmGroupInitRoll() {
   rows.sort((a, b) => (b.total ?? -999) - (a.total ?? -999));
   const rtLabel = rollType === 'adv' ? ' (Adv)' : rollType === 'dis' ? ' (Dis)' : '';
   let html = `<strong>Initiative${rtLabel}${mode === 'merged' ? ' · group' : ''}</strong>`;
-  html += `<div style="margin-top:4px;display:flex;flex-direction:column;gap:2px">`;
+  html += `<div style="margin-top:calc(4px*var(--fs, 1));display:flex;flex-direction:column;gap:calc(2px*var(--fs, 1))">`;
   for (const r of rows) {
     const color = r.isCrit ? 'var(--verdigris)' : r.isFail ? 'var(--blood)' : 'inherit';
-    html += `<div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline">`
+    html += `<div style="display:flex;justify-content:space-between;gap:calc(10px*var(--fs, 1));align-items:baseline">`
       + `<span>${esc(r.name)}</span>`
       + `<span><span style="font-size:calc(10px * var(--fs, 1));opacity:.55">${esc(r.detail)}</span> <strong style="color:${color};font-size:calc(14px * var(--fs, 1))">${r.total}</strong></span></div>`;
   }
@@ -732,7 +732,7 @@ function renderBulkPanel() {
   const namesList = document.getElementById('bulk-names-list');
   if (namesList) {
     namesList.innerHTML = selected.map(tok =>
-      `<span style="font-size:calc(10px * var(--fs, 1));background:var(--slate-hi);border:1px solid #00e5ff44;border-radius:2px;padding:1px 5px;cursor:pointer;display:inline-flex;align-items:center;gap:3px" onclick="bulkDeselectToken('${escJs(tok.id)}')" title="Remove from selection">${esc(tokDisplayName(tok))} <span style="color:var(--ash);font-size:calc(9px * var(--fs, 1))"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg></span></span>`
+      `<span style="font-size:calc(10px * var(--fs, 1));background:var(--slate-hi);border:1px solid #00e5ff44;border-radius:calc(2px*var(--fs, 1));padding:1px calc(5px*var(--fs, 1));cursor:pointer;display:inline-flex;align-items:center;gap:calc(3px*var(--fs, 1))" onclick="bulkDeselectToken('${escJs(tok.id)}')" title="Remove from selection">${esc(tokDisplayName(tok))} <span style="color:var(--ash);font-size:calc(9px * var(--fs, 1))"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg></span></span>`
     ).join('');
   }
 
@@ -937,13 +937,13 @@ async function confirmGroupCheckRoll() {
   rows.sort((a, b) => (b.total ?? -999) - (a.total ?? -999));
 
   let html = `<strong>${esc(abLabel)} ${kindLabel}${rtLabel}</strong>`;
-  html += `<div style="margin-top:4px;display:flex;flex-direction:column;gap:2px">`;
+  html += `<div style="margin-top:calc(4px*var(--fs, 1));display:flex;flex-direction:column;gap:calc(2px*var(--fs, 1))">`;
   for (const r of rows) {
     if (r.total === null) {
-      html += `<div style="display:flex;justify-content:space-between;gap:10px;opacity:.5"><span>${esc(r.name)}</span><span>—</span></div>`;
+      html += `<div style="display:flex;justify-content:space-between;gap:calc(10px*var(--fs, 1));opacity:.5"><span>${esc(r.name)}</span><span>—</span></div>`;
     } else {
       const color = r.isCrit ? 'var(--verdigris)' : r.isFail ? 'var(--blood)' : 'inherit';
-      html += `<div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline">`
+      html += `<div style="display:flex;justify-content:space-between;gap:calc(10px*var(--fs, 1));align-items:baseline">`
         + `<span>${esc(r.name)}</span>`
         + `<span><span style="font-size:calc(10px * var(--fs, 1));opacity:.55">${esc(r.detail)}</span> <strong style="color:${color};font-size:calc(14px * var(--fs, 1))">${r.total}</strong></span></div>`;
     }

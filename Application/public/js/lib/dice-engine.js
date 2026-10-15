@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-10-15 14:25
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -231,7 +231,7 @@ function _makeD20El(value, size, dur) {
   scene.style.cssText = `position:relative;width:${size}px;height:${size}px;flex-shrink:0`;
   const stage = document.createElement('div');
   stage.className = 'd20-stage';
-  stage.style.cssText = `position:absolute;top:0;left:0;width:200px;height:200px;transform:scale(${k});transform-origin:top left`;
+  stage.style.cssText = `position:absolute;top:0;left:0;width:calc(200px*var(--fs, 1));height:calc(200px*var(--fs, 1));transform:scale(${k});transform-origin:top left`;
   const die = document.createElement('div');
   die.className = 'd20-die';
   die.style.setProperty('--roll-dur', `${dur}ms`);
@@ -261,7 +261,7 @@ function _makeD10El(value, size, dur) {
   scene.style.cssText = `position:relative;width:${size}px;height:${size}px;flex-shrink:0`;
   const stage = document.createElement('div');
   stage.className = 'd10-stage';
-  stage.style.cssText = `position:absolute;top:0;left:0;width:200px;height:200px;transform:scale(${k});transform-origin:top left`;
+  stage.style.cssText = `position:absolute;top:0;left:0;width:calc(200px*var(--fs, 1));height:calc(200px*var(--fs, 1));transform:scale(${k});transform-origin:top left`;
   const die = document.createElement('div');
   die.className = 'd10-die';
   die.style.setProperty('--roll-dur', `${dur}ms`);

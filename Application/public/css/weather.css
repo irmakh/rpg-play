@@ -1,4 +1,4 @@
-/* Written by Irmak Hakman — 2026-10-15 14:01 */
+/* Written by Irmak Hakman — 2026-10-15 14:25 */
 /* Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) */
 
 /* Weather sprite + tooltip — shared by events.html, index.html, table.html.
@@ -10,8 +10,8 @@
  * maintain. Tune the -px positions here if a glyph looks off-centre. */
 .wx-ico {
   display: block;
-  width: 48px;
-  height: 48px;
+  width: calc(48px*var(--fs, 1));
+  height: calc(48px*var(--fs, 1));
   background-image: url(/img/weather.png);
   background-repeat: no-repeat;
   background-size: 313px 72px;
@@ -28,7 +28,7 @@
   display: inline-block;
   overflow: hidden;
   vertical-align: middle;
-  border-radius: 6px;
+  border-radius: calc(6px*var(--fs, 1));
 }
 
 /* Day cells must be a positioning context for the absolute marker. */
@@ -39,8 +39,8 @@
  * the day cell). */
 .wx-day-mark {
   position: absolute;
-  top: 2px;
-  right: 2px;
+  top: calc(2px*var(--fs, 1));
+  right: calc(2px*var(--fs, 1));
   line-height: 0;
   cursor: help;
 }
@@ -51,19 +51,19 @@
   z-index: 99999;
   display: none;
   pointer-events: none;
-  min-width: 168px;
-  max-width: 240px;
-  padding: 10px 12px;
-  border-radius: 10px;
+  min-width: calc(168px*var(--fs, 1));
+  max-width: calc(240px*var(--fs, 1));
+  padding: calc(10px*var(--fs, 1)) calc(12px*var(--fs, 1));
+  border-radius: calc(10px*var(--fs, 1));
   background: var(--slate);
   border: 1px solid var(--rule-hi);
   box-shadow: 0 8px 28px rgba(0, 0, 0, .45);
   font-size: calc(12px * var(--fs, 1));
   color: var(--bone);
 }
-#wx-tooltip .wx-tip-date { font-weight: bold; margin-bottom: 6px; }
-#wx-tooltip .wx-tip-icons { display: flex; gap: 8px; margin-bottom: 7px; }
-#wx-tooltip .wx-tip-row { display: flex; justify-content: space-between; gap: 10px; margin: 2px 0; }
+#wx-tooltip .wx-tip-date { font-weight: bold; margin-bottom: calc(6px*var(--fs, 1)); }
+#wx-tooltip .wx-tip-icons { display: flex; gap: calc(8px*var(--fs, 1)); margin-bottom: calc(7px*var(--fs, 1)); }
+#wx-tooltip .wx-tip-row { display: flex; justify-content: space-between; gap: calc(10px*var(--fs, 1)); margin: calc(2px*var(--fs, 1)) 0; }
 #wx-tooltip .wx-tip-lbl { color: var(--ash); }
 #wx-tooltip .wx-tip-val { font-weight: 600; }
 
@@ -71,23 +71,23 @@
 #wx-toolbar {
   display: none;
   align-items: center;
-  gap: 6px;
-  margin-left: 8px;
-  padding: 2px 8px;
-  border-radius: 6px;
+  gap: calc(6px*var(--fs, 1));
+  margin-left: calc(8px*var(--fs, 1));
+  padding: calc(2px*var(--fs, 1)) calc(8px*var(--fs, 1));
+  border-radius: calc(6px*var(--fs, 1));
   background: var(--wash);
   border: 1px solid var(--rule-hi);
   cursor: default;
   font-size: calc(12px * var(--fs, 1));
   white-space: nowrap;
 }
-#wx-toolbar .wx-tb-icons { display: flex; gap: 3px; }
+#wx-toolbar .wx-tb-icons { display: flex; gap: calc(3px*var(--fs, 1)); }
 #wx-toolbar .wx-tb-text { color: var(--bone); font-weight: 600; }
 
 /* ── The weather window: the day first ───────────────────────────────────────
    What the weather is, in pictures and words. The dials that change it are
    folded away under "Edit details". */
-.wx-now{border:1px solid var(--rule-hi);border-radius:6px;background:var(--wash);padding:var(--s3);margin-bottom:var(--s3)}
+.wx-now{border:1px solid var(--rule-hi);border-radius:calc(6px*var(--fs, 1));background:var(--wash);padding:var(--s3);margin-bottom:var(--s3)}
 .wx-now-date{font-size:calc(12px * var(--fs, 1));color:var(--ash);margin-bottom:var(--s2)}
 .wx-now-date b{color:var(--bone)}
 .wx-now-date a{font-size:calc(11px * var(--fs, 1));margin-left:var(--s2)}
@@ -96,9 +96,9 @@
 .wx-now-words{font-size:calc(13px * var(--fs, 1));color:var(--bone);line-height:1.45}
 .wx-now-detail{font-size:calc(11px * var(--fs, 1));color:var(--ash);margin-top:var(--s2)}
 .wx-now-btns{margin-top:var(--s3)}
-.wx-details{border:1px solid var(--rule);border-radius:6px;padding:0 var(--s3);margin-bottom:var(--s3)}
+.wx-details{border:1px solid var(--rule);border-radius:calc(6px*var(--fs, 1));padding:0 var(--s3);margin-bottom:var(--s3)}
 .wx-details > summary{cursor:pointer;font-size:calc(12px * var(--fs, 1));color:var(--ash);padding:var(--s2) 0}
 .wx-details > summary:hover{color:var(--bone)}
 .wx-details[open]{padding-bottom:var(--s2)}
 .wx-details[open] > summary{color:var(--bone);margin-bottom:var(--s2)}
-#wx-tooltip .wx-tip-desc{margin-top:6px;padding-top:6px;border-top:1px solid var(--rule);color:var(--ash);max-width:260px;white-space:normal;line-height:1.4}
+#wx-tooltip .wx-tip-desc{margin-top:calc(6px*var(--fs, 1));padding-top:calc(6px*var(--fs, 1));border-top:1px solid var(--rule);color:var(--ash);max-width:calc(260px*var(--fs, 1));white-space:normal;line-height:1.4}

@@ -1,4 +1,4 @@
-/* Written by Irmak Hakman — 2026-10-15 14:01 */
+/* Written by Irmak Hakman — 2026-10-15 14:25 */
 /* Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) */
 
 /* ============================================================================
@@ -87,11 +87,14 @@
   --t-2xl:calc(34px * var(--fs, 1)); --t-3xl:calc(48px * var(--fs, 1));
 
   /* ── Space, 4px base ──────────────────────────────────────────────────── */
-  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:32px; --s7:48px;
+  /* Scaled by --fs with the text, so spacing grows with it (unset = as written). */
+  --s1:calc(4px*var(--fs, 1)); --s2:calc(8px*var(--fs, 1)); --s3:calc(12px*var(--fs, 1));
+  --s4:calc(16px*var(--fs, 1)); --s5:calc(24px*var(--fs, 1)); --s6:calc(32px*var(--fs, 1));
+  --s7:calc(48px*var(--fs, 1));
 
   /* ── Radius carries hierarchy; one radius on everything is a tell ─────── */
-  --r-sm:3px;             /* inputs, chips                                  */
-  --r-md:6px;             /* panels, cards                                  */
+  --r-sm:calc(3px*var(--fs, 1));   /* inputs, chips                         */
+  --r-md:calc(6px*var(--fs, 1));   /* panels, cards                         */
   --r-full:999px;         /* rings, avatars, tokens                         */
 }
 

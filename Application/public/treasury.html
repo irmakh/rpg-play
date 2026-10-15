@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Written by Irmak Hakman — 2026-10-15 14:01 -->
+<!-- Written by Irmak Hakman — 2026-10-15 14:25 -->
 <!-- Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) -->
 <html lang="en" class="lamplit app-page">
 <head>
@@ -26,7 +26,7 @@
 <script src="/js/lib/auth-ui.js"></script>
 <div class="gate" id="gate">
   <div class="gate-box">
-    <div style="font-size:calc(36px * var(--fs, 1));margin-bottom:10px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-coins"></use></svg> </div>
+    <div style="font-size:calc(36px * var(--fs, 1));margin-bottom:calc(10px*var(--fs, 1))"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-coins"></use></svg> </div>
     <h2>Treasury</h2>
     <p>Enter master password to manage loot and shop stock.</p>
     <input type="password" id="gate-pw" placeholder="Master password…" autocomplete="off"
@@ -117,7 +117,7 @@
           <div class="field">
             <label class="lbl" for="f-tag-sel">Tag</label>
             <select id="f-tag-sel" onchange="onDrawerTag()"></select>
-            <input type="text" id="f-tag-new" placeholder="New tag name, then Enter" style="display:none;margin-top:5px"
+            <input type="text" id="f-tag-new" placeholder="New tag name, then Enter" style="display:none;margin-top:calc(5px*var(--fs, 1))"
                    onkeydown="if(event.key==='Enter'){event.preventDefault();commitDrawerTag();}" onblur="commitDrawerTag()">
           </div>
           <div class="field">
@@ -128,7 +128,7 @@
             <input type="checkbox" id="f-desc-visible" data-f="descVisible" data-label="identified" onchange="onField(this)">
             Identified — players see its name, description and properties
           </label>
-          <div class="field" id="d-unid-row" style="margin-top:10px">
+          <div class="field" id="d-unid-row" style="margin-top:calc(10px*var(--fs, 1))">
             <label class="lbl" for="f-unid-name">Name while unidentified</label>
             <input type="text" id="f-unid-name" data-f="unidName" data-label="unidentified name" maxlength="120" placeholder="e.g. Dull Iron Ring" oninput="onField(this)">
             <div class="help">Players read this instead of the real name. Empty: the real name, marked “(unidentified)”.</div>
@@ -160,7 +160,7 @@
               <div class="field"><label class="lbl" for="f-cp">CP</label><input type="number" id="f-cp" min="0" value="0" oninput="onPrice()"></div>
             </div>
             <div class="help" id="price-preview"></div>
-            <div class="field" style="max-width:170px;margin-top:6px">
+            <div class="field" style="max-width:calc(170px*var(--fs, 1));margin-top:calc(6px*var(--fs, 1))">
               <label class="lbl" for="f-qty">Stock (−1 = no limit)</label>
               <input type="number" id="f-qty" min="-1" value="1" oninput="onStock()">
             </div>
@@ -202,7 +202,7 @@
 
           <div class="block" id="sect-charges">
             <div class="block-h">Charges</div>
-            <div class="field" style="max-width:170px"><label class="lbl" for="f-charges">Charges (0 = none)</label><input type="number" id="f-charges" data-f="charges" data-label="charges" value="0" min="0" max="999" oninput="onField(this)"></div>
+            <div class="field" style="max-width:calc(170px*var(--fs, 1))"><label class="lbl" for="f-charges">Charges (0 = none)</label><input type="number" id="f-charges" data-f="charges" data-label="charges" value="0" min="0" max="999" oninput="onField(this)"></div>
             <label class="chk"><input type="checkbox" id="f-charges-long" data-f="chargesRecharge" data-label="long rest refill" onchange="onField(this)"> Refills on a long rest</label>
             <div class="help">An item with charges gets a Use button in its owner’s inventory.</div>
           </div>
@@ -256,14 +256,14 @@
     <div class="modal-body">
       <div class="field">
         <label class="lbl" for="import-text">One item per block, with a blank line between items. First line is the name, the rest is the description.</label>
-        <textarea id="import-text" style="min-height:150px;font-family:monospace"
+        <textarea id="import-text" style="min-height:calc(150px*var(--fs, 1));font-family:monospace"
                   placeholder="Gold Coins&#10;A handful of gold coins found in the chest.&#10;&#10;Rusty Sword&#10;An old blade, still somewhat sharp."></textarea>
       </div>
       <div class="g2">
         <div class="field">
           <label class="lbl" for="import-tag-sel">Tag</label>
           <select id="import-tag-sel" onchange="onTagPick('import-tag')"></select>
-          <input type="text" id="import-tag-new" placeholder="New tag name…" style="display:none;margin-top:5px">
+          <input type="text" id="import-tag-new" placeholder="New tag name…" style="display:none;margin-top:calc(5px*var(--fs, 1))">
         </div>
         <div class="field">
           <label class="lbl" for="import-mode">Put them in</label>

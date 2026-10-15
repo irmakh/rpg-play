@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-09-27 12:25
+// Written by Irmak Hakman — 2026-10-15 14:25
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -314,11 +314,11 @@ function addEditRow(containerId) {
 function efAppendRow(container, item) {
   const div = document.createElement('div');
   div.className = 'ef-entry-row';
-  div.innerHTML = `<div style="display:flex;gap:6px;margin-bottom:4px;align-items:center">
+  div.innerHTML = `<div style="display:flex;gap:calc(6px*var(--fs, 1));margin-bottom:calc(4px*var(--fs, 1));align-items:center">
     <input type="text" placeholder="Name" data-field="name" style="flex:1">
     <button type="button" class="btn sm danger" onclick="this.closest('.ef-entry-row').remove()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg></button>
   </div>
-  <textarea placeholder="Description" data-field="entries" style="min-height:56px;resize:vertical;width:100%"></textarea>`;
+  <textarea placeholder="Description" data-field="entries" style="min-height:calc(56px*var(--fs, 1));resize:vertical;width:100%"></textarea>`;
   div.querySelector('[data-field=name]').value = item.name || '';
   div.querySelector('[data-field=entries]').value = (item.entries || []).filter(e => typeof e === 'string').join('\n\n');
   container.appendChild(div);

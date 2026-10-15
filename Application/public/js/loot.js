@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 14:01
+// Written by Irmak Hakman — 2026-10-15 14:25
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -63,7 +63,7 @@ async function loadLogs() {
     const logs = await res.json();
     loadEl.style.display = 'none';
     if (logs.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="3" style="color:var(--ash);padding:12px;font-size:calc(11px * var(--fs, 1))">No claims yet.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="3" style="color:var(--ash);padding:calc(12px*var(--fs, 1));font-size:calc(11px * var(--fs, 1))">No claims yet.</td></tr>';
       return;
     }
     tbody.innerHTML = logs.map(l => {
@@ -138,21 +138,21 @@ function renderItemRow(item) {
     ? `<span class="vis-badge visible" style="font-size:calc(9px * var(--fs, 1))">Desc Visible</span>`
     : `<span class="vis-badge hidden" style="font-size:calc(9px * var(--fs, 1))">Desc Hidden</span>`;
   const descBtn = item.descVisible
-    ? `<button class="btn sm danger" onclick="toggleDescVisible('${escJs(item.id)}', false)" style="margin-left:4px">Hide Desc</button>`
-    : `<button class="btn sm success" onclick="toggleDescVisible('${escJs(item.id)}', true)" style="margin-left:4px">Show Desc</button>`;
+    ? `<button class="btn sm danger" onclick="toggleDescVisible('${escJs(item.id)}', false)" style="margin-left:calc(4px*var(--fs, 1))">Hide Desc</button>`
+    : `<button class="btn sm success" onclick="toggleDescVisible('${escJs(item.id)}', true)" style="margin-left:calc(4px*var(--fs, 1))">Show Desc</button>`;
   const descPreview = item.description
     ? `<span style="color:var(--ash);font-size:calc(11px * var(--fs, 1))">${esc(item.description.length > 80 ? item.description.slice(0,80)+'…' : item.description)}</span>`
     : '<span style="color:var(--rule)">—</span>';
   const checked = selectedItems.has(item.id) ? 'checked' : '';
   return `<tr>
-    <td style="text-align:center;width:30px"><input type="checkbox" ${checked} onchange="toggleItemSelection('${escJs(item.id)}')"></td>
+    <td style="text-align:center;width:calc(30px*var(--fs, 1))"><input type="checkbox" ${checked} onchange="toggleItemSelection('${escJs(item.id)}')"></td>
     <td><strong>${esc(item.name)}</strong></td>
-    <td style="max-width:220px">${descPreview}</td>
+    <td style="max-width:calc(220px*var(--fs, 1))">${descPreview}</td>
     <td style="white-space:nowrap">${visBadge}<br>${descBadge}</td>
     <td style="white-space:nowrap">
       ${visBtn}${descBtn}
-      <button class="btn sm" onclick="openItemModal('${escJs(item.id)}')" style="margin-left:4px">Edit</button>
-      <button class="btn sm danger" onclick="deleteItem('${escJs(item.id)}')" style="margin-left:4px">Delete</button>
+      <button class="btn sm" onclick="openItemModal('${escJs(item.id)}')" style="margin-left:calc(4px*var(--fs, 1))">Edit</button>
+      <button class="btn sm danger" onclick="deleteItem('${escJs(item.id)}')" style="margin-left:calc(4px*var(--fs, 1))">Delete</button>
     </td>
   </tr>`;
 }
@@ -214,7 +214,7 @@ function renderTable() {
       <div class="tag-body${isCollapsed ? '' : ' open'}">
         <div style="overflow-x:auto">
           <table>
-            <thead><tr><th style="width:30px"></th><th>Name</th><th>Description</th><th>Visibility</th><th></th></tr></thead>
+            <thead><tr><th style="width:calc(30px*var(--fs, 1))"></th><th>Name</th><th>Description</th><th>Visibility</th><th></th></tr></thead>
             <tbody>${selectAllRow}${rows}</tbody>
           </table>
         </div>

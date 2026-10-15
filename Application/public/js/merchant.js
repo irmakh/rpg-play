@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 14:01
+// Written by Irmak Hakman — 2026-10-15 14:25
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -248,7 +248,7 @@ async function loadLogs() {
     const logs = await res.json();
     loadEl.style.display = 'none';
     if (logs.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="5" style="color:var(--ash);padding:12px;font-size:calc(11px * var(--fs, 1))">No purchases yet.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="5" style="color:var(--ash);padding:calc(12px*var(--fs, 1));font-size:calc(11px * var(--fs, 1))">No purchases yet.</td></tr>';
       return;
     }
     tbody.innerHTML = logs.map(l => {
@@ -331,15 +331,15 @@ function renderTable() {
       const qtyStyle = item.quantity === 0 ? 'color:var(--blood)' : '';
       const checked = selectedItems.has(item.id) ? 'checked' : '';
       return `<tr>
-        <td style="width:28px"><input type="checkbox" ${checked} onchange="toggleItemSelection('${escJs(item.id)}')" style="accent-color:var(--bone)"></td>
+        <td style="width:calc(28px*var(--fs, 1))"><input type="checkbox" ${checked} onchange="toggleItemSelection('${escJs(item.id)}')" style="accent-color:var(--bone)"></td>
         <td><strong>${esc(item.name)}</strong></td>
         <td style="color:var(--ash)">${esc(item.itemType)}</td>
         <td style="color:var(--arc)">${cpToGp(item.valueCp)}</td>
         <td style="${qtyStyle}">${qtyText}</td>
         <td style="color:var(--ash);font-size:calc(11px * var(--fs, 1))">${esc(bonusSummary(item))}</td>
-        <td style="color:var(--ash);font-size:calc(11px * var(--fs, 1));max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(item.notes)}">${esc(item.notes) || '—'}</td>
+        <td style="color:var(--ash);font-size:calc(11px * var(--fs, 1));max-width:calc(160px*var(--fs, 1));overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(item.notes)}">${esc(item.notes) || '—'}</td>
         <td style="white-space:nowrap">
-          <button class="btn sm" onclick="openItemModal('${escJs(item.id)}')" style="margin-right:4px">Edit</button>
+          <button class="btn sm" onclick="openItemModal('${escJs(item.id)}')" style="margin-right:calc(4px*var(--fs, 1))">Edit</button>
           <button class="btn sm danger" onclick="deleteItem('${escJs(item.id)}')">Delete</button>
         </td>
       </tr>`;
@@ -347,15 +347,15 @@ function renderTable() {
 
     return `<div class="tag-group">
       <div class="tag-hdr" onclick="toggleTag(${tagAttr})">
-        <span style="margin-right:6px">${isOpen ? '▼' : '▶'}</span>
-        <input type="checkbox" ${allSel ? 'checked' : ''} onclick="event.stopPropagation();toggleGroupSelection(${tagAttr})" style="accent-color:var(--bone);margin-right:8px" title="Select all in group">
+        <span style="margin-right:calc(6px*var(--fs, 1))">${isOpen ? '▼' : '▶'}</span>
+        <input type="checkbox" ${allSel ? 'checked' : ''} onclick="event.stopPropagation();toggleGroupSelection(${tagAttr})" style="accent-color:var(--bone);margin-right:calc(8px*var(--fs, 1))" title="Select all in group">
         <span>${esc(label)}</span>
-        <span style="margin-left:8px;font-size:calc(11px * var(--fs, 1));color:var(--ash);font-weight:normal">${items.length} item${items.length !== 1 ? 's' : ''}</span>
+        <span style="margin-left:calc(8px*var(--fs, 1));font-size:calc(11px * var(--fs, 1));color:var(--ash);font-weight:normal">${items.length} item${items.length !== 1 ? 's' : ''}</span>
       </div>
       <div class="tag-body${isOpen ? ' open' : ''}">
         <table style="width:100%">
           <thead><tr>
-            <th style="width:28px"></th><th>Name</th><th>Type</th><th>Price</th>
+            <th style="width:calc(28px*var(--fs, 1))"></th><th>Name</th><th>Type</th><th>Price</th>
             <th>Qty</th><th>Bonuses</th><th>Notes</th><th></th>
           </tr></thead>
           <tbody>${rows}</tbody>
@@ -373,8 +373,8 @@ function initPropsGrid() {
   const grid = document.getElementById('props-grid');
   if (!grid || grid.childElementCount > 0) return;
   grid.innerHTML = WEAPON_PROPS.map(p =>
-    `<label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:calc(12px * var(--fs, 1))">
-      <input type="checkbox" id="${propId(p)}" value="${p}" onchange="onPropChange()" style="width:13px;height:13px;accent-color:var(--bone)">
+    `<label style="display:flex;align-items:center;gap:calc(5px*var(--fs, 1));cursor:pointer;font-size:calc(12px * var(--fs, 1))">
+      <input type="checkbox" id="${propId(p)}" value="${p}" onchange="onPropChange()" style="width:calc(13px*var(--fs, 1));height:calc(13px*var(--fs, 1));accent-color:var(--bone)">
       ${p}
     </label>`
   ).join('');

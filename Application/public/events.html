@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Written by Irmak Hakman — 2026-10-15 14:01 -->
+<!-- Written by Irmak Hakman — 2026-10-15 14:25 -->
 <!-- Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) -->
 <html lang="en" class="lamplit app-page">
 <head>
@@ -21,7 +21,7 @@
 <link rel="stylesheet" href="/css/calendar.css">
 <link rel="stylesheet" href="/css/weather.css">
 <style>
-  #cal-today-bar-btns { display:flex; gap:6px; align-items:center; flex-shrink:0; }
+  #cal-today-bar-btns { display:flex; gap:calc(6px*var(--fs, 1)); align-items:center; flex-shrink:0; }
 </style>
 <script src="/js/lib/icons.js"></script>
 </head>
@@ -31,7 +31,7 @@
 <script src="/js/lib/auth-ui.js"></script>
 <div class="gate" id="gate">
   <div class="gate-box">
-    <div style="font-size:calc(36px * var(--fs, 1));margin-bottom:10px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-calendar"></use></svg> </div>
+    <div style="font-size:calc(36px * var(--fs, 1));margin-bottom:calc(10px*var(--fs, 1))"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-calendar"></use></svg> </div>
     <h2>DM Calendar</h2>
     <p>Enter master password to access the campaign calendar.</p>
     <input type="password" id="gate-pw" placeholder="Master password…" autocomplete="off"
@@ -284,7 +284,7 @@
 
 <!-- Weather modal -->
 <div class="cal-modal" id="weather-modal" style="display:none">
-  <div class="cal-modal-box" style="max-width:540px">
+  <div class="cal-modal-box" style="max-width:calc(540px*var(--fs, 1))">
     <div class="cal-modal-title">🌦 Daily Weather</div>
 
     <!-- The day's weather. A day gets its weather by itself when the campaign
@@ -315,7 +315,7 @@
         <input type="number" id="weather-l2-min" min="1" max="20" value="18" onchange="weatherOnThresholds()">
       </div>
     </div>
-    <div style="font-size:calc(11px * var(--fs, 1));color:var(--ash);margin:-2px 0 8px" id="weather-range-help">Normal 1–14 · Level 1 15–17 · Level 2 18–20</div>
+    <div style="font-size:calc(11px * var(--fs, 1));color:var(--ash);margin:calc(-2px*var(--fs, 1)) 0 calc(8px*var(--fs, 1))" id="weather-range-help">Normal 1–14 · Level 1 15–17 · Level 2 18–20</div>
 
     <!-- Roll date selector -->
     <div class="cal-form-inline" style="align-items:flex-end">
@@ -326,7 +326,7 @@
           <option value="festival">Festival</option>
         </select>
       </div>
-      <div class="cal-form-inline" id="weather-date-day-fields" style="flex:1;gap:6px">
+      <div class="cal-form-inline" id="weather-date-day-fields" style="flex:1;gap:calc(6px*var(--fs, 1))">
         <div class="cal-form-row" style="flex:1"><label>Year</label>
           <input type="number" id="weather-date-year" value="1492" min="1" max="9999" onchange="weatherOnDateChange()"></div>
         <div class="cal-form-row" style="flex:1.4"><label>Month</label>
@@ -339,7 +339,7 @@
         <div class="cal-form-row" style="flex:.8"><label>Day</label>
           <input type="number" id="weather-date-day" value="1" min="1" max="30" onchange="weatherOnDateChange()"></div>
       </div>
-      <div class="cal-form-inline" id="weather-date-fest-fields" style="flex:1;gap:6px;display:none">
+      <div class="cal-form-inline" id="weather-date-fest-fields" style="flex:1;gap:calc(6px*var(--fs, 1));display:none">
         <div class="cal-form-row" style="flex:1"><label>Year</label>
           <input type="number" id="weather-date-fest-year" value="1492" min="1" max="9999" onchange="weatherOnDateChange()"></div>
         <div class="cal-form-row" style="flex:1.7"><label>Festival</label>
@@ -385,17 +385,17 @@
         </select>
       </div>
     </div>
-    <div class="cal-modal-btns" style="margin-top:6px">
+    <div class="cal-modal-btns" style="margin-top:calc(6px*var(--fs, 1))">
       <button class="btn primary sm" id="weather-save-btn" onclick="weatherSave()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-save"></use></svg> Save for this date</button>
     </div>
 
     </details>
 
     <!-- History -->
-    <div class="cal-form-row" style="margin-top:10px">
+    <div class="cal-form-row" style="margin-top:calc(10px*var(--fs, 1))">
       <label>History (click to edit)</label>
     </div>
-    <div id="weather-history" style="max-height:220px;overflow-y:auto"></div>
+    <div id="weather-history" style="max-height:calc(220px*var(--fs, 1));overflow-y:auto"></div>
 
     <div class="cal-modal-btns">
       <button class="btn sm" onclick="weatherCloseModal()">Close</button>

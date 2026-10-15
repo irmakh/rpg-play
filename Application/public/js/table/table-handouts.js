@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-10-15 14:25
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -102,7 +102,7 @@ function _tblHandoutBody(h) {
   if (h.canRoll) {
     return `
       <div class="ho-card-prompt">${esc(h.promptText || 'Something here rewards a closer look.')}</div>
-      <button class="btn primary" style="margin-top:10px" onclick="tblRollHandout('${escJs(h.id)}',this)"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-search"></use></svg> Examine</button>`;
+      <button class="btn primary" style="margin-top:calc(10px*var(--fs, 1))" onclick="tblRollHandout('${escJs(h.id)}',this)"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-search"></use></svg> Examine</button>`;
   }
   if (h.awaitingDm) {
     return `
@@ -292,7 +292,7 @@ function renderSideHandoutsPane(charId) {
           + '<button class="btn sm" onclick="sideHandoutGive(\'' + escJs(h.id) + '\',\'' + escJs(charId) + '\')">Give</button>'
           + '</div>').join('')
       : '<div class="ho-rp-none">Every handout is already with this character.</div>';
-    html += '<div class="ho-rp-none" style="margin-top:6px">'
+    html += '<div class="ho-rp-none" style="margin-top:calc(6px*var(--fs, 1))">'
           + '<a href="/handouts.html" style="color:var(--bone)">Manage handouts <svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-arrow-right"></use></svg></a></div></div>';
   }
   return html;
@@ -343,7 +343,7 @@ function _sideHandoutPlayerRow(h) {
   let body;
   if (h.canRoll) {
     body = '<div class="ho-rp-prompt">' + esc(h.promptText || 'Something here rewards a closer look.') + '</div>'
-         + '<button class="btn sm primary" style="margin-top:6px" onclick="sideHandoutExamine(\'' + escJs(h.id) + '\',this)">🔍 Examine</button>';
+         + '<button class="btn sm primary" style="margin-top:calc(6px*var(--fs, 1))" onclick="sideHandoutExamine(\'' + escJs(h.id) + '\',this)">🔍 Examine</button>';
   } else if (h.awaitingDm) {
     body = '<div class="ho-rp-prompt">' + esc(h.promptText || '') + '</div>'
          + '<div class="ho-rp-wait">You study it closely…</div>';
@@ -539,7 +539,7 @@ function renderHandoutModal() {
     +   '<div class="ho-mo-body">'
     +     '<div class="ho-mo-lbl">Handout</div>'
     +     '<div class="ho-mo-list">' + handoutRows + '</div>'
-    +     '<div class="ho-mo-lbl" style="margin-top:12px">Characters &amp; Results'
+    +     '<div class="ho-mo-lbl" style="margin-top:calc(12px*var(--fs, 1))">Characters &amp; Results'
     +       '<span class="ho-mo-bulk">'
     +         (anySuggested ? '<button class="btn sm" onclick="hoModalApplySuggested()">Apply suggested</button>' : '')
     +         (anyToGive ? '<button class="btn sm" onclick="hoModalAll(true)">All</button>'

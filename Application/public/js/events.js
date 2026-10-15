@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 14:01
+// Written by Irmak Hakman — 2026-10-15 14:25
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -557,14 +557,14 @@ function weatherRenderHistory() {
   const el = document.getElementById('weather-history');
   const log = Object.values(calWeather);
   if (!log.length) {
-    el.innerHTML = '<div style="font-size:calc(12px * var(--fs, 1));color:var(--ash);padding:6px 0">No weather recorded yet.</div>';
+    el.innerHTML = '<div style="font-size:calc(12px * var(--fs, 1));color:var(--ash);padding:calc(6px*var(--fs, 1)) 0">No weather recorded yet.</div>';
     return;
   }
   el.innerHTML = log.map(e => `
-    <div style="display:flex;justify-content:space-between;gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid var(--rule);font-size:calc(12px * var(--fs, 1))">
+    <div style="display:flex;justify-content:space-between;gap:calc(8px*var(--fs, 1));align-items:center;padding:calc(5px*var(--fs, 1)) 0;border-bottom:1px solid var(--rule);font-size:calc(12px * var(--fs, 1))">
       <span style="flex:1;min-width:0;cursor:pointer" onclick="weatherEditFromHistory('${escJs(e.id)}')" title="Edit this day">
         ${weatherIconSpan(weatherTempIconClass(e), 18)}
-        <b style="margin-left:4px">${esc(e.dateLabel || frFormatDate(e))}</b>
+        <b style="margin-left:calc(4px*var(--fs, 1))">${esc(e.dateLabel || frFormatDate(e))}</b>
         <span style="color:var(--ash)"> — ${esc(weatherSummary(e))}</span>
       </span>
       <button class="btn sm" style="flex-shrink:0" onclick="weatherDeleteEntry('${escJs(e.id)}')" title="Delete"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg></button>

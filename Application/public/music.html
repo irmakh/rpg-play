@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Written by Irmak Hakman — 2026-10-15 14:01 -->
+<!-- Written by Irmak Hakman — 2026-10-15 14:25 -->
 <!-- Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) -->
 <html lang="en">
 <head>
@@ -37,8 +37,8 @@ body.embed #tracks-wrap{flex:none}
 body.embed #tracks{flex:none; max-height:46vh; overflow-y:auto}
 
 #hdr{
-  flex-shrink:0; display:flex; align-items:center; gap:8px;
-  padding:8px 12px; background:var(--wash); border-bottom:1px solid var(--rule);
+  flex-shrink:0; display:flex; align-items:center; gap:calc(8px*var(--fs, 1));
+  padding:calc(8px*var(--fs, 1)) calc(12px*var(--fs, 1)); background:var(--wash); border-bottom:1px solid var(--rule);
 }
 #hdr h1{font-size:calc(13px * var(--fs, 1)); font-weight:bold; flex:1; white-space:nowrap}
 body.embed #hdr{display:none}
@@ -51,30 +51,30 @@ body.embed #hdr{display:none}
   #owner-note:empty{display:none}
 }
 
-#body{flex:1; min-height:0; display:flex; flex-direction:column; padding:10px 12px; gap:9px; overflow:hidden}
+#body{flex:1; min-height:0; display:flex; flex-direction:column; padding:calc(10px*var(--fs, 1)) calc(12px*var(--fs, 1)); gap:calc(9px*var(--fs, 1)); overflow:hidden}
 
-.row{display:flex; align-items:center; gap:7px}
+.row{display:flex; align-items:center; gap:calc(7px*var(--fs, 1))}
 .lbl{font-size:var(--t-sm); color:var(--ash)}
 
 /* Now playing */
-#np{display:flex; align-items:center; gap:7px; min-height:18px}
+#np{display:flex; align-items:center; gap:calc(7px*var(--fs, 1)); min-height:calc(18px*var(--fs, 1))}
 #np-state{font-size:calc(10px * var(--fs, 1)); color:var(--ash); white-space:nowrap; flex-shrink:0}
 #np-icon{color:var(--bone); flex-shrink:0}
 #np-name{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
 
 /* Seek + volume */
-#pos,#dur{font-size:calc(10px * var(--fs, 1)); white-space:nowrap; min-width:30px; font-variant-numeric:tabular-nums}
+#pos,#dur{font-size:calc(10px * var(--fs, 1)); white-space:nowrap; min-width:calc(30px*var(--fs, 1)); font-variant-numeric:tabular-nums}
 #pos{color:var(--bone); text-align:right}
 #dur{color:var(--ash)}
 input[type=range]{cursor:pointer; accent-color:var(--bone); min-width:0}
 #seek{flex:1}
-#vol{width:80px; flex:1; max-width:120px}
-#vol-pct{font-size:calc(10px * var(--fs, 1)); color:var(--bone); min-width:30px; text-align:right}
+#vol{width:calc(80px*var(--fs, 1)); flex:1; max-width:calc(120px*var(--fs, 1))}
+#vol-pct{font-size:calc(10px * var(--fs, 1)); color:var(--bone); min-width:calc(30px*var(--fs, 1)); text-align:right}
 body.readonly #seek{pointer-events:none; cursor:default; opacity:.75}
 
 select,.btn{
   background:var(--slate-hi); border:1px solid var(--rule-hi); color:var(--bone);
-  border-radius:3px; padding:5px 8px; font-size:calc(12px * var(--fs, 1)); font-family:inherit;
+  border-radius:calc(3px*var(--fs, 1)); padding:calc(5px*var(--fs, 1)) calc(8px*var(--fs, 1)); font-size:calc(12px * var(--fs, 1)); font-family:inherit;
 }
 select{width:100%}
 .btn{cursor:pointer; white-space:nowrap}
@@ -82,23 +82,23 @@ select{width:100%}
 .btn:disabled{opacity:.45; cursor:default}
 .btn.primary{background:var(--rule); border-color:var(--bone); color:var(--bone); font-weight:bold}
 .btn.danger{color:var(--blood); border-color:rgba(255,136,136,.4)}
-.btn.sm{padding:3px 7px; font-size:calc(11px * var(--fs, 1))}
-.btn.lnk{background:none; border:none; color:var(--bone); text-decoration:none; padding:3px 4px; font-size:calc(11px * var(--fs, 1))}
+.btn.sm{padding:calc(3px*var(--fs, 1)) calc(7px*var(--fs, 1)); font-size:calc(11px * var(--fs, 1))}
+.btn.lnk{background:none; border:none; color:var(--bone); text-decoration:none; padding:calc(3px*var(--fs, 1)) calc(4px*var(--fs, 1)); font-size:calc(11px * var(--fs, 1))}
 .btn.lnk:hover{text-decoration:underline; background:none}
 
-#transport{display:flex; justify-content:center; gap:8px}
-#loops{display:flex; justify-content:center; gap:6px}
+#transport{display:flex; justify-content:center; gap:calc(8px*var(--fs, 1))}
+#loops{display:flex; justify-content:center; gap:calc(6px*var(--fs, 1))}
 
 /* Track list */
-#tracks-wrap{flex:1; min-height:0; display:flex; flex-direction:column; border-top:1px solid var(--rule); padding-top:8px}
-#tracks{flex:1; min-height:0; overflow-y:auto; scrollbar-width:thin; scrollbar-color:var(--rule) transparent; margin-top:5px}
-.trk{display:flex; align-items:center; gap:6px; padding:5px 8px; border-radius:3px; cursor:pointer; font-size:calc(12px * var(--fs, 1))}
+#tracks-wrap{flex:1; min-height:0; display:flex; flex-direction:column; border-top:1px solid var(--rule); padding-top:calc(8px*var(--fs, 1))}
+#tracks{flex:1; min-height:0; overflow-y:auto; scrollbar-width:thin; scrollbar-color:var(--rule) transparent; margin-top:calc(5px*var(--fs, 1))}
+.trk{display:flex; align-items:center; gap:calc(6px*var(--fs, 1)); padding:calc(5px*var(--fs, 1)) calc(8px*var(--fs, 1)); border-radius:calc(3px*var(--fs, 1)); cursor:pointer; font-size:calc(12px * var(--fs, 1))}
 .trk:hover{background:var(--wash)}
 .trk.active{background:var(--rule)}
-.trk-idx{font-size:calc(11px * var(--fs, 1)); color:var(--ash); flex-shrink:0; min-width:14px}
+.trk-idx{font-size:calc(11px * var(--fs, 1)); color:var(--ash); flex-shrink:0; min-width:calc(14px*var(--fs, 1))}
 .trk.active .trk-idx{color:var(--bone)}
 .trk-name{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
-.empty{font-size:calc(11px * var(--fs, 1)); color:var(--ash); text-align:center; padding:10px}
+.empty{font-size:calc(11px * var(--fs, 1)); color:var(--ash); text-align:center; padding:calc(10px*var(--fs, 1))}
 
 /* Anything DM-only is hidden up front and removed from the DOM entirely for
    players, so a compact player window is exactly as tall as the three rows it
@@ -110,7 +110,7 @@ body.dm #loops{display:flex}
 body.dm #tracks-wrap{display:flex}
 body.dm #lnk-playlists{display:inline-block}
 
-#owner-note{font-size:calc(10px * var(--fs, 1)); color:var(--ash); text-align:center; min-height:12px}
+#owner-note{font-size:calc(10px * var(--fs, 1)); color:var(--ash); text-align:center; min-height:calc(12px*var(--fs, 1))}
 </style>
 </head>
 <body>
@@ -151,7 +151,7 @@ body.dm #lnk-playlists{display:inline-block}
   <!-- DM: transport -->
   <div class="dm-only" id="transport">
     <button class="btn" onclick="sendControl({action:'prev'})" title="Previous track"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-prev"></use></svg> </button>
-    <button class="btn primary" id="play-btn" onclick="togglePlay()" style="min-width:76px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-play"></use></svg> Play</button>
+    <button class="btn primary" id="play-btn" onclick="togglePlay()" style="min-width:calc(76px*var(--fs, 1))"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-play"></use></svg> Play</button>
     <button class="btn" onclick="sendControl({action:'next'})" title="Next track"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-next"></use></svg> </button>
     <button class="btn danger" onclick="sendControl({action:'stop'})" title="Stop for everyone"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-stop"></use></svg> </button>
   </div>

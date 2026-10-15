@@ -1,4 +1,4 @@
-/* Written by Irmak Hakman in 2026. */
+/* Written by Irmak Hakman — 2026-10-15 14:25 */
 /* Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) */
 
 /* app-shell.css - the full-height DM tool layout.
@@ -21,7 +21,7 @@ html.app-page .app-shell{display:flex;flex-direction:column;height:100%;width:10
 .app-body{display:flex;flex:1;min-height:0;overflow:hidden}
 
 .app-side{
-  width:var(--side-w, 300px); flex:none;
+  width:var(--side-w, calc(300px*var(--fs, 1))); flex:none;
   display:flex; flex-direction:column; min-height:0;
   border-right:1px solid var(--rule-hi);
   background:var(--slate);
@@ -42,7 +42,7 @@ html.app-page .app-shell{display:flex;flex-direction:column;height:100%;width:10
 .app-row{
   padding:var(--s2) var(--s3); border-bottom:1px solid var(--rule);
   cursor:pointer; display:flex; align-items:center; gap:var(--s2);
-  min-height:44px;
+  min-height:calc(44px*var(--fs, 1));
 }
 .app-row:hover{background:var(--slate-hi)}
 .app-row.selected{background:var(--arc-fill); box-shadow:inset 3px 0 0 var(--arc)}

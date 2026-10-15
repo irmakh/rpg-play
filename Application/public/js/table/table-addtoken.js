@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 14:01
+// Written by Irmak Hakman — 2026-10-15 14:25
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -39,15 +39,15 @@ function switchTokenTab(tab) {
 function _monsterRowHtml(m) {
   const portrait = m.data?.portraitThumb || m.data?.portrait;
   const thumb = portrait
-    ? `<img loading="lazy" src="${esc(portrait)}" style="width:30px;height:30px;border-radius:50%;object-fit:cover;border:1px solid var(--rule-hi);flex-shrink:0">`
-    : `<div style="width:30px;height:30px;border-radius:50%;background:var(--slate-hi);border:1px solid var(--rule-hi);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:calc(9px * var(--fs, 1));color:var(--ash)">?</div>`;
+    ? `<img loading="lazy" src="${esc(portrait)}" style="width:calc(30px*var(--fs, 1));height:calc(30px*var(--fs, 1));border-radius:50%;object-fit:cover;border:1px solid var(--rule-hi);flex-shrink:0">`
+    : `<div style="width:calc(30px*var(--fs, 1));height:calc(30px*var(--fs, 1));border-radius:50%;background:var(--slate-hi);border:1px solid var(--rule-hi);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:calc(9px * var(--fs, 1));color:var(--ash)">?</div>`;
   return `<div class="qroll-row" onclick="selectTokenMonster('${escJs(m.id)}','${escJs(m.name)}')"
-       style="padding:5px 10px;border-bottom:1px solid var(--rule);display:flex;align-items:center;gap:8px">
+       style="padding:calc(5px*var(--fs, 1)) calc(10px*var(--fs, 1));border-bottom:1px solid var(--rule);display:flex;align-items:center;gap:calc(8px*var(--fs, 1))">
     ${thumb}
     <span style="flex:1">${esc(m.name)}</span>
     <span style="font-size:calc(10px * var(--fs, 1));color:var(--ash)">CR ${esc(m.cr||'?')}</span>
     <button onclick="event.stopPropagation();uploadMonsterPortrait('${escJs(m.id)}')"
-            style="background:none;border:none;cursor:pointer;font-size:calc(14px * var(--fs, 1));padding:0 2px;opacity:.6"
+            style="background:none;border:none;cursor:pointer;font-size:calc(14px * var(--fs, 1));padding:0 calc(2px*var(--fs, 1));opacity:.6"
             title="Upload portrait"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-camera"></use></svg></button>
   </div>`;
 }
@@ -59,7 +59,7 @@ function filterMonsterList(query) {
   const filtered = q ? _monsterList.filter(m => m.name.toLowerCase().includes(q)) : _monsterList;
   list.innerHTML = filtered.length > 0
     ? filtered.map(_monsterRowHtml).join('')
-    : `<div style="padding:10px;font-size:calc(11px * var(--fs, 1));color:var(--ash)">${q ? 'No monsters match your search.' : 'No monsters found.'}</div>`;
+    : `<div style="padding:calc(10px*var(--fs, 1));font-size:calc(11px * var(--fs, 1));color:var(--ash)">${q ? 'No monsters match your search.' : 'No monsters found.'}</div>`;
 }
 
 async function populateAddTokenModal(chars) {
@@ -68,12 +68,12 @@ async function populateAddTokenModal(chars) {
   if (charTab && chars.length > 0) {
     charTab.innerHTML = chars.map(c => `
       <div class="qroll-row" onclick="selectTokenChar('${escJs(c.id)}','${escJs(c.name)}','${escJs(c.char_type||'character')}')"
-           style="padding:6px 10px;border-bottom:1px solid var(--rule)">
+           style="padding:calc(6px*var(--fs, 1)) calc(10px*var(--fs, 1));border-bottom:1px solid var(--rule)">
         <span>${esc(c.name)}</span>
         <span style="font-size:calc(10px * var(--fs, 1));color:var(--ash)">${c.char_type === 'npc' ? 'NPC' : 'PC'}</span>
       </div>`).join('');
   } else if (charTab) {
-    charTab.innerHTML = '<div style="padding:10px;font-size:calc(11px * var(--fs, 1));color:var(--ash)">No characters found.</div>';
+    charTab.innerHTML = '<div style="padding:calc(10px*var(--fs, 1));font-size:calc(11px * var(--fs, 1));color:var(--ash)">No characters found.</div>';
   }
 
   // Monsters tab (load on demand)

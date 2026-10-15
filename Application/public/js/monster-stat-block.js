@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 14:01
+// Written by Irmak Hakman — 2026-10-15 14:25
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -50,24 +50,24 @@ function renderMonsterStatBlock(data) {
   const condImmStr=[].concat(data.conditionImmune||[]).map(i=>typeof i==='string'?i:[].concat(i.conditionImmune||[]).join('/')).join(', ');
   const sensesStr=[...(data.senses||[])].join(', ')+(data.passive?((data.senses||[]).length?', ':'')+('Passive Perception '+data.passive):'');
   const langStr=(data.languages||[]).join(', ')||'—';
-  const HR='<hr style="border:none;border-top:1px solid var(--rule-hi);margin:8px 0">';
-  function rEntries(entries){return(entries||[]).map(e=>{if(typeof e==='string')return'<p style="margin:2px 0 4px;white-space:pre-wrap">'+parseEntry(e)+'</p>';if(e&&e.type==='list'&&Array.isArray(e.items))return'<ul style="margin:2px 0 4px;padding-left:16px">'+e.items.map(i=>'<li>'+parseEntry(typeof i==='string'?i:(i.name||''))+'</li>').join('')+'</ul>';return'';}).join('');}
-  function rSection(items,title){if(!items||!items.length)return'';return HR+'<div style="font-size:calc(10px * var(--fs, 1));color:var(--bone);text-transform:uppercase;font-weight:bold;letter-spacing:.5px;margin-bottom:4px">'+title+'</div>'+items.map(item=>'<div style="margin:5px 0"><span style="color:var(--bone);font-weight:bold;font-style:italic">'+parseEntry(item.name||'')+'</span> '+rEntries(item.entries)+'</div>').join('');}
-  function rSpellEntries(list){return(list||[]).map(sc=>{let h='<div style="margin:5px 0"><span style="color:var(--bone);font-weight:bold;font-style:italic">'+esc(sc.name||'')+'</span> ';if(sc.headerEntries)h+=rEntries(sc.headerEntries);if(sc.will&&sc.will.length)h+='<p style="margin:2px 0 4px"><em>At will:</em> '+sc.will.map(s=>parseEntry(s)).join(', ')+'</p>';if(sc.daily)for(const[k,v]of Object.entries(sc.daily)){const n=k.replace('e','');h+='<p style="margin:2px 0 4px"><em>'+esc(n)+'/day'+(k.endsWith('e')?' each':'')+':</em> '+v.map(s=>parseEntry(s)).join(', ')+'</p>';}if(sc.spells)for(const[lvl,sd]of Object.entries(sc.spells)){const slots=sd.slots?' ('+sd.slots+' slot'+(sd.slots!==1?'s':'')+')':'';const ord=['','st','nd','rd'];const lvlStr=lvl==='0'?'Cantrips (at will)':lvl+(ord[+lvl]||'th')+'-level'+slots;h+='<p style="margin:2px 0 4px"><em>'+esc(lvlStr)+':</em> '+[].concat(sd.spells||[]).map(s=>parseEntry(s)).join(', ')+'</p>';}return h+'</div>';}).join('');}
-  function rSectionWithSc(items,scList,title){const hi=items&&items.length;const hs=scList&&scList.length;if(!hi&&!hs)return'';return HR+'<div style="font-size:calc(10px * var(--fs, 1));color:var(--bone);text-transform:uppercase;font-weight:bold;letter-spacing:.5px;margin-bottom:4px">'+title+'</div>'+(hi?items.map(item=>'<div style="margin:5px 0"><span style="color:var(--bone);font-weight:bold;font-style:italic">'+parseEntry(item.name||'')+'</span> '+rEntries(item.entries)+'</div>').join(''):'')+rSpellEntries(scList);}
+  const HR='<hr style="border:none;border-top:1px solid var(--rule-hi);margin:calc(8px*var(--fs, 1)) 0">';
+  function rEntries(entries){return(entries||[]).map(e=>{if(typeof e==='string')return'<p style="margin:calc(2px*var(--fs, 1)) 0 calc(4px*var(--fs, 1));white-space:pre-wrap">'+parseEntry(e)+'</p>';if(e&&e.type==='list'&&Array.isArray(e.items))return'<ul style="margin:calc(2px*var(--fs, 1)) 0 calc(4px*var(--fs, 1));padding-left:calc(16px*var(--fs, 1))">'+e.items.map(i=>'<li>'+parseEntry(typeof i==='string'?i:(i.name||''))+'</li>').join('')+'</ul>';return'';}).join('');}
+  function rSection(items,title){if(!items||!items.length)return'';return HR+'<div style="font-size:calc(10px * var(--fs, 1));color:var(--bone);text-transform:uppercase;font-weight:bold;letter-spacing:.5px;margin-bottom:calc(4px*var(--fs, 1))">'+title+'</div>'+items.map(item=>'<div style="margin:calc(5px*var(--fs, 1)) 0"><span style="color:var(--bone);font-weight:bold;font-style:italic">'+parseEntry(item.name||'')+'</span> '+rEntries(item.entries)+'</div>').join('');}
+  function rSpellEntries(list){return(list||[]).map(sc=>{let h='<div style="margin:calc(5px*var(--fs, 1)) 0"><span style="color:var(--bone);font-weight:bold;font-style:italic">'+esc(sc.name||'')+'</span> ';if(sc.headerEntries)h+=rEntries(sc.headerEntries);if(sc.will&&sc.will.length)h+='<p style="margin:calc(2px*var(--fs, 1)) 0 calc(4px*var(--fs, 1))"><em>At will:</em> '+sc.will.map(s=>parseEntry(s)).join(', ')+'</p>';if(sc.daily)for(const[k,v]of Object.entries(sc.daily)){const n=k.replace('e','');h+='<p style="margin:calc(2px*var(--fs, 1)) 0 calc(4px*var(--fs, 1))"><em>'+esc(n)+'/day'+(k.endsWith('e')?' each':'')+':</em> '+v.map(s=>parseEntry(s)).join(', ')+'</p>';}if(sc.spells)for(const[lvl,sd]of Object.entries(sc.spells)){const slots=sd.slots?' ('+sd.slots+' slot'+(sd.slots!==1?'s':'')+')':'';const ord=['','st','nd','rd'];const lvlStr=lvl==='0'?'Cantrips (at will)':lvl+(ord[+lvl]||'th')+'-level'+slots;h+='<p style="margin:calc(2px*var(--fs, 1)) 0 calc(4px*var(--fs, 1))"><em>'+esc(lvlStr)+':</em> '+[].concat(sd.spells||[]).map(s=>parseEntry(s)).join(', ')+'</p>';}return h+'</div>';}).join('');}
+  function rSectionWithSc(items,scList,title){const hi=items&&items.length;const hs=scList&&scList.length;if(!hi&&!hs)return'';return HR+'<div style="font-size:calc(10px * var(--fs, 1));color:var(--bone);text-transform:uppercase;font-weight:bold;letter-spacing:.5px;margin-bottom:calc(4px*var(--fs, 1))">'+title+'</div>'+(hi?items.map(item=>'<div style="margin:calc(5px*var(--fs, 1)) 0"><span style="color:var(--bone);font-weight:bold;font-style:italic">'+parseEntry(item.name||'')+'</span> '+rEntries(item.entries)+'</div>').join(''):'')+rSpellEntries(scList);}
   let html='<div style="font-size:calc(12px * var(--fs, 1))">';
   if (data.portraitMedium || data.portrait) {
-    html += '<img src="'+esc(data.portraitMedium||data.portrait)+'" style="float:right;max-width:120px;max-height:120px;object-fit:cover;border-radius:4px;margin:0 0 8px 10px;border:1px solid var(--rule-hi)">';
+    html += '<img src="'+esc(data.portraitMedium||data.portrait)+'" style="float:right;max-width:calc(120px*var(--fs, 1));max-height:calc(120px*var(--fs, 1));object-fit:cover;border-radius:calc(4px*var(--fs, 1));margin:0 0 calc(8px*var(--fs, 1)) calc(10px*var(--fs, 1));border:1px solid var(--rule-hi)">';
   }
   html+='<div style="font-size:calc(16px * var(--fs, 1));font-weight:bold;color:var(--bone)">'+esc(data.name||'Unknown')+'</div>';
-  html+='<div style="font-size:calc(12px * var(--fs, 1));font-style:italic;color:var(--ash);margin-bottom:6px">'+esc([size,typeStr,alignment].filter(Boolean).join(', '))+(data.source?' <span style="font-size:calc(10px * var(--fs, 1));opacity:.6">('+esc(data.source)+')</span>':'')+'</div>';
+  html+='<div style="font-size:calc(12px * var(--fs, 1));font-style:italic;color:var(--ash);margin-bottom:calc(6px*var(--fs, 1))">'+esc([size,typeStr,alignment].filter(Boolean).join(', '))+(data.source?' <span style="font-size:calc(10px * var(--fs, 1));opacity:.6">('+esc(data.source)+')</span>':'')+'</div>';
   html+=HR;
-  html+='<div style="margin:3px 0"><span style="color:var(--bone);font-weight:bold">AC</span> '+esc(String(acStr))+'</div>';
-  html+='<div style="margin:3px 0"><span style="color:var(--bone);font-weight:bold">HP</span> '+esc(String(hpStr))+'</div>';
-  html+='<div style="margin:3px 0"><span style="color:var(--bone);font-weight:bold">Speed</span> '+esc(speedStr)+'</div>';
-  html+='<div style="margin:3px 0"><span style="color:var(--bone);font-weight:bold">Challenge</span> '+esc(String(cr))+'</div>';
+  html+='<div style="margin:calc(3px*var(--fs, 1)) 0"><span style="color:var(--bone);font-weight:bold">AC</span> '+esc(String(acStr))+'</div>';
+  html+='<div style="margin:calc(3px*var(--fs, 1)) 0"><span style="color:var(--bone);font-weight:bold">HP</span> '+esc(String(hpStr))+'</div>';
+  html+='<div style="margin:calc(3px*var(--fs, 1)) 0"><span style="color:var(--bone);font-weight:bold">Speed</span> '+esc(speedStr)+'</div>';
+  html+='<div style="margin:calc(3px*var(--fs, 1)) 0"><span style="color:var(--bone);font-weight:bold">Challenge</span> '+esc(String(cr))+'</div>';
   const prof=getMonsterProfBonus(data.cr);
-  html+='<div style="margin:3px 0"><span style="color:var(--bone);font-weight:bold">Proficiency Bonus</span> +'+prof+'</div>';
+  html+='<div style="margin:calc(3px*var(--fs, 1)) 0"><span style="color:var(--bone);font-weight:bold">Proficiency Bonus</span> +'+prof+'</div>';
   const _dexMod=Math.floor(((data.dex||10)-10)/2);
   const _hasInitProf=!!(data.initiative&&data.initiative.proficiency);
   // parseInt: stat blocks come from imports; a text initBonus must not reach the markup.
@@ -76,23 +76,23 @@ function renderMonsterStatBlock(data) {
   const _initParts=['DEX '+(_dexMod>=0?'+':'')+_dexMod];
   if(_hasInitProf)_initParts.push('Prof +'+prof);
   if(_manualInit!==0)_initParts.push('Mod '+(_manualInit>=0?'+':'')+_manualInit);
-  html+='<div style="margin:3px 0"><span style="color:var(--bone);font-weight:bold">Initiative</span> '+(_totalInit>=0?'+':'')+_totalInit+' <span style="font-size:calc(10px * var(--fs, 1));color:var(--ash)">('+_initParts.join(', ')+')</span></div>';
-  html+=HR+'<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:4px;text-align:center;margin:6px 0">';
-  for(let i=0;i<6;i++){const sc=scores[i];const val=data[sc]||10;const m=Math.floor((val-10)/2);html+='<div style="background:var(--slate-hi);border-radius:3px;padding:4px 2px"><div style="font-size:calc(9px * var(--fs, 1));color:var(--bone);text-transform:uppercase;font-weight:bold">'+snames[i]+'</div><div style="font-size:calc(13px * var(--fs, 1));font-weight:bold">'+esc(val)+'</div><div style="font-size:calc(10px * var(--fs, 1));color:var(--ash)">'+(m>=0?'+':'')+m+'</div></div>';}
+  html+='<div style="margin:calc(3px*var(--fs, 1)) 0"><span style="color:var(--bone);font-weight:bold">Initiative</span> '+(_totalInit>=0?'+':'')+_totalInit+' <span style="font-size:calc(10px * var(--fs, 1));color:var(--ash)">('+_initParts.join(', ')+')</span></div>';
+  html+=HR+'<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:calc(4px*var(--fs, 1));text-align:center;margin:calc(6px*var(--fs, 1)) 0">';
+  for(let i=0;i<6;i++){const sc=scores[i];const val=data[sc]||10;const m=Math.floor((val-10)/2);html+='<div style="background:var(--slate-hi);border-radius:calc(3px*var(--fs, 1));padding:calc(4px*var(--fs, 1)) calc(2px*var(--fs, 1))"><div style="font-size:calc(9px * var(--fs, 1));color:var(--bone);text-transform:uppercase;font-weight:bold">'+snames[i]+'</div><div style="font-size:calc(13px * var(--fs, 1));font-weight:bold">'+esc(val)+'</div><div style="font-size:calc(10px * var(--fs, 1));color:var(--ash)">'+(m>=0?'+':'')+m+'</div></div>';}
   html+='</div>'+HR;
-  if(saveStr)html+='<div style="margin:3px 0"><span style="color:var(--bone);font-weight:bold">Saving Throws</span> '+esc(saveStr)+'</div>';
-  if(skillStr)html+='<div style="margin:3px 0"><span style="color:var(--bone);font-weight:bold">Skills</span> '+esc(skillStr)+'</div>';
-  if(immuneStr)html+='<div style="margin:3px 0"><span style="color:var(--bone);font-weight:bold">Damage Immunities</span> '+esc(immuneStr)+'</div>';
-  if(resistStr)html+='<div style="margin:3px 0"><span style="color:var(--bone);font-weight:bold">Resistances</span> '+esc(resistStr)+'</div>';
-  if(condImmStr)html+='<div style="margin:3px 0"><span style="color:var(--bone);font-weight:bold">Condition Immunities</span> '+esc(condImmStr)+'</div>';
+  if(saveStr)html+='<div style="margin:calc(3px*var(--fs, 1)) 0"><span style="color:var(--bone);font-weight:bold">Saving Throws</span> '+esc(saveStr)+'</div>';
+  if(skillStr)html+='<div style="margin:calc(3px*var(--fs, 1)) 0"><span style="color:var(--bone);font-weight:bold">Skills</span> '+esc(skillStr)+'</div>';
+  if(immuneStr)html+='<div style="margin:calc(3px*var(--fs, 1)) 0"><span style="color:var(--bone);font-weight:bold">Damage Immunities</span> '+esc(immuneStr)+'</div>';
+  if(resistStr)html+='<div style="margin:calc(3px*var(--fs, 1)) 0"><span style="color:var(--bone);font-weight:bold">Resistances</span> '+esc(resistStr)+'</div>';
+  if(condImmStr)html+='<div style="margin:calc(3px*var(--fs, 1)) 0"><span style="color:var(--bone);font-weight:bold">Condition Immunities</span> '+esc(condImmStr)+'</div>';
   const vulnStr=[].concat(data.vulnerable||[]).map(i=>typeof i==='string'?i:[].concat(i.vulnerable||[]).join('/')).join(', ');
-  if(vulnStr)html+='<div style="margin:3px 0"><span style="color:var(--bone);font-weight:bold">Damage Vulnerabilities</span> '+esc(vulnStr)+'</div>';
-  if(sensesStr)html+='<div style="margin:3px 0"><span style="color:var(--bone);font-weight:bold">Senses</span> '+esc(sensesStr)+'</div>';
-  html+='<div style="margin:3px 0"><span style="color:var(--bone);font-weight:bold">Languages</span> '+esc(langStr)+'</div>';
+  if(vulnStr)html+='<div style="margin:calc(3px*var(--fs, 1)) 0"><span style="color:var(--bone);font-weight:bold">Damage Vulnerabilities</span> '+esc(vulnStr)+'</div>';
+  if(sensesStr)html+='<div style="margin:calc(3px*var(--fs, 1)) 0"><span style="color:var(--bone);font-weight:bold">Senses</span> '+esc(sensesStr)+'</div>';
+  html+='<div style="margin:calc(3px*var(--fs, 1)) 0"><span style="color:var(--bone);font-weight:bold">Languages</span> '+esc(langStr)+'</div>';
   const scGroups={};for(const sc of(data.spellcasting||[])){const k=(sc.displayAs||'trait').toLowerCase();(scGroups[k]||(scGroups[k]=[])).push(sc);}
   const traitSc=Object.entries(scGroups).filter(([k])=>!['action','bonus','reaction','legendary','mythic'].includes(k)).flatMap(([,v])=>v);
   html+=rSection(data.trait,'Traits');
-  if(traitSc.length)html+=HR+'<div style="font-size:calc(10px * var(--fs, 1));color:var(--bone);text-transform:uppercase;font-weight:bold;letter-spacing:.5px;margin-bottom:4px">Spellcasting</div>'+rSpellEntries(traitSc);
+  if(traitSc.length)html+=HR+'<div style="font-size:calc(10px * var(--fs, 1));color:var(--bone);text-transform:uppercase;font-weight:bold;letter-spacing:.5px;margin-bottom:calc(4px*var(--fs, 1))">Spellcasting</div>'+rSpellEntries(traitSc);
   html+=rSectionWithSc(data.action,scGroups['action'],'Actions');
   html+=rSectionWithSc(data.bonus,scGroups['bonus'],'Bonus Actions');
   html+=rSectionWithSc(data.reaction,scGroups['reaction'],'Reactions');

@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 14:01
+// Written by Irmak Hakman — 2026-10-15 14:25
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -84,7 +84,7 @@ function renderList() {
 
   if (!_campaigns.length) {
     box.innerHTML = '<div class="detail-empty"><div>No campaigns yet.</div>'
-      + '<button class="btn btn-sm" style="margin-top:10px" onclick="openNewCampaign()">Create the first one</button></div>';
+      + '<button class="btn btn-sm" style="margin-top:calc(10px*var(--fs, 1))" onclick="openNewCampaign()">Create the first one</button></div>';
     return;
   }
 
@@ -131,7 +131,7 @@ function renderDetail() {
   const chars = c.characters || [];
 
   document.getElementById('detail').innerHTML = `
-    <button class="btn btn-sm btn-ghost back-btn" style="margin-bottom:14px" onclick="closeDetail()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-arrow-left"></use></svg> All campaigns</button>
+    <button class="btn btn-sm btn-ghost back-btn" style="margin-bottom:calc(14px*var(--fs, 1))" onclick="closeDetail()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-arrow-left"></use></svg> All campaigns</button>
 
     <div class="detail-head">
       <div class="detail-cover">${c.coverMedium || c.coverUrl
@@ -181,8 +181,8 @@ function renderDetail() {
         </div>
 
         <div id="char-setup-step" style="display:none">
-          <div style="font-size:calc(13px * var(--fs, 1));color:var(--bone);font-weight:bold;margin-bottom:4px" id="setup-char-name"></div>
-          <div style="font-size:calc(11px * var(--fs, 1));color:var(--ash);margin-bottom:14px">This character has no password yet.<br>Set one to continue.</div>
+          <div style="font-size:calc(13px * var(--fs, 1));color:var(--bone);font-weight:bold;margin-bottom:calc(4px*var(--fs, 1))" id="setup-char-name"></div>
+          <div style="font-size:calc(11px * var(--fs, 1));color:var(--ash);margin-bottom:calc(14px*var(--fs, 1))">This character has no password yet.<br>Set one to continue.</div>
           <div class="field">
             <label>New Password</label>
             <input type="password" id="setup-pw1" autocomplete="new-password"
@@ -195,7 +195,7 @@ function renderDetail() {
           </div>
           <div class="err-msg" id="setup-err"></div>
           <button class="btn" id="setup-btn" onclick="setupPassword()">Set Password &amp; Login</button>
-          <button class="btn btn-ghost" style="margin-top:8px" onclick="cancelSetup()">Back</button>
+          <button class="btn btn-ghost" style="margin-top:calc(8px*var(--fs, 1))" onclick="cancelSetup()">Back</button>
         </div>
       </div>
 
@@ -212,7 +212,7 @@ function renderDetail() {
       </div>
     </div>
 
-    <div class="row" style="max-width:520px">
+    <div class="row" style="max-width:calc(520px*var(--fs, 1))">
       <button class="btn btn-sm btn-ghost" onclick="openManage()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-gear"></use></svg> Campaign settings</button>
     </div>
   `;

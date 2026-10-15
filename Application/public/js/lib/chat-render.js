@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 14:01
+// Written by Irmak Hakman — 2026-10-15 14:25
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -122,7 +122,7 @@ function appendChatEntry(e) {
     const body = e.html
       ? `<div class="chat-html" style="word-break:break-word;line-height:1.45">${sanitizeChatHtml(String(e.message || '').replace(/\n/g, '<br>'))}</div>`
       : `<div style="word-break:break-word;white-space:pre-wrap">${esc(e.message || '')}</div>`;
-    div.innerHTML = `<div style="display:flex;justify-content:space-between;margin-bottom:2px">
+    div.innerHTML = `<div style="display:flex;justify-content:space-between;margin-bottom:calc(2px*var(--fs, 1))">
       <span class="ce-sender">${esc(e.sender || '?')}${_pmHeaderSuffix(e)}</span>
       <span style="color:var(--ash);font-size:calc(10px * var(--fs, 1))">${time}</span>
     </div>${body}`;
@@ -136,17 +136,17 @@ function appendChatEntry(e) {
     let mediaEl = '';
     if (e.mimeType && e.mimeType.startsWith('image/')) {
       const displayUrl = e.mediumUrl || url;
-      mediaEl = `<img loading="lazy" src="${esc(displayUrl)}" style="max-width:100%;max-height:200px;width:auto;object-fit:contain;border-radius:4px;margin-top:4px;display:block;cursor:pointer" onclick="lightboxOpen('${escJs(url)}','${escJs(e.mimeType || '')}')">`;
+      mediaEl = `<img loading="lazy" src="${esc(displayUrl)}" style="max-width:100%;max-height:calc(200px*var(--fs, 1));width:auto;object-fit:contain;border-radius:calc(4px*var(--fs, 1));margin-top:calc(4px*var(--fs, 1));display:block;cursor:pointer" onclick="lightboxOpen('${escJs(url)}','${escJs(e.mimeType || '')}')">`;
     } else if (e.mimeType && e.mimeType.startsWith('video/')) {
-      mediaEl = `<div style="position:relative;max-width:100%;cursor:pointer;overflow:hidden;background:#000;border-radius:4px;margin-top:4px;display:inline-block" onclick="lightboxOpen('${escJs(url)}','${escJs(e.mimeType || '')}')"><video src="${esc(url)}" preload="metadata" muted playsinline style="max-width:100%;max-height:200px;display:block;pointer-events:none"></video><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:calc(28px * var(--fs, 1));text-shadow:0 2px 8px #000;pointer-events:none">&#9654;</div></div>`;
+      mediaEl = `<div style="position:relative;max-width:100%;cursor:pointer;overflow:hidden;background:#000;border-radius:calc(4px*var(--fs, 1));margin-top:calc(4px*var(--fs, 1));display:inline-block" onclick="lightboxOpen('${escJs(url)}','${escJs(e.mimeType || '')}')"><video src="${esc(url)}" preload="metadata" muted playsinline style="max-width:100%;max-height:calc(200px*var(--fs, 1));display:block;pointer-events:none"></video><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:calc(28px * var(--fs, 1));text-shadow:0 2px 8px #000;pointer-events:none">&#9654;</div></div>`;
     } else if (e.mimeType && e.mimeType.startsWith('audio/')) {
-      mediaEl = `<audio src="${esc(url)}" controls style="max-width:100%;margin-top:6px;display:block"></audio>`;
+      mediaEl = `<audio src="${esc(url)}" controls style="max-width:100%;margin-top:calc(6px*var(--fs, 1));display:block"></audio>`;
     } else {
-      mediaEl = `<a href="${esc(url)}" target="_blank" style="display:inline-block;margin-top:6px;padding:4px 8px;background:var(--slate-hi);border-radius:4px;color:var(--bone);font-size:calc(11px * var(--fs, 1))"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-paperclip"></use></svg> Open file</a>`;
+      mediaEl = `<a href="${esc(url)}" target="_blank" style="display:inline-block;margin-top:calc(6px*var(--fs, 1));padding:calc(4px*var(--fs, 1)) calc(8px*var(--fs, 1));background:var(--slate-hi);border-radius:calc(4px*var(--fs, 1));color:var(--bone);font-size:calc(11px * var(--fs, 1))"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-paperclip"></use></svg> Open file</a>`;
     }
-    const cap = e.caption ? `<div style="font-size:calc(10px * var(--fs, 1));color:var(--ash);margin-top:4px">${esc(e.caption)}</div>` : '';
+    const cap = e.caption ? `<div style="font-size:calc(10px * var(--fs, 1));color:var(--ash);margin-top:calc(4px*var(--fs, 1))">${esc(e.caption)}</div>` : '';
     div.className = 'chat-entry';
-    div.innerHTML = `<div style="display:flex;justify-content:space-between;margin-bottom:4px">
+    div.innerHTML = `<div style="display:flex;justify-content:space-between;margin-bottom:calc(4px*var(--fs, 1))">
       <span class="ce-sender">${esc(e.sender || 'DM')} <span style="font-size:calc(10px * var(--fs, 1));color:var(--ash);font-weight:normal">media</span></span>
       <span style="color:var(--ash);font-size:calc(10px * var(--fs, 1))">${time}</span>
     </div>${mediaEl}${cap}`;
@@ -164,11 +164,11 @@ function appendChatEntry(e) {
   const natStr = isNat20 ? ' <span style="color:var(--verdigris)"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-star"></use></svg> NAT 20!</span>'
                : isNat1  ? ' <span style="color:var(--blood)"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-skull"></use></svg> NAT 1</span>' : '';
   const descStr = e.description
-    ? `<div style="font-size:calc(10px * var(--fs, 1));color:var(--ash);margin-top:3px;font-style:italic;line-height:1.4;white-space:pre-wrap">${esc(e.description)}</div>`
+    ? `<div style="font-size:calc(10px * var(--fs, 1));color:var(--ash);margin-top:calc(3px*var(--fs, 1));font-style:italic;line-height:1.4;white-space:pre-wrap">${esc(e.description)}</div>`
     : '';
   const partsStr = chatDamageParts(e);
   div.className = `chat-entry${cls}`;
-  div.innerHTML = `<div style="display:flex;justify-content:space-between;margin-bottom:2px">
+  div.innerHTML = `<div style="display:flex;justify-content:space-between;margin-bottom:calc(2px*var(--fs, 1))">
     <span class="ce-sender">${esc(e.sender || '?')}</span>
     <span style="color:var(--ash);font-size:calc(10px * var(--fs, 1))">${time}</span>
   </div>

@@ -1,4 +1,4 @@
-/* Written by Irmak Hakman in 2026. */
+/* Written by Irmak Hakman — 2026-10-15 14:25 */
 /* Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) */
 
 /* ============================================================================
@@ -101,7 +101,7 @@ html.lamplit .lt-btn{
   border:1px solid var(--rule-hi);
   border-radius:var(--r-sm);
   padding:var(--s2) var(--s3);
-  min-height:36px;
+  min-height:calc(36px*var(--fs, 1));
   cursor:pointer;
   display:inline-flex;
   align-items:center;
@@ -143,7 +143,7 @@ html.lamplit .lt-btn:disabled{opacity:.5; cursor:default}
   border:1px solid var(--rule-hi);
   border-radius:var(--r-sm);
   padding:var(--s2) var(--s3);
-  min-height:36px;
+  min-height:calc(36px*var(--fs, 1));
 }
 /* Checkboxes and radios are sized by the pages that use them; the 36px
    min-height above would otherwise stretch them into ovals. */
@@ -194,8 +194,8 @@ html.lamplit .lt-ring{
   position:relative;
   display:inline-grid;
   place-items:center;
-  width:var(--ring-size, 44px);
-  height:var(--ring-size, 44px);
+  width:var(--ring-size, calc(44px*var(--fs, 1)));
+  height:var(--ring-size, calc(44px*var(--fs, 1)));
   border-radius:var(--r-full);
   flex:none;
 }
@@ -215,8 +215,8 @@ html.lamplit .lt-ring::before{
 
 html.lamplit .lt-ring > img,
 html.lamplit .lt-ring > .lt-ring-face{
-  width:calc(100% - (var(--ring-w) * 2) - 3px);
-  height:calc(100% - (var(--ring-w) * 2) - 3px);
+  width:calc(100% - (var(--ring-w) * 2) - calc(3px*var(--fs, 1)));
+  height:calc(100% - (var(--ring-w) * 2) - calc(3px*var(--fs, 1)));
   border-radius:var(--r-full);
   object-fit:cover;
   background:var(--slate);

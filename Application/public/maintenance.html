@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Written by Irmak Hakman — 2026-10-15 14:01 -->
+<!-- Written by Irmak Hakman — 2026-10-15 14:25 -->
 <!-- Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) -->
 <html lang="en">
 <head>
@@ -15,39 +15,39 @@
 *{box-sizing:border-box}
     body{margin:0;font-family:var(--ui);background:var(--ink);color:var(--bone);min-height:100vh}
     a{color:var(--arc-hi)}
-    .wrap{max-width:1200px;margin:0 auto;padding:18px}
+    .wrap{max-width:calc(1200px*var(--fs, 1));margin:0 auto;padding:calc(18px*var(--fs, 1))}
 
     /* Login gate */
-    #gate{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
-    #gate .card{background:var(--slate);border:1px solid var(--rule);border-radius:12px;padding:28px;width:100%;max-width:360px}
-    #gate h1{margin:0 0 4px;font-size:calc(20px * var(--fs, 1));color:var(--bone)}
-    #gate p{margin:0 0 18px;color:var(--ash);font-size:calc(13px * var(--fs, 1))}
-    #gate input{width:100%;padding:11px 12px;border-radius:8px;border:1px solid var(--rule);background:var(--sunken);color:var(--bone);font-size:calc(15px * var(--fs, 1))}
-    #gate button{width:100%;margin-top:12px;padding:11px;border:0;border-radius:8px;background:var(--arc);color:var(--ink);font-weight:700;font-size:calc(15px * var(--fs, 1));cursor:pointer}
+    #gate{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:calc(20px*var(--fs, 1))}
+    #gate .card{background:var(--slate);border:1px solid var(--rule);border-radius:calc(12px*var(--fs, 1));padding:calc(28px*var(--fs, 1));width:100%;max-width:calc(360px*var(--fs, 1))}
+    #gate h1{margin:0 0 calc(4px*var(--fs, 1));font-size:calc(20px * var(--fs, 1));color:var(--bone)}
+    #gate p{margin:0 0 calc(18px*var(--fs, 1));color:var(--ash);font-size:calc(13px * var(--fs, 1))}
+    #gate input{width:100%;padding:calc(11px*var(--fs, 1)) calc(12px*var(--fs, 1));border-radius:calc(8px*var(--fs, 1));border:1px solid var(--rule);background:var(--sunken);color:var(--bone);font-size:calc(15px * var(--fs, 1))}
+    #gate button{width:100%;margin-top:calc(12px*var(--fs, 1));padding:calc(11px*var(--fs, 1));border:0;border-radius:calc(8px*var(--fs, 1));background:var(--arc);color:var(--ink);font-weight:700;font-size:calc(15px * var(--fs, 1));cursor:pointer}
     #gate button:hover{background:var(--arc-hi)}
-    #gate-err{color:var(--blood);font-size:calc(13px * var(--fs, 1));margin-top:10px;min-height:16px}
+    #gate-err{color:var(--blood);font-size:calc(13px * var(--fs, 1));margin-top:calc(10px*var(--fs, 1));min-height:calc(16px*var(--fs, 1))}
 
     /* Dashboard */
     #panel{display:none}
-    .top{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:16px}
+    .top{display:flex;align-items:center;gap:calc(14px*var(--fs, 1));flex-wrap:wrap;margin-bottom:calc(16px*var(--fs, 1))}
     .top h1{margin:0;font-size:calc(19px * var(--fs, 1));color:var(--bone)}
-    .pill{background:var(--slate-hi);border:1px solid var(--rule);border-radius:999px;padding:4px 12px;font-size:calc(13px * var(--fs, 1));color:var(--bone)}
+    .pill{background:var(--slate-hi);border:1px solid var(--rule);border-radius:calc(999px*var(--fs, 1));padding:calc(4px*var(--fs, 1)) calc(12px*var(--fs, 1));font-size:calc(13px * var(--fs, 1));color:var(--bone)}
     .top .spacer{flex:1}
-    .top button{background:var(--slate-hi);border:1px solid var(--rule);color:var(--bone);padding:7px 14px;border-radius:8px;cursor:pointer;font-size:calc(13px * var(--fs, 1))}
+    .top button{background:var(--slate-hi);border:1px solid var(--rule);color:var(--bone);padding:calc(7px*var(--fs, 1)) calc(14px*var(--fs, 1));border-radius:calc(8px*var(--fs, 1));cursor:pointer;font-size:calc(13px * var(--fs, 1))}
     .top button:hover{border-color:var(--arc)}
     .muted{color:var(--ash);font-size:calc(12px * var(--fs, 1))}
 
-    .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
-    .client{background:var(--slate);border:1px solid var(--rule);border-radius:10px;padding:14px;border-left:4px solid var(--ash-dim)}
+    .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(calc(300px*var(--fs, 1)),1fr));gap:calc(12px*var(--fs, 1))}
+    .client{background:var(--slate);border:1px solid var(--rule);border-radius:calc(10px*var(--fs, 1));padding:calc(14px*var(--fs, 1));border-left:4px solid var(--ash-dim)}
     .client.dm{border-left-color:var(--bone)}
     .client.character{border-left-color:var(--verdigris)}
-    .client .who{display:flex;align-items:center;gap:8px;margin-bottom:8px}
-    .badge{font-size:calc(11px * var(--fs, 1));font-weight:700;padding:2px 8px;border-radius:999px;letter-spacing:.4px}
+    .client .who{display:flex;align-items:center;gap:calc(8px*var(--fs, 1));margin-bottom:calc(8px*var(--fs, 1))}
+    .badge{font-size:calc(11px * var(--fs, 1));font-weight:700;padding:calc(2px*var(--fs, 1)) calc(8px*var(--fs, 1));border-radius:calc(999px*var(--fs, 1));letter-spacing:.4px}
     .badge.dm{background:var(--bone);color:var(--ink)}
     .badge.character{background:var(--verdigris);color:#08210f}
     .badge.none{background:var(--ash-dim);color:var(--ink)}
     .client .name{font-weight:600;font-size:calc(15px * var(--fs, 1))}
-    .row{display:flex;justify-content:space-between;gap:10px;font-size:calc(13px * var(--fs, 1));padding:3px 0;border-top:1px dashed var(--rule)}
+    .row{display:flex;justify-content:space-between;gap:calc(10px*var(--fs, 1));font-size:calc(13px * var(--fs, 1));padding:calc(3px*var(--fs, 1)) 0;border-top:1px dashed var(--rule)}
     .row:first-of-type{border-top:0}
     .row .k{color:var(--ash)}
     .row .v{text-align:right;word-break:break-word}
@@ -59,32 +59,32 @@
     #btn-reload-all:hover{background:#9a3a3a}
     #btn-reload-outdated{background:var(--slate-hi)}
     .top button:disabled{opacity:.45;cursor:not-allowed}
-    .ua{color:var(--ash);font-size:calc(11px * var(--fs, 1));margin-top:8px;word-break:break-word}
-    #empty{color:var(--ash);padding:40px;text-align:center}
-    .events-wrap{overflow-x:auto;margin-top:10px;border:1px solid var(--rule-hi);border-radius:var(--r-md)}
+    .ua{color:var(--ash);font-size:calc(11px * var(--fs, 1));margin-top:calc(8px*var(--fs, 1));word-break:break-word}
+    #empty{color:var(--ash);padding:calc(40px*var(--fs, 1));text-align:center}
+    .events-wrap{overflow-x:auto;margin-top:calc(10px*var(--fs, 1));border:1px solid var(--rule-hi);border-radius:var(--r-md)}
     .events{width:100%;border-collapse:collapse;font-size:calc(12px * var(--fs, 1))}
-    .events th,.events td{padding:7px 10px;text-align:left;border-bottom:1px solid var(--rule);white-space:nowrap}
+    .events th,.events td{padding:calc(7px*var(--fs, 1)) calc(10px*var(--fs, 1));text-align:left;border-bottom:1px solid var(--rule);white-space:nowrap}
     .events th{color:var(--ash);font-weight:600}
     .events tr:last-child td{border-bottom:none}
     .ev-bad{color:var(--blood)}
     .ev-ok{color:var(--verdigris)}
-    .muted-hdr{margin-top:32px}
-    .events td.actions{display:flex;gap:6px}
+    .muted-hdr{margin-top:calc(32px*var(--fs, 1))}
+    .events td.actions{display:flex;gap:calc(6px*var(--fs, 1))}
     .events button{background:var(--slate-hi);color:var(--bone);border:1px solid var(--rule-hi);
-      border-radius:var(--r-sm);padding:4px 10px;font:inherit;font-size:calc(12px * var(--fs, 1));cursor:pointer}
+      border-radius:var(--r-sm);padding:calc(4px*var(--fs, 1)) calc(10px*var(--fs, 1));font:inherit;font-size:calc(12px * var(--fs, 1));cursor:pointer}
     .events button:hover,.events button:focus-visible{border-color:var(--arc)}
     .events .countdown{font-variant-numeric:tabular-nums}
     .events .ua-v{color:var(--ash)}
-    .pager{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:10px;font-size:calc(12px * var(--fs, 1))}
+    .pager{display:flex;flex-wrap:wrap;align-items:center;gap:calc(8px*var(--fs, 1));margin-top:calc(10px*var(--fs, 1));font-size:calc(12px * var(--fs, 1))}
     .pager[hidden],.pager [hidden]{display:none}
     .pager button{background:var(--slate-hi);color:var(--bone);border:1px solid var(--rule-hi);
-      border-radius:var(--r-sm);padding:5px 12px;font:inherit;cursor:pointer}
+      border-radius:var(--r-sm);padding:calc(5px*var(--fs, 1)) calc(12px*var(--fs, 1));font:inherit;cursor:pointer}
     .pager button:hover:not(:disabled),.pager button:focus-visible{border-color:var(--arc)}
     .pager button:disabled{opacity:.45;cursor:not-allowed}
-    .pager-info{color:var(--bone);font-variant-numeric:tabular-nums;padding:0 4px}
-    .pager-size{color:var(--ash);display:flex;align-items:center;gap:6px;margin-left:auto}
+    .pager-info{color:var(--bone);font-variant-numeric:tabular-nums;padding:0 calc(4px*var(--fs, 1))}
+    .pager-size{color:var(--ash);display:flex;align-items:center;gap:calc(6px*var(--fs, 1));margin-left:auto}
     .pager-size select{background:var(--slate-hi);color:var(--bone);border:1px solid var(--rule-hi);
-      border-radius:var(--r-sm);font:inherit;padding:3px 6px}
+      border-radius:var(--r-sm);font:inherit;padding:calc(3px*var(--fs, 1)) calc(6px*var(--fs, 1))}
   </style>
 </head>
 <body>
@@ -97,7 +97,7 @@
       <form id="gate-form" autocomplete="off">
         <input id="gate-pw" type="password" placeholder="Admin password" autocomplete="current-password">
         <button type="submit">Unlock</button>
-        <div id="gate-cap" style="margin-top:12px;text-align:left"></div>
+        <div id="gate-cap" style="margin-top:calc(12px*var(--fs, 1));text-align:left"></div>
         <div id="gate-err"></div>
       </form>
     </div>
