@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-09-26 16:50
+// Written by Irmak Hakman — 2026-10-15 17:39
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -54,8 +54,37 @@ function _realtimeParams() {
     // receives nothing. The cookie is also sent on the WS upgrade, but passing
     // it explicitly keeps the two paths reading the same value.
     campaign: campaignFromCookie(),
+    // This page's connection, so a later display change finds it (below), and
+    // the display template + UI size it shows, for the maintenance page.
+    cid: _rtCid,
+    ..._rtDisplay(),
   }).toString();
 }
+
+// One id per page load. It only lets this page's own connection be found
+// again; the server also checks the session token, so it grants nothing.
+const _rtCid = Math.random().toString(36).slice(2, 12) + Date.now().toString(36);
+
+// The display template and UI size this page shows (js/lib/template.js);
+// nothing on a page without it.
+function _rtDisplay() {
+  const d = window.RpgTemplate && window.RpgTemplate.current();
+  return d ? { tpl: d.template, fs: String(d.size), fsChosen: d.sizeChosen ? '1' : '' } : {};
+}
+
+// A template or size changed while connected: update what the maintenance
+// page lists for this connection. Display-only, so a lost update is harmless;
+// a reconnect sends the current values again anyway.
+if (typeof window.addEventListener === 'function') window.addEventListener('rpg-template', () => {
+  const token = _storedSessionToken();
+  if (!token) return;
+  const d = _rtDisplay();
+  fetch('/api/realtime/display', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ cid: _rtCid, token, tpl: d.tpl, fs: d.fs, fsChosen: d.fsChosen === '1' }),
+  }).catch(() => {});
+});
 
 // ── Campaign context (shared by every page that loads this lib) ───────────────
 

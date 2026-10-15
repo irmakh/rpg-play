@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-11 19:30
+// Written by Irmak Hakman — 2026-10-15 17:46
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -38,7 +38,7 @@ export function makeLdb() {
       color TEXT DEFAULT '#888888', hpCurrent INTEGER DEFAULT 0, hpMax INTEGER DEFAULT 0,
       hpTemp INTEGER DEFAULT 0, speed INTEGER DEFAULT 30, movedFt INTEGER DEFAULT 0,
       initiativeId TEXT DEFAULT '', visible INTEGER DEFAULT 1,
-      tokenSize INTEGER DEFAULT 1, portrait TEXT, portraitThumb TEXT,
+      tokenSize INTEGER DEFAULT 1, portrait TEXT, portraitThumb TEXT, customPortrait INTEGER DEFAULT 0,
       label TEXT DEFAULT '', conditions TEXT DEFAULT '[]', ac INTEGER,
       createdAt TEXT DEFAULT (datetime('now'))
     );
@@ -176,12 +176,15 @@ export function makeLdb() {
   function getLinkedTokens(charId) {
     return db.prepare('SELECT * FROM table_tokens WHERE linkedId = ?').all(charId).map(normTok);
   }
-  // ── media (stubs — media endpoints not covered in this test suite) ─────────
-  function listMedia() { return []; }
-  function createMedia() {}
-  function setPortrait() {}
-  function getMediaById() { return null; }
-  function deleteMedia() {}
+  // ── media (in memory: a character's pictures and which one is its portrait) ─
+  const media = new Map();
+  function listMedia(charId) { return [...media.values()].filter(m => m.charId === charId).map(m => ({ ...m })); }
+  function createMedia(id, fields) { media.set(id, { id, ...fields, isPortrait: !!fields.isPortrait }); }
+  function setPortrait(charId, mediaId) {
+    for (const m of media.values()) if (m.charId === charId) m.isPortrait = m.id === mediaId;
+  }
+  function getMediaById(id) { const m = media.get(id); return m ? { ...m } : null; }
+  function deleteMedia(id) { media.delete(id); }
 
   // ── initiative ─────────────────────────────────────────────────────────────
   function listInitEntries() {

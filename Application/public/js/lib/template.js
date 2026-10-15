@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 15:15
+// Written by Irmak Hakman — 2026-10-15 17:39
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -14,7 +14,14 @@
  *
  * Once the page is parsed, a small button goes into the page's own header; it
  * opens a pop-up list of the templates. A page that should not show one (a small pop-out player) sets data-no-template-select
- * on <html>. The console has its own design system and does not load this file.
+ * on <html>.
+ *
+ * The console screens (html[data-console]) keep the choice in localStorage
+ * instead: the map screen and the info panel are two installed apps on one
+ * device, and both should follow one choice and keep it between launches. A
+ * template there also keeps the console's own size (1, not 1.2) unless a UI
+ * size is chosen. A console page marks where the button goes with
+ * [data-tpl-slot]; RpgTemplate.remount() looks again after the page changes.
  */
 (function () {
   const KEY = 'rpgTemplate';
@@ -51,14 +58,17 @@
   const SIZES = [0.5, 0.75, 1, 1.1, 1.2, 1.35];
   const TEMPLATE_FS = 1.2;   // must match FS in scripts/build_templates.py
 
+  const isConsole = document.documentElement.hasAttribute('data-console');
+  function box() { return isConsole ? localStorage : sessionStorage; }
+
   function read() {
-    try { const v = sessionStorage.getItem(KEY) || ''; return known.has(v) ? v : ''; } catch { return ''; }
+    try { const v = box().getItem(KEY) || ''; return known.has(v) ? v : ''; } catch { return ''; }
   }
   function readSize() {
-    try { const v = Number(sessionStorage.getItem(SIZE_KEY)); return SIZES.includes(v) ? v : 0; } catch { return 0; }
+    try { const v = Number(box().getItem(SIZE_KEY)); return SIZES.includes(v) ? v : 0; } catch { return 0; }
   }
   /** The size in effect: the chosen one, or the template's own. */
-  function currentSize() { return readSize() || (read() ? TEMPLATE_FS : 1); }
+  function currentSize() { return readSize() || (read() && !isConsole ? TEMPLATE_FS : 1); }
 
   function apply() {
     const root = document.documentElement, id = read(), size = readSize();
@@ -70,10 +80,16 @@
     for (const b of document.querySelectorAll('.tpl-item')) b.setAttribute('aria-checked', String(b.dataset.id === id));
     const cur = currentSize();
     for (const b of document.querySelectorAll('.tpl-size')) b.setAttribute('aria-checked', String(Number(b.dataset.size) === cur));
+    // Tell the page when the look changes (js/lib/realtime.js reports it to
+    // the maintenance page). Not on the first apply: that is the page loading.
+    const key = id + '|' + cur;
+    if (lastKey !== null && key !== lastKey) window.dispatchEvent(new CustomEvent('rpg-template'));
+    lastKey = key;
   }
+  let lastKey = null;
 
   function store(key, val) {
-    try { if (val) sessionStorage.setItem(key, String(val)); else sessionStorage.removeItem(key); } catch {}
+    try { if (val) box().setItem(key, String(val)); else box().removeItem(key); } catch {}
     apply();
   }
   const choose = id => store(KEY, id);
@@ -82,12 +98,14 @@
   apply();
 
   // A same-origin frame on this page (the music player) shares this
-  // sessionStorage, so it follows a change made in the page around it.
+  // sessionStorage, so it follows a change made in the page around it. On the
+  // console the other screen's change arrives the same way, via localStorage.
   window.addEventListener('storage', e => { if (e.key === KEY || e.key === SIZE_KEY || e.key === null) apply(); });
 
-  // Where the button goes, first match wins. Each page's header is
+  // Where the button goes, first match wins (a console login form first: it
+  // covers the page under it). Each page's header is
   // different; anything without one gets a small button in the corner.
-  const SLOTS = ['.hdr-right', '.hdr', '.char-bar', '#toolbar', '.top', '#hdr', '.stories-hdr', '.login-box'];
+  const SLOTS = ['.c-gate [data-tpl-slot]', '[data-tpl-slot]', '.hdr-right', '.hdr', '.char-bar', '#toolbar', '.top', '#hdr', '.stories-hdr', '.login-box'];
   const ICON = '<svg class="lt-icon" viewBox="0 0 24 24" aria-hidden="true">' +
     '<path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.7-.9 1.4-1.8-.3-.9.3-2.2 1.6-2.2H17a4 4 0 0 0 4-4c0-5.5-4-10-9-10z"/>' +
     '<circle cx="7.5" cy="11" r="1.2"/><circle cx="10.5" cy="7" r="1.2"/><circle cx="15" cy="7.5" r="1.2"/></svg>';
@@ -177,10 +195,27 @@
     btn.addEventListener('click', () => (pop ? close() : open()));
     window.addEventListener('resize', close);
 
-    const slot = SLOTS.map(q => document.querySelector(q)).find(Boolean);
-    if (slot) slot.append(btn);
-    else { btn.classList.add('tpl-btn-float'); document.body.append(btn); }
+    place_btn();
   }
+
+  // Into the first slot on the page, or the corner when there is none.
+  function place_btn() {
+    if (!btn) return;
+    const slot = SLOTS.map(q => document.querySelector(q)).find(Boolean);
+    btn.classList.toggle('tpl-btn-float', !slot);
+    (slot || document.body).append(btn);
+  }
+
+  // For a page that swaps what is on screen without reloading (the console
+  // launcher drops its login form): put the button in the slot it has now.
+  window.RpgTemplate = {
+    remount() { close(); if (btn) place_btn(); },
+    /** What this page shows now: template id ('' = default), the size in
+     *  effect, and whether that size was chosen or is the template's own. */
+    current() { return { template: read(), size: currentSize(), sizeChosen: !!readSize() }; },
+    /** A template's name for display ('' = Default; unknown ids as given). */
+    labelOf(id) { const t = TEMPLATES.find(x => x[0] === (id || '')); return t ? t[1] : String(id); },
+  };
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mount);
   else mount();

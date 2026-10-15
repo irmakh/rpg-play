@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-10-15 17:45
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -179,13 +179,33 @@ document.getElementById('img-picker').addEventListener('change', async function 
   } catch { setStatus(id, 'Upload failed', 'err'); }
 });
 
-// Another DM window (or the table toolbar) may park or un-park the table.
+// Another DM window (or the table toolbar, or another device) may park or
+// un-park the table, or add, rename, re-picture or delete a screen. The list is
+// re-read for any of them, so what this page shows is always the server's.
+//
+// A reload rebuilds every card, so it waits while the DM is typing in one (their
+// own save echoes back here too) and runs once the field is left.
+let _reloadWaiting = false;
+function reloadSoon() {
+  const grid = document.getElementById('ws-grid');
+  const typing = grid && grid.contains(document.activeElement) && document.activeElement.tagName === 'INPUT';
+  if (!typing) { load(); return; }
+  if (_reloadWaiting) return;
+  _reloadWaiting = true;
+  document.activeElement.addEventListener('blur', () => {
+    _reloadWaiting = false;
+    // Let a change handler on that field save first, then look again.
+    setTimeout(reloadSoon, 300);
+  }, { once: true });
+}
+
 if (typeof connectRealtime === 'function') {
   connectRealtime({
     'waiting-screen': (d) => {
       activeId = (d && d.active && d.active.id) || '';
-      render();
+      reloadSoon();
     },
+    'waiting-screens': () => reloadSoon(),
   });
 }
 

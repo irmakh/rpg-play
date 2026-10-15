@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 15:43
+// Written by Irmak Hakman — 2026-10-15 17:47
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -494,7 +494,7 @@ const MAX_MEDIA_BYTES = 25 * 1024 * 1024;
 // Bump this number whenever frontend JS or CSS files change.
 // Also bump CACHE in public/sw.js to the same value.
 // Both must always match. See deployment notes in CLAUDE.md.
-const FRONTEND_VERSION = 292;
+const FRONTEND_VERSION = 296;
 
 // ── Express app ───────────────────────────────────────────────────────────────
 const app = express();
@@ -534,6 +534,7 @@ const CAMPAIGN_EXEMPT = [
   /^\/api\/config$/,
   /^\/api\/campaigns(\/|$)/,
   /^\/api\/maintenance\//,   // server-wide admin, gated by a super-admin session
+  /^\/api\/realtime\/display$/,   // a page's look for the maintenance page; finds its connection itself
   /^\/api\/telemetry\//,     // install reports from other servers (collector only)
   /^\/api\/auth\/(captcha|admin-login|logout)$/,   // login plumbing with no campaign of its own
 ];
@@ -687,6 +688,17 @@ const TRUST_PROXY = /^(1|true|yes)$/i.test(String(process.env.TRUST_PROXY || '')
 // sending oversized values that sit in memory per connection. Display-only.
 function _cap(v, n) { return String(v ?? '').slice(0, n); }
 
+// The display template and UI size a page reports (js/lib/template.js via
+// js/lib/realtime.js). Template ids are lowercase words ('' = the default);
+// the size is one of the pop-up's choices. Anything else is dropped.
+function displayFrom(q) {
+  const tpl = /^[a-z]{0,24}$/.test(String(q.tpl ?? '')) ? String(q.tpl ?? '') : '';
+  const n = Number(q.fs);
+  const fs = Number.isFinite(n) && n >= 0.25 && n <= 3 ? Math.round(n * 100) / 100 : null;
+  const chosen = q.fsChosen === true || q.fsChosen === '1';
+  return { template: tpl, uiSize: fs, uiSizeChosen: fs != null && chosen };
+}
+
 function clientMetaFromReq(req, transport) {
   let q = {};
   try {
@@ -718,8 +730,30 @@ function clientMetaFromReq(req, transport) {
     charName:  identity ? _cap(identity.charName, 128) : '',
     ver:       _cap(q.ver, 16),             // frontend version the client loaded
     userAgent: _cap(req.headers['user-agent'], 512),
+    cid:       _cap(q.cid, 32),             // the page's own id for its connection
+    // Whether the page reported a look at all (pages without js/lib/template.js do not).
+    ...('tpl' in q || 'fs' in q ? displayFrom(q) : { template: null, uiSize: null, uiSizeChosen: false }),
   };
 }
+
+// ── A connected page changed its display template or UI size ──────────────────
+// Updates what the maintenance page lists for that page's connection. The page
+// names its connection by cid and must present the same session token the
+// connection opened with, so one visitor cannot relabel another's. Display-only
+// and always 200 - a 401 here would make the page's fetch guard log it out.
+app.post('/api/realtime/display', (req, res) => {
+  const b = req.body || {};
+  const cid = typeof b.cid === 'string' ? b.cid.slice(0, 32) : '';
+  const token = tokenFromQuery(b);
+  let updated = 0;
+  if (cid && token) {
+    const d = displayFrom(b);
+    for (const c of [...wsClients, ...sseClients]) {
+      if (c._meta && c._meta.cid === cid && c._token === token) { Object.assign(c._meta, d); updated++; }
+    }
+  }
+  res.json({ updated });
+});
 
 // ── SSE endpoint ──────────────────────────────────────────────────────────────
 app.get('/api/events', (req, res) => {

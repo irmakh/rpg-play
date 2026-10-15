@@ -209,6 +209,7 @@ One catalogue for everything you hand out, replacing the separate Merchant and L
 - Hidden diagnostics page (no link anywhere) gated by the master password on every request
 - Lists every connected real-time client: IP, identity (DM or character name), login time, current page, transport (WebSocket / SSE), user agent
 - Shows the **frontend version each client has loaded** against the server's, highlighting anyone running stale assets
+- Shows the **display template and UI size** each client's page is showing (v295), updated live when they change it
 - **Force reload** — push a refresh to every client, or only to the outdated ones, so a release reaches phones without chasing people
 - **Blocked addresses** — every address currently locked out of logging in, described in words ("Aliyr in Icewind Dale", "DM of Icewind Dale", "Whole address"), with a live countdown and **Unblock** / **Unblock address** buttons so a player who mistyped five times does not have to sit out the timer
 - **Login activity** — the rolling 30-day audit of every login, failure, lockout and unblock, paged on the server (25 / 50 / 100 per page, remembered between visits; auto-refresh only on page 1)
@@ -310,11 +311,14 @@ on the top screen and an **info panel** on the bottom one. Each is an installabl
 both also work as two browser windows on a PC. It has its own look, separate from the
 rest of the app: true black for AMOLED screens, rows instead of cards, one condensed
 typeface, and four colours that each mean one thing (blue = focus, amber = whose turn,
-red = hostile or damage, green = health).
+red = hostile or damage, green = health). The display templates and UI size from the
+rest of the app work here too (the palette button on the launcher, the map's status line
+and the info panel's More tab); each template recolours the console while keeping those
+four meanings, and the map and the info panel follow one choice.
 
-- **Launcher and login** (`/console/`) — one login form for all console screens, with a
-  campaign picker when the server hosts several. Two console windows on the same device
-  share one login.
+- **Launcher and login** (`/console/`) — one login form for all console screens, in the
+  design of the main login page, with a campaign picker when the server hosts several.
+  Two console windows on the same device share one login.
 - **Map screen** (`/console/table-console.html`) — the shared table map inside a thin
   frame: a status line (whose turn, today's weather, notification count, tool, zoom,
   panel link), a Tools drawer, and a command line with move arrows and Undo move. Its

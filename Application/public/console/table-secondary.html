@@ -1,7 +1,7 @@
 <!DOCTYPE html>
-<!-- Written by Irmak Hakman — 2026-10-11 00:20 -->
+<!-- Written by Irmak Hakman — 2026-10-15 17:36 -->
 <!-- Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) -->
-<html lang="en" class="console">
+<html lang="en" class="console" data-console>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
@@ -11,6 +11,10 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <script>if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js');</script>
+<link rel="stylesheet" href="/css/tokens.css">
+<link rel="stylesheet" href="/css/templates.css">
+<script src="/js/lib/template.js"></script>
+<link rel="stylesheet" href="/css/fonts.css">
 <link rel="stylesheet" href="/css/notifications.css">
 <link rel="stylesheet" href="/css/console/console.css">
 <link rel="stylesheet" href="/css/console/panel.css">
@@ -245,6 +249,12 @@
       <div class="p-reveal">
         <span class="name">Logged in as <b id="s-who"></b></span>
         <button type="button" class="c-btn" onclick="sLogout()">Log out</button>
+      </div>
+      <!-- The display template button (js/lib/template.js). Both console
+           screens follow the one choice. -->
+      <div class="p-reveal">
+        <span class="name">Display template and UI size, for both screens</span>
+        <span class="c-tpl" data-tpl-slot></span>
       </div>
       <a class="c-row" href="/console/"><span class="c-row-main"><strong>Console launcher</strong><small>Open the map screen or the device check</small></span><span class="c-row-end">Open</span></a>
     </div>

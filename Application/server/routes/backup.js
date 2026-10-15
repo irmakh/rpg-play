@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-09-26 16:25
+// Written by Irmak Hakman — 2026-10-15 17:45
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -773,6 +773,7 @@ export default function register(app, ctx) {
         }
         ldb.importWaitingScreens(restored);
         broadcast('table', { action: 'waiting-screens-updated' });
+        broadcast('waiting-screens', { changed: true }, undefined, { dmOnly: true });
         break;
       }
       case 'handouts': {

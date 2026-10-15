@@ -21,6 +21,55 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [296] — 2026-10-15 — New portraits and waiting-screen changes show up live
+
+- **A character's new portrait now appears on its tokens straight away**, on every
+  screen. Uploading a portrait, choosing another picture as the portrait or deleting it
+  updates every token of that character on the map. Before, the token kept the old
+  picture until it was placed again - and since replacing a portrait deletes the old
+  file, it often showed a broken image. A token the DM gave its own picture keeps it,
+  and removing that picture now brings back the character's portrait (it used to leave
+  the token blank).
+- **A monster's new portrait reaches its tokens the same way**, and a hidden monster's
+  token is no longer revealed to players by that update.
+- **Replacing a waiting screen's image now shows the new one to players who are
+  already looking at it.** The new image kept the old file name, so their pages kept
+  the cached picture. The same was true of a token's own picture and a monster portrait;
+  each replacement now gets a new file name.
+- **The DM's waiting-screens page keeps up with changes made in another window or on
+  another device**: new, renamed, re-pictured and deleted screens appear without a
+  reload. It waits while you are typing in a field, so it never throws away your edit.
+
+## [295] — 2026-10-15 — The maintenance page shows each client's template and UI size
+
+- **Each connected client on the maintenance page now has a Template row**, e.g.
+  "Metallic Chic · UI size 120%" or "Default · UI size 110% (chosen)". "Chosen" means the
+  visitor picked that size; without it the size is the template's own. It updates
+  while the client is connected: a page reports a change of template or size the
+  moment it happens. Clients still on an older version show "not reported".
+- *(server)* New `POST /api/realtime/display`. A page names its own connection by an
+  id from its connection URL and must present that connection's session token, so
+  nobody can relabel another visitor's connection. Display-only; it always answers 200.
+
+## [293–294] — 2026-10-15 — Display templates on the console; the console login looks like the main one; the two screens install as two apps
+
+- **The display templates and UI size now work on the console.** A palette button
+  sits on the launcher, in the map screen's status line, in the info panel's More tab
+  and on the login form. Each template recolours the console (ground, rows, text) and
+  keeps its four colour meanings apart: focus, whose turn, hostile and health never
+  come out looking alike. The map screen and the info panel follow one choice, change
+  together, and keep it between launches. With no template the console keeps its black
+  look, and a template keeps the console's own size unless a UI size is chosen.
+- **The console login form now looks like the main login page**: the RPG Play mark,
+  the panel, the gold Character / Dungeon Master switch and the gold Login button, with
+  the screen's name and the campaign under the mark. On the Thor's short screens it
+  still fits in two columns with the Login button showing.
+- **The console launcher's app no longer claims the two screens.** Its manifest
+  covered all of `/console/`, so on a two-screen handheld (AYN Thor) installing
+  the map screen and the info panel kept landing on the same app. The launcher
+  now covers only its own page, leaving the map screen (`d20`) and the info
+  panel (`d20-companion`) to install as separate apps.
+
 ## [292] — 2026-10-15 — The right panel folds like the left; no "My sheet" button
 
 - **The map screen's right panel folds to a strip** down the map's right edge,

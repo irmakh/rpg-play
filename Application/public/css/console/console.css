@@ -1,4 +1,4 @@
-/* Written by Irmak Hakman — 2026-10-10 23:58 */
+/* Written by Irmak Hakman — 2026-10-15 17:36 */
 /* Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) */
 
 /* ============================================================================
@@ -24,6 +24,12 @@
    - One typeface, IBM Plex Sans Condensed: a condensed face fits one more
      column per row at this size. Numbers use tabular figures so they line up.
      No all-caps labels and no monospace - both are hard to read this small.
+
+   DISPLAY TEMPLATES: the console loads the app's display templates
+   (css/templates.css, js/lib/template.js). Each template also sets the --c-*
+   tokens below from its own colours, so the four meanings survive any of
+   them; with no template chosen this file's black instrument panel is the
+   look. A template keeps the console's own size unless a UI size is chosen.
 
    SCOPING: tokens live on html.console (a page fully in the new design) and on
    .cx (a new-design island inside a page that is not converted yet, such as
@@ -52,7 +58,7 @@
   unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
 
 /* ── Tokens ──────────────────────────────────────────────────────────────── */
-html.console,.cx{
+html.console,.cx,body.console-mode{
   --c-bg:#000000;          /* ground: a switched-off AMOLED pixel            */
   --c-surface:#0D1014;     /* the one raised level: your own line, a field   */
   --c-surface-hi:#171C22;  /* a pressed row                                  */
@@ -83,7 +89,15 @@ html.console,.cx{
 }
 
 /* ── Page base (pages fully in the new design) ───────────────────────────── */
-html.console{font-size:16px;color-scheme:dark;background:var(--c-bg)}
+html.console{font-size:calc(16px * var(--fs, 1));background:var(--c-bg)}
+html.console:not([data-template]){color-scheme:dark}
+/* A template's own --fs (1.2) is for the main app's large screens; here the
+   layouts are measured for the Thor's, so a template keeps size 1. A chosen
+   UI size is set inline on <html> and still wins. */
+html[data-console][data-template]{--fs:1}
+/* A light template must not leave the browser drawing dark form controls:
+   the template sets color-scheme on <html>, and .cx islands follow it. */
+html[data-console][data-template] .cx{color-scheme:inherit}
 html.console *,html.console *::before,html.console *::after{box-sizing:border-box}
 html.console body{
   margin:0;min-height:100dvh;background:var(--c-bg);color:var(--c-tx);
@@ -93,7 +107,7 @@ html.console body{
 }
 
 /* An island of the new design inside an unconverted page. */
-.cx{color:var(--c-tx);font-family:var(--c-font);font-size:16px;line-height:1.35;font-variant-numeric:tabular-nums;color-scheme:dark}
+.cx{color:var(--c-tx);font-family:var(--c-font);font-size:calc(16px * var(--fs, 1));line-height:1.35;font-variant-numeric:tabular-nums;color-scheme:dark}
 .cx *,.cx *::before,.cx *::after{box-sizing:border-box}
 
 /* `hidden` must beat the display:flex / grid our own classes set. */
@@ -177,42 +191,97 @@ a.c-row:active,button.c-row:active{background:var(--c-surface-hi)}
 html.pad-on .pad-only{display:inline-grid !important}
 html.pad-on .cx :focus,html.pad-on.console :focus{outline:2px solid var(--c-focus);outline-offset:-2px}
 
-/* ── Login gate ──────────────────────────────────────────────────────────── */
+/* ── Login gate ──────────────────────────────────────────────────────────────
+   The main login page's design (login.html), on the shared tokens: a panel on
+   the ground, the RPG Play mark, a gold switch and a gold button. Same sizes
+   too, scaled by --fs, so a UI size chosen in the template pop-up applies. */
 .c-gate{
-  position:fixed;inset:0;z-index:9999;overflow-y:auto;background:var(--c-bg);
+  position:fixed;inset:0;z-index:9999;overflow-y:auto;
+  background:var(--ink);color:var(--bone);font-family:var(--ui);font-size:calc(13px*var(--fs, 1));line-height:1.35;
   display:grid;place-items:center;
-  padding:max(1rem,env(safe-area-inset-top)) max(1rem,env(safe-area-inset-right)) max(1rem,env(safe-area-inset-bottom)) max(1rem,env(safe-area-inset-left));
+  padding:max(calc(16px*var(--fs, 1)),env(safe-area-inset-top)) max(calc(16px*var(--fs, 1)),env(safe-area-inset-right)) max(calc(16px*var(--fs, 1)),env(safe-area-inset-bottom)) max(calc(16px*var(--fs, 1)),env(safe-area-inset-left));
 }
-.c-login{width:100%;max-width:22rem;display:flex;flex-direction:column;gap:1rem}
-.c-login-form{display:flex;flex-direction:column;gap:.9rem}
+.c-gate *,.c-gate *::before,.c-gate *::after{box-sizing:border-box}
+.c-gate [hidden]{display:none !important}
+.c-login{
+  width:100%;max-width:calc(380px*var(--fs, 1));
+  background:var(--slate);border:1px solid var(--rule-hi);border-radius:calc(10px*var(--fs, 1));
+  padding:calc(32px*var(--fs, 1)) calc(28px*var(--fs, 1));
+}
+.lg-logo{text-align:center;margin-bottom:calc(24px*var(--fs, 1))}
+.lg-logo h1{margin:0;color:var(--bone);font-family:var(--display);font-variation-settings:'opsz' 72,'WONK' 1;font-size:var(--t-xl);font-weight:600;line-height:1.15}
+.lg-logo p{margin:calc(4px*var(--fs, 1)) 0 0;color:var(--ash);font-size:calc(11px*var(--fs, 1))}
+.lg-tabs{display:flex;margin-bottom:calc(24px*var(--fs, 1));border-radius:calc(5px*var(--fs, 1));overflow:hidden;border:1px solid var(--rule-hi)}
+.lg-tabs button{flex:1;padding:calc(8px*var(--fs, 1));background:transparent;border:0;color:var(--ash);font:inherit;font-size:calc(12px*var(--fs, 1));font-weight:bold;cursor:pointer;transition:background .15s}
+.lg-tabs button[aria-selected="true"]{background:var(--arc);color:var(--ink)}
+.lg-tabs button[aria-selected="false"]:hover{background:var(--wash);color:var(--bone)}
+.lg-field{margin-bottom:calc(14px*var(--fs, 1))}
+.c-gate label{display:block;margin:0 0 calc(4px*var(--fs, 1));font-size:calc(10px*var(--fs, 1));color:var(--bone)}
+.c-gate input,.c-gate select{
+  width:100%;margin:0;background:var(--slate-hi);border:1px solid var(--rule-hi);color:var(--bone);
+  border-radius:calc(4px*var(--fs, 1));padding:calc(8px*var(--fs, 1)) calc(10px*var(--fs, 1));
+  font-size:calc(13px*var(--fs, 1));font-family:inherit;
+}
+.c-gate input:focus,.c-gate select:focus{outline:none;border-color:var(--arc);background:var(--slate-hi)}
+.c-gate select option{background:var(--slate-hi)}
+.lg-btn{
+  display:block;width:100%;padding:calc(12px*var(--fs, 1));margin-top:calc(4px*var(--fs, 1));
+  background:var(--arc);border:0;color:var(--ink);border-radius:calc(4px*var(--fs, 1));
+  font-family:inherit;font-size:calc(13px*var(--fs, 1));font-weight:bold;cursor:pointer;
+}
+.lg-btn:hover{background:var(--arc-hi)}
+.lg-btn:disabled{opacity:.5;cursor:not-allowed}
+.lg-btn-back{margin-top:calc(8px*var(--fs, 1));background:transparent;border:1px solid var(--rule-hi);color:var(--ash)}
+.lg-btn-back:hover{background:var(--wash);color:var(--bone)}
+/* Gamepad and keyboard focus: the template's accent ring. */
+.c-gate :focus-visible,html.pad-on .c-gate :focus{outline:2px solid var(--arc);outline-offset:2px}
+.lg-err{margin:0 0 calc(10px*var(--fs, 1));min-height:calc(16px*var(--fs, 1));color:var(--blood);font-size:calc(11px*var(--fs, 1));text-align:center}
+.lg-step{margin-bottom:calc(16px*var(--fs, 1));font-size:calc(11px*var(--fs, 1));color:var(--ash)}
+.lg-step strong{display:block;margin-bottom:calc(4px*var(--fs, 1));font-size:calc(13px*var(--fs, 1));color:var(--bone)}
+.lg-hint{margin:calc(12px*var(--fs, 1)) 0 0;font-size:calc(11px*var(--fs, 1));color:var(--ash);text-align:center}
+.lg-tpl{display:flex;justify-content:center;margin-top:calc(16px*var(--fs, 1))}
+.lg-tpl:empty{display:none}
 .c-login-form[hidden]{display:none}
-.c-login-cols{display:flex;flex-direction:column;gap:.9rem}
-.c-login-col{display:flex;flex-direction:column;gap:.9rem;min-width:0}
-.cx .authui-cap{margin:0;display:flex;flex-direction:column;gap:.3rem}
-.cx .authui-cap-lbl{margin:0}
-.cx .authui-cap-row{margin:0}
-.cx .authui-cap-img{border-radius:2px;background:var(--c-surface)}
-.cx .authui-cap-new{width:var(--c-row);height:var(--c-row);border:1px solid var(--c-rule-hi);border-radius:2px;color:var(--c-mute)}
+.c-login-col{min-width:0}
+.c-gate .authui-cap{margin:0 0 calc(10px*var(--fs, 1))}
 
 /* Both Thor screens are short and wide (about 360px tall). Stacked, the form
    would need scrolling to reach the Log in button, so on a short landscape
-   screen the captcha and the button move into a second column. */
+   screen the box widens and the captcha and the button move into a second
+   column, with the mark beside the campaign choice. */
 @media (orientation:landscape) and (max-height:540px){
-  .c-gate{padding-block:.6rem}
-  /* Two columns throughout: the title beside the campaign choice, then the
-     who-is-logging-in strip and the form across both. Measured on a 640 x 360
-     screen, this is what keeps the Log in button on screen with the campaign
-     field showing. */
-  .c-login{max-width:40rem;display:grid;grid-template-columns:1fr 1fr;gap:.5rem 1.25rem;align-items:end}
-  .c-login>.c-seg,.c-login>.c-login-form{grid-column:1 / -1}
-  .c-login .c-title{font-size:var(--c-t-lg)}
-  .c-login .c-sub{font-size:var(--c-t-xs)}
-  .c-login-cols{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;align-items:start}
-  .c-login-form,.c-login-col{gap:.5rem}
-  .c-login .c-input,.c-login .c-btn,.c-login .c-seg button{min-height:2.5rem}
-  .cx .authui-cap-img{width:160px}
-  .cx .authui-cap-new{width:2.5rem;height:2.5rem}
-  .c-login .c-err{min-height:0}
+  .c-gate{padding-block:calc(8px*var(--fs, 1))}
+  .c-login{
+    max-width:calc(640px*var(--fs, 1));padding:calc(14px*var(--fs, 1)) calc(20px*var(--fs, 1));
+    display:grid;grid-template-columns:1fr 1fr;gap:0 calc(20px*var(--fs, 1));align-items:end;
+  }
+  .c-login>.lg-tabs,.c-login>.c-login-form,.c-login>.lg-hint,.c-login>.lg-tpl{grid-column:1 / -1}
+  .lg-logo{text-align:left;margin-bottom:calc(10px*var(--fs, 1))}
+  .lg-logo h1{font-size:var(--t-lg)}
+  .c-login>.lg-field{margin-bottom:calc(10px*var(--fs, 1))}
+  .lg-tabs{margin-bottom:calc(10px*var(--fs, 1))}
+  .c-login-cols{display:grid;grid-template-columns:1fr 1fr;gap:calc(20px*var(--fs, 1));align-items:start}
+  .lg-field{margin-bottom:calc(8px*var(--fs, 1))}
+  .lg-err{margin-bottom:calc(4px*var(--fs, 1));min-height:0}
+  .lg-step{margin-bottom:calc(8px*var(--fs, 1))}
+  .c-gate .authui-cap-img{width:calc(160px*var(--fs, 1));height:auto}
+  .lg-hint{margin-top:calc(6px*var(--fs, 1))}
+  /* The hint and the template button share one line. */
+  .c-login>.lg-hint{grid-column:1;text-align:left;align-self:center}
+  .c-login>.lg-tpl{grid-column:2;justify-content:flex-end;margin-top:calc(6px*var(--fs, 1))}
+}
+
+/* ── The display template button (js/lib/template.js) ───────────────────── */
+.c-tpl{display:inline-flex;flex:none}
+.c-tpl .tpl-btn{width:var(--c-row);height:var(--c-row);color:var(--c-mute);background:transparent;border-color:var(--c-rule-hi);border-radius:2px}
+.c-tpl .tpl-btn .lt-icon{width:1.25rem;height:1.25rem}
+/* Its pop-up wears the console's colours (the swatches keep their own),
+   except over the login form, which has the main login page's. */
+html[data-console] body:not(:has(> #c-gate)) > .tpl-pop{
+  --ink:var(--c-bg);--slate:var(--c-surface);--slate-hi:var(--c-surface-hi);
+  --bone:var(--c-tx);--ash:var(--c-mute);--rule:var(--c-rule);--rule-hi:var(--c-rule-hi);
+  --arc:var(--c-focus);--arc-fill:var(--c-focus-fill);
+  font-family:var(--c-font);border-radius:2px;
 }
 
 /* ── Launcher and plain console pages ────────────────────────────────────── */

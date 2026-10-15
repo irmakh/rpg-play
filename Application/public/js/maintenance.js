@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 14:25
+// Written by Irmak Hakman — 2026-10-15 17:40
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -400,6 +400,16 @@ function renderAuthEvents(events) {
     }).join('')}</tbody></table>`;
 }
 
+// The display template and UI size the client's page shows right now, e.g.
+// "Metallic Chic · 120%" or "Default · 110% (chosen)". A page that does not load
+// the template code, or a client older than v295, reports nothing.
+function displayText(c) {
+  if (c.template == null && c.uiSize == null) return 'not reported';
+  const name = window.RpgTemplate ? RpgTemplate.labelOf(c.template || '') : (c.template || 'Default');
+  if (c.uiSize == null) return name;
+  return `${name} · UI size ${Math.round(c.uiSize * 100)}%${c.uiSizeChosen ? ' (chosen)' : ''}`;
+}
+
 function render(data) {
   const { clients = [], now = Date.now(), count = 0, serverVersion = null } = data;
   _serverVersion = serverVersion;
@@ -432,6 +442,7 @@ function render(data) {
     const page = c.page || '(unknown)';
     const stale = c.ver && sv && c.ver !== sv;
     const verStr = c.ver ? ('v' + c.ver + (stale ? ' (outdated)' : '')) : 'unknown';
+    const displayRow = `<div class="row"><span class="k">Template</span><span class="v">${esc(displayText(c))}</span></div>`;
     const loginRow = loggedIn
       ? `<div class="row"><span class="k">Logged in</span><span class="v" title="${esc(absTime(c.loginAt))}">${relTime(c.loginAt, now)}</span></div>`
       : '';
@@ -444,6 +455,7 @@ function render(data) {
         <div class="row"><span class="k">Campaign</span><span class="v">${esc(c.campaignName || '—')}</span></div>
         <div class="row"><span class="k">Current page</span><span class="v page-v">${esc(page)}</span></div>
         <div class="row"><span class="k">Version</span><span class="v ${stale ? 'ver-stale' : 'ver-ok'}">${esc(verStr)}</span></div>
+        ${displayRow}
         ${loginRow}
         <div class="row"><span class="k">Connected</span><span class="v" title="${esc(absTime(c.connectedAt))}">${relTime(c.connectedAt, now)}</span></div>
         <div class="row"><span class="k">IP address</span><span class="v ip-v">${esc(c.ip || '—')}</span></div>

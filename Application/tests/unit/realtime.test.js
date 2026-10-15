@@ -133,6 +133,26 @@ describe('connectRealtime — one connection per page', () => {
     expect(url.searchParams.get('campaign')).toBe('camp-1');
   });
 
+  // v295 — the maintenance page shows each client's display template and UI size.
+  it('carries the display template and UI size, and the page connection id', async () => {
+    const { ctx, sockets } = load();
+    ctx.RpgTemplate = { current: () => ({ template: 'cool', size: 1.35, sizeChosen: true }) };
+    await ctx.connectRealtime({});
+    const url = new URL(sockets[0].url.replace(/^ws:/, 'http:'));
+    expect(url.searchParams.get('tpl')).toBe('cool');
+    expect(url.searchParams.get('fs')).toBe('1.35');
+    expect(url.searchParams.get('fsChosen')).toBe('1');
+    expect(url.searchParams.get('cid')).toMatch(/^[a-z0-9]{8,32}$/);
+  });
+
+  it('reports nothing about the look from a page without the template code', async () => {
+    const { ctx, sockets } = load();
+    await ctx.connectRealtime({});
+    const url = new URL(sockets[0].url.replace(/^ws:/, 'http:'));
+    expect(url.searchParams.has('tpl')).toBe(false);
+    expect(url.searchParams.has('fs')).toBe(false);
+  });
+
   // v237 — the live stream needs a login.
   it('presents the session token, and no longer claims a role of its own', async () => {
     const { ctx, sockets } = load();

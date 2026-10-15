@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-10-15 17:45
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -156,7 +156,9 @@ export default function register(app, ctx) {
         deleteUploadFile(data.portraitThumb);
         deleteUploadFile(data.portraitMedium);
         const buffer = Buffer.from(mimeMatch[2], 'base64');
-        const urls = await processImageSizes(mimeMatch[1], buffer, 'monsters', req.params.id);
+        // New name per upload, so tokens and pages show the new picture rather
+        // than the cached one at the old, identical URL.
+        const urls = await processImageSizes(mimeMatch[1], buffer, 'monsters', `${req.params.id}-${Date.now().toString(36)}`);
         data.portrait = urls.original;
         data.portraitThumb = urls.thumb;
         data.portraitMedium = urls.medium;
@@ -165,11 +167,8 @@ export default function register(app, ctx) {
       ldb.updateMonster(req.params.id, { dataJson });
       const newPortrait = data.portrait || null;
       const newPortraitThumb = data.portraitThumb || null;
-      const linked = ldb.getLinkedTokens(req.params.id).filter(t => t.type === 'monster' && !t.customPortrait);
-      for (const tok of linked) {
-        ldb.updateTableToken(tok.id, { portrait: newPortrait, portraitThumb: newPortraitThumb });
-        broadcast('table', { action: 'token-updated', token: { ...tok, portrait: newPortrait, portraitThumb: newPortraitThumb } });
-      }
+      // Its tokens on the map take the new portrait (server/routes/table.js).
+      ctx.refreshLinkedPortraits?.(req.params.id, newPortrait, newPortraitThumb, { monster: true });
       broadcast('monsters', { action: 'portrait-updated', id: req.params.id, portrait: newPortrait, portraitThumb: newPortraitThumb });
       res.json({ ok: true });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }

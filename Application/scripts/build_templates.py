@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Written by Irmak Hakman — 2026-10-15 15:15
+# Written by Irmak Hakman — 2026-10-15 17:36
 # Copyright (c) 2026 Irmak Hakman
 # SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 """Build public/css/templates.css — the twenty large-text colour templates.
@@ -172,6 +172,46 @@ def fit(h, surfaces, need, toward):
 
 def alpha(h, a): return f'#{h}{round(a * 255):02X}'
 
+def hue_gap(a, b):
+    """Degrees between two colours' hues (0-180)."""
+    d = abs(math.degrees(to_oklch(a)[2] - to_oklch(b)[2])) % 360
+    return min(d, 360 - d)
+
+# The console (css/console/console.css) has its own tokens, --c-*, and gives
+# each of its four accent colours one meaning: blue focus, amber turn, red foe,
+# green ok. A template keeps those meanings: focus takes the template's accent
+# and turn stays amber - unless the accent is itself amber-ish, when the two
+# swap so they never look alike (turn takes the accent, focus stays blue). An
+# accent close to the template's red or green would read as foe or ok, so
+# then focus stays blue and turn amber.
+CONSOLE_FOCUS, CONSOLE_TURN = '4CC2FF', 'FFB020'
+
+def console_tokens(t, tok):
+    light = t['mode'] == 'light'
+    surf = [t['ink'], t['slate'], t['slate_hi'], t['sunken']]
+    away = -1 if light else 1
+    blue = fit(CONSOLE_FOCUS, surf, 4.5, away)[0]
+    amber = fit(CONSOLE_TURN, surf, 4.5, away)[0]
+    arc = tok['arc']
+    if min(hue_gap(arc, tok['blood']), hue_gap(arc, tok['verdigris'])) < 35:
+        focus, turn = blue, amber
+    elif hue_gap(arc, CONSOLE_TURN) < 40:
+        focus, turn = blue, arc
+    else:
+        focus, turn = arc, amber
+    b = tok['bone']
+    sel = (f"html[data-template=\"{t['id']}\"].console, html[data-template=\"{t['id']}\"] .cx, "
+           f"html[data-template=\"{t['id']}\"] body.console-mode")
+    return [
+        f"{sel}{{",
+        f"  --c-bg:#{t['ink']}; --c-surface:#{t['slate']}; --c-surface-hi:#{t['slate_hi']};",
+        f"  --c-rule:{alpha(b, .16)}; --c-rule-hi:{alpha(b, .34)};",
+        f"  --c-tx:#{b}; --c-mute:#{tok['ash']};",
+        f"  --c-focus:#{focus}; --c-turn:#{turn}; --c-foe:#{tok['blood']}; --c-ok:#{tok['verdigris']};",
+        f"  --c-turn-fill:{alpha(turn, .1)}; --c-foe-fill:{alpha(tok['blood'], .13)}; --c-focus-fill:{alpha(focus, .13)};",
+        "}",
+    ]
+
 # The selectbox itself (js/lib/template.js puts it in each page's header). It is
 # styled here rather than in base.css because login, music and maintenance do
 # not load base.css, and it must look the same everywhere.
@@ -283,7 +323,7 @@ def build(t, notes):
         f"  --cast:{'0 1px 2px #0000001F, 0 8px 24px #00000014' if light else '0 1px 2px #0000006B, 0 10px 28px #00000047'};",
         f"  --txd:#{tok['ash']};",
         "}",
-    ]
+    ] + console_tokens(t, tok)
     return '\n'.join(lines)
 
 def main():
@@ -297,7 +337,8 @@ def main():
         "   which js/lib/template.js sets from the visitor's choice. With no template the\n"
         "   attribute is absent and none of this applies - the default look is untouched.\n"
         "   --fs scales every font size (see tokens.css). Every text colour is AA (4.5:1)\n"
-        "   on all four surfaces of its template. */\n"
+        "   on all four surfaces of its template. The second block of each template sets\n"
+        "   the console's own tokens (--c-*, css/console/console.css) from the same colours. */\n"
     )
     # template.js holds the list the selectbox offers; it must name the same ids.
     js = (OUT.parent.parent / 'js' / 'lib' / 'template.js').read_text(encoding='utf-8')

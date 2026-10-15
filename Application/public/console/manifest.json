@@ -1,8 +1,10 @@
 {
+  "id": "/console/",
   "name": "RPG Table — Console",
   "short_name": "RPG Console",
   "description": "Dual-screen console theme — full-screen map + secondary info panel",
-  "start_url": "/console/",
+  "start_url": "/console/index.html",
+  "scope": "/console/index.html",
   "display": "standalone",
   "background_color": "#000000",
   "theme_color": "#000000",

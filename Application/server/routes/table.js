@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 13:06
+// Written by Irmak Hakman — 2026-10-15 17:45
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -58,6 +58,25 @@ export default function register(app, ctx) {
     });
   }
 
+  // ── A character's or monster's portrait changed ──────────────────────────────
+  // Tokens keep their own copy of the portrait URL, taken when they were placed,
+  // so a new portrait (or one removed) did not reach the map until the token was
+  // placed again - and replacing a portrait deletes the old files, so the token
+  // showed a broken image. Every token linked to it takes the new one now,
+  // except a token the DM gave its own picture. Called from the character and
+  // monster routes through ctx (registered before this file, called later).
+  ctx.refreshLinkedPortraits = function (linkedId, portrait, portraitThumb, { monster = false } = {}) {
+    if (!linkedId) return 0;
+    const linked = ldb.getLinkedTokens(linkedId)
+      .filter(t => (monster ? t.type === 'monster' : t.type !== 'monster') && !t.customPortrait);
+    const update = { portrait: portrait || null, portraitThumb: portraitThumb || null };
+    for (const tok of linked) {
+      ldb.updateTableToken(tok.id, update);
+      broadcastToken(tok, { action: 'token-updated', token: { ...tok, ...update } });
+    }
+    return linked.length;
+  };
+
   // ── Hidden items ──────────────────────────────────────────────────────────────
   // Same secret as a hidden token: a trap or a cache the DM has placed but not
   // revealed. The page never drew them for players, but until v268 the server
@@ -100,6 +119,9 @@ export default function register(app, ctx) {
     };
   }
 
+  /** Tell every DM page the list of screens changed (another window, another device). */
+  const waitingListChanged = () => broadcast('waiting-screens', { changed: true }, undefined, { dmOnly: true });
+
   /** Remove a screen's image files from disk. Safe when there is no image. */
   function dropWaitingImages(rec) {
     for (const url of [rec?.imageUrl, rec?.imageThumb, rec?.imageMedium]) {
@@ -133,6 +155,7 @@ export default function register(app, ctx) {
       const caption = String(req.body?.caption || '').trim().slice(0, 200);
       const id = genId();
       ldb.createWaitingScreen(id, { name, caption, createdAt: new Date().toISOString() });
+      waitingListChanged();
       res.json({ ok: true, id });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
   });
@@ -151,6 +174,7 @@ export default function register(app, ctx) {
       if (activeWaitingId() === req.params.id) {
         broadcast('waiting-screen', { active: waitingObj(ldb.getWaitingScreen(req.params.id)) });
       }
+      waitingListChanged();
       res.json({ ok: true });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
   });
@@ -167,12 +191,16 @@ export default function register(app, ctx) {
       if (Math.ceil(m[2].length * 0.75) > 30_000_000) return res.status(413).json({ error: 'Image too large (max ~30 MB)' });
 
       dropWaitingImages(rec);   // replacing: the old files are now unreachable
-      const urls = await processImageSizes(m[1], Buffer.from(m[2], 'base64'), 'waiting', req.params.id);
+      // A new file name each time: the same name kept the same URL, so pages
+      // already showing the screen kept the old picture (the overlay skips an
+      // unchanged src, and /uploads is cached for 5 minutes).
+      const urls = await processImageSizes(m[1], Buffer.from(m[2], 'base64'), 'waiting', `${req.params.id}-${Date.now().toString(36)}`);
       const fields = { imageUrl: urls.original, imageThumb: urls.thumb, imageMedium: urls.medium };
       ldb.updateWaitingScreen(req.params.id, fields);
       if (activeWaitingId() === req.params.id) {
         broadcast('waiting-screen', { active: waitingObj({ ...rec, ...fields }) });
       }
+      waitingListChanged();
       res.json({ ok: true, ...fields });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
   });
@@ -192,6 +220,7 @@ export default function register(app, ctx) {
         syncParked(false);
         broadcast('waiting-screen', { active: null });
       }
+      waitingListChanged();
       res.json({ ok: true, closed: wasActive });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
   });
@@ -684,11 +713,11 @@ export default function register(app, ctx) {
       let portrait = null, portraitThumb = null, customPortrait = 0;
 
       if (dataUrl === '') {
-        // Clearing custom portrait — delete custom files and restore monster portrait
+        // Clearing custom portrait — delete custom files and restore the
+        // linked monster's or character's portrait
         deleteUploadFile(tok.portrait);
         deleteUploadFile(tok.portraitThumb);
-        // Restore from linked monster if present
-        if (tok.linkedId) {
+        if (tok.linkedId && tok.type === 'monster') {
           const mon = ldb.getMonster(tok.linkedId);
           if (mon) {
             let d = {};
@@ -696,6 +725,9 @@ export default function register(app, ctx) {
             portrait = d.portrait || null;
             portraitThumb = d.portraitThumb || null;
           }
+        } else if (tok.linkedId) {
+          const p = ldb.listMedia(tok.linkedId).find(r => r.isPortrait);
+          if (p) { portrait = p.dataUrl || null; portraitThumb = p.thumbUrl || null; }
         }
         customPortrait = 0;
       } else {
@@ -705,7 +737,8 @@ export default function register(app, ctx) {
         deleteUploadFile(tok.portrait);
         deleteUploadFile(tok.portraitThumb);
         const buffer = Buffer.from(mimeMatch[2], 'base64');
-        const urls = await processImageSizes(mimeMatch[1], buffer, 'tokens', req.params.id);
+        // New name per upload, so the map shows the new picture, not a cached one.
+        const urls = await processImageSizes(mimeMatch[1], buffer, 'tokens', `${req.params.id}-${Date.now().toString(36)}`);
         portrait = urls.original;
         portraitThumb = urls.thumb;
         customPortrait = 1;

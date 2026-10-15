@@ -39,8 +39,8 @@ char_sheet/
 │   │   │   ├── table-console.html      #     Map screen (top screen): shared table map in the console frame
 │   │   │   └── table-secondary.html    #     Info panel (bottom screen): Turn, Token, Chat, Handouts, Table, More
 │   │   ├── css/                        #   Stylesheets
-│   │   │   ├── console/                #     Console styles (own design system, not tokens.css)
-│   │   │   │   ├── console.css         #       Console design system (tokens, shared pieces, login)
+│   │   │   ├── console/                #     Console styles (own design system; templates.css sets its --c-* tokens)
+│   │   │   │   ├── console.css         #       Console design system (tokens, shared pieces, login in the login.html design)
 │   │   │   │   ├── map.css             #       Frame around the map (top screen)
 │   │   │   │   └── panel.css           #       Info panel (bottom screen)
 │   │   │   ├── app-shell.css           #     Full-height DM tool layout

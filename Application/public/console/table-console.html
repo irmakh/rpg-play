@@ -1,7 +1,7 @@
 <!DOCTYPE html>
-<!-- Written by Irmak Hakman — 2026-10-11 00:20 -->
+<!-- Written by Irmak Hakman — 2026-10-15 17:36 -->
 <!-- Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) -->
-<html lang="en" class="lamplit">
+<html lang="en" class="lamplit" data-console>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -12,6 +12,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <script>if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js');</script>
 <link rel="stylesheet" href="/css/tokens.css">
+<link rel="stylesheet" href="/css/templates.css">
+<script src="/js/lib/template.js"></script>
 <link rel="stylesheet" href="/css/fonts.css">
 <link rel="stylesheet" href="/css/base.css">
 <link rel="stylesheet" href="/css/table.css">
@@ -52,6 +54,8 @@
   <span class="m-stat">Tool <b id="m-tool">Select</b></span>
   <span class="m-stat">Zoom <b id="zoom-val">100%</b></span>
   <span class="m-stat" title="Whether the info panel is connected">Panel <i id="console-secondary-dot"></i></span>
+  <!-- The display template button (js/lib/template.js) -->
+  <span class="c-tpl" data-tpl-slot></span>
   <button type="button" class="m-btn" id="m-tools-btn" aria-expanded="false" aria-controls="m-tools" onclick="consoleToggleTools()">Tools</button>
 </div>
 

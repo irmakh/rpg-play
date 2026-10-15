@@ -1,8 +1,8 @@
-// Written by Irmak Hakman — 2026-10-15 15:43
+// Written by Irmak Hakman — 2026-10-15 17:47
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
-const CACHE = 'rpg-v292';
+const CACHE = 'rpg-v296';
 
 const STATIC = [
   // Core pages
@@ -26,7 +26,7 @@ const STATIC = [
   '/table.html',
   '/music.html',
   // Console theme
-  '/console/',
+  '/console/index.html',
   '/console/table-console.html',
   '/console/table-secondary.html',
   '/console/probe.html',
@@ -54,6 +54,12 @@ const STATIC = [
   '/fonts/plex-cond-500-latin-ext.woff2',
   '/fonts/plex-cond-600-latin.woff2',
   '/fonts/plex-cond-600-latin-ext.woff2',
+  // The two faces of the console login form (the design of the main login page)
+  '/css/fonts.css',
+  '/fonts/atkinson-latin.woff2',
+  '/fonts/atkinson-latin-ext.woff2',
+  '/fonts/fraunces-latin.woff2',
+  '/fonts/fraunces-latin-ext.woff2',
   // Shared JS libs
   '/js/monster-stat-block.js',
   '/js/lib/esc.js',

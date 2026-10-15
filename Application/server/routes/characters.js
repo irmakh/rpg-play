@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-11 19:30
+// Written by Irmak Hakman — 2026-10-15 17:44
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -515,6 +515,14 @@ export default function register(app, ctx) {
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
   });
 
+  // A character's tokens on the map show its portrait. After the portrait
+  // changes - a new one, another picture chosen, or the portrait deleted - they
+  // take the current one live (ctx.refreshLinkedPortraits, server/routes/table.js).
+  function refreshTokenPortraits(charId) {
+    const p = ldb.listMedia(charId).find(r => r.isPortrait);
+    ctx.refreshLinkedPortraits?.(charId, p ? p.dataUrl : null, p ? (p.thumbUrl || null) : null);
+  }
+
   // ── Media ──────────────────────────────────────────────────────────────────
   app.get('/api/characters/:id/media', async (req, res) => {
     try {
@@ -565,7 +573,7 @@ export default function register(app, ctx) {
         ldb.setPortrait(charId, '');
       }
       ldb.createMedia(newId, { charId, originalName: safeName, mimeType, dataUrl: fileUrl, thumbUrl, mediumUrl, isPortrait: !!isPortrait, createdAt: new Date().toISOString() });
-      if (isPortrait) ldb.setPortrait(charId, newId);
+      if (isPortrait) { ldb.setPortrait(charId, newId); refreshTokenPortraits(charId); }
       res.json({ id: newId, name: safeName, mimeType, isPortrait: !!isPortrait, thumbUrl, mediumUrl });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
   });
@@ -591,6 +599,7 @@ export default function register(app, ctx) {
       if (!target || target.charId !== charId) return res.status(404).json({ error: 'Media not found' });
       if (!target.mimeType.startsWith('image/')) return res.status(400).json({ error: 'Portrait must be an image' });
       ldb.setPortrait(charId, mediaId);
+      refreshTokenPortraits(charId);
       res.json({ ok: true });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
   });
@@ -607,6 +616,7 @@ export default function register(app, ctx) {
       deleteUploadFile(m.thumbUrl);
       deleteUploadFile(m.mediumUrl);
       ldb.deleteMedia(mediaId);
+      if (m.isPortrait) refreshTokenPortraits(charId);
       res.json({ ok: true });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
   });

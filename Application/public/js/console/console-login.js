@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-10 23:39
+// Written by Irmak Hakman — 2026-10-15 17:36
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -95,22 +95,26 @@ const ConsoleLogin = (function () {
   // ── The form ───────────────────────────────────────────────────────────────
   // Built with DOM calls for anything a player typed (a character's name); the
   // static skeleton is a fixed string with no interpolated data.
+  // The look is the main login page's (login.html): a panel on the ground, the
+  // RPG Play mark, a two-way Character / Dungeon Master switch, the gold Log in
+  // button. Its styles are in css/console/console.css (.c-gate), on the shared
+  // tokens, so a display template recolours it the same way.
   function buildGate(title, sub) {
     const gate = document.createElement('div');
-    gate.className = 'c-gate cx';
+    gate.className = 'c-gate';
     gate.id = 'c-gate';
     gate.innerHTML = `
       <div class="c-login">
-        <div>
-          <h1 class="c-title" data-el="title"></h1>
-          <p class="c-sub" data-el="sub"></p>
+        <div class="lg-logo">
+          <h1><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-swords"></use></svg> RPG Play</h1>
+          <p data-el="title"></p>
         </div>
         <!-- Shown only when the server hosts more than one campaign -->
-        <div class="c-field" data-el="campaign-field" hidden>
+        <div class="lg-field" data-el="campaign-field" hidden>
           <label for="c-login-campaign">Campaign</label>
-          <select class="c-input" id="c-login-campaign"></select>
+          <select id="c-login-campaign"></select>
         </div>
-        <div class="c-seg" role="tablist" aria-label="Who is logging in">
+        <div class="lg-tabs" role="tablist" aria-label="Who is logging in">
           <button type="button" role="tab" data-who="character" aria-selected="true">Character</button>
           <button type="button" role="tab" data-who="dm" aria-selected="false">Dungeon Master</button>
         </div>
@@ -118,40 +122,40 @@ const ConsoleLogin = (function () {
         <form class="c-login-form" data-form="character" novalidate>
           <div class="c-login-cols">
             <div class="c-login-col">
-              <div class="c-field">
+              <div class="lg-field">
                 <label for="c-login-char">Character</label>
-                <select class="c-input" id="c-login-char"><option value="">Loading…</option></select>
+                <select id="c-login-char"><option value="">Loading…</option></select>
               </div>
-              <div class="c-field">
+              <div class="lg-field">
                 <label for="c-login-char-pw">Password</label>
-                <input class="c-input" id="c-login-char-pw" type="password" autocomplete="current-password">
+                <input id="c-login-char-pw" type="password" placeholder="Enter password…" autocomplete="current-password">
               </div>
             </div>
             <div class="c-login-col">
               <div data-el="cap-char"></div>
-              <p class="c-err" data-el="err-char" role="alert"></p>
-              <button type="submit" class="c-btn primary block">Log in</button>
+              <p class="lg-err" data-el="err-char" role="alert"></p>
+              <button type="submit" class="lg-btn">Login</button>
             </div>
           </div>
         </form>
 
         <form class="c-login-form" data-form="setup" novalidate hidden>
-          <p class="c-sub"><strong data-el="setup-name"></strong> has no password yet. Choose one to continue.</p>
+          <div class="lg-step"><strong data-el="setup-name"></strong> has no password yet. Set one to continue.</div>
           <div class="c-login-cols">
             <div class="c-login-col">
-              <div class="c-field">
-                <label for="c-login-new1">New password</label>
-                <input class="c-input" id="c-login-new1" type="password" autocomplete="new-password">
+              <div class="lg-field">
+                <label for="c-login-new1">New Password</label>
+                <input id="c-login-new1" type="password" placeholder="Choose a password…" autocomplete="new-password">
               </div>
-              <div class="c-field">
-                <label for="c-login-new2">Type it again</label>
-                <input class="c-input" id="c-login-new2" type="password" autocomplete="new-password">
+              <div class="lg-field">
+                <label for="c-login-new2">Confirm Password</label>
+                <input id="c-login-new2" type="password" placeholder="Confirm password…" autocomplete="new-password">
               </div>
             </div>
             <div class="c-login-col">
-              <p class="c-err" data-el="err-setup" role="alert"></p>
-              <button type="submit" class="c-btn primary block">Set password and log in</button>
-              <button type="button" class="c-btn plain block" data-el="setup-back">Back</button>
+              <p class="lg-err" data-el="err-setup" role="alert"></p>
+              <button type="submit" class="lg-btn">Set Password &amp; Login</button>
+              <button type="button" class="lg-btn lg-btn-back" data-el="setup-back">Back</button>
             </div>
           </div>
         </form>
@@ -159,18 +163,22 @@ const ConsoleLogin = (function () {
         <form class="c-login-form" data-form="dm" novalidate hidden>
           <div class="c-login-cols">
             <div class="c-login-col">
-              <div class="c-field">
-                <label for="c-login-dm-pw">Dungeon Master password</label>
-                <input class="c-input" id="c-login-dm-pw" type="password" autocomplete="current-password">
+              <div class="lg-field">
+                <label for="c-login-dm-pw">Master Password</label>
+                <input id="c-login-dm-pw" type="password" placeholder="Enter master password…" autocomplete="current-password">
               </div>
             </div>
             <div class="c-login-col">
               <div data-el="cap-dm"></div>
-              <p class="c-err" data-el="err-dm" role="alert"></p>
-              <button type="submit" class="c-btn primary block">Log in</button>
+              <p class="lg-err" data-el="err-dm" role="alert"></p>
+              <button type="submit" class="lg-btn">Login as DM</button>
             </div>
           </div>
         </form>
+
+        <p class="lg-hint" data-el="sub"></p>
+        <!-- The display template button (js/lib/template.js) -->
+        <div class="lg-tpl" data-tpl-slot></div>
       </div>`;
     gate.querySelector('[data-el="title"]').textContent = title;
     gate.querySelector('[data-el="sub"]').textContent = sub;
@@ -222,6 +230,11 @@ const ConsoleLogin = (function () {
     // and its own DM password; the choice is kept in a cookie the server reads
     // on every request (POST /api/campaigns/:id/enter sets it). With a single
     // campaign there is nothing to choose and the field stays hidden.
+    // Like login.html: the campaign's name under the mark, once there is one.
+    function showCampaign() {
+      el('title').textContent = (_opts.title || 'RPG Console') + (_campaign ? ' · ' + _campaign.name : '');
+    }
+
     const campSel = byId('c-login-campaign');
     async function loadCampaigns() {
       let list = [], current = null;
@@ -231,6 +244,7 @@ const ConsoleLogin = (function () {
         if (curRes.ok) current = await curRes.json();      // 409 when none is chosen yet
       } catch {}
       _campaign = current ? { id: current.id, name: current.name } : null;
+      showCampaign();
       if (list.length > 1) {
         // Names go in as text - a DM typed them.
         campSel.replaceChildren(...(current ? [] : [new Option('Choose a campaign', '')]),
@@ -248,6 +262,7 @@ const ConsoleLogin = (function () {
         if (!res.ok) throw new Error();
         const c = await res.json();
         _campaign = { id: c.id, name: c.name };
+        showCampaign();
         // The placeholder has done its job once a campaign is chosen.
         if (campSel.options[0] && campSel.options[0].value === '') campSel.remove(0);
       } catch {
@@ -333,6 +348,7 @@ const ConsoleLogin = (function () {
     announce('SESSION_SYNC', sess);      // same device only
     if (typeof _opts.onLogin === 'function') {
       document.getElementById('c-gate')?.remove();
+      window.RpgTemplate?.remount();     // its button was on the form
       _opts.onLogin(sess);
     } else {
       location.reload();
