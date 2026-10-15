@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Written by Irmak Hakman — 2026-10-15 15:13
+# Written by Irmak Hakman — 2026-10-15 15:15
 # Copyright (c) 2026 Irmak Hakman
 # SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 """Build public/css/templates.css — the twenty large-text colour templates.
@@ -210,7 +210,8 @@ SELECT_CSS = """/* The template button and its pop-up, in every template includi
 .tpl-sw i:nth-child(2){background:var(--bone)}
 .tpl-sw i:nth-child(3){background:var(--arc)}
 /* Six sizes: the label takes its own line above them. */
-.tpl-sizes{display:flex; flex-wrap:wrap; align-items:center; gap:4px; margin-top:var(--s1); padding:var(--s2) 6px var(--s1); border-top:1px solid var(--rule)}
+/* At the top of the pop-up, and stays there while the template list scrolls. */
+.tpl-sizes{display:flex; flex-wrap:wrap; align-items:center; gap:4px; margin:calc(-1 * var(--s1)) calc(-1 * var(--s1)) var(--s1); padding:var(--s2) calc(6px + var(--s1)) var(--s2); border-bottom:1px solid var(--rule); position:sticky; top:calc(-1 * var(--s1)); z-index:1; background:var(--slate); border-radius:var(--r-md) var(--r-md) 0 0}
 .tpl-sizes-lbl{flex:1 0 100%; font-size:var(--t-xs); color:var(--ash); padding-bottom:2px; white-space:nowrap}
 .tpl-size{
   font:inherit; font-size:var(--t-xs); font-weight:600; color:var(--bone); cursor:pointer;

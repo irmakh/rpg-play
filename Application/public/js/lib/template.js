@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 15:13
+// Written by Irmak Hakman — 2026-10-15 15:15
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -136,7 +136,7 @@
       pop.append(it);
     }
 
-    // UI size: like a template, choosing one closes the pop-up.
+    // UI size, at the top: like a template, choosing one closes the pop-up.
     const row = document.createElement('div');
     row.className = 'tpl-sizes';
     row.setAttribute('role', 'group');
@@ -154,7 +154,7 @@
       b.addEventListener('click', () => { chooseSize(n); close(); btn.focus(); });
       row.append(b);
     }
-    pop.append(row);
+    pop.prepend(row);   // first: it applies to every template below it
     document.body.append(pop);
     place();
     btn.setAttribute('aria-expanded', 'true');

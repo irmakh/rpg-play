@@ -21,6 +21,13 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [286] — 2026-10-15 — UI size at the top of the template pop-up
+
+- **UI size** is now the first row of the palette pop-up, above the templates, and
+  stays in view while the template list scrolls.
+
+---
+
 ## [285] — 2026-10-15 — Ten more display templates
 
 - **Ten more templates** in the palette pop-up, from the next ten Visme website
