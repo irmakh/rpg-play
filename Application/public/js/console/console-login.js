@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 19:28
+// Written by Irmak Hakman — 2026-10-15 19:38
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -134,6 +134,13 @@ const ConsoleLogin = (function () {
           <label for="c-login-campaign">Campaign</label>
           <select id="c-login-campaign"></select>
         </div>
+        <!-- A live super-admin session on this device: no password needed. -->
+        <div data-el="admin-enter" hidden>
+          <p class="lg-err" data-el="err-admin" role="alert"></p>
+          <button type="button" class="lg-btn" data-el="as-admin">Enter as super admin</button>
+          <p class="lg-hint">You are logged in as super admin: you enter the chosen campaign as its DM.</p>
+          <button type="button" class="lg-btn lg-btn-back" data-el="use-password">Log in with a password instead</button>
+        </div>
         <div class="lg-tabs" role="tablist" aria-label="Who is logging in">
           <button type="button" role="tab" data-who="character" aria-selected="true">Character</button>
           <button type="button" role="tab" data-who="dm" aria-selected="false">Dungeon Master</button>
@@ -192,7 +199,6 @@ const ConsoleLogin = (function () {
               <div data-el="cap-dm"></div>
               <p class="lg-err" data-el="err-dm" role="alert"></p>
               <button type="submit" class="lg-btn">Login as DM</button>
-              <button type="button" class="lg-btn lg-btn-back" data-el="as-admin" hidden>Enter as super admin</button>
             </div>
           </div>
         </form>
@@ -345,19 +351,31 @@ const ConsoleLogin = (function () {
       show('character');
     });
 
-    // A super-admin session on this device opens any campaign as its DM.
-    const asAdmin = el('as-admin');
-    if (AuthUI.adminToken()) asAdmin.hidden = false;
-    asAdmin.addEventListener('click', async () => {
+    // A live super-admin session on this device enters any campaign as its DM
+    // with no password: then that is all the form offers (the password login
+    // stays one tap away).
+    const tabs = gate.querySelector('.lg-tabs');
+    function passwordLogin(on) {
+      el('admin-enter').hidden = on;
+      tabs.hidden = !on;
+      if (on) show('character');
+      else for (const f of ['character', 'setup', 'dm']) form(f).hidden = true;
+    }
+    el('use-password').addEventListener('click', () => passwordLogin(true));
+    el('as-admin').addEventListener('click', async () => {
       const token = AuthUI.adminToken();
-      if (!_campaign) { el('err-dm').textContent = 'Choose a campaign first.'; return; }
+      if (!_campaign) { el('err-admin').textContent = 'Choose a campaign first.'; return; }
       if (!token || !(await AuthUI.adminTokenWorks(token))) {
-        el('err-dm').textContent = 'The super admin session has ended. Log in on the maintenance page again.';
-        asAdmin.hidden = true;
+        el('err-admin').textContent = 'The super admin session has ended. Log in on the maintenance page again.';
+        passwordLogin(true);
         return;
       }
       finish({ role: 'dm', masterPw: token, superAdmin: true });
     });
+    (async () => {
+      const token = AuthUI.adminToken();
+      if (token && await AuthUI.adminTokenWorks(token)) passwordLogin(false);
+    })();
 
     form('dm').addEventListener('submit', e => {
       e.preventDefault();

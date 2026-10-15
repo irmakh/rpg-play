@@ -21,6 +21,14 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [301] — 2026-10-15 — A super admin enters a campaign without the login form
+
+- **With a live super admin session, choosing a campaign no longer shows the password form.**
+  The campaign list and the console login show one **Enter as super admin** button (you enter
+  as that campaign's DM), with **Log in with a password instead** for a character or DM login.
+  The super admin session is checked with the server first; if it has ended, the password form
+  comes back with a note.
+
 ## [300] + Android app 1.3 — 2026-10-15 — Remembered login in the full app; super admin switches campaigns
 
 - **Fixed: on a one-screen device the app forgot your login.** The campaign list has its own

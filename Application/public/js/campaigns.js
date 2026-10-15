@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 19:28
+// Written by Irmak Hakman — 2026-10-15 19:38
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -21,6 +21,9 @@ function escJs(v) {
 
 let _campaigns = [];
 let _sel = null;          // the loaded detail object for the selected campaign
+// Whether this tab holds a LIVE super-admin session (checked with the server
+// once per page): then entering a campaign needs no password at all.
+let _adminLive = null;
 let _setupCharId = null;  // character mid password-setup
 let _setupTicket = null;  // from the login answer: proves the login form's captcha was solved
 
@@ -122,6 +125,10 @@ async function selectCampaign(id, opts = {}) {
     const res = await fetch(`/api/campaigns/${encodeURIComponent(id)}/enter`, { method: 'POST' });
     if (!res.ok) throw new Error('enter failed');
     _sel = await res.json();
+    if (_adminLive === null) {
+      const t = AuthUI.adminToken();
+      _adminLive = !!t && await AuthUI.adminTokenWorks(t);
+    }
   } catch {
     detail.innerHTML = '<div class="detail-empty"><div>Could not open that campaign.</div></div>';
     return;
@@ -159,7 +166,16 @@ function renderDetail() {
       <span class="chip">${esc(fmtBytes(s.sizeBytes))}</span>
     </div>
 
-    <div class="sect">
+    ${_adminLive ? `
+    <div class="sect" id="admin-enter">
+      <div class="sect-hdr">Enter Campaign</div>
+      <div class="err-msg" id="admin-err"></div>
+      <button class="btn" onclick="enterAsAdmin()">Enter as super admin</button>
+      <div class="hint">You are logged in as super admin, so no password is needed: you enter as this campaign's DM.</div>
+      <button class="btn btn-ghost" style="margin-top:calc(8px*var(--fs, 1))" onclick="showPasswordLogin()">Log in with a password instead</button>
+    </div>` : ''}
+
+    <div class="sect" id="password-login"${_adminLive ? ' style="display:none"' : ''}>
       <div class="sect-hdr">Enter Campaign</div>
       <div class="tabs">
         <button class="tab-btn active" id="tab-char-btn" onclick="switchTab('character')">Character</button>
@@ -215,11 +231,6 @@ function renderDetail() {
         <div class="err-msg" id="dm-err"></div>
         <button class="btn" onclick="loginDM()">Login as DM</button>
         <div class="hint">Each campaign has its own DM password.</div>
-        ${AuthUI.adminToken() ? `
-        <div style="border-top:1px solid var(--rule);margin:calc(16px*var(--fs, 1)) 0"></div>
-        <div class="err-msg" id="admin-err"></div>
-        <button class="btn btn-ghost" onclick="enterAsAdmin()">Open as super admin</button>
-        <div class="hint">You are logged in as super admin: open this campaign as its DM, no DM password.</div>` : ''}
       </div>
     </div>
 
@@ -334,12 +345,20 @@ async function loginDM() {
 // super admin can switch campaigns without each one's DM password. Marked
 // superAdmin, so logging out of the campaign leaves the super-admin session
 // (and the maintenance page) alone.
+/** The ordinary character / DM login, for a super admin who wants it. */
+function showPasswordLogin() {
+  document.getElementById('admin-enter')?.remove();
+  document.getElementById('password-login').style.display = '';
+}
+
 async function enterAsAdmin() {
-  const errEl = document.getElementById('admin-err');
   const token = AuthUI.adminToken();
   if (!token || !(await AuthUI.adminTokenWorks(token))) {
     try { sessionStorage.removeItem('rpgAdminToken'); } catch {}
-    if (errEl) errEl.textContent = 'The super admin session has ended. Log in on the maintenance page again.';
+    _adminLive = false;
+    showPasswordLogin();
+    const msg = document.getElementById('char-err');
+    if (msg) msg.textContent = 'The super admin session has ended. Log in with a password, or on the maintenance page again.';
     return;
   }
   _storeSession({ role: 'dm', masterPw: token, superAdmin: true });
