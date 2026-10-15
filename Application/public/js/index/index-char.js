@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-11 20:00
+// Written by Irmak Hakman — 2026-10-15 11:45
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -646,11 +646,20 @@ async function ncConfirm() {
   try {
     const createBody = { name, char_type: charType };
     if (password) createBody.password = password;
+    // Creating a character is a DM action: the server checks the DM session.
+    const createHeaders = { 'Content-Type': 'application/json' };
+    if (indexMasterPw()) createHeaders['X-Master-Password'] = indexMasterPw();
     const createRes = await fetch('/api/characters', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: createHeaders,
       body: JSON.stringify(createBody)
     });
+    // Stop on a refusal - otherwise a dropdown entry is added for a character
+    // that was never saved, and it vanishes on the next refresh.
+    if (!createRes.ok) {
+      setStatus(createRes.status === 401 ? 'Only the DM can create characters — log in as DM.' : 'Failed to create character', true);
+      return;
+    }
     const char = await createRes.json();
     charHasPassword[char.id] = char.has_password;
     charTypes[char.id] = charType;

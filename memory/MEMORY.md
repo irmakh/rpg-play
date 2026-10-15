@@ -146,7 +146,8 @@
 - NEXT SESSION (as of 2026-10-11, session 98 close - supersedes all earlier NEXT SESSION notes): v262-v264 are uploaded, committed and pushed; production awaits the user's restart to reach v264 (v246-v264 if not restarted since the console work). The restart also adds three treasury_items columns (unidName, charges, chargesRecharge) by itself. Nothing is pending. Possible follow-ups nobody asked for yet: the spell slot / spellbook redesign and item charges on the handheld console; a Refill button on the table's Items tab (the sheet has one); anonymous GET /api/table returning hidden items and fog for non-visible entries (noticed, not changed).
 - NEXT SESSION (as of 2026-10-11, after v265 - supersedes all earlier NEXT SESSION notes): v262-v265 are uploaded, committed and pushed; production awaits the user's restart to reach v265. Nothing is pending. Notification priorities since v265: alert = combat start, your turn, loot, handouts, new day, weather (DM), damage/healing by the DM, conditions, shop open/closed, private messages; feed = dice, table chat, now playing.
 - NEXT SESSION (as of 2026-10-12, after v266 - supersedes all earlier NEXT SESSION notes): v262-v266 are uploaded, committed and pushed; production awaits the user's restart to reach v266. Nothing is pending. v266 is the rebuilt DM treasury screen (one table, one tag at a time, drawer, autosave with undo); mock-ups the user chose from: https://claude.ai/artifact/DqBef6EZLfkjh3Vb2ssEi4.
+- NEXT SESSION (as of 2026-10-15, after v267 - supersedes all earlier NEXT SESSION notes): v262-v267 are uploaded, committed and pushed; production awaits the user's restart to reach v267. Nothing is pending. v267 fixed DM 'New character' on the sheet (create request lacked the DM session header).
 ---
 
-*Last updated: 2026-10-11*
+*Last updated: 2026-10-15*
 *This file is the source of truth for persistent facts. Edit directly to update.*

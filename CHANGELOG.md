@@ -21,6 +21,15 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [267] — 2026-10-15 — Creating characters works again
+
+- **New character** on the character sheet saves the character again. It appeared in
+  the list but was gone after a refresh, because it was never saved.
+- If a character can't be created, the sheet now says so instead of showing an entry
+  that isn't really there.
+
+---
+
 ## [266] — 2026-10-12 — Treasury: a new DM screen
 
 The DM's treasury (`/treasury.html`) is rebuilt around one table.
