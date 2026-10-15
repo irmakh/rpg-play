@@ -21,9 +21,9 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
-## [275] — 2026-10-15 — Text size scales the whole interface
+## [276] — 2026-10-15 — UI size scales the whole interface
 
-- **Text size** in the template pop-up now scales buttons, spacing, panels and
+- **UI size** (was "Text size") in the template pop-up now scales buttons, spacing, panels and
   other sizes along with the text, so a larger size no longer squeezes words into
   boxes made for the smaller one. The ten templates (120% unless changed) grow
   the same way. Borders stay hairlines; the default look at 100% is unchanged.

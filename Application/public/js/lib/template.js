@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 14:16
+// Written by Irmak Hakman — 2026-10-15 14:27
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -34,7 +34,7 @@
   ];
   const known = new Set(TEMPLATES.map(t => t[0]));
 
-  // Text size, chosen separately and kept the same way. It sets --fs inline on
+  // UI size (text, spacing and sizes), chosen separately and kept the same way. It sets --fs inline on
   // <html>, which beats the template's own --fs; with none chosen, each
   // template keeps its own (1 for the default, 1.2 for the others).
   const SIZE_KEY = 'rpgTextSize';
@@ -127,12 +127,12 @@
       pop.append(it);
     }
 
-    // Text size: stays open, so the effect can be seen before closing.
+    // UI size: stays open, so the effect can be seen before closing.
     const row = document.createElement('div');
     row.className = 'tpl-sizes';
     row.setAttribute('role', 'group');
-    row.setAttribute('aria-label', 'Text size');
-    row.innerHTML = '<span class="tpl-sizes-lbl">Text size</span>';
+    row.setAttribute('aria-label', 'UI size');
+    row.innerHTML = '<span class="tpl-sizes-lbl">UI size</span>';
     const now = currentSize();
     for (const n of SIZES) {
       const b = document.createElement('button');
