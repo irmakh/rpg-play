@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 14:25
+// Written by Irmak Hakman — 2026-10-22 09:40
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -26,7 +26,12 @@ function treasuryHeaders() {
   const h = {};
   if (currentCharId) {
     h['X-Character-Id'] = currentCharId;
-    if (charPasswords[currentCharId]) h['X-Character-Password'] = charPasswords[currentCharId];
+    // The character's own token, else the DM's: a DM looking at a player's
+    // sheet holds no character token, so buying or asking for loot for them
+    // went out with no login at all and was refused (same order as
+    // sheetAuthHeaders in index-state.js).
+    const token = charPasswords[currentCharId] || indexMasterPw() || indexCharPw();
+    if (token) h['X-Character-Password'] = token;
   }
   return h;
 }

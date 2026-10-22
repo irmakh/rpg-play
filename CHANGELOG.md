@@ -21,6 +21,13 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [305] — 2026-10-22 — The DM can buy and ask for loot from a player's sheet
+
+- **Fixed: "Unauthorized" when the DM bought from the shop or asked for free loot on a
+  player's sheet.** Those two calls sent only the character's own login, which a DM does
+  not hold, so they went out with no login at all. They now send the DM's login, as the
+  rest of the sheet already did.
+
 ## [304] — 2026-10-22 — Player feedback: item pictures, map labels, sliders, monster editing
 
 - **Item pictures on the character sheet.** An item claimed or bought from the treasury
