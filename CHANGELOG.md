@@ -21,6 +21,24 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [306] — 2026-10-22 — A handout the DM marks Fail no longer shows Success
+
+- **Fixed: a player could go on seeing a handout's success text after the DM chose Fail.**
+  Three ways it happened, all closed:
+  - The character sheet and the table's right panel ignored a refresh that arrived while
+    an earlier one was still loading, so a Fail landing just after a roll (or just after a
+    Success tapped by mistake) never reached the screen until a reload. The refresh now
+    runs once the first one finishes.
+  - On the table pop-up, the console and the DM's hand-out dialog, two refreshes close
+    together could answer out of order and put the earlier result back. Only the newest
+    answer is used now.
+  - A handout card already open on the table kept the old text, with the corrected one
+    queued behind it. The open card now updates in place.
+- **"Apply all suggested" no longer overrules the DM.** It worked from the list on the
+  DM's screen, which could be out of date (another window, or the Handouts page while it
+  was being edited), and so could turn a Fail the DM had just given into the DC's
+  Success. The server now applies a suggestion only to someone still waiting on the DM.
+
 ## [305] — 2026-10-22 — The DM can buy and ask for loot from a player's sheet
 
 - **Fixed: "Unauthorized" when the DM bought from the shop or asked for free loot on a

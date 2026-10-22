@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 14:25
+// Written by Irmak Hakman — 2026-10-22 10:05
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -438,7 +438,7 @@ async function applySuggested() {
   const todo = (h.recipients || []).filter(r => r.outcome === 'rolled' && r.suggested);
   for (const r of todo) {
     await fetch(`/api/handouts/${encodeURIComponent(_selId)}/recipients/${encodeURIComponent(r.charId)}`, {
-      method: 'PATCH', headers: H(), body: JSON.stringify({ outcome: r.suggested }),
+      method: 'PATCH', headers: H(), body: JSON.stringify({ outcome: r.suggested, ifOutcome: 'rolled' }),
     });
   }
   await loadAll();

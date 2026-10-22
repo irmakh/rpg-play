@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 14:25
+// Written by Irmak Hakman — 2026-10-22 10:05
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -12,6 +12,7 @@
 let _tblHandouts = [];
 let _tblHandoutShown = new Set();   // guards against double-popping in one paint
 let _tblHandoutQueue = [];
+let _tblHandoutSeq = 0;             // newest load; an older answer landing later is dropped
 
 // charHeaders() already carries X-Character-Id + X-Character-Password.
 const tblHandoutHeaders = () => charHeaders();
@@ -36,11 +37,15 @@ function _tblHandoutKey(h) { return h.id + ':' + h.outcome; }
 
 async function loadTableHandouts({ popNew = true } = {}) {
   if (isDM() || !sessionCharId) return;
+  const seq = ++_tblHandoutSeq;
   try {
     const res = await fetch('/api/handouts', { headers: tblHandoutHeaders() });
     if (!res.ok) return;
     const list = await res.json();
     if (!Array.isArray(list)) return;
+    // Loads run side by side, one per realtime event. If an older one answers
+    // last it would put the earlier outcome back, so only the newest counts.
+    if (seq !== _tblHandoutSeq) return;
 
     const fresh = [];
     for (const h of list) {
@@ -52,6 +57,22 @@ async function loadTableHandouts({ popNew = true } = {}) {
     }
     _tblHandouts = list;
     if (popNew && fresh.length) {
+      // A newer state replaces any older one still waiting in the queue...
+      const freshIds = new Set(fresh.map(h => h.id));
+      _tblHandoutQueue = _tblHandoutQueue.filter(q => !freshIds.has(q.id));
+      // ...and the card already open, if it is this handout: the DM turning a
+      // Success into a Fail used to leave the success text up, with the fail
+      // card queued behind it until the player closed the first one.
+      const openCard = document.getElementById('handout-card');
+      const same = openCard && fresh.find(h => h.id === openCard.dataset.id);
+      // Updated where it stands (showHandoutCard would close it first, and the
+      // close pops the next queued card over it).
+      if (same) {
+        fresh.splice(fresh.indexOf(same), 1);
+        const body = document.getElementById('handout-card-body');
+        if (body) body.innerHTML = _tblHandoutBody(same);
+        _tblHandoutMarkSeen(same.id);
+      }
       _tblHandoutQueue.push(...fresh);
       if (!document.getElementById('handout-card')) _tblHandoutNext();
     }
@@ -84,6 +105,7 @@ function showHandoutCard(h) {
 
   const card = document.createElement('div');
   card.id = 'handout-card';
+  card.dataset.id = h.id;
   card.innerHTML = `
     <div class="ho-card-hdr" id="handout-card-drag">
       <span class="ho-card-title"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-document"></use></svg> ${esc(h.title)}</span>
@@ -175,6 +197,7 @@ function _tblHandoutMakeDraggable(card, handle) {
 let _sideHandouts = [];        // raw API rows (DM shape or player shape)
 let _sideHandoutsFor = null;   // charId the cache belongs to
 let _sideHandoutsLoading = false;
+let _sideHandoutsReload = null;  // charId to load again: asked for while a load ran
 
 // The right panel is narrow, so rows collapse to a single title line. Anything
 // that wants attention opens itself; everything else stays shut until clicked.
@@ -235,7 +258,10 @@ function sideHandoutBadge(charId) {
 }
 
 async function loadSideHandouts(charId, { rerender = true } = {}) {
-  if (!charId || _sideHandoutsLoading) return;
+  if (!charId) return;
+  // Not dropped while a load runs - remembered and run after it (see
+  // loadHandouts in index-handouts.js for why).
+  if (_sideHandoutsLoading) { _sideHandoutsReload = { charId, rerender }; return; }
   _sideHandoutsLoading = true;
   try {
     const res = await fetch('/api/handouts', { headers: authHeaders() });
@@ -244,6 +270,10 @@ async function loadSideHandouts(charId, { rerender = true } = {}) {
   } catch { _sideHandouts = []; }
   _sideHandoutsFor = charId;
   _sideHandoutsLoading = false;
+  if (_sideHandoutsReload) {
+    const again = _sideHandoutsReload; _sideHandoutsReload = null;
+    return loadSideHandouts(again.charId, { rerender: again.rerender || rerender });
+  }
   if (rerender) refreshSideHandoutsPane();
 }
 
@@ -456,11 +486,14 @@ function handoutModalIsOpen() {
 }
 
 /** Refetch the catalogue, then repaint if the dialog is still up. */
+let _hoModalSeq = 0;
 async function _hoModalLoad() {
+  const seq = ++_hoModalSeq;
   try {
     const res = await fetch('/api/handouts', { headers: authHeaders() });
     if (res.ok) {
       const list = await res.json();
+      if (seq !== _hoModalSeq) return;   // a newer load is on its way
       if (Array.isArray(list)) {
         _sideHandouts = list;
         if (_sideCharId) _sideHandoutsFor = _sideCharId;
@@ -647,7 +680,7 @@ async function hoModalApplySuggested() {
   for (const r of todo) {
     try {
       await fetch('/api/handouts/' + encodeURIComponent(h.id) + '/recipients/' + encodeURIComponent(r.charId), {
-        method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ outcome: r.suggested }),
+        method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ outcome: r.suggested, ifOutcome: 'rolled' }),
       });
     } catch {}
   }

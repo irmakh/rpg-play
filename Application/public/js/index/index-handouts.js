@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 14:25
+// Written by Irmak Hakman — 2026-10-22 10:05
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -9,6 +9,7 @@
 
 let _handouts = [];
 let _handoutsLoading = false;
+let _handoutsReload  = false;   // a refresh was asked for while one was running
 
 function handoutAuthHeaders() {
   // The character's own token, falling back to the DM's when a DM is looking at
@@ -17,7 +18,12 @@ function handoutAuthHeaders() {
 }
 
 async function loadHandouts() {
-  if (!currentCharId || _handoutsLoading) return;
+  if (!currentCharId) return;
+  // A realtime event that lands while a load is in flight must not be dropped:
+  // the DM's Fail arriving during the load started by the roll (or by a Success
+  // tapped a moment before) left the earlier result on screen until a reload.
+  // Remember it and load once more when this one finishes.
+  if (_handoutsLoading) { _handoutsReload = true; return; }
   _handoutsLoading = true;
   try {
     const res = await fetch('/api/handouts', { headers: handoutAuthHeaders() });
@@ -30,6 +36,7 @@ async function loadHandouts() {
     }
   } catch { _handouts = []; }
   _handoutsLoading = false;
+  if (_handoutsReload) { _handoutsReload = false; return loadHandouts(); }
   renderHandouts();
   updateHandoutBadge();
 }

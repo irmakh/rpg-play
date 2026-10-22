@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-10 23:55
+// Written by Irmak Hakman — 2026-10-22 10:05
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -18,12 +18,16 @@ let sHoPick = null;                 // DM: the handout whose detail is open
 const sHoOpen = new Set();          // player: handouts unfolded for reading
 const sHoChecked = new Set();       // DM: characters ticked to receive it
 
+let _sHoSeq = 0;
 async function sLoadHandouts() {
+  const seq = ++_sHoSeq;
   try {
     const res = await fetch('/api/handouts', { headers: sAuthHeaders() });
     if (!res.ok) return;
     const list = await res.json();
-    if (!Array.isArray(list)) return;
+    // Loads overlap when events come close together; an older answer landing
+    // last would put the earlier outcome back on screen.
+    if (seq !== _sHoSeq || !Array.isArray(list)) return;
     sHandouts = list;
   } catch { return; }
   if (sHoPick && !sHandouts.find(h => h.id === sHoPick)) sHoPick = null;
@@ -205,7 +209,7 @@ async function sHoApplySuggested(handoutId) {
   for (const r of (h.recipients || []).filter(r => r.outcome === 'rolled' && r.suggested)) {
     try {
       await fetch('/api/handouts/' + encodeURIComponent(h.id) + '/recipients/' + encodeURIComponent(r.charId), {
-        method: 'PATCH', headers: sAuthHeaders(), body: JSON.stringify({ outcome: r.suggested }),
+        method: 'PATCH', headers: sAuthHeaders(), body: JSON.stringify({ outcome: r.suggested, ifOutcome: 'rolled' }),
       });
     } catch {}
   }

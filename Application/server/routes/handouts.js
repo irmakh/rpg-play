@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-09-26 16:50
+// Written by Irmak Hakman — 2026-10-22 10:05
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -347,6 +347,13 @@ export default function register(app, ctx) {
 
       const outcome = String(req.body?.outcome || '');
       if (!OUTCOMES.has(outcome)) return res.status(400).json({ error: `outcome must be one of ${[...OUTCOMES].join(', ')}` });
+
+      // "Apply all suggested" sends ifOutcome: 'rolled'. The list it works from
+      // can be stale (another window, a page that skipped a refresh while the
+      // DM was editing), and without this it overwrote a Fail the DM had just
+      // given with the DC's Success. Nothing changes; the caller is told why.
+      if (req.body?.ifOutcome !== undefined && String(req.body.ifOutcome) !== (rec.outcome || 'pending'))
+        return res.status(409).json({ error: 'The outcome has already been set', outcome: rec.outcome || 'pending' });
 
       // Sending a recipient back to 'pending' clears the roll so they may try
       // again — that is how a DM grants a re-roll.

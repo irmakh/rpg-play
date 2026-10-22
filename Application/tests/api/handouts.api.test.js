@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-09-26 16:50
+// Written by Irmak Hakman — 2026-10-22 10:05
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -346,6 +346,32 @@ describe('DC guidance and confirmation', () => {
     await dm(request(app).patch(`/api/handouts/${h.id}/recipients/${ALIYR}`)).send({ outcome: 'pending' });
     expect(ldb.getHandoutRecipient(h.id, ALIYR).rollTotal).toBeNull();
     expect((await aliyr(request(app).post(`/api/handouts/${h.id}/roll`)).send({})).status).toBe(200);
+  });
+
+  it('does not let a stale "apply suggested" overwrite the DM\'s Fail', async () => {
+    // +11 against DC 12 always suggests success; the DM rules it a failure.
+    const h = await makeHandout({ checkDc: 12 });
+    await handTo(h.id, [ALIYR]);
+    await aliyr(request(app).post(`/api/handouts/${h.id}/roll`)).send({});
+    await dm(request(app).patch(`/api/handouts/${h.id}/recipients/${ALIYR}`)).send({ outcome: 'fail' });
+    // A window still holding the old list applies the DC's suggestion.
+    const res = await dm(request(app).patch(`/api/handouts/${h.id}/recipients/${ALIYR}`))
+      .send({ outcome: 'success', ifOutcome: 'rolled' });
+    expect(res.status).toBe(409);
+    expect(ldb.getHandoutRecipient(h.id, ALIYR).outcome).toBe('fail');
+    const { raw } = await playerPayload(h.id);
+    expect(raw).toContain(FAIL_BODY);
+    expect(raw).not.toContain(SUCCESS_BODY);
+  });
+
+  it('applies a suggestion while the recipient is still waiting on the DM', async () => {
+    const h = await makeHandout({ checkDc: 12 });
+    await handTo(h.id, [ALIYR]);
+    await aliyr(request(app).post(`/api/handouts/${h.id}/roll`)).send({});
+    const res = await dm(request(app).patch(`/api/handouts/${h.id}/recipients/${ALIYR}`))
+      .send({ outcome: 'success', ifOutcome: 'rolled' });
+    expect(res.status).toBe(200);
+    expect(ldb.getHandoutRecipient(h.id, ALIYR).outcome).toBe('success');
   });
 });
 
