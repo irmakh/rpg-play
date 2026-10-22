@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Written by Irmak Hakman — 2026-10-15 15:43 -->
+<!-- Written by Irmak Hakman — 2026-10-22 09:18 -->
 <!-- Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) -->
 <html lang="en" class="lamplit">
 <head>
@@ -16,6 +16,7 @@
 <script src="/js/lib/header-fit.js" defer></script>
 <link rel="stylesheet" href="/css/fonts.css">
 <link rel="stylesheet" href="/css/base.css">
+<link rel="stylesheet" href="/css/range.css">
 <link rel="stylesheet" href="/css/table.css">
 <link rel="stylesheet" href="/css/notifications.css">
 <link rel="stylesheet" href="/css/table-theme-modern.css">
@@ -107,10 +108,10 @@
   <span style="color:var(--bone)"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-music"></use></svg> </span>
   <span id="now-playing-name" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
   <span id="now-playing-pos" style="font-size:calc(10px * var(--fs, 1));color:var(--bone);white-space:nowrap;min-width:calc(26px*var(--fs, 1));text-align:right">0:00</span>
-  <input type="range" id="now-playing-seek" min="0" max="100" value="0" step="0.5" style="width:calc(80px*var(--fs, 1));cursor:pointer" oninput="musicSeekInput(this.value)" onchange="musicSeekSend(this.value)">
+  <input type="range" id="now-playing-seek" min="0" max="100" value="0" step="0.5" aria-label="Position in the track" style="width:calc(110px*var(--fs, 1))" oninput="musicSeekInput(this.value)" onchange="musicSeekSend(this.value)">
   <span id="now-playing-dur" style="font-size:calc(10px * var(--fs, 1));color:var(--ash);white-space:nowrap;min-width:calc(26px*var(--fs, 1))">0:00</span>
   <span style="font-size:calc(10px * var(--fs, 1));color:var(--ash);white-space:nowrap">Vol</span>
-  <input type="range" id="local-vol-slider" min="0" max="100" value="100" style="width:calc(60px*var(--fs, 1));cursor:pointer" oninput="setLocalVolume(this.value)" onchange="setLocalVolume(this.value)">
+  <input type="range" id="local-vol-slider" min="0" max="100" value="100" aria-label="Volume on this device" style="width:calc(90px*var(--fs, 1))" oninput="setLocalVolume(this.value)" onchange="setLocalVolume(this.value)">
   <span id="local-vol-pct" style="font-size:calc(11px * var(--fs, 1));color:var(--bone);min-width:calc(28px*var(--fs, 1));text-align:right">100%</span>
   <button onclick="openMusicPopup()" title="Pop out player to separate window" style="background:none;border:1px solid var(--rule-hi);color:var(--bone);border-radius:calc(3px*var(--fs, 1));padding:1px calc(6px*var(--fs, 1));cursor:pointer;font-size:calc(11px * var(--fs, 1));flex-shrink:0;line-height:1.6"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-external"></use></svg> </button>
 </div>

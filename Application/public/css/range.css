@@ -1,0 +1,49 @@
+/* Written by Irmak Hakman — 2026-10-22 09:18 */
+/* Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) */
+
+/* ── Sliders (input type=range) ──────────────────────────────────────────────
+   One look for every slider on the pages that link this file: map zoom, music
+   position and volume, prepare-map grid size. The element is tall (a finger's
+   worth of hit area) while the bar drawn in it stays thin, and the thumb is big
+   enough to grab on a phone. touch-action keeps a sideways drag on the slider
+   from scrolling the page instead. Colours come from tokens.css. */
+input[type=range]{
+  -webkit-appearance:none;appearance:none;
+  height:calc(28px*var(--fs, 1));min-height:0;min-width:calc(60px*var(--fs, 1));
+  margin:0;padding:0;border:0;background:transparent;
+  cursor:pointer;touch-action:none;vertical-align:middle;
+}
+input[type=range]:focus{outline:none}
+input[type=range]:focus-visible{outline:2px solid var(--arc);outline-offset:2px;border-radius:var(--r-sm)}
+input[type=range]:disabled{opacity:.5;cursor:default}
+
+input[type=range]::-webkit-slider-runnable-track{
+  height:calc(6px*var(--fs, 1));border-radius:999px;
+  background:var(--slate-hi);border:1px solid var(--rule-hi);
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;appearance:none;
+  width:calc(18px*var(--fs, 1));height:calc(18px*var(--fs, 1));border-radius:50%;
+  /* centre the thumb on the 6px track (its border included) */
+  margin-top:calc(-7px*var(--fs, 1) - 1px);
+  background:var(--bone);border:2px solid var(--arc);box-shadow:0 1px 3px rgba(0,0,0,.5);
+}
+input[type=range]:hover::-webkit-slider-thumb{background:var(--arc-hi)}
+
+input[type=range]::-moz-range-track{
+  height:calc(6px*var(--fs, 1));border-radius:999px;
+  background:var(--slate-hi);border:1px solid var(--rule-hi);
+}
+input[type=range]::-moz-range-progress{height:calc(6px*var(--fs, 1));border-radius:999px;background:var(--arc)}
+input[type=range]::-moz-range-thumb{
+  width:calc(18px*var(--fs, 1));height:calc(18px*var(--fs, 1));border-radius:50%;box-sizing:border-box;
+  background:var(--bone);border:2px solid var(--arc);box-shadow:0 1px 3px rgba(0,0,0,.5);
+}
+input[type=range]:hover::-moz-range-thumb{background:var(--arc-hi)}
+
+/* Phones and tablets: a bigger thumb for a fingertip. */
+@media (pointer:coarse){
+  input[type=range]{height:calc(36px*var(--fs, 1))}
+  input[type=range]::-webkit-slider-thumb{width:calc(24px*var(--fs, 1));height:calc(24px*var(--fs, 1));margin-top:calc(-10px*var(--fs, 1) - 1px)}
+  input[type=range]::-moz-range-thumb{width:calc(24px*var(--fs, 1));height:calc(24px*var(--fs, 1))}
+}

@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 14:25
+// Written by Irmak Hakman — 2026-10-22 09:18
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -374,6 +374,11 @@ function openItemDetail(id) {
   let html = `<table style="width:100%;border-collapse:collapse;font-size:calc(12px * var(--fs, 1))">` +
     rows.map(([k, v]) => `<tr><td style="padding:calc(4px*var(--fs, 1)) calc(6px*var(--fs, 1));color:var(--ash);width:42%">${esc(k)}</td><td style="padding:calc(4px*var(--fs, 1)) calc(6px*var(--fs, 1));font-weight:bold">${esc(String(v))}</td></tr>`).join('') +
     `</table>`;
+  // Items claimed or bought from the treasury carry the DM's picture.
+  if (item.img || item.imgThumb) {
+    html = `<img class="item-detail-img" src="${esc(item.img || item.imgThumb)}" alt=""
+      onclick="lightboxOpen('${escJs(item.img || item.imgThumb)}', 'image/*')" title="Show full size">` + html;
+  }
   if (item.notes) html += `<div style="margin-top:calc(10px*var(--fs, 1))"><div class="lbl" style="margin-bottom:calc(4px*var(--fs, 1))">Notes</div><div style="font-size:calc(12px * var(--fs, 1));white-space:pre-wrap;line-height:1.5">${esc(item.notes)}</div></div>`;
   document.getElementById('item-detail-body').innerHTML = html;
   document.getElementById('item-detail-modal').style.display = 'flex';
@@ -444,6 +449,7 @@ function renderItems() {
 
     return `<div class="item-row">
       <input type="checkbox" class="item-chk" ${item.equipped ? 'checked' : ''} onchange="toggleItemEquipped(${esc(JSON.stringify(item.id))})" title="Equipped">
+      ${item.imgThumb || item.img ? `<img class="item-thumb" src="${esc(item.imgThumb || item.img)}" alt="" loading="lazy" onclick="openItemDetail(${idLit})">` : ''}
       <span class="item-name" style="${equippedStyle};cursor:pointer" onclick="openItemDetail(${esc(JSON.stringify(item.id))})">${esc(item.name)}${attuneStr}${unidStr}</span>
       <span class="item-meta">${esc(typeLabel)}${bonusStr ? ' · ' + esc(bonusStr) : ''}${valueStr}</span>
       ${chargeStr}

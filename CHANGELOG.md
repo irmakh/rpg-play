@@ -21,6 +21,28 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [304] — 2026-10-22 — Player feedback: item pictures, map labels, sliders, monster editing
+
+- **Item pictures on the character sheet.** An item claimed or bought from the treasury
+  kept its picture but nothing showed it. It now appears as a thumbnail on the Items tab
+  and in the table's right panel, and full size in the item's detail window (tap it to
+  enlarge).
+- **Conditions sit under the token's name**, not above the token where they covered the
+  square above it.
+- **Bigger distance labels on the map.** The ruler and the drag distance were a fixed
+  12-13px, about 6px when zoomed out. They now grow with the grid, never drop below 18px
+  on screen, and have a dark outline so they read over any map.
+- **Sliders fixed.** The zoom, music position and volume sliders were drawn inside a
+  36px bordered input box with a thin browser bar in it. They have one proper style now,
+  are wider, and get a bigger thumb on phones and tablets.
+- **Maps are centred.** A map smaller than the screen sits in the middle instead of the
+  top-left corner.
+- **Monster edits show at once.** After saving, the Monsters page went on showing the old
+  stat block until a reload. Deleting the monster on screen now clears it too.
+- **Monster entries can be reordered.** Each trait, action, bonus action, reaction and
+  legendary action in the monster editor has move up / move down buttons, so a
+  Multiattack added last can go to the top.
+
 ## [303] — 2026-10-15 — The one-screen Android app remembers the template and UI size
 
 - **Fixed: on a one-screen device the Android app forgot the display template and UI size

@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 15:43
+// Written by Irmak Hakman — 2026-10-22 09:18
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -338,6 +338,12 @@ function _buildSidePanelItems(d, canEdit) {
       : '';
     return `<div class="rp-item-cell${worn ? ' worn' : ''}${max ? ' has-charges' : ''}"${attrs}>`
       + `<span class="rp-item-box${worn ? ' on' : ''}"></span>`
+      // The treasury's picture, if it has one; a click shows it full size
+      // instead of wearing the item.
+      + (it.imgThumb || it.img
+        ? `<img class="rp-item-thumb" src="${esc(it.imgThumb || it.img)}" alt="" loading="lazy" title="Show the picture"`
+          + ` onclick="event.stopPropagation();lightboxOpen('${escJs(it.img || it.imgThumb)}', 'image/*')">`
+        : '')
       + `<span class="rp-item-name">${esc(it.name || 'Item')}</span>${_sideItemChip(it)}${charge}</div>`;
   }).join('');
   return `<div class="rp-flat-hdr">Items${canEdit ? ' <span style="font-size:calc(8px * var(--fs, 1));opacity:.5;font-weight:normal;letter-spacing:0">(click to wear / remove)</span>' : ''}</div>`

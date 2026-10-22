@@ -1,4 +1,4 @@
-/* Written by Irmak Hakman — 2026-10-15 15:08 */
+/* Written by Irmak Hakman — 2026-10-22 09:18 */
 /* Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) */
 
 *{box-sizing:border-box;margin:0;padding:0}
@@ -572,6 +572,11 @@ html.lamplit .sk-roll-btn:hover{opacity:1;background:var(--slate-hi)}
 #treasury-seg .seg-btn.on{background:var(--arc);color:var(--ink)}
 .tr-thumb{width:calc(34px*var(--fs, 1));height:calc(34px*var(--fs, 1));border-radius:calc(4px*var(--fs, 1));object-fit:cover;flex-shrink:0;
           border:1px solid var(--rule-hi);background:var(--slate-hi);cursor:zoom-in}
+/* The same picture on the Items tab, once the item is on the sheet. */
+.item-thumb{width:calc(28px*var(--fs, 1));height:calc(28px*var(--fs, 1));border-radius:calc(4px*var(--fs, 1));object-fit:cover;flex-shrink:0;
+            border:1px solid var(--rule-hi);background:var(--slate-hi);cursor:pointer}
+.item-detail-img{display:block;max-width:100%;max-height:calc(220px*var(--fs, 1));margin:0 auto calc(10px*var(--fs, 1));
+                 border-radius:var(--r-sm);border:1px solid var(--rule-hi);object-fit:contain;cursor:zoom-in}
 /* Stands in for a description the DM has not revealed yet. */
 .tr-unid{font-size:calc(10px * var(--fs, 1));color:var(--ash);font-style:italic;opacity:.85;margin-top:calc(2px*var(--fs, 1));
          white-space:nowrap;overflow:hidden;text-overflow:ellipsis}

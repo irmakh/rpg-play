@@ -1,4 +1,4 @@
-/* Written by Irmak Hakman — 2026-10-15 14:25 */
+/* Written by Irmak Hakman — 2026-10-22 09:18 */
 /* Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) */
 
 *{box-sizing:border-box;margin:0;padding:0}
@@ -50,6 +50,10 @@ tr:hover td{background:var(--wash)}
 .search-bar input{flex:1;min-width:calc(140px*var(--fs, 1))}
 .ef-sec{font-size:calc(10px * var(--fs, 1));color:var(--bone);font-weight:bold;margin:calc(12px*var(--fs, 1)) 0 calc(6px*var(--fs, 1));padding-top:calc(10px*var(--fs, 1));border-top:1px solid var(--rule-hi);display:flex;align-items:center;justify-content:space-between}
 .ef-sec:first-child{border-top:none;margin-top:0;padding-top:0}
+/* Reorder buttons: the first row cannot go up, the last cannot go down. */
+.ef-move{min-width:calc(26px*var(--fs, 1));padding-left:0;padding-right:0;line-height:1}
+.ef-entry-row:first-child .ef-up,
+.ef-entry-row:last-child .ef-down{opacity:.35;pointer-events:none}
 .ef-entry-row{border:1px solid var(--rule-hi);border-radius:calc(4px*var(--fs, 1));padding:calc(8px*var(--fs, 1));margin-bottom:calc(6px*var(--fs, 1))}
 
 

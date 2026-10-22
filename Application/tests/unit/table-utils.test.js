@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-11 22:10
+// Written by Irmak Hakman — 2026-10-22 09:18
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -56,6 +56,7 @@ function load({ masterPw = '', tokens = [], initData = { entries: [], currentId:
     tokenRingColor:       ctx.tokenRingColor,
     hpBarColor:           ctx.hpBarColor,
     tokenLabelMetrics:    ctx.tokenLabelMetrics,
+    mapTextPx:            ctx.mapTextPx,
     dragDistanceLabel:    ctx.dragDistanceLabel,
     getActiveTurnTokenId: ctx.getActiveTurnTokenId,
     isDM:                 ctx.isDM,
@@ -382,5 +383,28 @@ describe('getActiveTurnTokenId', () => {
       ],
     });
     expect(getActiveTurnTokenId()).toBe('tok-A');
+  });
+});
+
+// ── mapTextPx ─────────────────────────────────────────────────────────────────
+describe('mapTextPx sizes the distances written on the map', () => {
+  const { mapTextPx } = load();
+
+  it('is bigger than the old fixed 13px on a default grid at 100%', () => {
+    expect(mapTextPx(50, 100)).toBe(18);
+  });
+
+  it('stays at least 18 screen pixels when zoomed out', () => {
+    expect(mapTextPx(50, 50) * 0.5).toBeGreaterThanOrEqual(18);
+  });
+
+  it('is a third of a square on a large grid', () => {
+    expect(mapTextPx(100, 100)).toBe(36);
+  });
+
+  it('caps a huge grid and falls back to defaults for bad input', () => {
+    expect(mapTextPx(400, 100)).toBe(96);
+    expect(mapTextPx(undefined, undefined)).toBe(18);
+    expect(mapTextPx(0, 0)).toBe(18);
   });
 });

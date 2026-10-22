@@ -1,4 +1,4 @@
-/* Written by Irmak Hakman — 2026-10-15 14:25 */
+/* Written by Irmak Hakman — 2026-10-22 09:18 */
 /* Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) */
 
 /* ============================================================================
@@ -134,7 +134,9 @@ html.lamplit .lt-btn-quiet:hover{background:var(--slate); color:var(--bone)}
 :where(html.lamplit) button:disabled,
 html.lamplit .lt-btn:disabled{opacity:.5; cursor:default}
 
-:where(html.lamplit) input:not([type=checkbox]):not([type=radio]),
+/* Not sliders either: the box made every range a 36px bordered field with a
+   thin native bar inside it. Sliders are styled in css/range.css. */
+:where(html.lamplit) input:not([type=checkbox]):not([type=radio]):not([type=range]),
 :where(html.lamplit) select,
 :where(html.lamplit) textarea{
   font:inherit;

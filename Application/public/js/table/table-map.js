@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-11 01:00
+// Written by Irmak Hakman — 2026-10-22 09:18
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -46,6 +46,7 @@ function resizeCanvases(w, h) {
     mapImg.style.width = W + 'px';
     mapImg.style.height = H + 'px';
   }
+  centerMap();
 }
 
 function getCanvasSize() {
@@ -129,11 +130,32 @@ function applyZoom(pct) {
     canvasWrap.style.transform = `scale(${scale})`;
     canvasWrap.style.transformOrigin = 'top left';
   }
+  centerMap();
   const slider = document.getElementById('slider-zoom');
   if (slider) slider.value = zoomPct;
   const lbl = document.getElementById('zoom-val');
   if (lbl) lbl.textContent = zoomPct + '%';
 }
+
+// A map smaller than the map area sits in its middle, not stuck to the top-left
+// corner; one larger than it starts at the edge and scrolls as before. Done with
+// margins on the scaled wrapper, so getCanvasPos() (which measures the wrapper)
+// and the scroll range both follow without further changes.
+function centerMap() {
+  if (!canvasWrap || !canvasArea) return;
+  // The canvases hold the map's real size (resizeCanvases sets them all alike).
+  const w = overlayCanvas.width, h = overlayCanvas.height;
+  const scale = zoomPct / 100;
+  // The wrapper is an inline-block, so it sits a line-box gap below the top;
+  // take that off, or a map that just fits would get a scrollbar.
+  const gapX = canvasWrap.offsetLeft - (parseFloat(canvasWrap.style.marginLeft) || 0);
+  const gapY = canvasWrap.offsetTop  - (parseFloat(canvasWrap.style.marginTop)  || 0);
+  const padX = Math.max(0, Math.floor((canvasArea.clientWidth  - w * scale) / 2 - gapX));
+  const padY = Math.max(0, Math.floor((canvasArea.clientHeight - h * scale) / 2 - gapY));
+  canvasWrap.style.marginLeft = padX + 'px';
+  canvasWrap.style.marginTop  = padY + 'px';
+}
+if (typeof ResizeObserver === 'function' && canvasArea) new ResizeObserver(() => centerMap()).observe(canvasArea);
 document.getElementById('slider-zoom')?.addEventListener('input', e => applyZoom(parseInt(e.target.value) || 100));
 document.getElementById('btn-zoom-in')?.addEventListener('click',  () => applyZoom(zoomPct + 10));
 document.getElementById('btn-zoom-out')?.addEventListener('click', () => applyZoom(zoomPct - 10));
@@ -428,11 +450,13 @@ function renderTokens() {
     }
 
     const conds = parseConditions(tok.conditions);
-    let condDiv = null;
     if (conds.length > 0) {
-      condDiv = document.createElement('div');
+      const condDiv = document.createElement('div');
       condDiv.className = 'token-conditions';
       condDiv.innerHTML = conds.map(c => `<span title="${esc(c)}">${esc(COND_ABBREV[c] || String(c).slice(0,3).toUpperCase())}</span>`).join('');
+      // Under the name (and the controller's), not above the token where it
+      // covered whatever stood in the square above.
+      label.appendChild(condDiv);
     }
 
     attachTokenEvents(div, tok);
@@ -447,13 +471,11 @@ function renderTokens() {
     if (behindFog) {
       div.appendChild(bar);
       div.appendChild(label);
-      if (condDiv) div.appendChild(condDiv);
     } else {
       const labelWrap = document.createElement('div');
       labelWrap.style.cssText = `position:absolute;left:${tokLeft}px;top:${tokTop}px;width:${size}px;height:${size}px;pointer-events:none;${labelVars}`;
       labelWrap.appendChild(bar);
       labelWrap.appendChild(label);
-      if (condDiv) labelWrap.appendChild(condDiv);
       tokenLabelLayer.appendChild(labelWrap);
     }
   }
@@ -987,19 +1009,17 @@ async function fetchDrawings() {
 // ── Ruler tool ────────────────────────────────────────────────────────────────
 function renderRuler(x1, y1, x2, y2) {
   oCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
-  oCtx.strokeStyle = '#ffcc00'; oCtx.lineWidth = 2;
-  oCtx.setLineDash([6, 3]);
+  const cs = tableState.cellSize || 50;
+  const px = mapTextPx(cs, zoomPct);
+  // The line thickens with the label, so it is not a hairline when zoomed out.
+  const lw = Math.max(2, Math.round(px / 8));
+  oCtx.strokeStyle = '#ffcc00'; oCtx.lineWidth = lw;
+  oCtx.setLineDash([lw * 3, lw * 1.5]);
   oCtx.beginPath(); oCtx.moveTo(x1, y1); oCtx.lineTo(x2, y2); oCtx.stroke();
   oCtx.setLineDash([]);
 
-  const cs = tableState.cellSize || 50;
   const dist = Math.round(Math.sqrt(((x2-x1)/cs)**2 + ((y2-y1)/cs)**2) * 5);
-  oCtx.fillStyle = '#ffcc00';
-  oCtx.font = 'bold 13px Segoe UI';
-  oCtx.textAlign = 'left';
-  oCtx.shadowColor = '#000'; oCtx.shadowBlur = 4;
-  oCtx.fillText(`${dist} ft`, x2 + 8, y2 - 6);
-  oCtx.shadowBlur = 0;
+  drawMapLabel(oCtx, `${dist} ft`, x2 + px * 0.6, y2 - px * 0.45, px, '#ffcc00');
 }
 
 // ── Ping tool ─────────────────────────────────────────────────────────────────
@@ -1212,12 +1232,8 @@ document.addEventListener('mousemove', e => {
     oCtx.lineTo(cx, cy);
     oCtx.stroke();
     oCtx.restore();
-    oCtx.font = 'bold 12px Segoe UI';
-    oCtx.textAlign = 'center';
-    oCtx.shadowColor = '#000'; oCtx.shadowBlur = 3;
-    oCtx.fillStyle = colour;
-    oCtx.fillText(lbl.text, cx, cy - size / 2 - 8);
-    oCtx.shadowBlur = 0;
+    const px = mapTextPx(cs, zoomPct);
+    drawMapLabel(oCtx, lbl.text, cx, cy - size / 2 - px * 0.5, px, colour, 'center');
   }
 });
 

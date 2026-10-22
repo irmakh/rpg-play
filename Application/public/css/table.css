@@ -1,4 +1,4 @@
-/* Written by Irmak Hakman — 2026-10-15 15:43 */
+/* Written by Irmak Hakman — 2026-10-22 09:18 */
 /* Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) */
 
 *{box-sizing:border-box;margin:0;padding:0}
@@ -220,7 +220,8 @@ input:focus,select:focus{outline:none;border-color:var(--arc)}
 .token-hp-fill{height:100%;transition:width .3s,background .3s}
 .token-name{position:absolute;top:calc(100% + var(--tk-bar,calc(4px*var(--fs, 1))) + calc(3px*var(--fs, 1)));left:50%;transform:translateX(-50%);width:10em;font-size:var(--tk-fs,9px);white-space:normal;overflow-wrap:break-word;text-align:center;color:var(--bone);pointer-events:none;text-shadow:0 1px 2px #000;background:rgba(0,0,0,.5);padding:0 .33em;border-radius:calc(2px*var(--fs, 1));line-height:1.3}
 .token-controller{font-size:.89em;color:var(--bone);margin-top:1px;font-weight:bold}
-.token-conditions{position:absolute;bottom:calc(100% + calc(4px*var(--fs, 1)));left:50%;transform:translateX(-50%);display:flex;flex-wrap:wrap;gap:1px;pointer-events:none;justify-content:center;font-size:var(--tk-fs,9px);max-width:13.3em}
+/* Inside .token-name, below the name, so it follows a name that wraps. */
+.token-conditions{display:flex;flex-wrap:wrap;gap:1px;pointer-events:none;justify-content:center;margin:.2em 0 .15em;text-shadow:none}
 .token-conditions span{font-size:.78em;font-weight:bold;background:rgba(255,140,0,.92);color:#000;border-radius:calc(2px*var(--fs, 1));padding:0 .28em;line-height:1.43;white-space:nowrap}
 .cond-btn{padding:calc(2px*var(--fs, 1)) calc(5px*var(--fs, 1));font-size:calc(10px * var(--fs, 1));border-radius:calc(3px*var(--fs, 1));cursor:pointer;border:1px solid var(--rule-hi);background:var(--slate-hi);color:var(--ash);font-weight:bold}
 .cond-btn:hover{border-color:var(--bone);color:var(--bone)}
@@ -468,6 +469,7 @@ input[type=number]{-moz-appearance:textfield;appearance:textfield}
 .rp-item-cell{display:flex;align-items:center;gap:calc(5px*var(--fs, 1));padding:calc(4px*var(--fs, 1)) calc(6px*var(--fs, 1));background:var(--wash);border:1px solid var(--rule-hi);border-radius:calc(4px*var(--fs, 1));font-size:calc(11px * var(--fs, 1));min-width:0;transition:background .1s}
 .rp-item-cell.worn{background:var(--rule-hi);border-color:var(--rule-hi)}
 .rp-item-cell:hover{background:var(--rule-hi)}
+.rp-item-thumb{width:calc(20px*var(--fs, 1));height:calc(20px*var(--fs, 1));flex-shrink:0;object-fit:cover;border-radius:calc(3px*var(--fs, 1));border:1px solid var(--rule-hi);cursor:zoom-in}
 .rp-item-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .rp-item-box{width:calc(13px*var(--fs, 1));height:calc(13px*var(--fs, 1));border:1.5px solid var(--rule-hi);border-radius:calc(3px*var(--fs, 1));flex-shrink:0;position:relative}
 .rp-item-box.on{background:var(--arc);border-color:var(--bone)}
@@ -875,7 +877,7 @@ body.toolbar-hidden #toolbar-strip:hover{background:var(--slate-hi);color:var(--
   font:inherit;font-size:calc(15px * var(--fs, 1));line-height:1;cursor:pointer}
 #map-zoom button:hover{background:var(--slate-hi);border-color:var(--arc-line)}
 #map-zoom button:focus-visible,#map-zoom input:focus-visible{outline:2px solid var(--arc);outline-offset:1px}
-#map-zoom #slider-zoom{width:calc(80px*var(--fs, 1));cursor:pointer;accent-color:var(--arc)}
+#map-zoom #slider-zoom{width:calc(110px*var(--fs, 1))}
 #map-zoom #zoom-val{font-size:calc(11px * var(--fs, 1));color:var(--ash);min-width:calc(36px*var(--fs, 1));text-align:right;font-variant-numeric:tabular-nums}
 
 /* ── Collapsing the left panel ────────────────────────────────────────────────

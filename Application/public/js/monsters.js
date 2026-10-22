@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 14:25
+// Written by Irmak Hakman — 2026-10-22 09:18
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -54,7 +54,11 @@ async function loadMonsters() {
     if (res.status === 401) { location.href = '/dm.html'; return; }
     if (!res.ok) { showStatus('Failed to load monsters.', true); return; }
     monsters = await res.json();
-    renderTable();
+    // The stat block on the right is built from the list, so it is rebuilt from
+    // the fresh copy too - after an edit it went on showing the old monster
+    // until the page was reloaded. (selectMonster also repaints the list.)
+    if (selectedMonsterId && monsters.some(m => m.id === selectedMonsterId)) selectMonster(selectedMonsterId);
+    else renderTable();
   } catch { showStatus('Network error.', true); }
 }
 
@@ -231,6 +235,10 @@ async function deleteMonster(monsterId) {
     if (res.status === 401) { location.href = '/dm.html'; return; }
     if (!res.ok) { showStatus('Failed to delete monster.', true); return; }
     monsters = monsters.filter(x => x.id !== monsterId);
+    if (selectedMonsterId === monsterId) {
+      selectedMonsterId = null;
+      document.getElementById('monster-detail').innerHTML = '<div class="app-empty">Select a monster to see its stat block.</div>';
+    }
     renderTable();
     showStatus(`${m.name} removed.`, false);
   } catch { showStatus('Network error.', true); }
@@ -316,12 +324,26 @@ function efAppendRow(container, item) {
   div.className = 'ef-entry-row';
   div.innerHTML = `<div style="display:flex;gap:calc(6px*var(--fs, 1));margin-bottom:calc(4px*var(--fs, 1));align-items:center">
     <input type="text" placeholder="Name" data-field="name" style="flex:1">
+    <button type="button" class="btn sm ef-move ef-up" onclick="efMoveRow(this, -1)" title="Move up" aria-label="Move up">▲</button>
+    <button type="button" class="btn sm ef-move ef-down" onclick="efMoveRow(this, 1)" title="Move down" aria-label="Move down">▼</button>
     <button type="button" class="btn sm danger" onclick="this.closest('.ef-entry-row').remove()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg></button>
   </div>
   <textarea placeholder="Description" data-field="entries" style="min-height:calc(56px*var(--fs, 1));resize:vertical;width:100%"></textarea>`;
   div.querySelector('[data-field=name]').value = item.name || '';
   div.querySelector('[data-field=entries]').value = (item.entries || []).filter(e => typeof e === 'string').join('\n\n');
   container.appendChild(div);
+}
+
+// Moves an entry one place up or down within its section. The stat block lists
+// them in the order the form holds them (efReadSection reads the rows in DOM
+// order), so this is how a Multiattack added last gets back to the top.
+function efMoveRow(btn, dir) {
+  const row = btn.closest('.ef-entry-row');
+  const other = dir < 0 ? row.previousElementSibling : row.nextElementSibling;
+  if (!other) return;
+  if (dir < 0) row.parentNode.insertBefore(row, other);
+  else row.parentNode.insertBefore(other, row);
+  btn.focus();
 }
 
 function scToItem(sc) {

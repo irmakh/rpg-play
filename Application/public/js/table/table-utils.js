@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-11 22:10
+// Written by Irmak Hakman — 2026-10-22 09:18
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -87,6 +87,29 @@ function tokenLabelMetrics(cellSize, sizeMult) {
   const mult = Math.max(1, sizeMult || 1);
   const font = Math.max(9, Math.min(40, Math.round(cs * 0.18 * Math.sqrt(mult))));
   return { font, bar: Math.max(4, Math.round(font * 0.45)) };
+}
+// Font size, in map pixels, for the distances written on the map (the ruler,
+// a token being dragged). A fixed 13px read as 6px at 50% zoom and vanished on a
+// large grid, so it is a third of a square, and never under 18 screen pixels
+// however far out the map is zoomed.
+function mapTextPx(cellSize, zoomPct) {
+  const cs = cellSize > 0 ? cellSize : 50;
+  const scale = Math.max(0.1, (zoomPct > 0 ? zoomPct : 100) / 100);
+  return Math.round(Math.min(96, Math.max(cs * 0.36, 18 / scale)));
+}
+// Writes a map label with a dark outline, which stays readable over any map
+// (the old soft shadow did not). Leaves the context's state as it found it.
+function drawMapLabel(ctx, text, x, y, px, colour, align) {
+  ctx.save();
+  ctx.font = `bold ${px}px Segoe UI, sans-serif`;
+  ctx.textAlign = align || 'left';
+  ctx.lineJoin = 'round';
+  ctx.lineWidth = Math.max(3, px * 0.22);
+  ctx.strokeStyle = 'rgba(0,0,0,.85)';
+  ctx.strokeText(text, x, y);
+  ctx.fillStyle = colour;
+  ctx.fillText(text, x, y);
+  ctx.restore();
 }
 // What to write beside a token while it is being dragged. In a fight the token
 // has a movement budget for the turn, so the label counts it down and turns red
