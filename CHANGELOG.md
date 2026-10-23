@@ -21,6 +21,17 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [307] — 2026-10-23 — Music files up to 250 MB
+
+- **Sound uploads on the Playlists page now take files up to 250 MB each** (was 50 MB).
+  The file goes up as itself instead of base64 inside JSON, through a new
+  `POST /api/sounds/upload`, and the server writes it straight to disk as it arrives
+  and stops at 250 MB. Before this, anything over about 150 MB could never have fit
+  through the 200 MB JSON body limit anyway. The old JSON route still works for tabs
+  that loaded the page before this release.
+
+---
+
 ## [306] — 2026-10-22 — A handout the DM marks Fail no longer shows Success
 
 - **Fixed: a player could go on seeing a handout's success text after the DM chose Fail.**

@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-09-26 17:55
+// Written by Irmak Hakman — 2026-10-23 11:55
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -100,12 +100,14 @@ function makeMediaDbStub() {
   };
 }
 
-export function makeApp({ maxStoryVideoBytes } = {}) {
+export function makeApp({ maxStoryVideoBytes, maxSoundBytes } = {}) {
   const app = express();
 
   // Story panel media is written to disk, so each app gets its own scratch
   // folder rather than the real public/story-images.
   const storyImagesDir = fs.mkdtempSync(path.join(os.tmpdir(), 'story-media-'));
+  // Raw sound uploads stream to disk too; same idea, its own folder.
+  const uploadsDir = fs.mkdtempSync(path.join(os.tmpdir(), 'uploads-'));
   app.use(express.json({ limit: '10mb' }));
 
   // Which campaign the in-flight request belongs to. Production resolves this
@@ -248,6 +250,12 @@ export function makeApp({ maxStoryVideoBytes } = {}) {
     MAX_MEDIA_BYTES,
     processImageSizes,
     saveUploadFile: () => '/uploads/test/stub.jpg',
+    uploadTarget: (subdir, id, mimeType) => {
+      const filename = id + '.' + (mimeType === 'audio/mpeg' ? 'mp3' : 'bin');
+      fs.mkdirSync(path.join(uploadsDir, subdir), { recursive: true });
+      return { abs: path.join(uploadsDir, subdir, filename), url: '/uploads/' + subdir + '/' + filename };
+    },
+    MAX_SOUND_BYTES: maxSoundBytes,
     deleteUploadFile: (url) => { deletedFiles.push(url); },
     // Shop/treasury helpers
     getShopConfig: async () => {
@@ -293,6 +301,6 @@ export function makeApp({ maxStoryVideoBytes } = {}) {
 
   return {
     app, ldb, ldbFor, masterPw: TEST_MASTER_PW, hashPassword, broadcasts, deletedFiles, parkedCampaigns,
-    sessions, setupTickets, captcha, loginGuard, auditEvents, sharedMedia, storyImagesDir,
+    sessions, setupTickets, captcha, loginGuard, auditEvents, sharedMedia, storyImagesDir, uploadsDir,
   };
 }

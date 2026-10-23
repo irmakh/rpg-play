@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-22 10:05
+// Written by Irmak Hakman — 2026-10-23 11:55
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -204,15 +204,22 @@ function uploadSubPath(subdir) {
 //
 // The id becomes the filename, so it is reduced to [A-Za-z0-9_-] first — a
 // restored backup supplies it, and '../../server' used to be a valid one.
-function saveUploadFile(subdir, id, mimeType, b64) {
+// Where a new upload goes: its absolute path on disk and the URL it will be
+// served at. The folder exists afterwards. Used directly by routes that stream
+// a raw file to disk (sounds) instead of handing over base64.
+function uploadTarget(subdir, id, mimeType) {
   const safeId = safeFileId(id);
   if (!safeId) throw new Error('Invalid upload id');
   const filename = `${safeId}.${mimeToExt(mimeType)}`;
   const rel = uploadSubPath(subdir);
   const dir = path.join(UPLOADS_DIR, rel);
   fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(path.join(dir, filename), Buffer.from(b64, 'base64'));
-  return `/uploads/${rel}/${filename}`;
+  return { abs: path.join(dir, filename), url: `/uploads/${rel}/${filename}` };
+}
+function saveUploadFile(subdir, id, mimeType, b64) {
+  const { abs, url } = uploadTarget(subdir, id, mimeType);
+  fs.writeFileSync(abs, Buffer.from(b64, 'base64'));
+  return url;
 }
 function deleteUploadFile(fileUrl) {
   const abs = uploadPath(fileUrl);
@@ -494,7 +501,7 @@ const MAX_MEDIA_BYTES = 25 * 1024 * 1024;
 // Bump this number whenever frontend JS or CSS files change.
 // Also bump CACHE in public/sw.js to the same value.
 // Both must always match. See deployment notes in CLAUDE.md.
-const FRONTEND_VERSION = 306;
+const FRONTEND_VERSION = 307;
 
 // ── Express app ───────────────────────────────────────────────────────────────
 const app = express();
@@ -877,7 +884,7 @@ const ctx = {
   checkDmPassword, hashPasswordAsync, verifyPasswordAsync,
   sessions, setupTickets, captcha, loginGuard, audit, TRUST_PROXY,
   // File helpers
-  processImageSizes, saveUploadFile, deleteUploadFile, readUploadAsBase64, uploadPath,
+  processImageSizes, saveUploadFile, uploadTarget, deleteUploadFile, readUploadAsBase64, uploadPath,
   mimeToExt, extToMime,
   // Media DB
   mediaDb, insertSharedMedia, _mediaGet, _mapUpsert,

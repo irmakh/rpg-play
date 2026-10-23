@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Written by Irmak Hakman — 2026-10-15 14:48 -->
+<!-- Written by Irmak Hakman — 2026-10-23 11:55 -->
 <!-- Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) -->
 <html lang="en" class="lamplit app-page">
 <head>
@@ -246,7 +246,7 @@
            ondragover="event.preventDefault();this.classList.add('drag-over')"
            ondragleave="this.classList.remove('drag-over')"
            ondrop="event.preventDefault();this.classList.remove('drag-over');upAddFiles(event.dataTransfer.files)">
-        Click or drop audio files here (MP3, WAV, OGG, FLAC, M4A, AAC — max 50 MB each)
+        Click or drop audio files here (MP3, WAV, OGG, FLAC, M4A, AAC — max 250 MB each)
       </div>
       <input type="file" id="up-file" multiple accept="audio/*,.mp3,.mpeg,.mp4,.m4a,.wav,.ogg,.flac,.aac,.webm"
              style="display:none" onchange="upAddFiles(this.files);this.value=''">
@@ -756,7 +756,7 @@ async function deleteSound(id, name) {
 }
 
 // ── Upload (multi-file queue) ────────────────────────────────────────────────
-const MAX_AUDIO_MB = 50;
+const MAX_AUDIO_MB = 250;   // matches the server's MAX_SOUND_BYTES
 let upQueue = [];       // { file, name, status: pending|uploading|done|error, pct, err }
 let _uploading = false;
 
@@ -820,12 +820,8 @@ async function upStart() {
     q.status = 'uploading';
     renderUpQueue();
     try {
-      const dataUrl = await new Promise((res, rej) => {
-        const r = new FileReader();
-        r.onload = e => res(e.target.result);
-        r.onerror = () => rej(new Error('Read failed'));
-        r.readAsDataURL(q.file);
-      });
+      // The raw file goes up as the body, not base64 in JSON: a 250 MB file
+      // would be a 334 MB string, too big for the server's JSON limit.
       await new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
         xhr.upload.onprogress = e => {
@@ -845,9 +841,10 @@ async function upStart() {
           } catch { reject(new Error('Upload failed')); }
         };
         xhr.onerror = () => reject(new Error('Network error'));
-        xhr.open('POST', '/api/sounds');
-        Object.entries(authHeaders()).forEach(([k, v]) => xhr.setRequestHeader(k, v));
-        xhr.send(JSON.stringify({ name: q.name, dataUrl, tags: [] }));
+        xhr.open('POST', '/api/sounds/upload?name=' + encodeURIComponent(q.name));
+        Object.entries(authHeaders()).forEach(([k, v]) => { if (k !== 'Content-Type') xhr.setRequestHeader(k, v); });
+        xhr.setRequestHeader('Content-Type', q.file.type || 'application/octet-stream');
+        xhr.send(q.file);
       });
       q.status = 'done';
       ok++;

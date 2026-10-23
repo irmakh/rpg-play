@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-10-23 11:55
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -11,6 +11,8 @@
  * pressed play last decided what every other campaign's client heard on load.
  */
 import { describe, it, expect } from 'vitest';
+import fs from 'fs';
+import path from 'path';
 import request from 'supertest';
 import { makeApp, TEST_MASTER_PW } from '../helpers/test-app.js';
 
@@ -188,5 +190,47 @@ describe('sound playback state is per campaign', () => {
 
     const west = (await state(app, WEST)).body;
     expect(west.currentPosition).toBe(0);
+  });
+});
+
+describe('POST /api/sounds/upload (raw file)', () => {
+  const MP3 = Buffer.concat([Buffer.from('ID3'), Buffer.alloc(2000, 7)]);
+  const upload = (app, body, { name = 'Rain', type = 'audio/mpeg', dm = true } = {}) => {
+    let r = request(app).post('/api/sounds/upload?name=' + encodeURIComponent(name))
+      .set('X-Campaign-Id', AMN).set('Content-Type', type);
+    if (dm) r = r.set('X-Master-Password', TEST_MASTER_PW);
+    return r.send(body);
+  };
+
+  it('saves the file to disk and adds it to the library', async () => {
+    const { app, ldbFor, uploadsDir } = makeApp();
+    const res = await upload(app, MP3, { name: 'Yağmur Sesi' });
+    expect(res.status).toBe(200);
+    expect(res.body.name).toBe('Yağmur Sesi');
+    const onDisk = path.join(uploadsDir, 'sounds', path.basename(res.body.url));
+    expect(fs.readFileSync(onDisk).equals(MP3)).toBe(true);
+    expect(fs.existsSync(onDisk + '.part')).toBe(false);
+    expect(ldbFor(AMN).listSoundFiles().map(s => s.name)).toContain('Yağmur Sesi');
+  });
+
+  it('refuses a file over the limit and leaves nothing behind', async () => {
+    const { app, ldbFor, uploadsDir } = makeApp({ maxSoundBytes: 1000 });
+    const res = await upload(app, MP3);
+    expect(res.status).toBe(413);
+    expect(res.body.code).toBe('TOO_LARGE');
+    expect(ldbFor(AMN).listSoundFiles()).toHaveLength(0);
+    const dir = path.join(uploadsDir, 'sounds');
+    expect(fs.existsSync(dir) ? fs.readdirSync(dir) : []).toEqual([]);
+  });
+
+  it('needs the DM', async () => {
+    const { app } = makeApp();
+    expect((await upload(app, MP3, { dm: false })).status).toBe(401);
+  });
+
+  it('refuses a type that is not audio, and a missing name', async () => {
+    const { app } = makeApp();
+    expect((await upload(app, MP3, { type: 'text/html' })).status).toBe(400);
+    expect((await upload(app, MP3, { name: '' })).status).toBe(400);
   });
 });

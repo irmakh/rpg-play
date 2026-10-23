@@ -1,6 +1,9 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-10-23 11:55
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
+
+import fs from 'fs';
+import { AsyncLocalStorage } from 'async_hooks';
 
 export default function register(app, ctx) {
   const { ldb, masterAuth, saveUploadFile, broadcast, genId } = ctx;
@@ -9,6 +12,12 @@ export default function register(app, ctx) {
   const currentCampaignId = ctx.currentCampaignId || (() => '');
 
   const AUDIO_MIME = new Set(['audio/mpeg','audio/wav','audio/ogg','audio/webm','audio/flac','audio/mp4','audio/aac','audio/x-m4a','video/mpeg']);
+
+  // A sound file sent raw (POST /api/sounds/upload) may be this large. Base64
+  // inside JSON could never get there: 250 MB is a 334 MB string, past the
+  // 200 MB body limit, and held in memory several times over.
+  const MAX_SOUND_BYTES = ctx.MAX_SOUND_BYTES || 250 * 1024 * 1024;   // tests pass a smaller one
+  const TOO_LARGE = { error: 'Sound files can be at most 250 MB.', code: 'TOO_LARGE' };
 
   // What is playing, per campaign. Two groups at two tables are two separate
   // sessions: each has its own track, position, loop mode and volume, and
@@ -63,6 +72,67 @@ export default function register(app, ctx) {
       ldb.createSoundFile(newId, fields);
       res.json({ ok: true, id: newId, url, name: fields.name, tags: fields.tags });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
+  });
+
+  // ── Raw upload ──────────────────────────────────────────────────────────────
+  // The body is the audio file itself (Content-Type: its audio type), the name
+  // rides in ?name=. It streams to a .part file, counted as it arrives, and is
+  // renamed into place only once complete — the same scheme as story videos.
+  // The JSON route above stays for pages loaded before this one existed.
+  app.post('/api/sounds/upload', (req, res) => {
+    // A refusal sent before the body is read closes the connection, so the
+    // client stops streaming a file nobody will keep.
+    const refuse = (status, body) => res.set('Connection', 'close').status(status).json(body);
+    if (!masterAuth(req)) return refuse(401, { error: 'Unauthorized' });
+    const name = String(req.query.name || '').trim().slice(0, 120);
+    if (!name) return refuse(400, { error: 'name required' });
+    const mimeType = String(req.headers['content-type'] || '').split(';')[0].trim().toLowerCase();
+    if (!AUDIO_MIME.has(mimeType)) return refuse(400, { error: 'Invalid audio type' });
+    if (Number(req.headers['content-length']) > MAX_SOUND_BYTES) return refuse(413, TOO_LARGE);
+
+    const newId = genId();
+    const { abs, url } = ctx.uploadTarget('sounds', newId, mimeType);
+    const partPath = abs + '.part';
+    const out = fs.createWriteStream(partPath);
+    let received = 0;
+    let failed = false;
+
+    const fail = (status, body) => {
+      if (failed) return;
+      failed = true;
+      req.unpipe(out);
+      out.destroy();
+      try { fs.unlinkSync(partPath); } catch {}
+      if (!res.headersSent) refuse(status, body);
+    };
+
+    req.on('data', chunk => {
+      if (failed) return;
+      received += chunk.length;
+      // Content-Length can be absent (chunked) or wrong, so the count is the real limit.
+      if (received > MAX_SOUND_BYTES) fail(413, TOO_LARGE);
+    });
+    req.on('close', () => { if (!req.complete) fail(400, { error: 'Upload interrupted.' }); });
+    out.on('error', () => fail(500, { error: 'Could not save the sound.' }));
+
+    // Bound to the request's campaign context now: 'finish' fires from socket
+    // reads outside it, where ldb (campaign-scoped) would throw — see stories.js.
+    out.on('finish', AsyncLocalStorage.bind(() => {
+      if (failed) return;
+      if (!received) return fail(400, { error: 'The file is empty.' });
+      try {
+        fs.renameSync(partPath, abs);
+        const fields = { name, url, mime_type: mimeType, tags: [], created_at: new Date().toISOString() };
+        ldb.createSoundFile(newId, fields);
+        res.json({ ok: true, id: newId, url, name, tags: [] });
+      } catch (err) {
+        console.error('[sounds] upload save failed:', err);
+        try { fs.unlinkSync(abs); } catch {}
+        fail(500, { error: 'Could not save the sound.' });
+      }
+    }));
+
+    req.pipe(out);
   });
 
   app.delete('/api/sounds/:id', (req, res) => {
