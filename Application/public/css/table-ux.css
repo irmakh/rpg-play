@@ -1,4 +1,4 @@
-/* Written by Irmak Hakman — 2026-10-15 14:25 */
+/* Written by Irmak Hakman — 2026-10-28 15:19 */
 /* Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) */
 
 /* ── Table screen: ease of use ──────────────────────────────────────────────
@@ -169,6 +169,9 @@ html.lamplit .mctx .cond-btn{min-height:calc(22px*var(--fs, 1));padding:calc(2px
   pointer-events:none;
 }
 #ux-hover[hidden]{display:none}
+/* The token's picture: the one part of the card that takes the pointer, so it
+   can be clicked open in full (uxViewPicture). */
+.ux-hv-pic{display:block;width:100%;max-height:calc(180px*var(--fs, 1));object-fit:contain;margin-bottom:calc(6px*var(--fs, 1));border-radius:var(--r-sm);background:var(--sunken);pointer-events:auto;cursor:zoom-in}
 .ux-hv-kind{font-size:calc(9px * var(--fs, 1));letter-spacing:1px;text-transform:uppercase;color:var(--ash)}
 .ux-hv-name{font-weight:700;word-break:break-word}
 .ux-hv-sub{font-size:calc(10px * var(--fs, 1));color:var(--ash)}

@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-28 14:25
+// Written by Irmak Hakman — 2026-10-28 15:19
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -98,6 +98,20 @@ function uxHintText(tool, o) {
   return '';
 }
 
+/**
+ * A token's picture: `full` is the original upload, opened in the lightbox;
+ * `view` is the 500px copy every upload also gets (beside its _thumb), for the
+ * hover card - falling back to the original for anything else (an old data:
+ * URL). Null for a token without one. Anyone who can see the token may open it.
+ */
+function uxTokenPicture(tok) {
+  const full = (tok && (tok.portrait || tok.portraitThumb)) || '';
+  if (!full) return null;
+  const thumb = tok.portraitThumb || '';
+  const view = /_thumb\.webp$/.test(thumb) ? thumb.replace(/_thumb\.webp$/, '_medium.webp') : full;
+  return { full, view };
+}
+
 /** Who may see a token's numbers - the same rule renderTokens() uses for its tooltip. */
 function uxSeesStats(tok, dm) {
   return !!dm || tok.type !== 'monster' || !!tok.assignedCharId;
@@ -111,7 +125,11 @@ function uxSeesStats(tok, dm) {
 function uxHoverHTML(tok, o) {
   const kind = tok.type === 'monster' ? 'Monster' : tok.type === 'npc' ? 'NPC' : tok.type === 'character' ? 'Character'
              : tok.type === 'companion' ? 'Companion' : 'Token';
-  let h = `<div class="ux-hv-kind">${kind}</div><div class="ux-hv-name">${esc(o.name)}</div>`;
+  const pic = uxTokenPicture(tok);
+  let h = pic
+    ? `<img class="ux-hv-pic" src="${esc(pic.view)}" data-full="${esc(pic.full)}" alt="" title="Click to see it in full" onerror="this.onerror=null;this.src=this.dataset.full">`
+    : '';
+  h += `<div class="ux-hv-kind">${kind}</div><div class="ux-hv-name">${esc(o.name)}</div>`;
   if (o.owner) h += `<div class="ux-hv-sub">Played by ${esc(o.owner)}</div>`;
   if (uxSeesStats(tok, o.dm)) {
     const max = tok.hpMax || 0, cur = tok.hpCurrent || 0, temp = tok.hpTemp || 0;
@@ -163,9 +181,19 @@ function uxTokenMenuHTML(tok, o) {
       : `<button type="button" class="btn sm ux-ctx-item" onclick="_dismissMapCtxMenu();toggleTokenVisibility()">${ico('eye-off')} Hide from players</button>`;
     h += `<button type="button" class="btn sm ux-ctx-item" onclick="_dismissMapCtxMenu();rollTokenInitiative()">${ico('dice')} Roll initiative</button>`;
   }
+  if (uxTokenPicture(tok)) h += `<button type="button" class="btn sm ux-ctx-item" onclick="_dismissMapCtxMenu();uxViewPicture('${escJs(tok.id)}')">${ico('image')} View picture</button>`;
   h += `<button type="button" class="btn sm ux-ctx-item" onclick="_dismissMapCtxMenu();uxShowDetails()">${ico('document')} Show details</button>`;
   if (o.dm) h += `<button type="button" class="btn sm danger ux-ctx-item" onclick="_dismissMapCtxMenu();deleteSelectedToken()">${ico('trash')} Remove from map</button>`;
   return h;
+}
+
+/**
+ * The right-click menu on a token someone else controls: only its picture.
+ * o = { name, kind }
+ */
+function uxPictureMenuHTML(tok, o) {
+  return `<div class="mctx-kind">${esc(o.kind || 'Token')}</div><div class="mctx-name">${esc(o.name)}</div>`
+    + `<button type="button" class="btn sm ux-ctx-item" onclick="_dismissMapCtxMenu();uxViewPicture('${escJs(tok.id)}')"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-image"></use></svg> View picture</button>`;
 }
 
 // ── Remembered settings ───────────────────────────────────────────────────────
@@ -667,7 +695,7 @@ function uxTokenAt(e) {
   const ox = tableState.offsetX || 0, oy = tableState.offsetY || 0;
   for (let i = tokens.length - 1; i >= 0; i--) {
     const tok = tokens[i];
-    if (!tok.visible && !isDM()) continue;
+    if (!tok.visible && !isMyToken(tok)) continue;   // drawn for the DM and its owner (renderTokens)
     const span = (tok.tokenSize || 1) * cs;
     const cx = ox + (tok.x || 0) * cs + span / 2, cy = oy + (tok.y || 0) * cs + span / 2;
     if (Math.hypot(pos.x - cx, pos.y - cy) <= span / 2) return tok;
@@ -679,7 +707,19 @@ function uxTokenAt(e) {
 canvasArea.addEventListener('contextmenu', e => {
   if (_uxTouch) { e.preventDefault(); return; }   // a long press is a drag here, not a menu
   const tok = uxTokenAt(e);
-  if (!uxCanEdit(tok)) return;                    // someone else's token: the browser's own menu
+  if (!uxCanEdit(tok)) {
+    // Anyone may look at a token's picture; the rest of the menu is for whoever
+    // controls it. No picture (or a monster under fog): the browser's own menu.
+    if (!tok || !uxTokenPicture(tok) || (!isDM() && uxUnderFog(tok))) return;
+    e.preventDefault();
+    uxHideHover();
+    uxCloseHpBox();
+    const kind = tok.type === 'monster' ? 'Monster' : tok.type === 'npc' ? 'NPC' : tok.type === 'character' ? 'Character'
+               : tok.type === 'companion' ? 'Companion' : 'Token';
+    _showMapCtxMenu(e.clientX, e.clientY, uxPictureMenuHTML(tok, { name: tokDisplayName(tok), kind }));
+    _mapCtxMenu?.classList.add('ux-ctx');
+    return;
+  }
   e.preventDefault();
   uxHideHover();
   uxCloseHpBox();
@@ -689,6 +729,14 @@ canvasArea.addEventListener('contextmenu', e => {
   _showMapCtxMenu(e.clientX, e.clientY, uxTokenMenuHTML(tok, { name: tokDisplayName(tok), dm: isDM() }));
   _mapCtxMenu?.classList.add('ux-ctx');
 });
+
+/** A token's picture in full, in the shared lightbox (js/lib/lightbox.js). */
+function uxViewPicture(id) {
+  const pic = uxTokenPicture(tokens.find(t => t.id === id));
+  if (!pic) return;
+  uxHideHover();
+  lightboxOpen(pic.full);
+}
 
 function uxApplyHp(mode, amount) {
   const tok = tokens.find(t => t.id === selectedTokenId);
@@ -787,13 +835,23 @@ function uxOpenHpBox(first) {
 // ── Hover summary ─────────────────────────────────────────────────────────────
 let _uxHoverId = null;      // token the card is showing, or waiting to show
 let _uxHoverTimer = null;
+let _uxHoverGrace = null;   // a card with a picture waits for the pointer to reach it
 
 function uxHideHover() {
   clearTimeout(_uxHoverTimer);
+  clearTimeout(_uxHoverGrace);
   _uxHoverTimer = null;
   _uxHoverId = null;
   const card = document.getElementById('ux-hover');
   if (card) card.hidden = true;
+}
+// Leaving a token: a card with a picture stays a moment so the pointer can
+// get to the picture and click it; any other card goes at once, as it always has.
+function uxHoverLeaveSoon() {
+  const card = document.getElementById('ux-hover');
+  if (!card || card.hidden || !card.querySelector('.ux-hv-pic')) { uxHideHover(); return; }
+  clearTimeout(_uxHoverGrace);
+  _uxHoverGrace = setTimeout(uxHideHover, 350);
 }
 function uxHoverOwner(tok) {
   const ownerId = tok.assignedCharId || (tok.type !== 'monster' ? tok.linkedId : '');
@@ -806,6 +864,11 @@ function uxFillHover(tok) {
     card = document.createElement('div');
     card.id = 'ux-hover';
     card.setAttribute('role', 'tooltip');
+    // The card ignores the pointer, all but its picture (table-ux.css). Its
+    // events bubble up here, so these survive the card being refilled.
+    card.addEventListener('mouseover', e => { if (e.target.closest('.ux-hv-pic')) clearTimeout(_uxHoverGrace); });
+    card.addEventListener('mouseout', e => { if (e.target.closest('.ux-hv-pic')) uxHoverLeaveSoon(); });
+    card.addEventListener('click', e => { if (e.target.closest('.ux-hv-pic') && _uxHoverId) uxViewPicture(_uxHoverId); });
     document.body.appendChild(card);
   }
   card.innerHTML = uxHoverHTML(tok, {
@@ -838,14 +901,15 @@ function uxShowHover(id) {
 canvasArea.addEventListener('mouseover', e => {
   const el = e.target.closest?.('.token');
   const id = el ? el.dataset.id : null;
-  if (id === _uxHoverId) return;
+  if (id === _uxHoverId) { clearTimeout(_uxHoverGrace); return; }
+  if (!id) { uxHoverLeaveSoon(); return; }
   uxHideHover();
-  if (!id || e.buttons) return;                   // not while a button is held (dragging)
+  if (e.buttons) return;                          // not while a button is held (dragging)
   if (window.matchMedia?.('(hover: none)').matches) return;   // touch: a tap would leave it stuck open
   _uxHoverId = id;
   _uxHoverTimer = setTimeout(() => { if (_uxHoverId === id) uxShowHover(id); }, 350);
 });
-canvasArea.addEventListener('mouseleave', uxHideHover);
+canvasArea.addEventListener('mouseleave', uxHoverLeaveSoon);
 canvasArea.addEventListener('mousedown', uxHideHover, true);
 canvasArea.addEventListener('scroll', uxHideHover, { passive: true });
 

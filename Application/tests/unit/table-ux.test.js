@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-11 01:04
+// Written by Irmak Hakman — 2026-10-28 15:19
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -36,7 +36,7 @@ function load() {
     + 'function hpBarColor(p){ return p >= 0.5 ? "green" : "red"; }',
     ctx
   );
-  runInContext(PURE + '\n;globalThis.__ux = { uxWheelZoom, uxPinchZoom, uxParseHp, uxHpAfter, uxToolForKey, uxKeyForTool, uxHintText, uxSeesStats, uxHoverHTML, uxCondsHTML, uxTokenMenuHTML };', ctx);
+  runInContext(PURE + '\n;globalThis.__ux = { uxWheelZoom, uxPinchZoom, uxParseHp, uxHpAfter, uxToolForKey, uxKeyForTool, uxHintText, uxSeesStats, uxHoverHTML, uxCondsHTML, uxTokenMenuHTML, uxTokenPicture, uxPictureMenuHTML };', ctx);
   return ctx.__ux;
 }
 const ux = load();
@@ -238,6 +238,47 @@ describe('uxHoverHTML', () => {
       { name: EVIL, owner: EVIL, dm: true }
     );
     expectInert(h);
+  });
+});
+
+describe('token pictures', () => {
+  const uploaded = { id: 't1', type: 'monster', portrait: '/uploads/c/tokens/a.png', portraitThumb: '/uploads/c/tokens/a_thumb.webp' };
+
+  it('opens the original, and shows the 500px copy in the card', () => {
+    expect(ux.uxTokenPicture(uploaded)).toEqual({ full: '/uploads/c/tokens/a.png', view: '/uploads/c/tokens/a_medium.webp' });
+  });
+
+  it('uses the original for a picture with no sized copies', () => {
+    const p = ux.uxTokenPicture({ portrait: 'data:image/png;base64,AAAA' });
+    expect(p).toEqual({ full: 'data:image/png;base64,AAAA', view: 'data:image/png;base64,AAAA' });
+  });
+
+  it('has nothing for a token without a picture', () => {
+    expect(ux.uxTokenPicture({ type: 'character' })).toBeNull();
+    expect(ux.uxHoverHTML({ type: 'character', hpMax: 5 }, { name: 'Vex', dm: false })).not.toContain('ux-hv-pic');
+  });
+
+  it('puts the picture in the hover card, for anyone who can see the token', () => {
+    const h = ux.uxHoverHTML(uploaded, { name: 'G3', dm: false });
+    expect(h).toContain('class="ux-hv-pic" src="/uploads/c/tokens/a_medium.webp" data-full="/uploads/c/tokens/a.png"');
+  });
+
+  it('offers View picture in the full menu only when there is one', () => {
+    const base = { type: 'monster', hpCurrent: 4, hpMax: 7, conditions: '[]' };
+    expect(ux.uxTokenMenuHTML({ ...uploaded, ...base }, { name: 'G3', dm: false })).toContain("uxViewPicture('t1')");
+    expect(ux.uxTokenMenuHTML(base, { name: 'G3', dm: false })).not.toContain('View picture');
+  });
+
+  it('gives someone else\'s token a menu with only its picture', () => {
+    const h = ux.uxPictureMenuHTML(uploaded, { name: 'G3', kind: 'Monster' });
+    expect(h).toContain('View picture');
+    expect(h).toContain('Monster');
+    expect(h).not.toContain('Dmg');
+    expect(h).not.toContain('Conditions');
+  });
+
+  it('escapes a name typed by a player', () => {
+    expect(ux.uxPictureMenuHTML(uploaded, { name: '<b>x</b>' })).toContain('&lt;b&gt;x&lt;/b&gt;');
   });
 });
 

@@ -21,6 +21,19 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [309] — 2026-10-28 — See token pictures in full
+
+- **The hover card over a token shows its picture.** Clicking the picture opens it
+  full-size (the original upload) in the lightbox. The card stays a moment after the
+  pointer leaves the token so the picture can be reached; a card for a token without a
+  picture closes at once, as before.
+- **Right-click → View picture, for everyone.** On a token you control the menu gains a
+  *View picture* line. On anyone else's token a player now gets a small menu with just
+  *View picture* (it used to be the browser's own menu). Only tokens on that player's
+  map; a monster under fog or a token with no picture keeps the browser's menu.
+- A player can right-click their own hidden token (a companion they hid); the menu found
+  only visible ones.
+
 ## [308] — 2026-10-28 — Players own their companions
 
 - **A Companions tab on the character sheet.** Players build their familiars, summons
