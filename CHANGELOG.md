@@ -21,6 +21,18 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [311] — 2026-10-28 — Make an item unidentified again
+
+- **"Make unidentified"** on an identified treasury item, next to the line saying it is
+  identified in the editor and in the item's ⋯ menu. It is for an item identified by
+  mistake.
+- **Copies players already hold go back too.** They show the unidentified name again
+  (the second name if the item has one, otherwise the real name marked
+  "(unidentified)"). The description, bonuses, charges and attack row are hidden again,
+  and a worn or attuned copy is taken off. Identify brings everything back.
+- Neither Identify nor Make unidentified is offered as an Undo: the other button is the
+  way back.
+
 ## [310] — 2026-10-28 — Treasury: piles
 
 The DM's treasury (`/treasury.html`) is rebuilt around **piles**: a chest, a hoard, a

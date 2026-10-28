@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-12 00:30
+// Written by Irmak Hakman — 2026-10-28 17:05
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -978,5 +978,61 @@ describe('the potion kind', () => {
     expect(ldb.getTreasuryItem(id).itemType).toBe('potion');
     await asDM(request(app).put(`/api/treasury/${id}`)).send({ itemType: 'gizmo' });
     expect(ldb.getTreasuryItem(id).itemType).toBe('other');
+  });
+});
+
+describe('making an identified item unidentified again', () => {
+  async function givenAndIdentified(over = {}) {
+    const { app, ldb, broadcasts } = setup();
+    const id = seed(ldb, {
+      name: 'Flame Tongue', unidName: 'Warm Blade', descVisible: false, itemType: 'weapon',
+      weaponAtk: '1', weaponDmg: '1d8 slashing', description: 'Burns.', charges: 3, acBonus: 1, ...over,
+    });
+    await asDM(request(app).post(`/api/treasury/${id}/give`)).send({ charId: 'char-a' });
+    await asDM(request(app).put(`/api/treasury/${id}`)).send({ descVisible: true });
+    return { app, ldb, broadcasts, id };
+  }
+
+  it('hides the item again on every copy players hold, attack row included', async () => {
+    const { app, ldb, id } = await givenAndIdentified();
+    expect(charItems(ldb)[0]).toMatchObject({ name: 'Flame Tongue', notes: expect.stringContaining('Burns.') });
+    expect(JSON.parse(charData(ldb)._weapons).some(w => w[0] === 'Flame Tongue')).toBe(true);
+
+    const res = await asDM(request(app).put(`/api/treasury/${id}`)).send({ descVisible: false });
+    expect(res.status).toBe(200);
+    expect(ldb.getTreasuryItem(id).descVisible).toBe(false);
+    expect(charItems(ldb)[0]).toMatchObject({
+      name: 'Warm Blade', unidentified: true, notes: '', weaponAtk: '', weaponDmg: '', charges: 0, acBonus: 0,
+    });
+    expect(JSON.parse(charData(ldb)._weapons)).toEqual([]);
+    expect(JSON.stringify(charData(ldb))).not.toContain('Burns.');
+  });
+
+  it('takes a worn copy off, and uses the marked real name without a second name', async () => {
+    const { app, ldb, id } = await givenAndIdentified({ unidName: '', itemType: 'wondrous', weaponAtk: '', weaponDmg: '' });
+    const data = charData(ldb);
+    const its = JSON.parse(data._items);
+    its[0].equipped = true; its[0].attuned = true;
+    ldb.updateCharacter('char-a', { dataJson: JSON.stringify({ ...data, _items: JSON.stringify(its) }), name: 'Alice' });
+    await asDM(request(app).put(`/api/treasury/${id}`)).send({ descVisible: false });
+    expect(charItems(ldb)[0]).toMatchObject({ name: 'Flame Tongue - (unidentified)', equipped: false, attuned: false, unidentified: true });
+  });
+
+  it('can be identified again afterwards', async () => {
+    const { app, ldb, id } = await givenAndIdentified();
+    await asDM(request(app).put(`/api/treasury/${id}`)).send({ descVisible: false });
+    await asDM(request(app).put(`/api/treasury/${id}`)).send({ descVisible: true });
+    expect(charItems(ldb)[0]).toMatchObject({ name: 'Flame Tongue' });
+    expect(charItems(ldb)[0].unidentified).toBeUndefined();
+    expect(JSON.parse(charData(ldb)._weapons).filter(w => w[0] === 'Flame Tongue')).toHaveLength(1);
+  });
+
+  it('leaves other items and other weapon rows alone', async () => {
+    const { app, ldb, id } = await givenAndIdentified();
+    const other = seed(ldb, { name: 'Dagger', itemType: 'weapon', weaponDmg: '1d4 piercing', descVisible: true });
+    await asDM(request(app).post(`/api/treasury/${other}/give`)).send({ charId: 'char-a' });
+    await asDM(request(app).put(`/api/treasury/${id}`)).send({ descVisible: false });
+    expect(charItems(ldb).find(i => i.srcId === other)).toMatchObject({ name: 'Dagger' });
+    expect(JSON.parse(charData(ldb)._weapons).map(w => w[0])).toEqual(['Dagger']);
   });
 });

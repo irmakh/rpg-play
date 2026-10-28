@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-28 16:10
+// Written by Irmak Hakman — 2026-10-28 17:06
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -354,6 +354,49 @@ function renameHeldCopies(characters, item) {
   return touched;
 }
 
+/**
+ * The reverse of identifyHeldCopies(), for an item the DM identified by
+ * mistake: every identified copy players hold goes back to what grantItems()
+ * stores for an unidentified one: the stand-in name, no description, no
+ * bonuses, no charges and no attack row. A copy is also taken off and out of
+ * attunement, because the bonuses that made it worth wearing are now unknown.
+ * Returns the characters whose sheets changed.
+ */
+function unidentifyHeldCopies(characters, item) {
+  const touched = [];
+  for (const c of characters) {
+    let data = {};
+    try { data = JSON.parse(c.dataJson || '{}'); } catch { continue; }
+    let its = [];
+    try { its = JSON.parse(data._items || '[]'); } catch { continue; }
+    const holds = its.filter(i => i && i.srcId === item.id && !i.unidentified);
+    if (holds.length === 0) continue;
+    let weapons = [];
+    try { weapons = JSON.parse(data._weapons || '[]'); } catch {}
+
+    // An identified weapon copy added one attack row under the item's name;
+    // take as many such rows back as there are weapon copies.
+    let rows = holds.filter(h => h.itemType === 'weapon').length;
+    if (rows) weapons = weapons.filter(w => !(rows > 0 && Array.isArray(w) && w[0] === item.name && rows--));
+
+    for (const held of holds) {
+      Object.assign(held, {
+        name: item.unidName || unidentifiedItemName(item.name),
+        unidentified: true,
+        equipped: false, attuned: false, requiresAttunement: false,
+        acBase: 10, acBonus: 0, initBonus: 0, speedBonus: 0,
+        weaponAtk: '', weaponDmg: '', notes: '',
+        charges: 0, chargesUsed: 0, chargesRecharge: '',
+      });
+    }
+
+    data._items = JSON.stringify(its);
+    data._weapons = JSON.stringify(weapons);
+    touched.push({ char: c, dataJson: JSON.stringify(data) });
+  }
+  return touched;
+}
+
 // Local copy so grantItems stays usable without threading ctx through it.
 function cpToGpStringSafe(valueCp) {
   if (!valueCp) return '0 gp';
@@ -560,6 +603,13 @@ export default function register(app, ctx) {
       // Revealing the description identifies every copy players already hold.
       const revealed = update.descVisible === true && !existing.descVisible;
       if (revealed) await identifyForEveryone({ ...existing, ...update, id: req.params.id });
+
+      // Taking it back hides it again on every copy players hold.
+      if (update.descVisible === false && existing.descVisible) {
+        const touched = unidentifyHeldCopies(ldb.listCharacters(), objFromRecord({ ...existing, ...update, id: req.params.id }));
+        for (const { char, dataJson } of touched) ldb.updateCharacter(char.id, { dataJson, name: char.name });
+        for (const { char } of touched) broadcast('characters', { action: 'updated', id: char.id });
+      }
 
       // Still unidentified, but called something else now: rename the copies
       // players hold, so nobody keeps reading a name they should not have.

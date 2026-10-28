@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Written by Irmak Hakman — 2026-10-28 16:10 -->
+<!-- Written by Irmak Hakman — 2026-10-28 17:06 -->
 <!-- Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) -->
 <html lang="en" class="lamplit app-page">
 <head>
@@ -174,7 +174,8 @@
             <div class="help">Players read this, not the real name or description, until you identify it. Empty: the real name, marked “(unidentified)”.</div>
           </div>
         </div>
-        <div id="d-idd" class="help">Identified: players see its name, description and properties.</div>
+        <div id="d-idd" class="help">Identified: players see its name, description and properties.
+          <button type="button" class="link" onclick="unidentifyItem(curId)" title="Hide its real name, description and properties again, on every copy players hold">Make unidentified</button></div>
 
         <details class="sect" id="sect-weapon">
           <summary>Weapon</summary>

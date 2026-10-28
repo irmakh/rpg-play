@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-28 16:10
+// Written by Irmak Hakman — 2026-10-28 17:06
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -322,9 +322,9 @@ async function flushSave(id) {
     const res = await api(`/api/treasury/${id}`, { method: 'PUT', body: JSON.stringify(patch) });
     if (res.status === 401) { handleUnauth(); return; }
     if (!res.ok) throw new Error('refused');
-    // Identifying reaches the players' own sheets and cannot be taken back, so
-    // it is never offered as an undo.
-    lastUndo = patch.descVisible === true ? null : { id, before: p.before, label: p.label || 'last change' };
+    // Identifying, or taking it back, reaches the players' own sheets, so it is
+    // never offered as an undo: the other button is the way back.
+    lastUndo = patch.descVisible !== undefined ? null : { id, before: p.before, label: p.label || 'last change' };
     setSaveState('Saved');
   } catch {
     const it = byId(id);
@@ -759,7 +759,9 @@ function openItemMenu(btn, id) {
     + (give ? `<div class="menu-h">Give one to</div><div class="menu-scroll">${give}</div>` : '')
     + (move ? `<div class="menu-h">Move to pile</div><div class="menu-scroll">${move}</div>` : '')
     + '<hr>'
-    + (it.descVisible ? '' : `<button type="button" onclick="closeMenu();identifyItem(${I})">${ico('eye')} Identify</button>`)
+    + (it.descVisible
+      ? `<button type="button" onclick="closeMenu();unidentifyItem(${I})">${ico('eye-off')} Make unidentified</button>`
+      : `<button type="button" onclick="closeMenu();identifyItem(${I})">${ico('eye')} Identify</button>`)
     + `<button type="button" onclick="closeMenu();duplicateItem(${I})">Duplicate</button>`
     + `<button type="button" class="bad" onclick="closeMenu();deleteItem(${I})">${ico('trash')} Delete</button>`);
 }
@@ -1053,6 +1055,16 @@ async function identifyItem(id) {
   if (!it || it.descVisible) return;
   if (!confirm(`Identify "${it.name}"?\n\nPlayers will see its real name, description and properties, on every copy they hold. This cannot be undone.`)) return;
   queueSave(id, { descVisible: true }, { now: true });
+  renderAll();
+}
+
+// For an item identified by mistake. The copies players hold go back to the
+// unidentified name with nothing revealed, and come off if worn.
+function unidentifyItem(id) {
+  const it = byId(id);
+  if (!it || !it.descVisible) return;
+  if (!confirm(`Make "${it.name}" unidentified again?\n\nPlayers will see only ${it.unidName ? `“${it.unidName}”` : 'its name, marked (unidentified)'}: no description or properties, on every copy they hold. Copies they wear are taken off.`)) return;
+  queueSave(id, { descVisible: false }, { now: true });
   renderAll();
 }
 
