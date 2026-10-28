@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-28 16:10
+// Written by Irmak Hakman — 2026-10-28 17:14
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -576,6 +576,7 @@ export function makeLdb() {
   const _preparedMaps = [];
   function listPreparedMaps() { return _preparedMaps.slice(); }
   function createPreparedMap(id, fields) { _preparedMaps.push({ id, ...fields }); }
+  function getPreparedMap(id) { return _preparedMaps.find(m => m.id === id) || null; }
 
   // ── Notifications (mirror db/localdb.js) ────────────────────────────────────
   function createNotification(id, f) {
@@ -765,7 +766,7 @@ export function makeLdb() {
     // chat + drawings
     listChatLog, appendChatLog, deleteChatMessage, clearChatLog,
     listDrawings, addDrawing, updateDrawing, deleteDrawing, clearDrawings,
-    listPreparedMaps, createPreparedMap,
+    listPreparedMaps, getPreparedMap, createPreparedMap,
     // notifications
     createNotification, addNotificationRecipient, listNotificationsFor, unreadNotificationCount,
     markNotificationSeen, markAllNotificationsSeen, clearNotificationsFor, pruneNotifications,

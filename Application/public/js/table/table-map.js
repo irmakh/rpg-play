@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-28 14:25
+// Written by Irmak Hakman — 2026-10-28 17:10
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -738,11 +738,13 @@ function commitPlacement(gridX, gridY) {
   _setAddTokenBusy(true);
   _tokQ.run(async () => {
     try {
-      await fetch('/api/table/tokens', {
+      const res = await fetch('/api/table/tokens', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Master-Password': masterPw },
         body: JSON.stringify(payload)
       });
+      // A refusal has a reason worth showing (a unique monster already placed).
+      if (!res.ok) showToast((await res.json().catch(() => ({}))).error || 'Failed to add token.', true);
     } catch { showToast('Failed to add token.', true); }
     finally { _setAddTokenBusy(false); }
   });

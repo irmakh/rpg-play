@@ -21,6 +21,19 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [312] — 2026-10-28 — Unique monsters
+
+- **A "Unique" choice on a monster**, in the monster editor under Source, for a named
+  creature such as a villain or a dragon. The monster list and stat block show it.
+- **Only one token of a unique monster on the table.** Adding a second one, from the
+  table's Add Token dialog or the prepared-map editor (place or duplicate), says it is
+  already there. The server refuses it too.
+- **It is called by its name.** Its token is labelled with the monster's name instead of
+  a letter and number, and the identifier box is greyed out for it.
+- Loading a prepared map that holds a unique monster twice (placed before it was marked
+  unique) puts one token on the table, under its name.
+- A token identifier can now be up to 60 characters (it was 20), so a long name fits.
+
 ## [311] — 2026-10-28 — Make an item unidentified again
 
 - **"Make unidentified"** on an identified treasury item, next to the line saying it is

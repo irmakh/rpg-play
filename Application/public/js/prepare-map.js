@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 14:25
+// Written by Irmak Hakman — 2026-10-28 17:12
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -1191,8 +1191,14 @@ function pmSelectMonster(id) {
   const row = document.querySelector(`#pm-mon-list [data-mid="${CSS.escape(id)}"]`);
   if (row) row.style.background = 'var(--wash)';
   const sel = document.getElementById('pm-mon-selected');
-  if (sel) { sel.textContent = `✓ ${mon.name}`; sel.style.color = 'var(--verdigris)'; }
+  if (sel) { sel.textContent = `✓ ${mon.name}${mon.data?.unique ? ' (unique)' : ''}`; sel.style.color = 'var(--verdigris)'; }
   const d = mon.data || {};
+  const idEl = document.getElementById('pm-tok-identifier');
+  if (idEl) {
+    idEl.disabled = !!d.unique;
+    if (d.unique) idEl.value = '';
+    idEl.placeholder = d.unique ? 'Unique: uses its name' : 'A1, B2…';
+  }
   const hp = (d.hp?.average) ?? (typeof d.hp === 'number' ? d.hp : 10);
   const spd = d.speed?.walk || (typeof d.speed === 'string' ? parseInt(d.speed) : null) || 30;
   const rawAc = [].concat(d.ac || [])[0];
@@ -1240,6 +1246,8 @@ function openPmTokModal(editIdx) {
   if (confirmBtn) confirmBtn.innerHTML = isEdit ? '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-save"></use></svg> Save Changes' : '📍 Place on Map';
 
   pmPortraitDataUrl = null;
+  const idReset = document.getElementById('pm-tok-identifier');
+  if (idReset) { idReset.disabled = false; idReset.placeholder = 'A1, B2…'; }
 
   if (isEdit && tok) {
     pmCurrentTab = tok.type === 'monster' ? 'monster' : 'custom';
@@ -1366,8 +1374,14 @@ function pmConfirmToken() {
   if (pmCurrentTab === 'monster') {
     const mon = pmMonsterList.find(m => m.id === pmSelectedMonsterId);
     if (!mon) { showStatus('Select a monster first', true); return; }
+    // A unique monster is on the map once, called by its name.
+    const unique = !!mon.data?.unique;
+    if (unique && pmUniqueTaken(mon.id, _editTokenIndex)) {
+      showStatus(`${mon.name} is unique and is already on this map.`, true);
+      return;
+    }
     const letters = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
-    let identifier = (document.getElementById('pm-tok-identifier')?.value || '').trim();
+    let identifier = unique ? mon.name : (document.getElementById('pm-tok-identifier')?.value || '').trim();
     if (!identifier) identifier = letters[Math.floor(Math.random() * letters.length)] + (Math.floor(Math.random() * 9) + 1);
     const hp  = parseInt(document.getElementById('pm-tok-hp')?.value) || 10;
     const spd = parseInt(document.getElementById('pm-tok-speed')?.value) || 30;
@@ -1376,7 +1390,7 @@ function pmConfirmToken() {
     const portrait = pmPortraitDataUrl || mon.data?.portrait || null;
     const portraitThumb = pmPortraitDataUrl ? null : (mon.data?.portraitThumb || null);
     config = {
-      id: genId(), name: `${mon.name} ${identifier}`, label: identifier,
+      id: genId(), name: unique ? mon.name : `${mon.name} ${identifier}`, label: identifier,
       type: 'monster', linkedId: mon.id,
       hpCurrent: hp, hpMax: hp, speed: spd, ac, visibleToPlayers,
       color: document.getElementById('pm-tok-color')?.value || '#cc3333',
@@ -1458,9 +1472,16 @@ function _randomTokenIdentifier() {
   return letters[Math.floor(Math.random() * letters.length)] + (Math.floor(Math.random() * 9) + 1);
 }
 
+// Is this unique monster already on the map (other than the token at skipIdx)?
+function pmUniqueTaken(monsterId, skipIdx) {
+  return prepState.preparedTokens.some((t, i) => i !== skipIdx && t.type === 'monster' && t.linkedId === monsterId);
+}
+
 function cloneToken(i) {
   const src = prepState.preparedTokens[i];
   if (!src) return;
+  const mon = src.type === 'monster' ? pmMonsterList.find(m => m.id === src.linkedId) : null;
+  if (mon?.data?.unique) { showStatus(`${mon.name} is unique: there can be only one.`, true); return; }
   const config = JSON.parse(JSON.stringify(src));
   config.id = genId();
   delete config.x; delete config.y;  // position is chosen by clicking the map

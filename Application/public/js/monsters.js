@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-22 09:18
+// Written by Irmak Hakman — 2026-10-28 17:09
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -122,7 +122,7 @@ function renderTable() {
     <div class="app-row${m.id === selectedMonsterId ? ' selected' : ''}"
          role="button" tabindex="0" onclick="selectMonster('${escJs(m.id)}')"
          onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();selectMonster('${escJs(m.id)}')}">
-      <span class="app-row-name">${esc(m.name)}</span>
+      <span class="app-row-name">${esc(m.name)}${m.data?.unique ? ' <span class="cr-badge" title="Unique: one token at a time, called by its name">Unique</span>' : ''}</span>
       <span class="cr-badge">${esc(m.cr || '?')}</span>
     </div>`).join('');
 }
@@ -138,7 +138,7 @@ function selectMonster(monsterId) {
     <div class="detail-hdr">
       <div>
         <h2 class="detail-title">${esc(m.name)}</h2>
-        <div class="detail-sub">${esc(getTypeStr(d))} &middot; CR ${esc(m.cr || '?')} &middot; AC ${esc(getAcStr(d))} &middot; HP ${esc(getHpStr(d))} &middot; ${esc(getSpeedStr(d))}</div>
+        <div class="detail-sub">${d.unique ? 'Unique &middot; ' : ''}${esc(getTypeStr(d))} &middot; CR ${esc(m.cr || '?')} &middot; AC ${esc(getAcStr(d))} &middot; HP ${esc(getHpStr(d))} &middot; ${esc(getSpeedStr(d))}</div>
       </div>
       <div class="detail-actions">
         <button class="btn success" onclick="openInitModal('${escJs(m.id)}')" title="Add to the initiative tracker">+ Initiative</button>
@@ -417,6 +417,7 @@ function openAddMonsterModal() {
    'ef-str','ef-dex','ef-con','ef-int','ef-wis','ef-cha','ef-passive','ef-init-bonus'].forEach(id => efSet(id, ''));
   document.getElementById('ef-size').value = 'M';
   document.getElementById('ef-init-prof').checked = false;
+  document.getElementById('ef-unique').checked = false;
   ['ef-traits','ef-actions','ef-bonus','ef-reactions','ef-legendary'].forEach(id => { document.getElementById(id).innerHTML = ''; });
   document.getElementById('edit-modal-title').textContent = 'Add Monster';
   document.getElementById('edit-err').textContent = '';
@@ -439,6 +440,7 @@ function openEditMonsterModal(monsterId) {
   const AL = {L:'Lawful',N:'Neutral',C:'Chaotic',G:'Good',E:'Evil',U:'Unaligned',A:'Any'};
   efSet('ef-alignment', (d.alignment || []).map(a => AL[a] || a).join(' '));
   efSet('ef-source', d.source);
+  document.getElementById('ef-unique').checked = d.unique === true;
   // Combat
   const acFirst = [].concat(d.ac || [])[0];
   efSet('ef-ac', typeof acFirst === 'number' ? acFirst : (acFirst && acFirst.ac) || '');
@@ -554,6 +556,8 @@ async function submitEditMonster() {
   if (langs) data.languages = langs; else delete data.languages;
   const initBonusVal = parseInt(document.getElementById('ef-init-bonus').value) || 0;
   if (initBonusVal !== 0) data.initBonus = initBonusVal; else delete data.initBonus;
+  // Unique: one token at a time on the table, called by its own name.
+  if (document.getElementById('ef-unique').checked) data.unique = true; else delete data.unique;
   const initProf = document.getElementById('ef-init-prof').checked;
   if (initProf) {
     data.initiative = { ...(data.initiative || {}), proficiency: true };

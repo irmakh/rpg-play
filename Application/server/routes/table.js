@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-28 14:25
+// Written by Irmak Hakman — 2026-10-28 17:10
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -14,6 +14,18 @@ export default function register(app, ctx) {
     broadcast: _rawBroadcast,
     crypto, path, fs, __dirname,
   } = ctx;
+  // A monster marked Unique (a named villain, a dragon) stands on the table
+  // once, under its own name instead of a letter and number. Returns its name,
+  // or null for an ordinary monster.
+  function uniqueMonsterName(monsterId) {
+    if (!monsterId) return null;
+    const m = ldb.getMonster?.(monsterId);
+    if (!m) return null;
+    let d = {}; try { d = JSON.parse(m.dataJson || '{}'); } catch {}
+    return d.unique === true ? String(m.name || d.name || 'Monster').trim() : null;
+  }
+  const LABEL_MAX = 60;
+
   // Older harnesses register these routes without the campaign helpers.
   const currentCampaignId = ctx.currentCampaignId || (() => '');
   const parkedCampaigns   = ctx.parkedCampaigns || new Set();
@@ -534,9 +546,19 @@ export default function register(app, ctx) {
 
       const resolvedInitId = String(initiativeId);
 
+      let tokName = String(name).trim(), tokLabel = String(label || '');
+      const unique = type === 'monster' ? uniqueMonsterName(String(linkedId)) : null;
+      if (unique) {
+        if (ldb.listTableTokens().some(t => t.type === 'monster' && t.linkedId === String(linkedId))) {
+          return res.status(409).json({ error: `${unique} is unique and is already on the table.` });
+        }
+        tokName = unique;
+        tokLabel = unique;
+      }
+
       const newId = genId();
       const token = {
-        name: String(name).trim(), type, linkedId: String(linkedId), assignedCharId: String(assignedCharId),
+        name: tokName, type, linkedId: String(linkedId), assignedCharId: String(assignedCharId),
         x: parseInt(x) || 0, y: parseInt(y) || 0,
         color: String(color), hpCurrent: parseInt(hpCurrent) || 0,
         hpMax: parseInt(hpMax) || 0, hpTemp: Math.max(0, parseInt(hpTemp) || 0), speed: parseInt(speed) || 30,
@@ -544,7 +566,7 @@ export default function register(app, ctx) {
         tokenSize: Math.max(1, Math.min(4, parseInt(tokenSize) || 1)),
         portrait: typeof portrait === 'string' && (portrait.startsWith('data:image/') || portrait.startsWith('/uploads/')) ? portrait : null,
         portraitThumb: typeof portraitThumb === 'string' && portraitThumb.startsWith('/uploads/') ? portraitThumb : null,
-        label: String(label || '').slice(0, 20),
+        label: tokLabel.slice(0, LABEL_MAX),
         conditions: Array.isArray(conditions) ? JSON.stringify(conditions) : String(conditions || '[]'),
         ac: ac != null ? (parseInt(ac) || null) : null,
         createdAt: new Date().toISOString()
@@ -1092,10 +1114,20 @@ export default function register(app, ctx) {
 
       // Place prepared tokens onto the table
       const preparedTokens = (() => { try { return JSON.parse(map.preparedTokens || '[]'); } catch { return []; } })();
+      // A unique monster prepared twice (before it was marked unique) is placed
+      // once, under its name.
+      const placedUnique = new Set();
+      let placed = 0;
       for (const pt of preparedTokens) {
+        const unique = pt.type === 'monster' ? uniqueMonsterName(String(pt.linkedId || '')) : null;
+        if (unique) {
+          if (placedUnique.has(pt.linkedId)) continue;
+          placedUnique.add(pt.linkedId);
+        }
+        placed++;
         const tokenId = genId();
         const token = {
-          name: String(pt.name || 'Token').trim(),
+          name: unique || String(pt.name || 'Token').trim(),
           type: ['monster','npc','character','custom'].includes(pt.type) ? pt.type : 'custom',
           linkedId: String(pt.linkedId || ''),
           assignedCharId: '',
@@ -1112,7 +1144,7 @@ export default function register(app, ctx) {
           tokenSize: Math.max(1, Math.min(4, parseInt(pt.tokenSize) || 1)),
           portrait: typeof pt.portrait === 'string' ? pt.portrait : null,
           portraitThumb: typeof pt.portraitThumb === 'string' ? pt.portraitThumb : null,
-          label: String(pt.label || '').slice(0, 20),
+          label: String(unique || pt.label || '').slice(0, LABEL_MAX),
           conditions: '[]',
           ac: pt.ac != null ? (parseInt(pt.ac) || null) : null,
           createdAt: new Date().toISOString(),
@@ -1121,7 +1153,7 @@ export default function register(app, ctx) {
         broadcastToken({ id: tokenId, ...token }, { action: 'token-added', token: { id: tokenId, ...token } });
       }
 
-      res.json({ ok: true, tokensPlaced: preparedTokens.length });
+      res.json({ ok: true, tokensPlaced: placed });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
   });
 }

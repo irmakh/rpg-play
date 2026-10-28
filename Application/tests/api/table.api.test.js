@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 13:06
+// Written by Irmak Hakman — 2026-10-28 17:15
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -581,5 +581,62 @@ describe('hidden items stay with the DM', () => {
     await dm(request(app).post('/api/table/items/trap/reveal')).expect(200);
     const ev2 = broadcasts.filter(b => b.payload?.action === 'items-updated').pop();
     expect(ev2.opts.forOthers.hiddenItems.map(i => i.id)).toEqual(['trap']);
+  });
+});
+
+// ── Unique monsters ───────────────────────────────────────────────────────────
+describe('unique monsters on the table', () => {
+  function withMonsters() {
+    const made = makeApp();
+    made.ldb.createMonster('strahd', { name: 'Strahd von Zarovich', dataJson: JSON.stringify({ name: 'Strahd von Zarovich', unique: true }) });
+    made.ldb.createMonster('goblin', { name: 'Goblin', dataJson: JSON.stringify({ name: 'Goblin' }) });
+    return made;
+  }
+  const monster = (linkedId, over = {}) => ({ name: 'X A1', type: 'monster', linkedId, label: 'A1', ...over });
+
+  it('places a unique monster under its own name, whatever the client sent', async () => {
+    const { app, ldb } = withMonsters();
+    const id = await createToken(app, monster('strahd', { name: 'Strahd von Zarovich K7', label: 'K7' }));
+    expect(ldb.getTableToken(id)).toMatchObject({ name: 'Strahd von Zarovich', label: 'Strahd von Zarovich' });
+  });
+
+  it('refuses a second token of a unique monster, with a reason', async () => {
+    const { app, ldb } = withMonsters();
+    await createToken(app, monster('strahd'));
+    const res = await dm(request(app).post('/api/table/tokens')).send(monster('strahd'));
+    expect(res.status).toBe(409);
+    expect(res.body.error).toBe('Strahd von Zarovich is unique and is already on the table.');
+    expect(ldb.listTableTokens()).toHaveLength(1);
+  });
+
+  it('allows it again once the first token is gone', async () => {
+    const { app } = withMonsters();
+    const first = await createToken(app, monster('strahd'));
+    await dm(request(app).delete(`/api/table/tokens/${first}`));
+    expect((await dm(request(app).post('/api/table/tokens')).send(monster('strahd'))).status).toBe(200);
+  });
+
+  it('leaves ordinary monsters as many as you like, with their identifiers', async () => {
+    const { app, ldb } = withMonsters();
+    await createToken(app, monster('goblin', { name: 'Goblin A1', label: 'A1' }));
+    await createToken(app, monster('goblin', { name: 'Goblin B2', label: 'B2' }));
+    expect(ldb.listTableTokens().map(t => t.label).sort()).toEqual(['A1', 'B2']);
+  });
+
+  it('loads a prepared map with a unique monster on it twice as one token, under its name', async () => {
+    const { app, ldb } = withMonsters();
+    ldb.createPreparedMap('m1', {
+      name: 'Castle', createdAt: new Date().toISOString(),
+      preparedTokens: JSON.stringify([
+        { id: 'p1', name: 'Strahd von Zarovich A1', label: 'A1', type: 'monster', linkedId: 'strahd', x: 1, y: 1 },
+        { id: 'p2', name: 'Strahd von Zarovich B2', label: 'B2', type: 'monster', linkedId: 'strahd', x: 2, y: 2 },
+        { id: 'p3', name: 'Goblin C3', label: 'C3', type: 'monster', linkedId: 'goblin', x: 3, y: 3 },
+      ]),
+    });
+    const res = await dm(request(app).post('/api/prepared-maps/m1/load-to-table'));
+    expect(res.status).toBe(200);
+    expect(res.body.tokensPlaced).toBe(2);
+    const labels = ldb.listTableTokens().map(t => t.label).sort();
+    expect(labels).toEqual(['C3', 'Strahd von Zarovich']);
   });
 });

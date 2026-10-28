@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Written by Irmak Hakman — 2026-10-15 14:48 -->
+<!-- Written by Irmak Hakman — 2026-10-28 17:09 -->
 <!-- Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) -->
 <html lang="en" class="lamplit app-page">
 <head>
@@ -121,6 +121,10 @@
         <div class="field"><label class="lbl">Type (e.g. dragon (chromatic))</label><input type="text" id="ef-type" placeholder="dragon (chromatic)"></div>
         <div class="field"><label class="lbl">Alignment</label><input type="text" id="ef-alignment" placeholder="Chaotic Evil"></div>
         <div class="field" style="grid-column:span 2"><label class="lbl">Source</label><input type="text" id="ef-source" placeholder="XMM, PHB…"></div>
+        <div class="field" style="grid-column:span 2;display:flex;align-items:flex-start;gap:calc(6px*var(--fs, 1))">
+          <input type="checkbox" id="ef-unique" style="margin:calc(2px*var(--fs, 1)) 0 0;cursor:pointer">
+          <label for="ef-unique" style="font-size:calc(12px * var(--fs, 1));cursor:pointer">Unique, a named creature such as a villain or a dragon. Only one token of it can be on the table, and it is called by its name instead of a letter and number.</label>
+        </div>
       </div>
 
       <div class="ef-sec">Portrait</div>

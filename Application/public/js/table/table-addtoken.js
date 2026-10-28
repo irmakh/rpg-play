@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 14:25
+// Written by Irmak Hakman — 2026-10-28 17:10
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -25,7 +25,10 @@ function switchTokenTab(tab) {
   const idRow = document.getElementById('tok-identifier-row');
   if (idRow) {
     idRow.style.display = tab === 'monsters' ? 'flex' : 'none';
-    if (tab !== 'monsters') document.getElementById('tok-identifier').value = '';
+    const idIn = document.getElementById('tok-identifier');
+    if (tab !== 'monsters') idIn.value = '';
+    idIn.disabled = false;
+    idIn.placeholder = 'A, B, #1 … (auto if blank)';
   }
   const searchWrap = document.getElementById('tok-monster-search-wrap');
   if (searchWrap) searchWrap.style.display = tab === 'monsters' ? '' : 'none';
@@ -130,6 +133,19 @@ function selectTokenMonster(monsterId, monsterName) {
   _pendingTokenType = 'monster';
   document.querySelectorAll('#tok-tab-monsters .qroll-row').forEach(r => r.style.background = '');
   event.currentTarget.style.background = 'var(--wash)';
+  // A unique monster is called by its name, so there is no identifier to type.
+  const unique = !!_monsterList.find(m => m.id === monsterId)?.data?.unique;
+  const idIn = document.getElementById('tok-identifier');
+  if (idIn) {
+    idIn.disabled = unique;
+    idIn.placeholder = unique ? 'Unique: uses its name' : 'A, B, #1 … (auto if blank)';
+    if (unique) idIn.value = '';
+  }
+}
+
+// One token of a unique monster on the table at a time.
+function uniqueMonsterOnTable(monsterId) {
+  return tokens.some(t => t.type === 'monster' && t.linkedId === monsterId);
 }
 
 async function submitAddToken() {
@@ -203,14 +219,19 @@ async function submitAddToken() {
   } else if (tab === 'monsters' && _pendingTokenLinkedId) {
     const mon = _monsterList.find(m => m.id === _pendingTokenLinkedId);
     const baseName = mon?.name || 'Monster';
-    let identifier = document.getElementById('tok-identifier')?.value?.trim();
+    const unique = !!mon?.data?.unique;
+    if (unique && uniqueMonsterOnTable(_pendingTokenLinkedId)) {
+      showToast(`${baseName} is unique and is already on the table.`, true);
+      return;
+    }
+    let identifier = unique ? baseName : document.getElementById('tok-identifier')?.value?.trim();
     if (!identifier) {
       // Generate a random letter + digit, e.g. "A3", "K7"
       const letters = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
       identifier = letters[Math.floor(Math.random() * letters.length)]
                  + (Math.floor(Math.random() * 9) + 1);
     }
-    const name = `${baseName} ${identifier}`;
+    const name = unique ? baseName : `${baseName} ${identifier}`;
     const mData = mon?.data || {};
     const hp = mData.hp?.average || mData.hp || 10;
     const spd = mData.speed?.walk || (typeof mData.speed === 'string' ? parseInt(mData.speed) : null) || 30;
