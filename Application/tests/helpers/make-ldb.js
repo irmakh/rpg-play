@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-28 14:25
+// Written by Irmak Hakman — 2026-10-28 16:10
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -128,6 +128,9 @@ export function makeLdb() {
     );
     CREATE UNIQUE INDEX IF NOT EXISTS idx_treasury_req_pending
       ON treasury_requests(itemId, charId) WHERE status = 'pending';
+    CREATE TABLE IF NOT EXISTS treasury_piles (
+      tag TEXT PRIMARY KEY, note TEXT DEFAULT '', createdAt TEXT DEFAULT (datetime('now'))
+    );
     CREATE TABLE IF NOT EXISTS sound_files (
       id TEXT PRIMARY KEY, name TEXT DEFAULT '', url TEXT DEFAULT '',
       mime_type TEXT DEFAULT '', tags TEXT DEFAULT '[]',
@@ -447,6 +450,31 @@ export function makeLdb() {
   function bulkCreateTreasuryItems(rows) {
     for (const { id, fields } of rows) createTreasuryItem(id, fields);
   }
+  function listTreasuryPiles() {
+    return db.prepare('SELECT tag, note, createdAt FROM treasury_piles ORDER BY createdAt').all();
+  }
+  function upsertTreasuryPile(tag, note) {
+    db.prepare(`INSERT INTO treasury_piles (tag, note, createdAt) VALUES (?, ?, ?)
+      ON CONFLICT(tag) DO UPDATE SET note = COALESCE(?, note)`)
+      .run(tag, note ?? '', new Date().toISOString(), note ?? null);
+  }
+  function renameTreasuryPile(from, to) {
+    const src = db.prepare('SELECT note FROM treasury_piles WHERE tag = ?').get(from);
+    const dst = db.prepare('SELECT note FROM treasury_piles WHERE tag = ?').get(to);
+    db.prepare('UPDATE treasury_items SET tag = ? WHERE tag = ?').run(to, from);
+    db.prepare('DELETE FROM treasury_piles WHERE tag = ?').run(from);
+    if (!to) return;
+    if (dst) { if (!dst.note && src?.note) db.prepare('UPDATE treasury_piles SET note = ? WHERE tag = ?').run(src.note, to); }
+    else db.prepare('INSERT INTO treasury_piles (tag, note, createdAt) VALUES (?, ?, ?)').run(to, src?.note || '', new Date().toISOString());
+  }
+  function deleteTreasuryPile(tag) {
+    db.prepare('DELETE FROM treasury_piles WHERE tag = ?').run(tag);
+  }
+  function importTreasuryPiles(rows) {
+    if (!Array.isArray(rows)) return;
+    const ins = db.prepare('INSERT OR REPLACE INTO treasury_piles (tag, note, createdAt) VALUES (?, ?, ?)');
+    for (const r of rows) if (r && r.tag) ins.run(String(r.tag), r.note || '', r.createdAt || new Date().toISOString());
+  }
   function listLootLogs() {
     return db.prepare('SELECT * FROM loot_logs ORDER BY claimedAt DESC LIMIT 500').all();
   }
@@ -730,6 +758,7 @@ export function makeLdb() {
     listTreasuryItems, getTreasuryItem, getTreasuryItemsByIds,
     createTreasuryItem, updateTreasuryItem, deleteTreasuryItem,
     bulkUpdateTreasuryTag, bulkUpdateTreasuryMode, bulkDeleteTreasuryItems, bulkCreateTreasuryItems,
+    listTreasuryPiles, upsertTreasuryPile, renameTreasuryPile, deleteTreasuryPile, importTreasuryPiles,
     listLootLogs, createLootLog, listClaimedItemIds, listPurchaseLogs, createPurchaseLog,
     // weather
     getWeatherConfig, saveWeatherConfig, listWeatherLog, getWeatherForDate, saveWeatherEntry, deleteWeatherEntry,

@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-28 14:25
+// Written by Irmak Hakman — 2026-10-28 16:10
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -160,6 +160,12 @@ db.exec(`
     weaponAtk TEXT DEFAULT '', weaponDmg TEXT DEFAULT '', weaponPropertiesJson TEXT DEFAULT '[]',
     imageUrl TEXT DEFAULT '', imageThumb TEXT DEFAULT '', imageMedium TEXT DEFAULT '',
     createdAt TEXT DEFAULT (datetime('now'))
+  );
+  -- A pile is a tag on the treasury screen: a chest, a hoard, a merchant's
+  -- stock. Its items carry the tag; this row holds what belongs to the pile
+  -- itself (the DM's private note) and lets an empty pile exist.
+  CREATE TABLE IF NOT EXISTS treasury_piles (
+    tag TEXT PRIMARY KEY, note TEXT DEFAULT '', createdAt TEXT DEFAULT (datetime('now'))
   );
   CREATE TABLE IF NOT EXISTS monsters (
     id TEXT PRIMARY KEY, name TEXT DEFAULT '', cr TEXT DEFAULT '?',
@@ -385,6 +391,7 @@ db.prepare("INSERT OR IGNORE INTO calendar_state (id, fr_year, fr_month, fr_day,
   })();
   console.log(`[treasury] migrated ${lootRows.length} loot + ${shopRows.length} shop items`);
 })();
+foldShopSaleTags();
 
 // ── Characters ────────────────────────────────────────────────────────────────
 function listCharacters() {
@@ -718,6 +725,54 @@ function bulkUpdateTreasuryTag(ids, tag) {
   const stmt = db.prepare('UPDATE treasury_items SET tag = ? WHERE id = ?');
   db.transaction(() => { for (const id of ids) stmt.run(tag, id); })();
 }
+// ── Treasury piles ────────────────────────────────────────────────────────────
+function listTreasuryPiles() {
+  return db.prepare('SELECT tag, note, createdAt FROM treasury_piles ORDER BY createdAt').all();
+}
+// note undefined: make sure the pile exists, keeping any note it has.
+function upsertTreasuryPile(tag, note) {
+  db.prepare(`INSERT INTO treasury_piles (tag, note, createdAt) VALUES (?, ?, ?)
+    ON CONFLICT(tag) DO UPDATE SET note = COALESCE(?, note)`)
+    .run(tag, note ?? '', new Date().toISOString(), note ?? null);
+}
+// Renaming a pile moves its items. Renaming onto a pile that already exists
+// merges the two; the note that survives is the target's, unless it has none.
+function renameTreasuryPile(from, to) {
+  db.transaction(() => {
+    const src = db.prepare('SELECT note FROM treasury_piles WHERE tag = ?').get(from);
+    const dst = db.prepare('SELECT note FROM treasury_piles WHERE tag = ?').get(to);
+    db.prepare('UPDATE treasury_items SET tag = ? WHERE tag = ?').run(to, from);
+    db.prepare('DELETE FROM treasury_piles WHERE tag = ?').run(from);
+    if (!to) return;
+    if (dst) { if (!dst.note && src?.note) db.prepare('UPDATE treasury_piles SET note = ? WHERE tag = ?').run(src.note, to); }
+    else db.prepare('INSERT INTO treasury_piles (tag, note, createdAt) VALUES (?, ?, ?)').run(to, src?.note || '', new Date().toISOString());
+  })();
+}
+function deleteTreasuryPile(tag) {
+  db.prepare('DELETE FROM treasury_piles WHERE tag = ?').run(tag);
+}
+function importTreasuryPiles(rows) {
+  if (!Array.isArray(rows)) return;
+  const ins = db.prepare('INSERT OR REPLACE INTO treasury_piles (tag, note, createdAt) VALUES (?, ?, ?)');
+  db.transaction(() => {
+    for (const r of rows) if (r && r.tag) ins.run(String(r.tag), r.note || '', r.createdAt || new Date().toISOString());
+  })();
+}
+
+// The shop used to have a second switch: a list of tags on sale, and shop
+// items outside it sat in the shop unseen. The treasury screen (v310) gives
+// each place one meaning (what is in the shop is on sale), so those items are
+// hidden instead and the list is cleared. Players see exactly what they did.
+function foldShopSaleTags() {
+  const cfg = getShopConfig();
+  if (!cfg.activeTags.length) return;
+  db.transaction(() => {
+    const ph = cfg.activeTags.map(() => '?').join(', ');
+    db.prepare(`UPDATE treasury_items SET mode = 'hidden' WHERE mode = 'shop' AND tag NOT IN (${ph})`).run(...cfg.activeTags);
+    setShopConfig(cfg.isOpen, []);
+  })();
+}
+
 function bulkUpdateTreasuryMode(ids, mode) {
   const stmt = db.prepare('UPDATE treasury_items SET mode = ? WHERE id = ?');
   db.transaction(() => { for (const id of ids) stmt.run(mode, id); })();
@@ -976,6 +1031,7 @@ function importAll(data) {
       insPrep.run(r.id, r.name || '', r.cellSize || 50, r.offsetX || 0, r.offsetY || 0, r.mapWidth || 0, r.mapHeight || 0, fr, hi, r.createdAt || new Date().toISOString());
     }
   })();
+  foldShopSaleTags();
 }
 
 // ── Selective imports (merge — no deletes, duplicate IDs get _old suffix) ─────
@@ -1029,6 +1085,7 @@ function importTreasury(items, shopConfig, purchaseLogs, lootLogs) {
     for (const r of (purchaseLogs || [])) insPurch.run(r.id, r.charId || '', r.charName || '', r.itemName || '', r.itemId || '', r.qty || 1, r.totalCp || 0, r.purchasedAt || r.createdAt || new Date().toISOString());
     for (const r of (lootLogs || []))     insLoot.run(r.id, r.charId || '', r.charName || '', r.itemName || '', r.itemId || '', r.claimedAt || r.createdAt || new Date().toISOString());
   })();
+  foldShopSaleTags();
 }
 
 // Legacy backup types — kept so old backup files still restore. Their rows are
@@ -1550,6 +1607,7 @@ function exportAll() {
     deleteTreasuryRequest, declinePendingTreasuryRequests,
     listTreasuryItems, listTreasuryItemsByMode, getTreasuryItem, getTreasuryItemsByIds,
     createTreasuryItem, updateTreasuryItem, deleteTreasuryItem, bulkUpdateTreasuryTag, bulkUpdateTreasuryMode, bulkDeleteTreasuryItems,
+    listTreasuryPiles, upsertTreasuryPile, renameTreasuryPile, deleteTreasuryPile, importTreasuryPiles, foldShopSaleTags,
     bulkCreateTreasuryItems, listMonsters, getMonster, createMonster, updateMonster, deleteMonster,
     listInitEntries, getInitEntry, getInitEntryByCharId, createInitEntry, updateInitEntry, deleteInitEntry,
     listOrphanMonsterInitEntries, clearInitEntries, getInitState, setInitState, listDrawings, addDrawing,

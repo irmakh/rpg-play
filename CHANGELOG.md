@@ -21,6 +21,55 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [310] — 2026-10-28 — Treasury: piles
+
+The DM's treasury (`/treasury.html`) is rebuilt around **piles**: a chest, a hoard, a
+merchant's stock. A pile is what used to be a tag, so every item is already in the right
+pile.
+
+**Every pile at a glance**
+- The screen opens on a card per pile: its name, how many items, where they are
+  (Hidden, Free loot, On sale, or a mix), the first few names and pictures, and your note.
+- **One switch per pile** (Hidden / Free loot / Shop) moves all of its items at once,
+  and Undo puts them back. You can still move one item on its own; the pile then reads
+  "Mixed".
+- **Unsorted** collects items that are in no pile.
+- **Search** on the overview finds an item in any pile.
+
+**One switch for the shop**
+- *Shop open / Shop closed* sits beside the title. Whatever is in the shop is on sale
+  while it is open. The separate list of tags on sale is gone: shop items whose tag was
+  not on sale are now **Hidden**, so players see exactly what they saw before.
+
+**Inside a pile**
+- **A simple list:** picture, name, where it is, price and stock. A ⋯ menu on each item
+  holds where it is, Give one to…, Move to pile, Identify, Duplicate and Delete.
+- **Drag an item** onto another pile in the list beside it to move it there.
+- **A private note** under the pile's name, such as "Behind the altar, DC 15
+  Investigation". Only the DM sees it.
+- **Give pile…** hands out the whole pile: everything to one character, or a character per
+  item to split it. Each character gets one notification listing what they received.
+- Rename a pile by clicking its name. Renaming it onto an existing pile merges the two.
+  The ⋯ menu deletes a pile, either keeping its items (they go to Unsorted) or with them.
+
+**The item editor is one scroll**
+- No tabs. Give and Identify are at the top, then picture and kind, where it is, pile,
+  price and stock, and what players read. Weapon, armour, bonuses, charges and history
+  fold open below.
+- **Price is one box:** type "50", "7 sp" or "2 pp 5 gp". **Stock** takes a number or ∞.
+
+**Requests**
+- A banner across the top lists every player waiting for loot, with Give and Decline on
+  each line. It is only there while somebody is waiting.
+
+**Removed:** the row checkboxes and bulk bar (the pile switch, drag and pile delete
+cover them) and the single-key shortcuts. Esc steps back, / searches, N adds an item to
+the open pile, Ctrl+Z undoes.
+
+*(Server)* New routes `GET/POST /api/treasury/piles`, `POST /api/treasury/piles/delete`
+and `POST /api/treasury/give-many`; a `treasury_piles` table holds pile notes and is
+included in the Treasury backup.
+
 ## [309] — 2026-10-28 — See token pictures in full
 
 - **The hover card over a token shows its picture.** Clicking the picture opens it

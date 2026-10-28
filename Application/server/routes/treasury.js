@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-11 23:10
+// Written by Irmak Hakman — 2026-10-28 16:10
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -8,7 +8,10 @@
  *
  *   'hidden' — DM only, invisible to players
  *   'loot'   — free, claimed once per character
- *   'shop'   — for sale, gated by the shop open/closed config and activeTag
+ *   'shop'   — for sale while the shop is open
+ *
+ * An item's tag is the pile it lies in (a chest, a hoard, a merchant). The
+ * treasury_piles table holds what belongs to a pile itself: the DM's note.
  *
  * Claiming and buying both produce real inventory items through the same
  * grantItems() helper, so a claimed magic sword carries its stats exactly like
@@ -720,6 +723,120 @@ export default function register(app, ctx) {
       broadcast('treasury', { action: 'bulk-updated' });
       res.json({ ok: true, count: ids.length });
     } catch (err) { console.error('POST /api/treasury/bulk-delete:', err); res.status(500).json({ error: 'Server error' }); }
+  });
+
+  // ── Piles ───────────────────────────────────────────────────────────────────
+  // A pile is a tag. Its items say which pile they are in; a pile row adds a
+  // note and lets a pile exist before anything is put in it. Tags travel in
+  // the body, not the path, because a pile can be called anything.
+  const pileTag = t => String(t ?? '').trim().slice(0, TAG_MAX);
+  const NOTE_MAX = 2000;
+
+  app.get('/api/treasury/piles', async (req, res) => {
+    try {
+      if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
+      res.json(ldb.listTreasuryPiles());
+    } catch (err) { console.error('GET /api/treasury/piles:', err); res.status(500).json({ error: 'Server error' }); }
+  });
+
+  // Make a pile, or change its note. `newTag` renames it, moving its items.
+  // POST rather than PUT: PUT /api/treasury/:id above would take the request.
+  app.post('/api/treasury/piles', async (req, res) => {
+    try {
+      if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
+      const tag = pileTag(req.body?.tag);
+      if (!tag) return res.status(400).json({ error: 'A pile needs a name' });
+      const note = req.body?.note !== undefined ? String(req.body.note).slice(0, NOTE_MAX) : undefined;
+      let at = tag;
+      if (req.body?.newTag !== undefined) {
+        at = pileTag(req.body.newTag);
+        if (!at) return res.status(400).json({ error: 'A pile needs a name' });
+        if (at !== tag) ldb.renameTreasuryPile(tag, at);
+      }
+      ldb.upsertTreasuryPile(at, note);
+      broadcast('treasury', { action: 'piles' });
+      res.json({ ok: true, tag: at });
+    } catch (err) { console.error('POST /api/treasury/piles:', err); res.status(500).json({ error: 'Server error' }); }
+  });
+
+  // Remove a pile. Its items go to Unsorted, or with deleteItems are deleted.
+  app.post('/api/treasury/piles/delete', async (req, res) => {
+    try {
+      if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
+      const tag = pileTag(req.body?.tag);
+      if (!tag) return res.status(400).json({ error: 'tag required' });
+      const inPile = (await listAll()).filter(r => (r.tag || '') === tag);
+      if (req.body?.deleteItems) {
+        for (const r of inPile) dropImageFiles(r);
+        ldb.bulkDeleteTreasuryItems(inPile.map(r => r.id));
+        const at = new Date().toISOString();
+        for (const r of inPile) await declinePendingFor(r.id, at);
+        ldb.deleteTreasuryPile(tag);
+      } else {
+        ldb.renameTreasuryPile(tag, '');
+      }
+      broadcast('treasury', { action: 'bulk-updated' });
+      res.json({ ok: true, count: inPile.length });
+    } catch (err) { console.error('POST /api/treasury/piles/delete:', err); res.status(500).json({ error: 'Server error' }); }
+  });
+
+  // Hand several items out at once: a whole pile to one character, or split
+  // between them. The same rules as one Give, applied per item; each character
+  // gets one notification for everything they received.
+  app.post('/api/treasury/give-many', async (req, res) => {
+    try {
+      if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
+      const grants = req.body?.grants;
+      if (!Array.isArray(grants) || grants.length === 0 || grants.length > 200) return res.status(400).json({ error: 'grants array required' });
+      for (const g of grants) {
+        const q = Number(g?.quantity ?? 1);
+        if (!g || !g.itemId || !g.charId || !Number.isInteger(q) || q < 1 || q > 100) return res.status(400).json({ error: 'Invalid grant' });
+      }
+      const items = await getMany([...new Set(grants.map(g => g.itemId))]);
+      const itemById = new Map(items.map(i => [i.id, i]));
+      const chars = new Map();
+      for (const charId of new Set(grants.map(g => g.charId))) {
+        const rec = await getCharacter(charId);
+        if (!rec) return res.status(404).json({ error: 'Character not found' });
+        let data = {}; try { data = JSON.parse(rec.dataJson || '{}'); } catch {}
+        chars.set(charId, { rec, data, got: [] });
+      }
+      if (grants.some(g => !itemById.has(g.itemId))) return res.status(404).json({ error: 'Not found' });
+
+      const now = new Date().toISOString();
+      const left = new Map(items.map(i => [i.id, i.quantity]));
+      for (const g of grants) {
+        const item = itemById.get(g.itemId);
+        const c = chars.get(g.charId);
+        const qty = Number(g.quantity ?? 1);
+        grantItems(c.data, objFromRecord(item), qty);
+        const charName = c.data.name || c.rec.name || 'Unknown';
+        for (let n = 0; n < qty; n++) ldb.createLootLog(genId(), { charId: g.charId, charName, itemName: item.name, itemId: item.id, claimedAt: now });
+        const shown = item.descVisible ? item.name : (item.unidName || 'an unidentified item');
+        c.got.push(shown + (qty > 1 ? ' ×' + qty : ''));
+        if (left.get(item.id) !== -1) left.set(item.id, Math.max(0, left.get(item.id) - qty));
+      }
+      let declined = 0;
+      for (const item of items) {
+        if (item.quantity === -1) continue;
+        const q = left.get(item.id);
+        const gone = q === 0 && item.mode === 'loot';
+        ldb.updateTreasuryItem(item.id, gone ? { quantity: 0, mode: 'hidden' } : { quantity: q });
+        if (gone) declined += await declinePendingFor(item.id, now);
+      }
+      for (const [charId, c] of chars) {
+        ldb.updateCharacter(charId, { dataJson: JSON.stringify(c.data), name: c.rec.name });
+        broadcast('characters', { action: 'updated', id: charId });
+        ctx.notify?.({
+          to: charId, kind: 'loot-granted', priority: 'alert',
+          title: c.got.length === 1 ? 'The DM gave you ' + c.got[0] : `The DM gave you ${c.got.length} items`,
+          body: c.got.length === 1 ? 'It is in your inventory now.' : c.got.join(', '),
+          data: { href: '/index.html' },
+        });
+      }
+      broadcast('treasury', { action: 'approved' });
+      res.json({ ok: true, count: grants.length, declined });
+    } catch (err) { console.error('POST /api/treasury/give-many:', err); res.status(500).json({ error: 'Server error' }); }
   });
 
   // Bulk text import — one item per blank-line-separated block, first line is

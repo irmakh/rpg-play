@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 17:45
+// Written by Irmak Hakman — 2026-10-28 16:10
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -123,6 +123,7 @@ export default function register(app, ctx) {
           lootLogs: ldb.listLootLogs(),
           // Pending player claims/purchases belong with the items they are for.
           treasuryRequests: ldb.exportTreasuryRequests(),
+          treasuryPiles: ldb.listTreasuryPiles(),
         };
       }
       case 'maps': {
@@ -397,6 +398,7 @@ export default function register(app, ctx) {
         await w(',"purchaseLogs":'); await _writeJsonArray(w, ldb.listPurchaseLogs(), r => r);
         await w(',"lootLogs":'); await _writeJsonArray(w, ldb.listLootLogs(), r => r);
         await w(',"treasuryRequests":'); await _writeJsonArray(w, ldb.exportTreasuryRequests(), r => r);
+        await w(',"treasuryPiles":'); await _writeJsonArray(w, ldb.listTreasuryPiles(), r => r);
         break;
       }
       case 'maps': {
@@ -738,6 +740,7 @@ export default function register(app, ctx) {
         ldb.importTreasury(restored, backup.shopConfig, backup.purchaseLogs, backup.lootLogs);
         // Absent from files written before requests were backed up; harmless then.
         ldb.importTreasuryRequests(backup.treasuryRequests);
+        ldb.importTreasuryPiles(backup.treasuryPiles);
         broadcast('treasury', { action: 'reload' });
         break;
       }

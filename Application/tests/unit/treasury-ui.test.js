@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-12 00:30
+// Written by Irmak Hakman — 2026-10-28 16:10
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -6,9 +6,9 @@
  * Unit tests for the pure half of js/treasury.js — the DM treasury screen.
  *
  * Everything above the "Page state" marker takes values and returns values:
- * what a typed price or stock means, which items a tag view shows, how they
- * sort, what the tag picker and the shop strip offer, and which groups of
- * fields a kind of item shows. That slice is run here as the real file.
+ * what a typed price or stock means, where a pile's items are, which piles
+ * there are, what a search finds, how many "Give pile" hands over, and which
+ * groups of fields a kind of item shows. That slice is run here as the real file.
  */
 import { describe, it, expect } from 'vitest';
 import { createContext, runInContext } from 'vm';
@@ -23,7 +23,7 @@ if (!SRC.includes(MARK)) throw new Error('treasury.js: "Page state" marker not f
 
 const ctx = createContext({ console });
 runInContext(SRC.slice(0, SRC.indexOf(MARK))
-  + '\n;globalThis.__t = { parsePrice, parseStock, stockText, cpToGp, cpToDenoms, itemsInView, sortItems, tagEntries, shopTagsAfterToggle, kindOf, sectionShown, kindSummary, KINDS, VIEW_ALL, VIEW_ASKED };', ctx);
+  + '\n;globalThis.__t = { parsePrice, parseStock, stockText, cpToGp, pileState, pileEntries, searchItems, giveQty, kindOf, sectionShown, kindSummary, KINDS };', ctx);
 const T = ctx.__t;
 const arr = x => Array.from(x);
 
@@ -72,94 +72,79 @@ describe('stock', () => {
   });
 });
 
-describe('itemsInView', () => {
-  const items = [
-    item('a', { tag: 'Market', mode: 'shop', name: 'Potion of Healing' }),
-    item('b', { tag: 'Market', mode: 'hidden', name: 'Emberglass Dagger', description: 'A blade of red glass' }),
-    item('c', { tag: 'Crypt', mode: 'loot', name: 'Obsidian Ring', unidName: 'Black Stone Band' }),
-    item('d', { tag: '', mode: 'hidden', name: 'Loose Coins' }),
-  ];
-  const ids = f => arr(T.itemsInView(items, { mode: 'all', q: '', ...f })).map(i => i.id);
-
-  it('shows one tag at a time', () => {
-    expect(ids({ view: 'Market' })).toEqual(['a', 'b']);
-    expect(ids({ view: 'Crypt' })).toEqual(['c']);
+describe('pileState', () => {
+  it('names the one place all of a pile is in', () => {
+    expect(T.pileState([item('a', { mode: 'loot' }), item('b', { mode: 'loot' })]).state).toBe('loot');
+    expect(T.pileState([item('a', { mode: 'shop' })]).state).toBe('shop');
+    expect(T.pileState([item('a')]).state).toBe('hidden');
   });
-  it('has a view for items with no tag, one for everything, and one for what is asked for', () => {
-    expect(ids({ view: '' })).toEqual(['d']);
-    expect(ids({ view: T.VIEW_ALL })).toEqual(['a', 'b', 'c', 'd']);
-    expect(ids({ view: T.VIEW_ASKED, askedIds: new Set(['c']) })).toEqual(['c']);
-    expect(ids({ view: T.VIEW_ASKED })).toEqual([]);
+  it('is mixed when its items disagree, and counts each place', () => {
+    const s = T.pileState([item('a', { mode: 'loot' }), item('b'), item('c', { mode: 'loot' })]);
+    expect(s.state).toBe('mixed');
+    expect({ ...s.counts }).toEqual({ hidden: 1, loot: 2, shop: 0 });
   });
-  it('narrows by where the item is', () => {
-    expect(ids({ view: 'Market', mode: 'shop' })).toEqual(['a']);
-    expect(ids({ view: T.VIEW_ALL, mode: 'hidden' })).toEqual(['b', 'd']);
-  });
-  it('searches name, the name players see, description and tag — inside the view', () => {
-    expect(ids({ view: T.VIEW_ALL, q: 'GLASS' })).toEqual(['b']);
-    expect(ids({ view: T.VIEW_ALL, q: 'black stone' })).toEqual(['c']);
-    expect(ids({ view: T.VIEW_ALL, q: 'market' })).toEqual(['a', 'b']);
-    expect(ids({ view: 'Crypt', q: 'potion' })).toEqual([]);
+  it('is empty with nothing in it', () => {
+    expect(T.pileState([]).state).toBe('empty');
+    expect(T.pileState(undefined).state).toBe('empty');
   });
 });
 
-describe('sortItems', () => {
+describe('pileEntries', () => {
   const items = [
-    item('a', { name: 'Zebra hide', valueCp: 100, quantity: 5, mode: 'shop' }),
-    item('b', { name: 'apple', valueCp: 900, quantity: -1, mode: 'hidden', descVisible: false }),
-    item('c', { name: 'Mace', valueCp: 100, quantity: 0, mode: 'loot' }),
+    item('a', { tag: 'Market', mode: 'shop' }), item('b', { tag: 'Market', mode: 'shop' }),
+    item('c', { tag: 'Crypt', mode: 'loot' }), item('d', { tag: '' }),
   ];
-  const order = (key, dir, fn) => arr(T.sortItems(items, key, dir, fn)).map(i => i.id);
-  it('sorts by name without minding capitals', () => {
-    expect(order('name', 'asc')).toEqual(['b', 'c', 'a']);
-    expect(order('name', 'desc')).toEqual(['a', 'c', 'b']);
+  const rows = [{ tag: 'Crypt', note: 'Behind the altar' }, { tag: 'Armoury', note: '' }];
+  const list = () => arr(T.pileEntries(items, rows, [{ itemId: 'c' }, { itemId: 'c' }, { itemId: 'gone' }]));
+
+  it('lists every tag in use and every pile row, by name, with Unsorted last', () => {
+    expect(list().map(p => p.tag)).toEqual(['Armoury', 'Crypt', 'Market', '']);
   });
-  it('sorts by price, breaking ties by name', () => {
-    expect(order('price', 'asc')).toEqual(['c', 'a', 'b']);
-    expect(order('price', 'desc')).toEqual(['b', 'c', 'a']);
+  it('keeps an empty pile, and its note', () => {
+    const crypt = list().find(p => p.tag === 'Crypt');
+    expect(crypt.note).toBe('Behind the altar');
+    expect(list().find(p => p.tag === 'Armoury')).toMatchObject({ state: 'empty' });
+    expect(arr(list().find(p => p.tag === 'Armoury').items)).toEqual([]);
   });
-  it('puts unlimited stock above any number', () => {
-    expect(order('stock', 'desc')[0]).toBe('b');
-    expect(order('stock', 'asc')).toEqual(['c', 'a', 'b']);
+  it('gives each pile its items, its state and the requests waiting on it', () => {
+    const market = list().find(p => p.tag === 'Market');
+    expect(arr(market.items).map(i => i.id)).toEqual(['a', 'b']);
+    expect(market.state).toBe('shop');
+    expect(list().find(p => p.tag === 'Crypt').asks).toBe(2);
+    expect(market.asks).toBe(0);
   });
-  it('sorts by place, by state and by how many are asking', () => {
-    expect(order('mode', 'asc')).toEqual(['b', 'c', 'a']);
-    expect(order('state', 'asc')[0]).toBe('b');
-    expect(order('asked', 'desc', id => (id === 'c' ? 2 : 0))[0]).toBe('c');
-  });
-  it('does not change the list it was given', () => {
-    T.sortItems(items, 'name', 'asc');
-    expect(items.map(i => i.id)).toEqual(['a', 'b', 'c']);
+  it('leaves Unsorted out when nothing is unsorted', () => {
+    const tags = arr(T.pileEntries(items.filter(i => i.tag), [], [])).map(p => p.tag);
+    expect(tags).toEqual(['Crypt', 'Market']);
   });
 });
 
-describe('tagEntries', () => {
+describe('searchItems', () => {
   const items = [
-    item('a', { tag: 'Market', mode: 'shop' }), item('b', { tag: 'Market', mode: 'hidden' }),
-    item('c', { tag: 'Crypt', mode: 'loot' }), item('d', { tag: '' }), item('e', { tag: 'Armoury', mode: 'shop' }),
+    item('a', { tag: 'Market', name: 'Potion of Healing' }),
+    item('b', { tag: 'Market', name: 'Emberglass Dagger', description: 'A blade of red glass' }),
+    item('c', { tag: 'Crypt', name: 'Obsidian Ring', unidName: 'Black Stone Band' }),
   ];
-  const by = (open, active) => Object.fromEntries(arr(T.tagEntries(items, open, active)).map(e => [e.tag, e]));
-  it('counts each tag and lists them by name, with "no tag" last', () => {
-    const list = arr(T.tagEntries(items, true, []));
-    expect(list.map(e => e.tag)).toEqual(['Armoury', 'Crypt', 'Market', '']);
-    expect(list.find(e => e.tag === 'Market')).toMatchObject({ count: 2, forSale: 1 });
+  const ids = q => arr(T.searchItems(items, q)).map(i => i.id);
+  it('finds by name, the name players see, description and pile, without minding capitals', () => {
+    expect(ids('GLASS')).toEqual(['b']);
+    expect(ids('black stone')).toEqual(['c']);
+    expect(ids('market')).toEqual(['a', 'b']);
   });
-  it('marks a tag as on sale only when its shop items can be bought now', () => {
-    expect(by(true, []).Market.onSale).toBe(true);
-    expect(by(true, []).Crypt.onSale).toBe(false);            // nothing of it is in the shop
-    expect(by(true, ['Armoury']).Market.onSale).toBe(false);  // the shop sells another tag
-    expect(by(true, ['Armoury']).Armoury.onSale).toBe(true);
-    expect(by(false, []).Market.onSale).toBe(false);          // the shop is closed
+  it('returns everything for an empty search, and nothing for no match', () => {
+    expect(ids('  ')).toEqual(['a', 'b', 'c']);
+    expect(ids('zzz')).toEqual([]);
   });
 });
 
-describe('shopTagsAfterToggle', () => {
-  it('adds a tag, takes it off, and goes back to everything when the last one goes', () => {
-    expect(arr(T.shopTagsAfterToggle([], 'Market'))).toEqual(['Market']);
-    expect(arr(T.shopTagsAfterToggle(['Market'], 'Crypt'))).toEqual(['Market', 'Crypt']);
-    expect(arr(T.shopTagsAfterToggle(['Market', 'Crypt'], 'Market'))).toEqual(['Crypt']);
-    expect(arr(T.shopTagsAfterToggle(['Market'], 'Market'))).toEqual([]);
-    expect(arr(T.shopTagsAfterToggle(undefined, 'Market'))).toEqual(['Market']);
+describe('giveQty', () => {
+  it('hands over the whole stock, one of an endless one, and none of a spent one', () => {
+    expect(T.giveQty(item('a', { quantity: 4 }))).toBe(4);
+    expect(T.giveQty(item('a', { quantity: -1 }))).toBe(1);
+    expect(T.giveQty(item('a', { quantity: 0 }))).toBe(0);
+  });
+  it('never asks the server for more than 100 at once', () => {
+    expect(T.giveQty(item('a', { quantity: 500 }))).toBe(100);
   });
 });
 
