@@ -1,4 +1,4 @@
-/* Written by Irmak Hakman — 2026-10-22 09:18 */
+/* Written by Irmak Hakman — 2026-10-28 14:25 */
 /* Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) */
 
 *{box-sizing:border-box;margin:0;padding:0}
@@ -345,6 +345,19 @@ a.char-btn{display:inline-block;text-decoration:none;line-height:1.5}
 /* ── Equipment Items ── */
 .item-row{display:flex;align-items:center;gap:calc(6px*var(--fs, 1));padding:calc(5px*var(--fs, 1)) 0;border-bottom:1px solid var(--rule);flex-wrap:wrap}
 .item-row:last-child{border-bottom:none}
+/* ── Companions (index-companions.js) ── */
+.cmp-row{align-items:flex-start}
+.cmp-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:calc(2px*var(--fs, 1))}
+.cmp-main .item-meta{white-space:normal}
+.cmp-ph{width:calc(32px*var(--fs, 1));height:calc(32px*var(--fs, 1));display:inline-flex;align-items:center;justify-content:center;background:var(--slate-hi);border-radius:var(--r-sm);flex-shrink:0}
+.cmp-atks{display:flex;flex-wrap:wrap;gap:calc(4px*var(--fs, 1))}
+.cmp-atk{font-size:calc(10px * var(--fs, 1));padding:1px calc(6px*var(--fs, 1));border:1px solid var(--rule-hi);border-radius:var(--r-sm);color:var(--bone)}
+.cmp-hint{font-size:calc(10px * var(--fs, 1));color:var(--ash);margin-top:calc(8px*var(--fs, 1))}
+.cmp-head{display:flex;gap:calc(10px*var(--fs, 1));align-items:flex-end;margin-bottom:calc(6px*var(--fs, 1))}
+.cmp-portrait{display:flex;flex-direction:column;gap:calc(4px*var(--fs, 1));align-items:center}
+.cmp-portrait img{width:calc(56px*var(--fs, 1));height:calc(56px*var(--fs, 1));object-fit:cover;border-radius:var(--r-sm)}
+.cmp-atk-row{display:grid;grid-template-columns:2fr calc(52px*var(--fs, 1)) 3fr auto;gap:calc(4px*var(--fs, 1));margin-bottom:calc(4px*var(--fs, 1));align-items:center}
+.cmp-atk-row input{min-width:0}
 .item-chk{width:calc(16px*var(--fs, 1));height:calc(16px*var(--fs, 1));accent-color:var(--bone);flex-shrink:0;cursor:pointer}
 .item-name{flex:1;font-size:calc(12px * var(--fs, 1));font-weight:bold;min-width:calc(60px*var(--fs, 1));overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .item-meta{font-size:calc(10px * var(--fs, 1));color:var(--ash);white-space:nowrap;flex-shrink:0}

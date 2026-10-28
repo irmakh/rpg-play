@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Written by Irmak Hakman — 2026-10-22 09:18 -->
+<!-- Written by Irmak Hakman — 2026-10-28 14:25 -->
 <!-- Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) -->
 <html lang="en" class="lamplit">
 <head>
@@ -374,7 +374,7 @@
       <!-- Initiative roll + edit label (DM only) — directly below Temp HP -->
       <div id="hp-init-row" style="display:none;border-top:1px solid var(--rule-hi);padding:calc(6px*var(--fs, 1)) calc(8px*var(--fs, 1))">
         <button id="hp-init-btn" class="btn sm" onclick="rollTokenInitiative()" style="width:100%;font-size:calc(12px * var(--fs, 1))"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg> Roll Initiative</button>
-        <button class="btn sm" onclick="openEditLabel()" style="width:100%;font-size:calc(12px * var(--fs, 1));margin-top:calc(4px*var(--fs, 1))"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-pencil"></use></svg> Edit Identifier</button>
+        <button id="hp-init-label-btn" class="btn sm" onclick="openEditLabel()" style="width:100%;font-size:calc(12px * var(--fs, 1));margin-top:calc(4px*var(--fs, 1))"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-pencil"></use></svg> Edit Identifier</button>
       </div>
 
       <!-- Character / Monster sheet content -->
@@ -764,6 +764,7 @@
 <script src="/js/monster-stat-block.js" defer></script>
 <script src="/js/table/table-monsters.js" defer></script>
 <script src="/js/table/table-panel.js" defer></script>
+<script src="/js/table/table-companions.js" defer></script>
 <script src="/js/table/table-hppanel.js" defer></script>
 <script src="/js/table/table-addtoken.js" defer></script>
 <script src="/js/table/table-music.js" defer></script>

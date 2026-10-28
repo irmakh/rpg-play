@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 15:37
+// Written by Irmak Hakman — 2026-10-28 14:25
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -109,7 +109,8 @@ function uxSeesStats(tok, dm) {
  * o = { name, dm, owner, inCombat }
  */
 function uxHoverHTML(tok, o) {
-  const kind = tok.type === 'monster' ? 'Monster' : tok.type === 'npc' ? 'NPC' : tok.type === 'character' ? 'Character' : 'Token';
+  const kind = tok.type === 'monster' ? 'Monster' : tok.type === 'npc' ? 'NPC' : tok.type === 'character' ? 'Character'
+             : tok.type === 'companion' ? 'Companion' : 'Token';
   let h = `<div class="ux-hv-kind">${kind}</div><div class="ux-hv-name">${esc(o.name)}</div>`;
   if (o.owner) h += `<div class="ux-hv-sub">Played by ${esc(o.owner)}</div>`;
   if (uxSeesStats(tok, o.dm)) {

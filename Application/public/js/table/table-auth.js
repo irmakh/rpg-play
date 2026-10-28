@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 15:37
+// Written by Irmak Hakman — 2026-10-28 14:25
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -32,9 +32,11 @@ function isMyToken(tok) {
 }
 
 // A token that any player can see in the HP tracker / on the map without fog.
-// Includes all character/NPC tokens AND monster tokens assigned to a specific player.
+// Includes all character/NPC tokens, players' companions, AND monster tokens
+// assigned to a specific player.
 function isPlayerToken(tok) {
   if (tok.type === 'monster') return !!tok.assignedCharId;
+  if (tok.type === 'companion') return true;
   return !!tok.linkedId;
 }
 

@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-22 09:18
+// Written by Irmak Hakman — 2026-10-28 14:25
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -69,6 +69,7 @@ function tokenRingColor(type) {
   if (type === 'character') return '#E6EDF7';   // --bone
   if (type === 'monster')   return '#E4666B';   // --blood
   if (type === 'npc')       return '#E0A93F';   // --arc
+  if (type === 'companion') return '#3DD68C';   // --verdigris: on the players' side
   return '#637189';                             // --ash-dim
 }
 function hpBarColor(pct) {

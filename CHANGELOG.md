@@ -21,6 +21,37 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [308] — 2026-10-28 — Players own their companions
+
+- **A Companions tab on the character sheet.** Players build their familiars, summons
+  and animal companions there: name, picture, max HP, AC, speed, size, initiative bonus,
+  a list of attacks (name, to hit, damage) and notes. Saved with the character as
+  `_companions`, and visible to the DM on the player's sheet.
+- **Summon from the table.** A character's right panel gets a Companions tab with a
+  Summon button per companion (for the player and the DM). The token lands in the
+  nearest free cells beside the character's token, at full HP every time. Summoning the
+  same one again adds a numbered copy ("Wolf 2") for Conjure Animals.
+- **The player runs it.** On their own companion a player can apply damage and healing,
+  set temp HP and conditions, rename it, give the token its own picture, hide it from
+  the other players, and dismiss it. The DM can still do everything to it.
+- **Initiative per companion.** Set on the sheet: *Shares my turn* (no row of its own) or
+  *Own initiative*, rolled from its panel into a row of its own in the tracker.
+- **Its attacks roll into chat under its name**, as "Owl (Arwil)", with the usual
+  Miss / Roll damage prompt.
+- Server: new `POST /api/table/companions/summon`, `POST /api/table/companions/:id/initiative`
+  and `POST /api/characters/:id/companion-portrait`; token type `companion` with a new
+  `companion` column; a companion's owner may update, re-picture and delete that token.
+- **A hidden companion stays secret in the tracker too.** Its initiative row goes only
+  to its owner and the DM, and comes back for everyone when it is shown again.
+- **A player sees their own hidden token** (faded), so a companion they hid can be
+  clicked and shown again. The server already sent it to them; the map did not draw it.
+- The right panel's tabs wrap onto a second row instead of pushing the whole panel
+  sideways when there are more than fit (Companions, or a "Handouts (3)" badge).
+- Fix: giving a monster token its own picture no longer deletes the monster's portrait
+  files. Only a picture the token was given itself is deleted when it is replaced.
+- Fix: a character made blank (no template) was renamed "Unnamed" by its first autosave.
+  It now keeps its name.
+
 ## [307] — 2026-10-23 — Music files up to 250 MB
 
 - **Sound uploads on the Playlists page now take files up to 250 MB each** (was 50 MB).

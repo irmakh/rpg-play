@@ -1,4 +1,4 @@
-/* Written by Irmak Hakman — 2026-10-15 14:35 */
+/* Written by Irmak Hakman — 2026-10-28 14:25 */
 /* Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) */
 
 /* ════════════════════════════════════════════════════════════
@@ -421,6 +421,9 @@ body[data-theme="modern"] .rp-flat-hdr {
 /* ── Right-panel sheet tabs (Skills / Combat / Spells / Items) ── */
 body[data-theme="modern"] .rp-tabs {
   display: flex;
+  /* Wraps: a sixth tab (Companions) or a "Handouts (3)" badge made the bar
+     wider than the panel, and the whole panel then scrolled sideways. */
+  flex-wrap: wrap;
   gap: calc(2px*var(--fs, 1));
   padding: calc(6px*var(--fs, 1)) calc(8px*var(--fs, 1)) 0;
   background: var(--ink);

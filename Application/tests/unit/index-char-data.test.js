@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-10-28 14:25
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -191,6 +191,7 @@ function load({
   items        = [],
   itemIdCounter = 0,
   claimedLoots = [],
+  companions   = [],
   actions      = [],
   actionIdCounter = 0,
 } = {}) {
@@ -201,6 +202,7 @@ function load({
     items:         items.map(i => ({ ...i })),
     itemIdCounter,
     claimedLoots:  claimedLoots.map(l => ({ ...l })),
+    companions:    companions.map(c => ({ ...c })),
     actions:       actions.map(a => ({ ...a })),
     actionIdCounter,
     _lastSavedData: {},
@@ -211,6 +213,7 @@ function load({
     renderWeaponsSummary:        () => {},
     renderEquippedItemsSummary:  () => {},
     renderClaimedLoots:          () => {},
+    renderCompanions:            () => {},
     renderActionsTab:            () => {},
     recalcAll:                   () => {},
     parseInt, Math, JSON, String, Date,
@@ -228,6 +231,7 @@ function load({
     get items()        { return ctx.items; },
     get itemIdCounter(){ return ctx.itemIdCounter; },
     get claimedLoots() { return ctx.claimedLoots; },
+    get companions()   { return ctx.companions; },
     get actions()      { return ctx.actions; },
     get actionIdCounter(){ return ctx.actionIdCounter; },
   };
@@ -350,6 +354,36 @@ describe('collectData — items and loots', () => {
     });
     const parsed = JSON.parse(collectData()._loots);
     expect(parsed[0].id).toBe('l1');
+  });
+
+  it('serialises companions to JSON', () => {
+    const { collectData } = load({
+      companions: [{ id: 'cmp-1', name: 'Owl', hpMax: 1, attacks: [{ name: 'Talons', toHit: '3', damage: '1' }] }],
+    });
+    const parsed = JSON.parse(collectData()._companions);
+    expect(parsed[0]).toMatchObject({ id: 'cmp-1', name: 'Owl', hpMax: 1 });
+    expect(parsed[0].attacks[0].name).toBe('Talons');
+  });
+});
+
+describe('applyData — companions', () => {
+  it('restores the companions list', () => {
+    const sheet = load();
+    sheet.applyData({ _companions: JSON.stringify([{ id: 'cmp-1', name: 'Wolf' }]) });
+    expect(sheet.companions.map(c => c.name)).toEqual(['Wolf']);
+  });
+
+  it('empties the list for a character without companions', () => {
+    const sheet = load({ companions: [{ id: 'x', name: 'Old' }] });
+    sheet.applyData({});
+    expect(sheet.companions).toEqual([]);
+  });
+
+  it('takes a changed list from another tab (applyPartial)', () => {
+    const sheet = load();
+    sheet.applyData({ _companions: '[]' });
+    sheet.applyPartial(['_companions'], { _companions: JSON.stringify([{ id: 'cmp-2', name: 'Imp' }]) });
+    expect(sheet.companions.map(c => c.name)).toEqual(['Imp']);
   });
 });
 

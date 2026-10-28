@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-11 19:30
+// Written by Irmak Hakman — 2026-10-28 14:25
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -324,6 +324,9 @@ try { db.exec(`ALTER TABLE table_tokens ADD COLUMN ac INTEGER`); } catch {}
 try { db.exec(`ALTER TABLE table_tokens ADD COLUMN assignedCharId TEXT DEFAULT ''`); } catch {}
 try { db.exec(`ALTER TABLE playlists ADD COLUMN sounds TEXT DEFAULT '[]'`); } catch {}
 try { db.exec(`ALTER TABLE table_tokens ADD COLUMN customPortrait INTEGER DEFAULT 0`); } catch {}
+// A player's companion (familiar, summon, beast) placed from their sheet: the
+// stats the token was summoned with, as JSON (see the summon route in table.js).
+try { db.exec(`ALTER TABLE table_tokens ADD COLUMN companion TEXT DEFAULT ''`); } catch {}
 try { db.exec(`ALTER TABLE calendar_events ADD COLUMN author_char_id TEXT DEFAULT ''`); } catch {}
 try { db.exec(`ALTER TABLE calendar_events ADD COLUMN author_name    TEXT DEFAULT ''`); } catch {}
 try { db.exec(`ALTER TABLE calendar_events ADD COLUMN media_json     TEXT DEFAULT '[]'`); } catch {}
@@ -838,8 +841,8 @@ function getMovedTableTokens() {
   return db.prepare('SELECT * FROM table_tokens WHERE movedFt > 0').all().map(normalizeToken);
 }
 function createTableToken(id, fields) {
-  db.prepare('INSERT INTO table_tokens (id, name, type, linkedId, assignedCharId, x, y, color, hpCurrent, hpMax, hpTemp, speed, movedFt, initiativeId, visible, tokenSize, portrait, portraitThumb, label, conditions, ac, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
-    .run(id, fields.name || '', fields.type || 'custom', fields.linkedId || '', fields.assignedCharId || '', fields.x || 0, fields.y || 0, fields.color || '#888888', fields.hpCurrent || 0, fields.hpMax || 0, fields.hpTemp || 0, fields.speed || 30, fields.movedFt || 0, fields.initiativeId || '', fields.visible !== false ? 1 : 0, fields.tokenSize || 1, fields.portrait || null, fields.portraitThumb || null, fields.label || '', fields.conditions || '[]', fields.ac ?? null, fields.createdAt || new Date().toISOString());
+  db.prepare('INSERT INTO table_tokens (id, name, type, linkedId, assignedCharId, x, y, color, hpCurrent, hpMax, hpTemp, speed, movedFt, initiativeId, visible, tokenSize, portrait, portraitThumb, label, conditions, ac, companion, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+    .run(id, fields.name || '', fields.type || 'custom', fields.linkedId || '', fields.assignedCharId || '', fields.x || 0, fields.y || 0, fields.color || '#888888', fields.hpCurrent || 0, fields.hpMax || 0, fields.hpTemp || 0, fields.speed || 30, fields.movedFt || 0, fields.initiativeId || '', fields.visible !== false ? 1 : 0, fields.tokenSize || 1, fields.portrait || null, fields.portraitThumb || null, fields.label || '', fields.conditions || '[]', fields.ac ?? null, fields.companion || '', fields.createdAt || new Date().toISOString());
 }
 function updateTableToken(id, fields) {
   if (!fields || Object.keys(fields).length === 0) return;

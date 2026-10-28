@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 17:45
+// Written by Irmak Hakman — 2026-10-28 14:25
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -49,6 +49,46 @@ export default function register(app, ctx) {
   /** Tokens a non-DM may be sent: every visible one, plus their own. */
   const tokensForPlayer = (list, charId) =>
     list.filter(t => !isHiddenToken(t) || (charId && tokenOwner(t) === String(charId)));
+  // ── Companions ────────────────────────────────────────────────────────────────
+  // A familiar, summon or beast the player built on their sheet (_companions)
+  // and put on the map themselves. The token belongs to them (assignedCharId),
+  // has no linkedId (it is neither a character nor a monster), and keeps the
+  // stats it was summoned with in `companion` (JSON), so the panel can show its
+  // attacks to its owner. Its owner runs it the way the DM runs a monster.
+  const companionOf = (t) => { try { return JSON.parse((t && t.companion) || '{}') || {}; } catch { return {}; } };
+  /** Is the caller the player this companion token belongs to (or the DM)? */
+  async function ownsCompanion(tok, req) {
+    if (!tok || tok.type !== 'companion' || !tok.assignedCharId) return false;
+    return (await charAuth(tok.assignedCharId, req)) === 200;
+  }
+  /**
+   * Where a new companion goes: the nearest free cells beside its owner's token,
+   * to the right first. With no owner token on the map, the nearest free cells
+   * to the map's corner.
+   */
+  function companionSpot(all, owner, size) {
+    const taken = (x, y) => all.some(t => {
+      const s = t.tokenSize || 1;
+      return x < t.x + s && t.x < x + size && y < t.y + s && t.y < y + size;
+    });
+    const ox = owner ? owner.x || 0 : 0, oy = owner ? owner.y || 0 : 0;
+    const os = owner ? owner.tokenSize || 1 : 1;
+    // Gap between the two footprints in cells: 1 = touching, 0 = overlapping.
+    const gap = (x, y) => Math.max(ox - (x + size), x - (ox + os), oy - (y + size), y - (oy + os)) + 1;
+    for (let r = owner ? 1 : 0; r <= 10; r++) {
+      let best = null;
+      for (let y = oy - size - r + 1; y <= oy + os + r - 1; y++) {
+        for (let x = ox - size - r + 1; x <= ox + os + r - 1; x++) {
+          if (x < 0 || y < 0 || Math.max(gap(x, y), 0) !== r || taken(x, y)) continue;
+          const rank = (x >= ox + os ? 0 : 2) + (y >= oy ? 0 : 1);
+          if (!best || rank < best.rank) best = { x, y, rank };
+        }
+      }
+      if (best) return { x: best.x, y: best.y };
+    }
+    return { x: ox + os, y: oy };
+  }
+
   function broadcastToken(tok, payload) {
     if (!isHiddenToken(tok)) return broadcast('table', payload);
     return broadcast('table', payload, undefined, {
@@ -619,6 +659,31 @@ export default function register(app, ctx) {
         res.json({ ok: true });
       } else {
         const body = req.body || {};
+        // A companion's owner sets its HP, conditions, name and whether the
+        // other players can see it. A move alone goes down the path below.
+        if (tok.type === 'companion' && Object.keys(body).some(k => k !== 'x' && k !== 'y')
+            && await ownsCompanion(tok, req)) {
+          const update = {};
+          if (body.name !== undefined && String(body.name).trim()) update.name = String(body.name).trim().slice(0, 60);
+          if (body.hpCurrent !== undefined)  update.hpCurrent = Math.max(0, parseInt(body.hpCurrent) || 0);
+          if (body.hpMax !== undefined)      update.hpMax     = Math.max(0, parseInt(body.hpMax) || 0);
+          if (body.hpTemp !== undefined)     update.hpTemp    = Math.max(0, parseInt(body.hpTemp) || 0);
+          if (body.visible !== undefined)    update.visible   = !!body.visible;
+          if (body.conditions !== undefined) update.conditions = Array.isArray(body.conditions) ? JSON.stringify(body.conditions) : String(body.conditions);
+          if (!Object.keys(update).length) return res.status(400).json({ error: 'Nothing to update' });
+          ldb.updateTableToken(req.params.id, update);
+          const updated = { ...tok, ...update };
+          broadcastToken(updated, { action: 'token-updated', token: updated });
+          if (update.name && tok.initiativeId && ldb.getInitEntry(tok.initiativeId)) {
+            ldb.updateInitEntry(tok.initiativeId, { name: update.name });
+          }
+          // Renamed, or hidden/shown: its tracker row changes for the others
+          // too (GET /api/initiative leaves a hidden companion's row out).
+          if (tok.initiativeId && (update.name || update.visible !== undefined)) {
+            broadcast('initiative', { action: 'updated' });
+          }
+          return res.json({ ok: true });
+        }
         if (body.conditions !== undefined && Object.keys(body).length === 1) {
           const condVal = Array.isArray(body.conditions) ? JSON.stringify(body.conditions) : String(body.conditions);
           ldb.updateTableToken(req.params.id, { conditions: condVal });
@@ -672,8 +737,9 @@ export default function register(app, ctx) {
 
   app.delete('/api/table/tokens/:id', async (req, res) => {
     try {
-      if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
       const tok = ldb.getTableToken(req.params.id);
+      // The DM removes any token; a player dismisses their own companion.
+      if (!masterAuth(req) && !(await ownsCompanion(tok, req))) return res.status(401).json({ error: 'Unauthorized' });
       if (!tok) return res.status(404).json({ error: 'Not found' });
 
       let initiativeBroadcastNeeded = false;
@@ -701,9 +767,96 @@ export default function register(app, ctx) {
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
   });
 
+  // ── Companions: summon and initiative ─────────────────────────────────────────
+  // POST /api/table/companions/summon { charId, companionId } — the player (or
+  // the DM) puts one of the character's companions on the map beside the
+  // character's token, at full HP. Summoning the same one again adds another
+  // (Conjure Animals), numbered so they can be told apart.
+  app.post('/api/table/companions/summon', async (req, res) => {
+    try {
+      const { charId, companionId } = req.body || {};
+      if (!charId || !companionId) return res.status(400).json({ error: 'charId and companionId required' });
+      if (!masterAuth(req) && (await charAuth(String(charId), req)) !== 200)
+        return res.status(401).json({ error: 'Unauthorized' });
+      const char = await getCharacter(String(charId));
+      if (!char) return res.status(404).json({ error: 'Character not found' });
+      let data = {}, list = [];
+      try { data = JSON.parse(char.dataJson || '{}'); } catch {}
+      try { list = JSON.parse(data._companions || '[]'); } catch {}
+      const c = Array.isArray(list) ? list.find(x => x && String(x.id) === String(companionId)) : null;
+      if (!c) return res.status(404).json({ error: 'Companion not found' });
+
+      const all = ldb.listTableTokens();
+      const owner = all.find(t => t.linkedId === String(charId) && (t.type === 'character' || t.type === 'npc'));
+      const size = Math.max(1, Math.min(4, parseInt(c.size) || 1));
+      const { x, y } = companionSpot(all, owner, size);
+      const baseName = String(c.name || '').trim().slice(0, 60) || 'Companion';
+      const names = new Set(all.map(t => t.name));
+      let name = baseName;
+      for (let n = 2; names.has(name); n++) name = `${baseName} ${n}`;
+      const upload = (v) => (typeof v === 'string' && v.startsWith('/uploads/') ? v : null);
+      const portrait = upload(c.portrait), portraitThumb = upload(c.portraitThumb);
+      const hpMax = Math.max(0, parseInt(c.hpMax) || 0);
+      const speed = parseInt(c.speed);
+      const companion = {
+        id: String(c.id),
+        initMode: c.initMode === 'own' ? 'own' : 'shared',
+        initBonus: parseInt(c.initBonus) || 0,
+        attacks: (Array.isArray(c.attacks) ? c.attacks : []).slice(0, 20).map(a => ({
+          name:   String(a?.name || '').slice(0, 60),
+          toHit:  String(a?.toHit ?? '').slice(0, 10),
+          damage: String(a?.damage || '').slice(0, 80),
+        })).filter(a => a.name || a.damage),
+        notes: String(c.notes || '').slice(0, 2000),
+        portrait, portraitThumb,
+      };
+      const newId = genId();
+      const token = {
+        name, type: 'companion', linkedId: '', assignedCharId: String(charId),
+        x, y, color: '#888888',
+        hpCurrent: hpMax, hpMax, hpTemp: 0,
+        speed: Number.isFinite(speed) ? Math.max(0, speed) : 30,
+        movedFt: 0, initiativeId: '', visible: true, tokenSize: size,
+        portrait, portraitThumb, label: '', conditions: '[]',
+        ac: parseInt(c.ac) || null,
+        companion: JSON.stringify(companion),
+        createdAt: new Date().toISOString(),
+      };
+      ldb.createTableToken(newId, token);
+      broadcastToken({ id: newId, ...token }, { action: 'token-added', token: { id: newId, ...token } });
+      res.json({ ok: true, id: newId });
+    } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
+  });
+
+  // POST /api/table/companions/:id/initiative { roll } — a companion that acts
+  // on its own turn gets its own row in the tracker (one that shares its
+  // owner's turn never calls this). Rolling again replaces the roll.
+  app.post('/api/table/companions/:id/initiative', async (req, res) => {
+    try {
+      const tok = ldb.getTableToken(req.params.id);
+      if (!tok || tok.type !== 'companion') return res.status(404).json({ error: 'Not found' });
+      if (!masterAuth(req) && !(await ownsCompanion(tok, req))) return res.status(401).json({ error: 'Unauthorized' });
+      const roll = parseInt((req.body || {}).roll);
+      if (!Number.isFinite(roll)) return res.status(400).json({ error: 'roll required' });
+      let entryId = tok.initiativeId && ldb.getInitEntry(tok.initiativeId) ? tok.initiativeId : '';
+      if (entryId) {
+        ldb.updateInitEntry(entryId, { roll, name: tok.name });
+      } else {
+        entryId = genId();
+        ldb.createInitEntry(entryId, { name: tok.name, roll, charId: '', monsterId: '', createdAt: new Date().toISOString() });
+        ldb.updateTableToken(tok.id, { initiativeId: entryId });
+        const updated = { ...tok, initiativeId: entryId };
+        broadcastToken(updated, { action: 'token-updated', token: updated });
+      }
+      broadcast('initiative', { action: 'updated' });
+      res.json({ ok: true, id: entryId });
+    } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
+  });
+
   app.post('/api/table/tokens/:id/portrait', express.json({ limit: '12mb' }), async (req, res) => {
     try {
-      if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
+      if (!masterAuth(req) && !(await ownsCompanion(ldb.getTableToken(req.params.id), req)))
+        return res.status(401).json({ error: 'Unauthorized' });
       const { dataUrl } = req.body || {};
       if (typeof dataUrl !== 'string' || (dataUrl !== '' && !dataUrl.match(/^data:image\//)))
         return res.status(400).json({ error: 'Image data URL required' });
@@ -714,10 +867,17 @@ export default function register(app, ctx) {
 
       if (dataUrl === '') {
         // Clearing custom portrait — delete custom files and restore the
-        // linked monster's or character's portrait
-        deleteUploadFile(tok.portrait);
-        deleteUploadFile(tok.portraitThumb);
-        if (tok.linkedId && tok.type === 'monster') {
+        // linked monster's or character's portrait (a companion's: the one
+        // on its owner's sheet)
+        if (tok.customPortrait) {
+          deleteUploadFile(tok.portrait);
+          deleteUploadFile(tok.portraitThumb);
+        }
+        if (tok.type === 'companion') {
+          const c = companionOf(tok);
+          portrait = c.portrait || null;
+          portraitThumb = c.portraitThumb || null;
+        } else if (tok.linkedId && tok.type === 'monster') {
           const mon = ldb.getMonster(tok.linkedId);
           if (mon) {
             let d = {};
@@ -734,8 +894,12 @@ export default function register(app, ctx) {
         // Upload new custom portrait
         const mimeMatch = dataUrl.match(/^data:(image\/[^;]+);base64,(.+)$/s);
         if (!mimeMatch) return res.status(400).json({ error: 'Invalid image format' });
-        deleteUploadFile(tok.portrait);
-        deleteUploadFile(tok.portraitThumb);
+        // Only a picture this token was given itself is its own to delete: a
+        // linked monster's, character's or companion's belongs to them.
+        if (tok.customPortrait) {
+          deleteUploadFile(tok.portrait);
+          deleteUploadFile(tok.portraitThumb);
+        }
         const buffer = Buffer.from(mimeMatch[2], 'base64');
         // New name per upload, so the map shows the new picture, not a cached one.
         const urls = await processImageSizes(mimeMatch[1], buffer, 'tokens', `${req.params.id}-${Date.now().toString(36)}`);

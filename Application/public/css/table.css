@@ -1,4 +1,4 @@
-/* Written by Irmak Hakman — 2026-10-22 09:18 */
+/* Written by Irmak Hakman — 2026-10-28 14:25 */
 /* Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) */
 
 *{box-sizing:border-box;margin:0;padding:0}
@@ -90,6 +90,16 @@ input[type=number].rp-num-input:focus{outline:none;border-color:var(--arc);backg
 .rp-atk-list{display:flex;flex-direction:column}
 .rp-atk-row{display:flex;align-items:center;gap:calc(4px*var(--fs, 1));padding:calc(4px*var(--fs, 1)) calc(10px*var(--fs, 1));border-bottom:1px solid var(--wash)}
 .rp-atk-row:last-child{border-bottom:none}
+/* ── Companions (table-companions.js) ── */
+.cmp-notes{padding:calc(6px*var(--fs, 1)) calc(10px*var(--fs, 1));font-size:calc(12px * var(--fs, 1));color:var(--bone);white-space:pre-wrap;overflow-wrap:anywhere}
+.cmp-dismiss{display:block;width:calc(100% - 20px*var(--fs, 1));margin:calc(10px*var(--fs, 1)) auto}
+.cmp-side-row{display:flex;align-items:center;gap:calc(8px*var(--fs, 1));padding:calc(6px*var(--fs, 1)) calc(10px*var(--fs, 1));border-bottom:1px solid var(--wash)}
+.cmp-side-row:last-child{border-bottom:none}
+.cmp-side-img{width:calc(32px*var(--fs, 1));height:calc(32px*var(--fs, 1));border-radius:calc(4px*var(--fs, 1));object-fit:cover;flex-shrink:0}
+.cmp-side-ph{display:inline-flex;align-items:center;justify-content:center;background:var(--slate-hi)}
+.cmp-side-main{flex:1;min-width:0}
+.cmp-side-name{font-weight:bold;font-size:calc(12px * var(--fs, 1));overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cmp-side-meta{font-size:calc(10px * var(--fs, 1));color:var(--ash)}
 .rp-atk-name{flex:1;font-size:calc(11px * var(--fs, 1));overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;color:var(--bone)}
 .rp-atk-name:hover{color:var(--bone)}
 .rp-atk-hit{font-size:calc(12px * var(--fs, 1));font-weight:bold;color:var(--bone);cursor:pointer;padding:calc(2px*var(--fs, 1)) calc(6px*var(--fs, 1));border-radius:calc(3px*var(--fs, 1));background:var(--wash);flex-shrink:0}

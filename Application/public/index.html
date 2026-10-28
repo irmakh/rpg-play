@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Written by Irmak Hakman — 2026-10-15 15:08 -->
+<!-- Written by Irmak Hakman — 2026-10-28 14:25 -->
 <!-- Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) -->
 <html lang="en" class="lamplit">
 <head>
@@ -122,6 +122,7 @@
     <button class="tab" role="tab" type="button" id="tabbtn-spells" aria-controls="tab-spells" aria-selected="false" tabindex="-1" onclick="showTab('spells',this)">Spells</button>
     <button class="tab" role="tab" type="button" id="tabbtn-notes" aria-controls="tab-notes" aria-selected="false" tabindex="-1" onclick="showTab('notes',this)">Notes</button>
     <button class="tab" role="tab" type="button" id="tabbtn-inventory" aria-controls="tab-inventory" aria-selected="false" tabindex="-1" onclick="showTab('inventory',this)">Items</button>
+    <button class="tab" role="tab" type="button" id="tabbtn-companions" aria-controls="tab-companions" aria-selected="false" tabindex="-1" onclick="showTab('companions',this)">Companions</button>
     <button class="tab" role="tab" type="button" id="tabbtn-rolls" aria-controls="tab-rolls" aria-selected="false" tabindex="-1" onclick="showTab('rolls',this)">Rolls</button>
     <button class="tab" id="tab-btn-media" role="tab" type="button" aria-controls="tab-media" aria-selected="false" tabindex="-1" onclick="showTab('media',this)">Media</button>
     <button class="tab" id="tab-btn-treasury" role="tab" type="button" aria-controls="tab-treasury" aria-selected="false" tabindex="-1" onclick="showTab('treasury',this)">Treasury</button>
@@ -311,6 +312,15 @@
         <div class="field"><label class="lbl">GP</label><input type="number" data-key="gp" style="text-align:center"></div>
         <div class="field"><label class="lbl">PP</label><input type="number" data-key="pp2" style="text-align:center"></div>
       </div>
+    </div></div>
+  </div>
+
+  <!-- COMPANIONS — familiars, summons, beasts; summoned from the table -->
+  <div id="tab-companions" role="tabpanel" aria-labelledby="tabbtn-companions" tabindex="0" class="page">
+    <div class="card"><div class="ct">Companions</div><div class="cb" style="padding:calc(8px*var(--fs, 1)) calc(10px*var(--fs, 1))">
+      <div id="companions-body"></div>
+      <button class="add-btn" style="margin-top:calc(4px*var(--fs, 1))" onclick="openCompanionModal(null)">+ Add Companion</button>
+      <div class="cmp-hint">Summon them from the table: open your sheet in the right panel, then the Companions tab. Every summon starts at full HP.</div>
     </div></div>
   </div>
 
@@ -794,6 +804,47 @@
   </div>
 </div>
 
+<!-- Companion modal (index-companions.js) -->
+<div id="companion-modal" class="modal-overlay" style="display:none">
+  <div class="modal-box" style="max-width:calc(460px*var(--fs, 1));width:92%">
+    <div class="ct" id="cmp-modal-title">Add Companion</div>
+    <div class="modal-body" style="max-height:70vh;overflow-y:auto">
+      <div class="cmp-head">
+        <div class="cmp-portrait">
+          <img id="cmp-portrait-img" alt="" style="display:none">
+          <button type="button" class="char-btn" onclick="chooseCompanionPortrait()">Picture…</button>
+          <button type="button" class="char-btn" id="cmp-portrait-rm" onclick="removeCompanionPortrait()" style="display:none">Remove</button>
+          <input type="file" id="cmp-portrait-input" accept="image/*" style="display:none" onchange="onCompanionPortraitChosen(this)">
+        </div>
+        <div class="field" style="flex:1"><label class="lbl" for="cmp-name">Name</label><input type="text" id="cmp-name" maxlength="60" placeholder="Owl familiar…"></div>
+      </div>
+      <div class="g3" style="gap:calc(8px*var(--fs, 1));margin-bottom:calc(6px*var(--fs, 1))">
+        <div class="field"><label class="lbl" for="cmp-hp">Max HP</label><input type="number" id="cmp-hp" min="0"></div>
+        <div class="field"><label class="lbl" for="cmp-ac">AC</label><input type="number" id="cmp-ac" min="0"></div>
+        <div class="field"><label class="lbl" for="cmp-speed">Speed (ft)</label><input type="number" id="cmp-speed" min="0" step="5"></div>
+        <div class="field"><label class="lbl" for="cmp-size">Size</label><select id="cmp-size"></select></div>
+        <div class="field"><label class="lbl" for="cmp-init">Initiative bonus</label><input type="number" id="cmp-init"></div>
+        <div class="field"><label class="lbl" for="cmp-init-mode">In combat</label>
+          <select id="cmp-init-mode">
+            <option value="shared">Shares my turn</option>
+            <option value="own">Own initiative</option>
+          </select>
+        </div>
+      </div>
+      <div class="field" style="margin-bottom:calc(6px*var(--fs, 1))">
+        <label class="lbl">Attacks <span style="color:var(--ash)">(name · to hit · damage)</span></label>
+        <div id="cmp-atk-list"></div>
+        <button type="button" class="char-btn" style="padding:calc(2px*var(--fs, 1)) calc(10px*var(--fs, 1));font-size:calc(11px * var(--fs, 1));margin-top:calc(2px*var(--fs, 1))" onclick="addCompanionAttackRow()">+ Add Attack</button>
+      </div>
+      <div class="field"><label class="lbl" for="cmp-notes">Notes / abilities</label><textarea id="cmp-notes" maxlength="2000" style="min-height:calc(60px*var(--fs, 1))"></textarea></div>
+    </div>
+    <div class="modal-btns">
+      <button class="char-btn" onclick="closeCompanionModal()">Cancel</button>
+      <button class="char-btn primary" onclick="saveCompanionModal()">Save</button>
+    </div>
+  </div>
+</div>
+
 <!-- Custom action modal -->
 <div id="action-modal" class="modal-overlay" style="display:none">
   <div class="modal-box" style="max-width:calc(420px*var(--fs, 1));width:92%">
@@ -899,6 +950,7 @@
 <script src="/js/index/index-char.js" defer></script>
 <script src="/js/index/index-dice.js" defer></script>
 <script src="/js/index/index-items.js" defer></script>
+<script src="/js/index/index-companions.js" defer></script>
 <script src="/js/index/index-actions.js" defer></script>
 <script src="/js/index/index-media.js" defer></script>
 <script src="/js/index/index-treasury.js" defer></script>

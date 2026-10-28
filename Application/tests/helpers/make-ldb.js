@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 17:46
+// Written by Irmak Hakman — 2026-10-28 14:25
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -39,7 +39,7 @@ export function makeLdb() {
       hpTemp INTEGER DEFAULT 0, speed INTEGER DEFAULT 30, movedFt INTEGER DEFAULT 0,
       initiativeId TEXT DEFAULT '', visible INTEGER DEFAULT 1,
       tokenSize INTEGER DEFAULT 1, portrait TEXT, portraitThumb TEXT, customPortrait INTEGER DEFAULT 0,
-      label TEXT DEFAULT '', conditions TEXT DEFAULT '[]', ac INTEGER,
+      label TEXT DEFAULT '', conditions TEXT DEFAULT '[]', ac INTEGER, companion TEXT DEFAULT '',
       createdAt TEXT DEFAULT (datetime('now'))
     );
     CREATE TABLE IF NOT EXISTS table_state (
@@ -270,8 +270,8 @@ export function makeLdb() {
     db.prepare(`INSERT INTO table_tokens
       (id, name, type, linkedId, assignedCharId, x, y, color, hpCurrent, hpMax, hpTemp,
        speed, movedFt, initiativeId, visible, tokenSize, portrait, portraitThumb,
-       label, conditions, ac, createdAt)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+       label, conditions, ac, companion, createdAt)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
       .run(
         id,
         fields.name || '', fields.type || 'custom', fields.linkedId || '', fields.assignedCharId || '',
@@ -280,7 +280,7 @@ export function makeLdb() {
         fields.speed || 30, fields.movedFt || 0, fields.initiativeId || '',
         fields.visible !== false ? 1 : 0,
         fields.tokenSize || 1, fields.portrait || null, fields.portraitThumb || null,
-        fields.label || '', fields.conditions || '[]', fields.ac ?? null,
+        fields.label || '', fields.conditions || '[]', fields.ac ?? null, fields.companion || '',
         fields.createdAt || new Date().toISOString()
       );
   }

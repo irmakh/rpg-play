@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Written by Irmak Hakman — 2026-10-15 17:36 -->
+<!-- Written by Irmak Hakman — 2026-10-28 14:25 -->
 <!-- Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) -->
 <html lang="en" class="lamplit" data-console>
 <head>
@@ -188,7 +188,7 @@
         </div>
         <div id="hp-init-row" style="display:none;border-top:1px solid var(--rule-hi);padding:6px 8px">
           <button id="hp-init-btn" class="btn sm" onclick="rollTokenInitiative()" style="width:100%;font-size:12px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg> Roll Initiative</button>
-          <button class="btn sm" onclick="openEditLabel()" style="width:100%;font-size:12px;margin-top:4px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-pencil"></use></svg> Edit Identifier</button>
+          <button id="hp-init-label-btn" class="btn sm" onclick="openEditLabel()" style="width:100%;font-size:12px;margin-top:4px"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-pencil"></use></svg> Edit Identifier</button>
         </div>
         <div id="hp-label-row" style="display:none;border-top:1px solid var(--rule-hi);padding:6px 8px">
           <div style="font-size:10px;color:var(--ash);margin-bottom:4px">Identifier (shown to players)</div>
@@ -423,6 +423,7 @@
 <script src="/js/table/table-chat.js" defer></script>
 <script src="/js/table/table-monsters.js" defer></script>
 <script src="/js/table/table-panel.js" defer></script>
+<script src="/js/table/table-companions.js" defer></script>
 <script src="/js/table/table-hppanel.js" defer></script>
 <script src="/js/table/table-addtoken.js" defer></script>
 <script src="/js/table/table-waiting.js" defer></script>

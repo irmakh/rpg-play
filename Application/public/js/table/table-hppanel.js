@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 15:43
+// Written by Irmak Hakman — 2026-10-28 14:25
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -88,7 +88,7 @@ function _refreshHpPanel(tok) {
       rpImg.src = portrait; rpImg.style.display = ''; rpPh.style.display = 'none';
     } else {
       rpImg.style.display = 'none'; rpPh.style.display = '';
-      rpPh.innerHTML = tok.type === 'monster' ? '🐉' : '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-swords"></use></svg>';
+      rpPh.innerHTML = tok.type === 'monster' ? '🐉' : tok.type === 'companion' ? '🐾' : '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-swords"></use></svg>';
     }
   }
 
@@ -107,10 +107,19 @@ function _refreshHpPanel(tok) {
     hpNameEl.innerHTML = `<span class="rp-name-main">${esc(tokDisplayName(tok))}</span>`;
   }
   const canEdit = isDM() || isMyToken(tok);
+  // A player runs their own companion (table-companions.js) as the DM runs a
+  // monster: dismiss, rename, picture, hide, its own initiative.
+  const ownCompanion = tok.type === 'companion' && isMyToken(tok);
   const delBtn = document.getElementById('hp-del-btn');
-  if (delBtn) delBtn.style.display = isDM() ? '' : 'none';
+  if (delBtn) {
+    delBtn.style.display = isDM() || ownCompanion ? '' : 'none';
+    delBtn.title = tok.type === 'companion' ? 'Dismiss companion' : 'Delete token';
+  }
   const editLabelBtn = document.getElementById('hp-edit-label-btn');
-  if (editLabelBtn) editLabelBtn.style.display = isDM() ? '' : 'none';
+  if (editLabelBtn) {
+    editLabelBtn.style.display = isDM() || ownCompanion ? '' : 'none';
+    editLabelBtn.title = tok.type === 'companion' ? 'Rename' : 'Edit identifier';
+  }
   // HP change inputs — visible only to editors
   const hpEditArea = document.getElementById('hp-edit-area');
   if (hpEditArea) hpEditArea.style.display = canEdit ? '' : 'none';
@@ -129,10 +138,11 @@ function _refreshHpPanel(tok) {
   const visRow = document.getElementById('hp-vis-row');
   const visBtn = document.getElementById('hp-vis-btn');
   if (visRow && visBtn) {
-    if (isDM()) {
+    if (isDM() || ownCompanion) {
       visRow.style.display = '';
       const isVisible = tok.visible !== false;
-      visBtn.innerHTML = isVisible ? '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-eye"></use></svg> Visible to players' : '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-eye-off"></use></svg> Hidden from players';
+      const who = isDM() ? 'players' : 'the others';
+      visBtn.innerHTML = isVisible ? `<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-eye"></use></svg> Visible to ${who}` : `<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-eye-off"></use></svg> Hidden from ${who}`;
       visBtn.style.background = isVisible ? 'var(--verdigris)' : 'var(--blood)';
       visBtn.style.color = '#fff';
       visBtn.style.border = 'none';
@@ -154,14 +164,21 @@ function _refreshHpPanel(tok) {
       condGrid.appendChild(btn);
     }
   }
-  // Roll Initiative — DM only, all token types
+  // Roll Initiative — DM, all token types; a companion's owner, for one that
+  // takes its own turn (one that shares its owner's turn has no row).
   const initRow = document.getElementById('hp-init-row');
   const initBtn = document.getElementById('hp-init-btn');
   if (initRow && initBtn) {
-    if (isDM()) {
+    const companionTurn = tok.type === 'companion' && companionOf(tok).initMode === 'own';
+    if (isDM() || (ownCompanion && companionTurn)) {
       initRow.style.display = '';
+      const labelBtn = document.getElementById('hp-init-label-btn');
+      if (labelBtn) labelBtn.innerHTML = '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-pencil"></use></svg> '
+        + (tok.type === 'companion' ? 'Rename' : 'Edit Identifier');
       const hasEntry = !!initData.entries.find(e => e.id === tok.initiativeId);
-      if (tok.type === 'monster') {
+      if (tok.type === 'companion' && !companionTurn) {
+        initBtn.innerHTML = '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg> Shares its owner\'s turn';
+      } else if (tok.type === 'monster') {
         initBtn.innerHTML = '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg> Roll Monster Initiative';
       } else {
         initBtn.innerHTML = hasEntry ? '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg> Reroll Initiative' : '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg> Roll Initiative';
@@ -170,12 +187,12 @@ function _refreshHpPanel(tok) {
       initRow.style.display = 'none';
     }
   }
-  // Token portrait upload — DM only, monster tokens
+  // Token portrait upload — DM on monster tokens, and a companion's owner
   const portraitRow = document.getElementById('hp-portrait-row');
   const portraitPreview = document.getElementById('hp-portrait-preview');
   const portraitResetBtn = document.getElementById('hp-portrait-reset-btn');
   if (portraitRow) {
-    if (isDM() && tok.type === 'monster') {
+    if ((isDM() && (tok.type === 'monster' || tok.type === 'companion')) || ownCompanion) {
       portraitRow.style.display = '';
       const img = tok.portraitThumb || tok.portrait || '';
       if (img && portraitPreview) { portraitPreview.src = img; portraitPreview.style.display = ''; }
@@ -226,7 +243,7 @@ function onTokenPortraitChosen(input) {
     try {
       const res = await fetch(`/api/table/tokens/${tok.id}/portrait`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Master-Password': masterPw },
+        headers: authHeaders(),
         body: JSON.stringify({ dataUrl })
       });
       if (!res.ok) { showToast('Portrait upload failed.', true); return; }
@@ -242,11 +259,11 @@ function onTokenPortraitChosen(input) {
 
 async function removeTokenCustomPortrait() {
   const tok = tokens.find(t => t.id === selectedTokenId);
-  if (!tok || !isDM()) return;
+  if (!tok || !(isDM() || (tok.type === 'companion' && isMyToken(tok)))) return;
   try {
     const res = await fetch(`/api/table/tokens/${tok.id}/portrait`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Master-Password': masterPw },
+      headers: authHeaders(),
       body: JSON.stringify({ dataUrl: '' })
     });
     if (!res.ok) { showToast('Failed to reset portrait.', true); return; }
@@ -273,15 +290,16 @@ async function removeTokenCustomPortrait() {
 
 async function toggleTokenVisibility() {
   const tok = tokens.find(t => t.id === selectedTokenId);
-  if (!tok || !isDM()) return;
+  if (!tok || !(isDM() || (tok.type === 'companion' && isMyToken(tok)))) return;
   await _putHp({ visible: tok.visible === false });
 }
 
 function openEditLabel() {
   const tok = tokens.find(t => t.id === selectedTokenId);
-  if (!tok || !isDM()) return;
+  if (!tok || !(isDM() || (tok.type === 'companion' && isMyToken(tok)))) return;
   const input = document.getElementById('hp-label-input');
-  if (input) input.value = tok.label || '';
+  // A companion has no identifier: the box renames it.
+  if (input) input.value = tok.type === 'companion' ? tok.name : tok.label || '';
   const row = document.getElementById('hp-label-row');
   if (row) row.style.display = '';
   setTimeout(() => input?.focus(), 30);
@@ -294,9 +312,27 @@ function cancelEditLabel() {
 
 async function saveEditLabel() {
   const tok = tokens.find(t => t.id === selectedTokenId);
-  if (!tok || !isDM()) return;
+  if (!tok) return;
   const newLabel = (document.getElementById('hp-label-input')?.value || '').trim();
   if (!newLabel) return;
+  if (tok.type === 'companion') {
+    if (!isMyToken(tok)) return;
+    const name = newLabel.slice(0, 60);
+    try {
+      const res = await fetch(`/api/table/tokens/${tok.id}`, {
+        method: 'PUT', headers: authHeaders(), body: JSON.stringify({ name }),
+      });
+      if (!res.ok) return showToast('Failed to rename.', true);
+      patchToken(tok.id, { name });
+      cancelEditLabel();
+      _refreshHpPanel({ ...tok, name });
+      renderTokens();
+      _sideQrollTokenId = null;
+      loadSideQroll();
+    } catch { showToast('Connection error.', true); }
+    return;
+  }
+  if (!isDM()) return;
   const baseName = tok.label ? tok.name.slice(0, tok.name.length - tok.label.length).trimEnd() : tok.name;
   const newName = baseName ? `${baseName} ${newLabel}` : newLabel;
   try {
@@ -317,7 +353,12 @@ async function saveEditLabel() {
 
 function rollTokenInitiative() {
   const tok = tokens.find(t => t.id === selectedTokenId);
-  if (!tok || !isDM()) return;
+  if (!tok) return;
+  if (tok.type === 'companion') {
+    if (companionOf(tok).initMode === 'own') rollCompanionInitiative(tok.id);
+    return;
+  }
+  if (!isDM()) return;
   if (tok.type === 'monster') {
     openGroupInitModal(tok, null);
   } else {

@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-22 09:18
+// Written by Irmak Hakman — 2026-10-28 14:25
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -8,7 +8,7 @@ let _sideAllSpells = []; // full parsed _spells of the displayed char (for actio
 let _sideActiveTab = 'skills'; // active right-panel sheet tab (skills|combat|spells|items|handouts)
 let _sideCombatTab = 'attacks'; // active Combat sub-tab (attacks|action|bonus|reaction|other)
 
-const _SIDE_TABS = ['skills', 'combat', 'spells', 'items', 'handouts'];
+const _SIDE_TABS = ['skills', 'combat', 'spells', 'items', 'handouts', 'companions'];
 
 // Switch the active right-panel tab without a full re-render (re-renders read
 // _sideActiveTab to restore the same tab on the next paint).
@@ -224,6 +224,11 @@ function renderSideCharacter() {
     ? sideHandoutBadge(_sideCharId) : 0;
   const TABS = [['skills', 'Skills'], ['combat', 'Combat'], ['spells', 'Spells'], ['items', 'Items'],
                 ['handouts', handoutBadge ? `Handouts (${handoutBadge})` : 'Handouts']];
+  // Companions (table-companions.js) only for a character that has some.
+  let _hasCompanions = false;
+  try { _hasCompanions = JSON.parse(d['_companions'] || '[]').length > 0; } catch {}
+  if (_hasCompanions && typeof sideCompanionsPane === 'function') TABS.push(['companions', 'Companions']);
+  if (!TABS.some(([id]) => id === _sideActiveTab)) _sideActiveTab = 'skills';
   const tabBarHtml = `<div class="rp-tabs">`
     + TABS.map(([id, lbl]) =>
         `<button id="rp-tabbtn-${id}" class="rp-tab${_sideActiveTab === id ? ' active' : ''}${id === 'handouts' && handoutBadge ? ' rp-tab-alert' : ''}" onclick="setSideTab('${id}')">${lbl}</button>`
@@ -239,7 +244,9 @@ function renderSideCharacter() {
 
   const panesHtml = pane('skills', skillsPane) + pane('combat', combatPane)
                   + pane('spells', spellsPane) + pane('items', itemsPane)
-                  + pane('handouts', handoutsPane);
+                  + pane('handouts', handoutsPane)
+                  + (_hasCompanions && typeof sideCompanionsPane === 'function'
+                      ? pane('companions', sideCompanionsPane(d, _sideCharId || '', canEditSlots)) : '');
 
   return secStatsHtml
     + abilitiesSection
@@ -841,6 +848,16 @@ async function loadSideQroll() {
     return;
   }
 
+  // A player's companion: its attacks and notes, for its owner and the DM.
+  if (activeTok.type === 'companion') {
+    qrollCharName = activeTok.name;
+    qrollData = null; _sideCharId = null;
+    if (subtitleEl) subtitleEl.textContent = 'Companion';
+    content.innerHTML = isMyToken(activeTok) && typeof renderCompanionPanel === 'function'
+      ? renderCompanionPanel(activeTok) : '';
+    return;
+  }
+
   // Character / NPC / custom token
   if (!isMyToken(activeTok)) {
     // Another player's character — no sheet access
@@ -925,9 +942,10 @@ function _showAdvModal(label) {
 }
 
 // Item 3: after a weapon attack roll, prompt for Miss (close) or Roll Damage.
-function showWeaponDmgPrompt(atkLabel, dmg, note) {
+// `sender` names who rolled when it is not the player themselves (a companion).
+function showWeaponDmgPrompt(atkLabel, dmg, note, sender = null) {
   const wName = String(atkLabel).replace(/ Atk$/i, '').replace(/ atk$/i, '');
-  _pendingWeaponDmg = { wName, dmg, note: note || '' };
+  _pendingWeaponDmg = { wName, dmg, note: note || '', sender };
   const el = document.getElementById('weapon-dmg-prompt');
   if (!el) return;
   const lbl = document.getElementById('weapon-dmg-prompt-label');
@@ -944,7 +962,7 @@ function weaponDmgRoll() {
   _pendingWeaponDmg = null;
   const el = document.getElementById('weapon-dmg-prompt');
   if (el) el.style.display = 'none';
-  if (w && w.dmg) rollDamageStr(`${w.wName} Dmg`, w.dmg, w.note || '');
+  if (w && w.dmg) rollDamageStr(`${w.wName} Dmg`, w.dmg, w.note || '', w.sender);
 }
 
 // Item 9: clicking a spell name posts it to chat rendered as raw HTML (so links
@@ -974,7 +992,7 @@ function postSpellInfoFromPanel(idx) { _postSpellInfo(_sideSpells[idx]); }
 // Rolls a damage string, which may carry several typed parts ("1d6 piercing,
 // 2d8 fire"). Every part rolls at once and shares one grouped overlay; the
 // single-part case goes down the same path and looks exactly as it did.
-async function rollDamageStr(label, dmgStr, description = '') {
+async function rollDamageStr(label, dmgStr, description = '', sender = null) {
   const dmg = parseDamage(dmgStr);
   if (!dmg) return;
   const { total, groups } = dmg;
@@ -985,7 +1003,7 @@ async function rollDamageStr(label, dmgStr, description = '') {
   _broadcastDiceRoll(rollId, first.sides || 6, first.rolls.length ? first.rolls : [first.total],
                      first.modifier, total, label, duration, -1, groups);
   await showDiceGroups(groups, total, label, duration);
-  await postToChat({ sender: getChatSender(), ...dmgChatPayload(dmg, label, description ? { description } : {}) });
+  await postToChat({ sender: sender || getChatSender(), ...dmgChatPayload(dmg, label, description ? { description } : {}) });
   _pushRollToChar(getActiveCharLinkedId(), { label, type: 'dmg', detail: dmg.detail, total, isCrit: false, isFail: false, isDamage: true, time: new Date().toISOString() });
 }
 
@@ -1025,7 +1043,7 @@ function rollInitiativeFromPanel() {
 async function confirmRoll(type) {
   if (!rollPending) return;
   document.getElementById('adv-modal').style.display = 'none';
-  const { label, modifier, afterRoll, dmOnlyChat, skipDiceBroadcast, weaponDmg, weaponNote } = rollPending;
+  const { label, modifier, afterRoll, dmOnlyChat, skipDiceBroadcast, weaponDmg, weaponNote, sender } = rollPending;
   rollPending = null;
   const charId = getActiveCharLinkedId();
   const r1 = Math.ceil(Math.random() * 20);
@@ -1043,12 +1061,12 @@ async function confirmRoll(type) {
     _broadcastDiceRoll(rollId, 20, dieResults, modifier, total, chatLabel, duration, usedIdx);
   }
   await showDiceAnimation(20, dieResults, modifier, total, chatLabel, duration, usedIdx);
-  await postToChat({ sender: getChatSender(), dice: '1d20', results: [used], modifier, total, label: chatLabel, ...(dmOnlyChat ? { dmOnly: true } : {}) });
+  await postToChat({ sender: sender || getChatSender(), dice: '1d20', results: [used], modifier, total, label: chatLabel, ...(dmOnlyChat ? { dmOnly: true } : {}) });
   const detail = type !== 'norm' ? `d20(${r1}, ${r2} → ${used})${modifier !== 0 ? (modifier > 0 ? ' + ' : ' − ') + Math.abs(modifier) : ''}` : `d20(${r1})${modifier !== 0 ? (modifier > 0 ? ' + ' : ' − ') + Math.abs(modifier) : ''}`;
   _pushRollToChar(charId, { label: chatLabel, type, detail, total, isCrit: used === 20, isFail: used === 1, isDamage: false, time: new Date().toISOString() });
   if (afterRoll) afterRoll(total);
   // Item 3: weapon attack → offer Miss / Roll Damage now that the die has settled.
-  if (weaponDmg) showWeaponDmgPrompt(label, weaponDmg, weaponNote);
+  if (weaponDmg) showWeaponDmgPrompt(label, weaponDmg, weaponNote, sender);
 }
 
 document.addEventListener('keydown', e => {

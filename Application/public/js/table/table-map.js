@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-22 09:18
+// Written by Irmak Hakman — 2026-10-28 14:25
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -398,7 +398,10 @@ function renderTokens() {
   const ox = tableState.offsetX || 0, oy = tableState.offsetY || 0;
 
   for (const tok of tokens) {
-    if (!tok.visible && !isDM()) continue;
+    // A hidden token is drawn for the DM and for whoever it belongs to (faded,
+    // below) - the server sends it to no one else. Its owner has to see it to
+    // show it again, e.g. a companion they hid.
+    if (!tok.visible && !isMyToken(tok)) continue;
     const sizeMult = tok.tokenSize || 1;
     const size = Math.round(sizeMult * cs - 4);
     const tokLeft = ox + (tok.x || 0) * cs + 2;
@@ -532,9 +535,11 @@ function moveSelectedToken(key) {
 }
 
 async function deleteSelectedToken() {
-  if (!selectedTokenId || !isDM()) return;
+  if (!selectedTokenId) return;
   const tok = tokens.find(t => t.id === selectedTokenId);
   if (!tok) return;
+  // A player dismisses their own companion (table-companions.js).
+  if (!isDM()) { if (tok.type === 'companion' && isMyToken(tok)) dismissCompanion(tok.id); return; }
   if (!await showConfirm(`Remove "${tok.name}" from the map?`)) return;
   // UI cleanup — immediate
   const id = selectedTokenId;
@@ -1254,7 +1259,7 @@ overlayCanvas.addEventListener('mouseup', e => {
       if (!e.shiftKey) bulkTokenIds.clear();
       let added = 0;
       for (const tok of tokens) {
-        if (!tok.visible && !isDM()) continue;
+        if (!tok.visible && !isMyToken(tok)) continue;
         const sizeMult = tok.tokenSize || 1;
         const size = Math.round(sizeMult * cs - 4);
         const tokLeft = ox + (tok.x || 0) * cs + 2;

@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-09-27 11:13
+// Written by Irmak Hakman — 2026-10-28 14:25
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -59,6 +59,9 @@ let _lastSavedData = {};
 
 // Media (shared between index-char.js clearSheet and index-media.js)
 let mediaList = [];
+
+// Companions (shared between index-char.js collectData/applyData and index-companions.js)
+let companions = [];
 
 // Loot (shared between index-char.js collectData/clearSheet/applyData and index-loot.js)
 let claimedLoots = [];

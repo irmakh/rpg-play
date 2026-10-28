@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 18:57
+// Written by Irmak Hakman — 2026-10-28 14:25
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -51,6 +51,8 @@ export default function register(app, ctx) {
       if (data['_spells']  !== undefined) qroll['_spells']  = data['_spells'];
       if (data['_actions'] !== undefined) qroll['_actions'] = data['_actions'];
       if (data['_items']   !== undefined) qroll['_items']   = data['_items'];
+      // Familiars and summons, for the table's Companions tab (Summon buttons).
+      if (data['_companions'] !== undefined) qroll['_companions'] = data['_companions'];
       res.json({ id: char.id, name: char.name, data: qroll });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
   });
@@ -422,7 +424,9 @@ export default function register(app, ctx) {
       try { data = JSON.parse(char.dataJson || '{}'); } catch {}
       const keys = Object.keys(patch);
       for (const k of keys) data[k] = patch[k];
-      const name = (data.name || '').trim() || 'Unnamed';
+      // A character made blank (no template) has its name only in the column, not
+      // in the data, so the first autosave of anything renamed it "Unnamed".
+      const name = (data.name || '').trim() || char.name || 'Unnamed';
       ldb.updateCharacter(charId, { name, dataJson: JSON.stringify(data) });
       broadcast('characters', { action: 'updated', id: charId, keys });
 
@@ -576,6 +580,33 @@ export default function register(app, ctx) {
       ldb.createMedia(newId, { charId, originalName: safeName, mimeType, dataUrl: fileUrl, thumbUrl, mediumUrl, isPortrait: !!isPortrait, createdAt: new Date().toISOString() });
       if (isPortrait) { ldb.setPortrait(charId, newId); refreshTokenPortraits(charId); }
       res.json({ id: newId, name: safeName, mimeType, isPortrait: !!isPortrait, thumbUrl, mediumUrl });
+    } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
+  });
+
+  // POST /api/characters/:id/companion-portrait { dataUrl, replace } — the picture
+  // for one of the character's companions (sheet → Companions). Only stored and
+  // sized here; the sheet keeps the URLs in its _companions list. `replace` is
+  // the picture it had, deleted when it is one of this character's companions'.
+  app.post('/api/characters/:id/companion-portrait', async (req, res) => {
+    try {
+      const charId = req.params.id;
+      const status = await charAuth(charId, req);
+      if (status !== 200) return res.status(status).json({ error: status === 404 ? 'Not found' : 'Unauthorized' });
+      const { dataUrl, replace } = req.body || {};
+      const mimeMatch = typeof dataUrl === 'string' && dataUrl.match(/^data:(image\/[a-z0-9.+-]+);base64,([A-Za-z0-9+/=]+)$/i);
+      if (!mimeMatch || !IMAGE_MIME.has(mimeMatch[1].toLowerCase())) return res.status(400).json({ error: 'Image data URL required' });
+      if (Math.ceil(mimeMatch[2].length * 0.75) > MAX_MEDIA_BYTES) return res.status(413).json({ error: 'File too large (max 25 MB)' });
+      const prefix = `cmp-${String(charId).replace(/[^A-Za-z0-9_-]/g, '')}-`;
+      let urls;
+      try {
+        urls = await processImageSizes(mimeMatch[1].toLowerCase(), Buffer.from(mimeMatch[2], 'base64'),
+                                       'companions', prefix + Date.now().toString(36));
+      } catch { return res.status(400).json({ error: 'That file is not a picture that can be read' }); }
+      if (typeof replace === 'string' && replace.includes('/companions/' + prefix)) {
+        const base = replace.replace(/(_thumb|_medium)?\.[a-z0-9]+$/i, '');
+        for (const f of [replace, base + '_thumb.webp', base + '_medium.webp']) deleteUploadFile(f);
+      }
+      res.json({ ok: true, portrait: urls.original, portraitThumb: urls.thumb });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
   });
 

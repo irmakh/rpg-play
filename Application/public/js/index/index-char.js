@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 14:25
+// Written by Irmak Hakman — 2026-10-28 14:25
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -59,6 +59,7 @@ function collectData() {
   out['_items'] = JSON.stringify(items);
   out['_itemIdCounter'] = itemIdCounter;
   out['_loots'] = JSON.stringify(claimedLoots);
+  out['_companions'] = JSON.stringify(companions);
   return out;
 }
 
@@ -87,6 +88,8 @@ function clearSheet() {
   if (typeof renderActionsTab === 'function') renderActionsTab();
   claimedLoots = [];
   renderClaimedLoots();
+  companions = [];
+  if (typeof renderCompanions === 'function') renderCompanions();
   mediaList = [];
   renderMedia();
   updatePortraitHeader();
@@ -175,6 +178,13 @@ function _applyLists(d, which) {
     if (d['_loots']) { try { claimedLoots = JSON.parse(d['_loots']); } catch {} }
     renderClaimedLoots();
   }
+  // Companions (familiars, summons — index-companions.js)
+  if (want('companions')) {
+    companions = [];
+    if (d['_companions']) { try { companions = JSON.parse(d['_companions']); } catch {} }
+    if (!Array.isArray(companions)) companions = [];
+    if (typeof renderCompanions === 'function') renderCompanions();
+  }
   renderWeaponsSummary();
   renderEquippedItemsSummary();
   if (typeof renderActionsTab === 'function') renderActionsTab();
@@ -221,7 +231,8 @@ function applyPartial(keys, d) {
   // unsaved edits to that same list (else the local edit wins — last-writer on a
   // shared list, the documented blob-granularity limitation).
   const listMap = { _weapons:'weapons', _spells:'spells', _items:'items', _itemIdCounter:'items',
-                    _actions:'actions', _actionIdCounter:'actions', _loots:'loots', _rollHistory:'rollHistory' };
+                    _actions:'actions', _actionIdCounter:'actions', _loots:'loots', _rollHistory:'rollHistory',
+                    _companions:'companions' };
   const which = new Set();
   for (const k of keys) {
     const name = listMap[k];

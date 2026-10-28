@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-09-27 11:13
+// Written by Irmak Hakman — 2026-10-28 14:25
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -20,7 +20,18 @@ export default function register(app, ctx) {
       if (!masterAuth(req) && !currentId) {
         const assigned = new Set(ldb.listTableTokens()
           .filter(t => t.initiativeId && t.assignedCharId).map(t => t.initiativeId));
-        entries = all.filter(e => !e.monsterId || assigned.has(e.id));
+        entries = entries.filter(e => !e.monsterId || assigned.has(e.id));
+      }
+      // A companion its player has hidden (a familiar scouting unseen) is left
+      // off the map for the others, so its row in the tracker is too. Only its
+      // owner, proven by their login, and the DM still get it.
+      if (!masterAuth(req)) {
+        const cid = String(req.headers['x-character-id'] || '');
+        const me = cid && (await charAuth(cid, req)) === 200 ? cid : '';
+        const secret = new Set(ldb.listTableTokens()
+          .filter(t => t.type === 'companion' && !t.visible && t.initiativeId && t.assignedCharId !== me)
+          .map(t => t.initiativeId));
+        if (secret.size) entries = entries.filter(e => !secret.has(e.id));
       }
       res.json({ entries, currentId });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
