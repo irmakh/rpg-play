@@ -131,6 +131,7 @@
 - RELEASE KEYWORD (user, 2026-10-15): when the user says 'release', do all three without asking again: upload the changed files to production (pscp, md5-verify), then commit, then push. Upload comes first (security fixes must reach production before they are pushed). The server restart stays the user's job.
 - UPLOAD FROM THE LINUX DEV MACHINE: pscp fails there (host key not cached under the IP). Use OpenSSH: scp/ssh -i ~/.ssh/oracle to ubuntu@dnd.kimse.me (that name is in known_hosts; 89.168.88.208 is not), target /home/ubuntu/hdd1/dnd-new/. In zsh pass the options as an array, not an unquoted string. Tests run inside the char_sheet_dev container: docker exec char_sheet_dev npx vitest run (no local node_modules).
 - MEMORY EMBEDDING ON THE LINUX DEV MACHINE: system python lacks fastembed; run tools/memory/embed_memory.py with the project venv (venv/bin/python), which has it.
+- Bump FRONTEND_VERSION whenever frontend files change after the user has loaded a version, even mid-testing: ?v=N assets are immutable-cached, so same-version edits are invisible (cost a wrong diagnosis on 2026-11-01). Write JS containing \n with the Edit tool, not Python heredocs in Git Bash, which turned '\\n' into real newlines.
 
 ## Current Projects
 
@@ -148,6 +149,7 @@
 - NEXT SESSION (as of 2026-10-28 evening, after v310 - supersedes all earlier NEXT SESSION notes): v310 (Treasury rebuilt around piles; shop tags-on-sale list folded into Hidden on first campaign open) is committed (db44229), pushed and uploaded; the user must restart production (screen session in ~/hdd1/dnd-new, Ctrl-C then node server.js). Not yet tested by the user in a browser, locally or on prod. Open question still: hidden MONSTER tokens show their initiative row to players once combat starts.
 - NEXT SESSION (as of 2026-10-28 late evening, after v312 - supersedes all earlier NEXT SESSION notes): v310 (Treasury piles), v311 (make item unidentified again, held copies re-hidden) and v312 (Unique monsters: one token, named by the monster) are committed, pushed and uploaded; the user must restart production (screen session in ~/hdd1/dnd-new). None yet tested by the user in a browser. Open question still: hidden MONSTER tokens show their initiative row to players once combat starts.
 - NEXT SESSION (as of 2026-11-01, after v319 - supersedes all earlier NEXT SESSION notes): v310-v312 and v313-v319 (one release, commit 99d896c) are committed, pushed and uploaded; the user must restart production (screen session in ~/hdd1/dnd-new, Ctrl-C then node server.js) because server files changed (notify.js, routes/chat.js, db/localdb.js). User confirmed v319 locally. The old open question (hidden monster initiative rows shown to players) is unrelated and still open. Old leaked notifications stay in players' bells until they press Clear.
+- NEXT SESSION (as of 2026-11-01 close, supersedes all earlier NEXT SESSION notes): production restarted by the user and confirmed serving v319 (commit 99d896c); v310-v312 are live with it. Nothing pending. Still open from before: hidden MONSTER tokens show their initiative row to players once combat starts.
 ---
 
 *Last updated: 2026-11-01*
