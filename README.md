@@ -7,7 +7,7 @@
 [![JavaScript](https://img.shields.io/badge/Vanilla_JS-no_build_step-F7DF1E?style=flat-square&logo=javascript&logoColor=black)](#tech-stack)
 [![PWA](https://img.shields.io/badge/PWA-installable-5A0FC8?style=flat-square&logo=pwa&logoColor=white)](#mobile-companion-pwa-console)
 [![Android](https://img.shields.io/badge/Android-console_app-3DDC84?style=flat-square&logo=android&logoColor=white)](#android-app-android--two-screen-handhelds-and-phones)
-[![Vitest](https://img.shields.io/badge/Vitest-1591_passing-6E9F18?style=flat-square&logo=vitest&logoColor=white)](#tech-stack)
+[![Vitest](https://img.shields.io/badge/Vitest-1705_passing-6E9F18?style=flat-square&logo=vitest&logoColor=white)](#tech-stack)
 [![Docker](https://img.shields.io/badge/Docker-compose-2496ED?style=flat-square&logo=docker&logoColor=white)](#option-a--docker-recommended-for-local--lan-play)
 
 A self-hosted web app for running D&D 5e sessions. It hosts any number of **campaigns**, each a fully separate world with its own DM password and its own data. Every campaign bundles a full character sheet, a shared virtual battle map, a real-time initiative tracker, a monster library, a treasury for loot and shop items, a synced music player, handouts with blind skill checks, a comic-style story builder with image and video panels, and a mobile companion — all kept live across every connected browser with no external cloud required.
@@ -93,10 +93,11 @@ Uploaded images and audio are split the same way: new uploads land in `public/up
 - Portrait upload plus media attachments (images, video) with a fullscreen lightbox; videos autoplay with controls
 - Inventory, features & traits, background, and notes tabs
 - Dice rolling with full 3D animation, broadcast live to the virtual table; advantage / disadvantage dual-die rolls; per-character roll history
+- **Critical hits (5e rules)** — a natural 20 on an attack makes the next damage roll a crit: the damage dice are rolled twice and the modifiers added once (`1d8+3` → `2d8+3`), marked **(Crit)** in chat and history
 - Import / export character as XML (D&D Beyond–compatible) — round-trips custom actions and spell action/duration fields, and prompts update-vs-new-copy on a same-name import
 - Per-character password protection (set / change / remove); multiple characters selectable from a list
 - Player-facing tabs: **Treasury** (one tab with a Free Loot / Shop switch — claim dropped items for free or buy with in-character currency; item images, and unidentified items shown as such), **Initiative** (slide-out tracker with roll submission), **Calendar** (Calendar of Harptos — DM events plus your own journals with media)
-- Real-time chat: free text or `/r NdS+M [label]` dice rolls (e.g. `/r 2d6+3`, `/r d20 Stealth`)
+- Real-time chat: free text or `/r NdS+M [label]` dice rolls (e.g. `/r 2d6+3`, `/r d20 Stealth`), typed damage with `/dmg 1d6 piercing, 2d8 fire`, and critical damage with `/crit 1d8+3 slashing`
 - **Private messages** — every chat box (sheet, table, DM panel, both console screens) has a recipient picker. *Everyone* is the default; pick the DM or a character and only the sender, the recipient and the DM can read it. The picker returns to *Everyone* after each private message
 - **Display templates and UI size** (every page): the default navy-and-gold look plus 20 colour templates, and a UI size from 50% to 135% that scales text and layout together - both from the palette button in the page header. The choice lasts for the browser tab (on the console screens, for the device); quick-nav buttons to the Table and Stories
 
@@ -123,11 +124,15 @@ Uploaded images and audio are split the same way: new uploads land in `public/up
 - Monster names hidden from players — shown as an identifier (e.g. "Goblin #2"), editable by the DM from the side panel; per-monster visibility toggle in real time
 - **Token quick-roll side panel** — click a token for full dice rolling: saves, skills, ability checks, damage, initiative. A persistent **dice-mode setting** (Normal / Adv / Dis / Ask, default **Ask**) behind the button beside the dice roller applies to every roll; the button shows the mode in force
 - Right-panel sections use the same section headers as the character sheet (Conditions, HP, Temp HP, etc.), with the Bulk Edit panel mirroring the same controls for multi-token edits
+- **Multi-select (DM)** — shift+click tokens, or drag a box with the **Multi** tool (shift+drag adds to it), to build a selection; the token already selected before the first shift+click is kept in it. Bulk HP, conditions, show/hide, group initiative and group checks/saves act on every selected token
 - **Equipment wear/unwear** in the right panel — toggling items recomputes AC, initiative, speed, and spell DC and syncs to the token
 - **Monster actions panel** — each action has a **Use** button that posts the action text and a damage roll to chat; players' custom actions have the same **Use** button
-- Click a weapon row to roll the attack, then a **Miss / Roll Damage** prompt; click a spell name to post its full description to chat with a 5e.tools link
+- Click a weapon row to roll the attack, then a **Miss / Roll Damage / Crit** prompt; click a spell name to post its full description to chat with a 5e.tools link
+- **Critical damage** — on a natural 20 the prompt turns red and leads with **Crit**: every damage die is rolled twice, modifiers are added once (5e rules), and typed parts all double (`1d6 piercing, 2d8 fire` → `2d6 piercing, 4d8 fire`). A monster's nat-20 attack carries the crit to its next damage roll; the **Next damage is a crit** switch in the dice settings covers anything else (Champion 19–20, a paralysed target)
 - **3D dice** — animated icosahedron (d20) and pentagonal-trapezohedron (d10), shown for every roll including those broadcast from the character sheet; a switch in the dice settings toggles the animation on/off
-- **Group rolls (DM)** — select multiple tokens and trigger a single ability check or saving throw; each token rolls by its own bonus and the results post as one combined chat message (also for group initiative)
+- **Group rolls (DM)** — select multiple tokens and trigger a single ability check or saving throw; each token rolls by its own bonus and the results post as one combined chat message from the DM, headed with the roll count ("DEX Save — 3 rolls"). Results of tokens hidden from players go in a separate DM-only message; group initiative is DM-only, like single-token initiative
+- **Hidden tokens stay hidden** — any roll the DM makes for a token hidden from players (attack, damage, save, check, a monster's Use card, its 3D dice) goes to the DM only, as do hidden tokens' results in a group roll
+- **Notifications** — the bell (every page) keeps rolls, chat, loot, handouts and turn alerts. A burst of rolls from one person folds into one row ("Aliyr rolled 12 times") that lists each roll, newest first; a group roll is the same kind of row, one line per token ("DM rolled 3 times": "Goblin 15 (DEX Save)", …). Rolls and chat lines also **pop up** at the top centre of the screen, one per roll, in the same pop-up the table uses for its own messages: pop-ups stack, newest on top, and stay 30 seconds or until closed (a switch in the bell's settings turns them off)
 - **Pop-out panels** (View menu) — pop the initiative/chat sidebar, the right token panel, or the chat bar into a separate browser window; the real DOM node moves across windows and keeps updating over SSE. The popped-out character sheet uses a dedicated responsive "magazine" layout
 - Fog-of-war regions and hidden map items (traps, chests, doors, notes): DM reveals or re-hides per region/item; hovering a panel entry highlights its spot on the canvas
 - Drawing tools (freehand, line, arrow, rectangle, circle with colour/weight), ruler, ping marker, zoom
@@ -703,15 +708,15 @@ desktop client, untick **Send an anonymous install report** in Settings.
 
 ## Tech Stack
 
-- **Backend:** Node.js (ES modules), Express — split into 17 semantic route modules under `server/routes/`, with a lean `server.js` entry point
+- **Backend:** Node.js (ES modules), Express — split into 18 semantic route modules under `server/routes/`, with a lean `server.js` entry point
 - **Database:** SQLite (`better-sqlite3`). One cross-tenant registry (`campaigns.db`) plus four SQLite files per campaign under `data/campaigns/<id>/`
 - **Real-time:** WebSocket (`ws`), with a Server-Sent Events endpoint kept alongside it
-- **Frontend:** Vanilla JS, HTML, CSS — no build step, no framework, no bundler. The character sheet is 15 modules under `js/index/`, the table is 17 under `js/table/`, with shared helpers in `js/lib/`
+- **Frontend:** Vanilla JS, HTML, CSS — no build step, no framework, no bundler. The character sheet is 16 modules under `js/index/`, the table is 19 under `js/table/`, with shared helpers in `js/lib/`
 - **Dice:** 3D CSS dice (icosahedron d20, pentagonal-trapezohedron d10) driven by a shared `dice-engine.js`
 - **Image processing:** `sharp` — each upload generates `_thumb.webp` (80×80 crop) and `_medium.webp` (max 500 px); maps excluded
 - **PWA:** Service Worker (`sw.js`) — network-first for HTML, cache-first for versioned static assets
 - **Android app:** Kotlin, plain Android `Activity` + `WebView` (one dependency: `androidx.webkit`), minSdk 30 / target 34; built in Docker with Gradle 8.7, self-updating through Android's `PackageInstaller`
-- **Tests:** 1591 Vitest tests across 61 files (unit + API) covering the sheet, table, dice fairness, login security, per-route login rules, escaping of user text in the page renderers, and routes
+- **Tests:** 1705 Vitest tests across 64 files (unit + API) covering the sheet, table, dice fairness, login security, per-route login rules, escaping of user text in the page renderers, and routes
 - **Security:** in-house, no new dependencies — maths captcha (`lib/captcha.js`, rendered by `sharp`), opaque session tokens stored as SHA-256 (`lib/sessions.js`), failed-login lockout (`lib/login-guard.js`), async scrypt (`lib/passwords.js`), response headers and caller-dependent body limits (`lib/security-middleware.js`)
 - **SSL:** Node.js native `https` with Let's Encrypt certificates
 
@@ -732,14 +737,14 @@ High-level layout — see **[structure.md](structure.md)** for the complete, ann
 char_sheet/
 ├── Application/            # The web app
 │   ├── server.js           #   Express entry point — loads route modules + shared context
-│   ├── server/routes/      #   17 Express route modules
+│   ├── server/routes/      #   18 Express route modules
 │   ├── lib/                #   Campaign scoping, auth, sessions, captcha, lockout, hardening, upload paths, live-event audience
 │   ├── db/                 #   SQLite layers (campaignsdb, campaign-store, localdb, mediadb, storiesdb)
-│   ├── tests/              #   61 Vitest unit + API suites (1591 tests)
+│   ├── tests/              #   64 Vitest unit + API suites (1705 tests)
 │   └── public/             #   Served frontend
 │       ├── *.html          #     Page entry points (campaigns, index, table, dm, treasury, events, …)
-│       ├── js/index/       #     15 character-sheet modules
-│       ├── js/table/       #     17 virtual-table modules
+│       ├── js/index/       #     16 character-sheet modules
+│       ├── js/table/       #     19 virtual-table modules
 │       ├── js/lib/         #     Shared utilities (dice engine, chat render, calendar, …)
 │       ├── console/        #     Two-screen console: launcher, map screen, info panel
 │       ├── js/console/     #     Console scripts (login, gamepad, info panel modules)

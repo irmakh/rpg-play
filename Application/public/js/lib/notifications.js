@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-11 18:10
+// Written by Irmak Hakman — 2026-11-01 17:30
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -16,6 +16,11 @@
 
 const NOTIF_MUTE_KEY = 'notifMutes';
 const NOTIF_POLL_MS  = 120000;   // safety net; realtime does the real work
+const NOTIF_TOAST_MS = 30000;    // a pop-up stays this long unless closed
+const NOTIF_TOAST_MAX = 8;       // more than this on screen and the oldest goes
+// Kinds that pop up on screen as well as landing in the bell, even though they
+// are 'feed' (silent): every roll, and table chat — which carries group rolls.
+const NOTIF_TOAST_KINDS = new Set(['dice', 'chat']);
 
 let _notifItems   = [];
 let _notifUnread  = 0;
@@ -68,7 +73,7 @@ const NOTIF_ICONS = {
   'handout': '📜', 'your-turn': '⚔️', 'combat-started': '⚔️',
   'dice': '🎲', 'chat': '💬', 'music': '🎵', 'damage': '🩸', 'healing': '💚',
   'condition': '🌀', 'shop-open': '🛒', 'shop-closed': '🛒', 'calendar': '📅', 'weather': '🌦',
-  'security': '🛡️',
+  'security': '🛡️', 'info': 'ℹ️', 'error': '⚠️',
 };
 function notifIcon(kind) { return NOTIF_ICONS[kind] || '🔔'; }
 
@@ -184,6 +189,9 @@ function notifFollow(data) {
 }
 
 // ── Toast ────────────────────────────────────────────────────────────────────
+// Toasts stack: the newest goes on top and any already showing move down, so
+// two rolls in quick succession are both on screen. Each stays NOTIF_TOAST_MS
+// or until its × is clicked.
 function notifToast(n) {
   let host = document.getElementById('notif-toasts');
   if (!host) {
@@ -192,17 +200,29 @@ function notifToast(n) {
     document.body.appendChild(host);
   }
   const el = document.createElement('div');
-  el.className = 'notif-toast';
+  el.className = 'notif-toast' + (n.kind === 'error' ? ' err' : '');
   el.innerHTML =
     `<span class="notif-toast-icon">${notifIcon(n.kind)}</span>` +
     `<div class="notif-toast-text"><div class="notif-toast-title">${_notifEsc(n.title)}</div>` +
-    (n.body ? `<div class="notif-toast-body">${_notifEsc(n.body)}</div>` : '') + '</div>';
+    (n.body ? `<div class="notif-toast-body">${_notifEsc(n.body)}</div>` : '') + '</div>' +
+    `<button type="button" class="notif-toast-close" title="Close" aria-label="Close">×</button>`;
+  let gone = false;
+  const dismiss = () => {
+    if (gone) return;
+    gone = true;
+    el.classList.add('out');
+    setTimeout(() => el.remove(), 400);
+  };
+  el.querySelector('.notif-toast-close').onclick = (e) => { e.stopPropagation(); dismiss(); };
   if (n.data && n.data.href) {
     el.style.cursor = 'pointer';
     el.onclick = () => notifFollow(n.data);
   }
-  host.appendChild(el);
-  setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 400); }, 6000);
+  host.prepend(el);
+  // Too many at once (a round of a dozen rolls): the oldest make room.
+  const live = [...host.querySelectorAll('.notif-toast:not(.out)')];
+  live.slice(NOTIF_TOAST_MAX).forEach(old => { old.classList.add('out'); setTimeout(() => old.remove(), 400); });
+  setTimeout(dismiss, NOTIF_TOAST_MS);
 }
 
 // ── Bell + panel ─────────────────────────────────────────────────────────────
@@ -275,6 +295,8 @@ function _notifRenderPanel() {
     settings.innerHTML = `
       <label class="notif-set"><input type="checkbox" ${notifMuted('sound') ? '' : 'checked'}
         onchange="notifSetMute('sound', !this.checked)"> Chime on important ones</label>
+      <label class="notif-set"><input type="checkbox" ${notifMuted('toast') ? '' : 'checked'}
+        onchange="notifSetMute('toast', !this.checked)"> Show rolls and chat on screen (30 s)</label>
       <label class="notif-set"><input type="checkbox" ${notifMuted('popup') ? '' : 'checked'}
         onchange="notifSetMute('popup', !this.checked)"> Popup when this window is in the background</label>
       <div class="notif-set-note">${desktop
@@ -408,6 +430,11 @@ function handleNotification(payload) {
     notifToast(item);
     notifChime();
     notifPopup(item);
+  } else if (NOTIF_TOAST_KINDS.has(payload.kind) && !notifMuted('toast')) {
+    // A roll pops up in its own words, even when the bell folded it into a
+    // "rolled 12 times" row (payload.latest is that one event).
+    const one = payload.latest || {};
+    notifToast({ ...item, title: one.title || item.title, body: one.title ? one.body : item.body });
   }
   // Replace the optimistic row with the real one, so marking it read addresses
   // a delivery the server knows about.

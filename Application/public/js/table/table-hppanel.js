@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-28 14:25
+// Written by Irmak Hakman — 2026-11-01 18:15
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -573,7 +573,6 @@ async function confirmGroupInitRoll() {
     const roll = used + bonus;
     for (const tok of targetToks) await _applyMonsterInitRoll(tok, roll);
     for (const tok of targetToks) rows.push(mkRow(tokDisplayName(tok), used, bonus, dicePart));
-    showToast(`Initiative ${roll} set for all ${targetToks.length} tokens.`);
   } else {
     // Individual: separate d20 + each token's own dex mod
     for (const tok of targetToks) {
@@ -582,27 +581,13 @@ async function confirmGroupInitRoll() {
       await _applyMonsterInitRoll(tok, used + bonus);
       rows.push(mkRow(tokDisplayName(tok), used, bonus, dicePart));
     }
-    showToast(`Individual initiative rolled for ${targetToks.length} tokens.`);
   }
 
   // Post all results to chat in one message (same format as group check / save).
-  rows.sort((a, b) => (b.total ?? -999) - (a.total ?? -999));
   const rtLabel = rollType === 'adv' ? ' (Adv)' : rollType === 'dis' ? ' (Dis)' : '';
-  let html = `<strong>Initiative${rtLabel}${mode === 'merged' ? ' · group' : ''}</strong>`;
-  html += `<div style="margin-top:calc(4px*var(--fs, 1));display:flex;flex-direction:column;gap:calc(2px*var(--fs, 1))">`;
-  for (const r of rows) {
-    const color = r.isCrit ? 'var(--verdigris)' : r.isFail ? 'var(--blood)' : 'inherit';
-    html += `<div style="display:flex;justify-content:space-between;gap:calc(10px*var(--fs, 1));align-items:baseline">`
-      + `<span>${esc(r.name)}</span>`
-      + `<span><span style="font-size:calc(10px * var(--fs, 1));opacity:.55">${esc(r.detail)}</span> <strong style="color:${color};font-size:calc(14px * var(--fs, 1))">${r.total}</strong></span></div>`;
-  }
-  html += `</div>`;
-  // Credential attached: html:true is honoured only from a logged-in sender (v235).
-  fetch('/api/chat', {
-    method: 'POST',
-    headers: authHeaders({ 'Content-Type': 'application/json' }),
-    body: JSON.stringify({ sender: getChatSender(), type: 'text', message: html, html: true })
-  }).catch(() => {});
+  // DM-only, like a single token's initiative from its panel: players see the
+  // order in the tracker, not each monster's die.
+  _postGroupRolls(`Initiative${rtLabel}${mode === 'merged' ? ' · group' : ''}`, rows, { dmOnly: true });
 
   const selTok = tokens.find(t => t.id === selectedTokenId);
   if (selTok && tokenIds.includes(selectedTokenId)) _refreshHpPanel(selTok);
@@ -973,17 +958,37 @@ async function confirmGroupCheckRoll() {
     const r2 = Math.ceil(Math.random() * 20);
     const used = rollType === 'adv' ? Math.max(r1, r2) : rollType === 'dis' ? Math.min(r1, r2) : r1;
     const name = tokDisplayName(tok);
+    const hidden = tok.visible === false;
     if (bonus === null) {
-      rows.push({ name, total: null });
+      rows.push({ name, total: null, hidden });
     } else {
       const dicePart = rollType !== 'normal' ? `${r1}/${r2}→${used}` : `${used}`;
       const bonusStr = bonus >= 0 ? `+${bonus}` : `${bonus}`;
-      rows.push({ name, total: used + bonus, detail: `d20(${dicePart}) ${bonusStr}`, isCrit: used === 20, isFail: used === 1 });
+      rows.push({ name, total: used + bonus, detail: `d20(${dicePart}) ${bonusStr}`, isCrit: used === 20, isFail: used === 1, hidden });
     }
   }
-  rows.sort((a, b) => (b.total ?? -999) - (a.total ?? -999));
+  // Visible tokens' results are public; a hidden token's name and result go in
+  // a second message only the DM sees, so the roll does not reveal it.
+  const shown  = rows.filter(r => !r.hidden);
+  const hidden = rows.filter(r => r.hidden);
+  if (shown.length)  _postGroupRolls(`${abLabel} ${kindLabel}${rtLabel}`, shown);
+  if (hidden.length) _postGroupRolls(`${abLabel} ${kindLabel}${rtLabel} · hidden tokens`, hidden, { dmOnly: true });
+  // No separate "Rolled …" message: the roll's own notification pops up for
+  // the DM too, with every result in it.
+}
 
-  let html = `<strong>${esc(abLabel)} ${kindLabel}${rtLabel}</strong>`;
+// One chat message for a group roll (initiative, check, save): a heading and a
+// row per token, highest first. Rows are { name, total|null, detail, isCrit,
+// isFail }; a null total is a token whose bonus is unknown.
+//
+// It posts as the DM, not as getChatSender(): that is the token open in the
+// side panel, so the whole group's roll used to arrive under the first selected
+// token's name. The notice makes the bell treat it as dice like any other roll:
+// a line per token ("Goblin 15 (DEX Save)"), each one counted ("DM rolled 3 times").
+function _postGroupRolls(heading, rows, { dmOnly = false } = {}) {
+  rows.sort((a, b) => (b.total ?? -999) - (a.total ?? -999));
+  const count = `${rows.length} roll${rows.length !== 1 ? 's' : ''}`;
+  let html = `<strong>${esc(heading)} — ${count}</strong>`;
   html += `<div style="margin-top:calc(4px*var(--fs, 1));display:flex;flex-direction:column;gap:calc(2px*var(--fs, 1))">`;
   for (const r of rows) {
     if (r.total === null) {
@@ -996,12 +1001,11 @@ async function confirmGroupCheckRoll() {
     }
   }
   html += `</div>`;
-
+  const notice = { label: heading, rolls: rows.map(r => ({ name: r.name, total: r.total })) };
   // Credential attached: html:true is honoured only from a logged-in sender (v235).
   fetch('/api/chat', {
     method: 'POST',
     headers: authHeaders({ 'Content-Type': 'application/json' }),
-    body: JSON.stringify({ sender: getChatSender(), type: 'text', message: html, html: true })
+    body: JSON.stringify({ sender: 'DM', type: 'text', message: html, html: true, notice, ...(dmOnly ? { dmOnly: true } : {}) })
   }).catch(() => {});
-  showToast(`Rolled ${abLabel} ${kindLabel} for ${rows.length} token${rows.length !== 1 ? 's' : ''}.`);
 }

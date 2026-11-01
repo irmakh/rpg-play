@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 14:25
+// Written by Irmak Hakman — 2026-11-01 15:10
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -111,10 +111,38 @@ function rollDamageSpec(spec) {
   };
 }
 
+// Critical hit (5e rules): roll every part's damage dice twice, add the
+// modifiers once. "1d8+3 slashing, 2d6 fire" → "2d8+3 slashing, 4d6 fire".
+// Flat parts ("5 cold") have no dice and stay as they are. Pure.
+function critDamageSpec(spec) {
+  if (!spec || !spec.parts) return spec;
+  return {
+    ...spec,
+    crit: true,
+    parts: spec.parts.map(p => p.sides ? { ...p, count: Math.min(200, p.count * 2) } : p)
+  };
+}
+
 // Parse + roll in one step — the form the weapon and monster damage buttons use.
-function parseDamage(expr) {
-  const spec = parseDamageSpec(expr);
-  return spec ? rollDamageSpec(spec) : null;
+// `crit` doubles the dice (critDamageSpec); the result then carries crit: true.
+function parseDamage(expr, crit = false) {
+  let spec = parseDamageSpec(expr);
+  if (!spec) return null;
+  if (crit) spec = critDamageSpec(spec);
+  const dmg = rollDamageSpec(spec);
+  if (crit) dmg.crit = true;
+  return dmg;
+}
+
+// An attack roll, judged by its label: "Longsword Atk", "Bite atk",
+// "Spell Attack", "Weapon Attack". A natural 20 on one of these is a crit.
+function isAttackLabel(label) {
+  return /\b(atk|attack)\b/i.test(String(label || ''));
+}
+
+// "Longsword Dmg" → "Longsword Dmg (Crit)", so chat and roll history say so.
+function critLabel(label) {
+  return `${label || 'Damage'} (Crit)`;
 }
 
 // The per-part breakdown carried on a chat entry. Kept small on purpose — the
@@ -160,6 +188,19 @@ function _dmgLooksLikePart(s) {
  */
 function parseDiceCommand(text) {
   const t = String(text == null ? '' : text).trim();
+
+  // /crit — a critical damage roll: dice doubled, modifiers once.
+  const cm = t.match(/^\/crit\s+(.+)$/i);
+  if (cm) {
+    const base = parseDamageSpec(cm[1]);
+    if (!base) return null;
+    const spec = critDamageSpec(base);
+    const first = spec.parts[0];
+    return {
+      count: first.count || 1, sides: first.sides, modifier: first.modifier,
+      label: null, damage: spec, crit: true, expr: cm[1].trim()
+    };
+  }
 
   // /dmg | /damage — always a typed damage roll.
   const dm = t.match(/^\/(?:dmg|damage)\s+(.+)$/i);

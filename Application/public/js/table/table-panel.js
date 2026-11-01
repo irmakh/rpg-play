@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-28 14:25
+// Written by Irmak Hakman — 2026-11-01 15:10
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -943,27 +943,44 @@ function _showAdvModal(label) {
 
 // Item 3: after a weapon attack roll, prompt for Miss (close) or Roll Damage.
 // `sender` names who rolled when it is not the player themselves (a companion).
-function showWeaponDmgPrompt(atkLabel, dmg, note, sender = null) {
+// A natural 20 turns the prompt into a critical hit: the Crit button leads and
+// the label says so. Crit stays offered on any hit for features that crit on
+// less (Champion 19–20) or auto-crit (a paralysed target in reach).
+function showWeaponDmgPrompt(atkLabel, dmg, note, sender = null, nat20 = false) {
   const wName = String(atkLabel).replace(/ Atk$/i, '').replace(/ atk$/i, '');
   _pendingWeaponDmg = { wName, dmg, note: note || '', sender };
   const el = document.getElementById('weapon-dmg-prompt');
   if (!el) return;
   const lbl = document.getElementById('weapon-dmg-prompt-label');
-  if (lbl) lbl.textContent = `${wName} hit?`;
+  if (lbl) lbl.textContent = nat20 ? `${wName}: critical hit!` : `${wName} hit?`;
+  el.classList.toggle('is-crit', nat20);
+  document.getElementById('weapon-dmg-btn-hit')?.classList.toggle('primary', !nat20);
+  document.getElementById('weapon-dmg-btn-crit')?.classList.toggle('primary', nat20);
   el.style.display = 'flex';
 }
 function weaponDmgMiss() {
   _pendingWeaponDmg = null;
+  setCritArmed(false);
   const el = document.getElementById('weapon-dmg-prompt');
   if (el) el.style.display = 'none';
 }
-function weaponDmgRoll() {
+function weaponDmgRoll(crit = false) {
   const w = _pendingWeaponDmg;
   _pendingWeaponDmg = null;
   const el = document.getElementById('weapon-dmg-prompt');
   if (el) el.style.display = 'none';
-  if (w && w.dmg) rollDamageStr(`${w.wName} Dmg`, w.dmg, w.note || '', w.sender);
+  if (w && w.dmg) rollDamageStr(`${w.wName} Dmg`, w.dmg, w.note || '', w.sender, crit);
+  else setCritArmed(false);
 }
+
+// The "next damage roll is a crit" switch in the dice popover. A natural 20 on
+// an attack turns it on by itself; the next damage roll uses it up.
+function setCritArmed(on) {
+  _critArmed = !!on;
+  const sw = document.getElementById('btn-crit-next');
+  if (sw) { sw.classList.toggle('on', _critArmed); sw.setAttribute('aria-checked', String(_critArmed)); }
+}
+function toggleCritArmed() { setCritArmed(!_critArmed); }
 
 // Item 9: clicking a spell name posts it to chat rendered as raw HTML (so links
 // in the notes are clickable). Always posts — even with an empty description — and
@@ -992,9 +1009,14 @@ function postSpellInfoFromPanel(idx) { _postSpellInfo(_sideSpells[idx]); }
 // Rolls a damage string, which may carry several typed parts ("1d6 piercing,
 // 2d8 fire"). Every part rolls at once and shares one grouped overlay; the
 // single-part case goes down the same path and looks exactly as it did.
-async function rollDamageStr(label, dmgStr, description = '', sender = null) {
-  const dmg = parseDamage(dmgStr);
+// `crit` null means "use the armed crit" (nat 20 or the Crit switch); a crit
+// doubles the dice, not the modifiers. Any damage roll uses the arm up.
+async function rollDamageStr(label, dmgStr, description = '', sender = null, crit = null) {
+  if (crit == null) crit = _critArmed;
+  setCritArmed(false);
+  const dmg = parseDamage(dmgStr, crit);
   if (!dmg) return;
+  if (crit) label = critLabel(label);
   const { total, groups } = dmg;
   const first     = dmg.parts[0];
   const duration  = 1000 + Math.random() * 2000;
@@ -1065,8 +1087,14 @@ async function confirmRoll(type) {
   const detail = type !== 'norm' ? `d20(${r1}, ${r2} → ${used})${modifier !== 0 ? (modifier > 0 ? ' + ' : ' − ') + Math.abs(modifier) : ''}` : `d20(${r1})${modifier !== 0 ? (modifier > 0 ? ' + ' : ' − ') + Math.abs(modifier) : ''}`;
   _pushRollToChar(charId, { label: chatLabel, type, detail, total, isCrit: used === 20, isFail: used === 1, isDamage: false, time: new Date().toISOString() });
   if (afterRoll) afterRoll(total);
+  // Every attack roll decides the crit afresh: a natural 20 arms it for the
+  // damage that follows (monster rows roll damage from a separate click).
+  if (isAttackLabel(label)) {
+    setCritArmed(used === 20);
+    if (used === 20 && !(weaponDmg && document.getElementById('weapon-dmg-prompt'))) showToast('Critical hit! The next damage roll doubles its dice.');
+  }
   // Item 3: weapon attack → offer Miss / Roll Damage now that the die has settled.
-  if (weaponDmg) showWeaponDmgPrompt(label, weaponDmg, weaponNote, sender);
+  if (weaponDmg) showWeaponDmgPrompt(label, weaponDmg, weaponNote, sender, used === 20);
 }
 
 document.addEventListener('keydown', e => {

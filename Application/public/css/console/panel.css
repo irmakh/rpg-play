@@ -1,4 +1,4 @@
-/* Written by Irmak Hakman — 2026-10-11 00:20 */
+/* Written by Irmak Hakman — 2026-11-01 17:30 */
 /* Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) */
 
 /* ============================================================================
@@ -82,7 +82,7 @@ html.console #notif-panel{
 html.console #notif-panel>*{zoom:1.25}
 html.console .notif-row.unread{box-shadow:inset 3px 0 0 var(--c-tx)}
 html.console .notif-row-icon,html.console .notif-toast-icon{display:none}
-html.console #notif-toasts{top:calc(var(--c-row) + .4rem);left:.5rem;right:.5rem;max-width:none}
+html.console #notif-toasts{top:calc(var(--c-row) + .4rem);left:.5rem;right:.5rem;max-width:none;width:auto;transform:none}
 html.console .notif-toast{zoom:1.2;background:var(--c-tx);color:var(--c-bg);border:0;border-radius:2px;box-shadow:none}
 html.console .notif-toast-body{color:var(--c-bg);opacity:.75}
 

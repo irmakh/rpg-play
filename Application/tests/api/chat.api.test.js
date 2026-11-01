@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-09-27 11:13
+// Written by Irmak Hakman — 2026-11-01 18:40
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -382,10 +382,56 @@ describe('chat broadcast audience', () => {
     expect(sent[0].opts).toEqual({ dmOnly: true });
   });
 
+  it('keeps a DM-only text line (group roll of hidden tokens) from players', async () => {
+    const { app, broadcasts } = setup();
+    await asDM(request(app).post('/api/chat'), AMN).send({
+      type: 'text', sender: 'DM', html: true, dmOnly: true,
+      message: '<strong>DEX Save · hidden tokens — 1 roll</strong>',
+    });
+    expect(broadcasts.find(b => b.channel === 'chat').opts).toEqual({ dmOnly: true });
+    expect((await readAsPlayer(app, AMN)).body).toEqual([]);
+    expect((await readAsDM(app, AMN)).body[0].dmOnly).toBe(true);
+  });
+
+  it('ignores dmOnly on a text line from a player', async () => {
+    const made = setup();
+    made.ldbFor(AMN).createCharacter('c1', { name: 'Gerion', charType: 'pc', passwordHash: made.hashPassword('pw1') });
+    const token = await loginAs(made.app, made.captcha, 'c1', 'pw1');
+    await request(made.app).post('/api/chat').set('X-Campaign-Id', AMN).set('X-Character-Password', token)
+      .send({ type: 'text', sender: 'Gerion', message: 'hello', dmOnly: true });
+    const sent = made.broadcasts.filter(b => b.channel === 'chat');
+    expect(sent[0].opts).toEqual({});
+    expect(sent[0].payload.dmOnly).toBeUndefined();
+  });
+
   it('sends an ordinary roll to everyone', async () => {
     const { app, broadcasts } = setup();
     await roll(app, AMN, 'Gerion');
     expect(broadcasts.find(b => b.channel === 'chat').opts).toEqual({});
+  });
+
+  // The 3D dice of a hidden token's roll would show its result on every screen.
+  const dice = { sides: 20, dieResults: [14], modifier: 3, total: 17, label: 'Bite atk', sender: 'Goblin #2' };
+
+  it('shows a DM-only roll\'s dice on DM screens only', async () => {
+    const { app, broadcasts } = setup();
+    await asDM(request(app).post('/api/dice/broadcast'), AMN).send({ ...dice, dmOnly: true });
+    expect(broadcasts.find(b => b.channel === 'dice-roll').opts).toEqual({ dmOnly: true });
+  });
+
+  it('shows ordinary dice to everyone', async () => {
+    const { app, broadcasts } = setup();
+    await asDM(request(app).post('/api/dice/broadcast'), AMN).send(dice);
+    expect(broadcasts.find(b => b.channel === 'dice-roll').opts).toEqual({});
+  });
+
+  it('ignores dmOnly on dice from a player', async () => {
+    const made = setup();
+    made.ldbFor(AMN).createCharacter('c1', { name: 'Gerion', charType: 'pc', passwordHash: made.hashPassword('pw1') });
+    const token = await loginAs(made.app, made.captcha, 'c1', 'pw1');
+    await request(made.app).post('/api/dice/broadcast').set('X-Campaign-Id', AMN).set('X-Character-Password', token)
+      .send({ ...dice, sender: 'Gerion', dmOnly: true });
+    expect(made.broadcasts.find(b => b.channel === 'dice-roll').opts).toEqual({});
   });
 
 });

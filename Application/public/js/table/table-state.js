@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-11-01 15:10
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -25,6 +25,7 @@ let bulkTokenIds = new Set(); // DM multi-selection for bulk HP/condition edits
 let multiSelectState = null;  // { x1, y1 } while DM is drag-selecting an area
 let rollPending = null; // { label, modifier, sender }
 let diceMode = 'ask';  // persistent d20 roll mode (item 2): 'norm' | 'adv' | 'dis' | 'ask' — 'ask' shows per-roll modal
+let _critArmed = false;       // next damage roll is a critical (dice doubled) — set by a nat-20 attack or the Crit switch
 let _pendingWeaponDmg = null; // { wName, dmg, note } — set after a weapon attack, drives the Miss/Roll-Damage prompt (item 3)
 let _sideSpells = [];   // prepared spells currently rendered in the side panel (for spell-name → chat description, item 9)
 let placementState = null; // { payload } — click-to-place mode

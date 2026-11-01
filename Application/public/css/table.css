@@ -1,4 +1,4 @@
-/* Written by Irmak Hakman — 2026-10-28 14:25 */
+/* Written by Irmak Hakman — 2026-11-01 15:10 */
 /* Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) */
 
 *{box-sizing:border-box;margin:0;padding:0}
@@ -924,4 +924,6 @@ body.rp-collapsed #right-strip{
 }
 body.rp-collapsed #right-strip:hover{background:var(--slate-hi);color:var(--bone)}
 #right-strip .ls-label{writing-mode:vertical-rl;letter-spacing:.04em}
-
+/* Weapon damage prompt after a natural 20 on the attack */
+#weapon-dmg-prompt.is-crit{border-color:var(--blood);box-shadow:0 0 0 1px var(--blood),0 4px 18px #000a}
+#weapon-dmg-prompt.is-crit #weapon-dmg-prompt-label{color:var(--blood)}

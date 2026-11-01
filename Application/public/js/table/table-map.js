@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-28 17:10
+// Written by Irmak Hakman — 2026-11-01 15:10
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -575,6 +575,7 @@ function attachTokenEvents(div, tok) {
 function _selectTokenClick(tok, e) {
   if (e.shiftKey && isDM()) {
     // Shift+click: toggle token in bulk selection, hide single-token panel
+    _foldSingleIntoBulk(tok.id);
     if (bulkTokenIds.has(tok.id)) {
       bulkTokenIds.delete(tok.id);
     } else {
@@ -592,6 +593,19 @@ function _selectTokenClick(tok, e) {
     selectToken(tok.id);
     openHpPanel(tok);
   }
+}
+
+// Growing a selection with shift keeps the token that was single-selected:
+// it joins the bulk set. Without this, click A then shift+click B and C left A
+// out of every bulk action (group saves/checks, HP, conditions, initiative)
+// while its white ring still made it look selected.
+function _foldSingleIntoBulk(exceptId) {
+  if (!selectedTokenId || selectedTokenId === exceptId) {
+    if (selectedTokenId === exceptId) selectedTokenId = null; // the toggle below adds it
+    return;
+  }
+  if (tokens.some(t => t.id === selectedTokenId)) bulkTokenIds.add(selectedTokenId);
+  selectedTokenId = null;
 }
 
 function startDrag(tok, e) {
@@ -1258,7 +1272,8 @@ overlayCanvas.addEventListener('mouseup', e => {
     if (x2 - x1 > 4 || y2 - y1 > 4) {
       const cs = tableState.cellSize || 50;
       const ox = tableState.offsetX || 0, oy = tableState.offsetY || 0;
-      if (!e.shiftKey) bulkTokenIds.clear();
+      if (!e.shiftKey) { bulkTokenIds.clear(); selectedTokenId = null; }
+      else _foldSingleIntoBulk(null);
       let added = 0;
       for (const tok of tokens) {
         if (!tok.visible && !isMyToken(tok)) continue;

@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-22 09:18
+// Written by Irmak Hakman — 2026-11-01 17:30
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -406,5 +406,36 @@ describe('mapTextPx sizes the distances written on the map', () => {
     expect(mapTextPx(400, 100)).toBe(96);
     expect(mapTextPx(undefined, undefined)).toBe(18);
     expect(mapTextPx(0, 0)).toBe(18);
+  });
+});
+
+// ── showToast → the one notification pop-up ──────────────────────────────────
+describe('showToast', () => {
+  function loadWith(extra) {
+    const shown = { bar: null };
+    const ctx = createContext({
+      document: { getElementById: () => ({ style: {}, set textContent(v) { shown.bar = v; } }) },
+      clearTimeout: () => {}, setTimeout: () => 0, console, ...extra,
+    });
+    runInContext(SRC, ctx);
+    return { showToast: ctx.showToast, shown };
+  }
+
+  it('hands the message to the notification pop-up when there is one', () => {
+    const calls = [];
+    const { showToast, shown } = loadWith({ notifToast: (n) => calls.push(n) });
+    showToast('Rolled DEX Save for 3 tokens.');
+    showToast('Connection error.', true);
+    expect(calls).toEqual([
+      { kind: 'info', title: 'Rolled DEX Save for 3 tokens.' },
+      { kind: 'error', title: 'Connection error.' },
+    ]);
+    expect(shown.bar).toBeNull();          // the old bar stayed out of it
+  });
+
+  it('falls back to the old bar on a page without notifications', () => {
+    const { showToast, shown } = loadWith({});
+    showToast('Saved.');
+    expect(shown.bar).toBe('Saved.');
   });
 });

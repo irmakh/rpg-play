@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-09-26 16:50
+// Written by Irmak Hakman — 2026-11-01 17:55
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -36,6 +36,8 @@ const KEEP_EVENTS = 300;
 // one row that counts up. A combat round produces a dozen rolls; without this
 // the bell would be useless the moment dice were included.
 const COALESCE_MS = 45000;
+// How many event lines a folded row keeps (see n.line); older ones are counted.
+const MAX_LINES = 12;
 
 export default function makeNotify(ctx) {
   const { ldb, broadcast, genId } = ctx;
@@ -72,6 +74,15 @@ export default function makeNotify(ctx) {
    * @param {string} [n.coalesceTitle]    wording for a folded row; {count} is
    *                                      replaced with how many it stands for
    * @param {string} [n.coalesceBody]     body for a folded row
+   * @param {string} [n.line]             this event in one line ("18 (Longsword
+   *                                      Dmg)"). Given, a folded row's body lists
+   *                                      every event's line, newest first, rather
+   *                                      than only the latest (coalesceBody)
+   * @param {string[]} [n.lines]          several rolls in one event (a group
+   *                                      save): each is a line, and each counts,
+   *                                      so a 3-token save is "rolled 3 times"
+   * @param {string} [n.toastTitle]       the pop-up's wording for this event, if
+   * @param {string} [n.toastBody]        it differs from title/body
    * @param {string|string[]} [n.exclude] recipients to skip
    * @returns {string|null} the notification id, or null if it reached nobody
    */
@@ -81,39 +92,73 @@ export default function makeNotify(ctx) {
       if (recipients.length === 0) return null;
 
       const createdAt = new Date().toISOString();
+      // The rolls this event carries, one line each, and how many it counts for.
+      const newLines = (Array.isArray(n.lines) ? n.lines : (n.line ? [n.line] : []))
+        .map(l => String(l).slice(0, 120)).slice(0, MAX_LINES);
+      const weight = Math.max(1, newLines.length);
+      // This one event in its own words, for the pop-up: a folded row speaks
+      // for the whole burst, a pop-up only for what just came.
+      const latest = {
+        title: String(n.toastTitle ?? n.title ?? '').slice(0, 200),
+        body: String(n.toastBody ?? n.body ?? '').slice(0, 500),
+      };
+      const listBody = (lines, count) =>
+        lines.join('\n') + (count > lines.length ? `\n… and ${count - lines.length} earlier` : '');
 
       // Fold into the previous one where the caller asked for it, rather than
       // stacking a dozen near-identical rows. The existing deliveries are
       // reused and marked unread again, so the row resurfaces with a new count.
       if (n.coalesce && n.actorName) {
         const since = new Date(Date.now() - COALESCE_MS).toISOString();
-        const prev = ldb.findRecentNotification(n.kind || '', n.actorName, since);
+        let prev = ldb.findRecentNotification(n.kind || '', n.actorName, since);
+        // Only into a row with exactly this audience. A DM-only roll (a blind
+        // handout check, a monster's initiative) folded into a row the players
+        // hold would put its result in their bell; a public roll folded into a
+        // DM-only row would never reach them.
         if (prev) {
-          const count = (prev.count || 1) + 1;
+          const had = [...new Set(ldb.listNotificationRecipients(prev.id))].sort().join(',');
+          if (had !== [...recipients].sort().join(',')) prev = null;
+        }
+        if (prev) {
+          const count = (prev.count || 1) + weight;
           const title = n.coalesceTitle
             ? String(n.coalesceTitle).replace('{count}', String(count))
             : String(n.title || '');
-          const body = n.coalesceBody !== undefined ? String(n.coalesceBody) : String(n.body || '');
-          ldb.bumpNotification(prev.id, { title, body, createdAt });
+          let body = n.coalesceBody !== undefined ? String(n.coalesceBody) : String(n.body || '');
+          let dataJson;
+          if (newLines.length) {
+            let prevData = {};
+            try { prevData = JSON.parse(prev.dataJson || '{}') || {}; } catch {}
+            const lines = [...newLines, ...(Array.isArray(prevData.lines) ? prevData.lines : [])]
+              .slice(0, MAX_LINES);
+            body = listBody(lines, count);
+            dataJson = JSON.stringify({ ...prevData, ...(n.data || {}), lines });
+          }
+          ldb.bumpNotification(prev.id, { title, body: body.slice(0, 2000), createdAt, dataJson, count });
           ldb.resetNotificationSeen(prev.id);
           broadcast('notification', {
             id: prev.id, recipients,
             kind: prev.kind, priority: prev.priority, title, body,
-            data: n.data || {}, actorName: prev.actorName, createdAt, count,
+            data: n.data || {}, actorName: prev.actorName, createdAt, count, latest,
           }, undefined, { to: recipients });
           return prev.id;
         }
       }
 
       const id = genId();
+      // A new row that already stands for several rolls (a group save) reads
+      // like a folded one: "DM rolled 3 times" over a line per roll.
+      const many = weight > 1;
       const row = {
         kind: n.kind || '',
         priority: n.priority === 'alert' ? 'alert' : 'feed',
-        title: String(n.title || '').slice(0, 200),
-        body: String(n.body || '').slice(0, 500),
-        dataJson: JSON.stringify(n.data || {}),
+        title: String(many && n.coalesceTitle
+          ? String(n.coalesceTitle).replace('{count}', String(weight)) : (n.title || '')).slice(0, 200),
+        body: (many ? listBody(newLines, weight) : String(n.body || '')).slice(0, 2000),
+        dataJson: JSON.stringify(newLines.length ? { ...(n.data || {}), lines: newLines } : (n.data || {})),
         actorName: String(n.actorName || '').slice(0, 120),
         createdAt,
+        count: weight,
       };
 
       ldb.createNotification(id, row);
@@ -128,7 +173,7 @@ export default function makeNotify(ctx) {
       broadcast('notification', {
         id, recipients,
         kind: row.kind, priority: row.priority, title: row.title, body: row.body,
-        data: n.data || {}, actorName: row.actorName, createdAt,
+        data: n.data || {}, actorName: row.actorName, createdAt, count: weight, latest,
       }, undefined, { to: recipients });
       return id;
     } catch (err) {

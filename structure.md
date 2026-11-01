@@ -4,7 +4,7 @@ Complete file tree of the RPG Play repository — **git-tracked files only**. Un
 
 ← Back to [README.md](README.md)
 
-*Last updated: 2026-09-27 (frontend v242).*
+*Last updated: 2026-11-01 (frontend v319).*
 
 ---
 
@@ -28,7 +28,9 @@ char_sheet/
 │   │   ├── request-context.js          #   AsyncLocalStorage campaign scope + db proxies
 │   │   ├── security-middleware.js      #   Security headers, session gate, body limits by caller
 │   │   ├── sessions.js                 #   Opaque session tokens (stored as SHA-256) + setup tickets
-│   │   └── upload-paths.js             #   The one rule for resolving upload paths safely
+│   │   ├── telemetry.js                #   Install report to the licensor at startup and daily (README "Install reporting")
+│   │   ├── upload-paths.js             #   The one rule for resolving upload paths safely
+│   │   └── weather-words.js            #   A day's weather log (numbers and levels) in words
 │   ├── public/                         # Served frontend (HTML / CSS / JS + PWA)
 │   │   ├── console/                    #   Two-screen console for a handheld (map + info panel)
 │   │   │   ├── index.html              #     Launcher and login (with campaign choice)
@@ -55,6 +57,7 @@ char_sheet/
 │   │   │   ├── merchant.css            #     Retired merchant shop styles (page redirects to Treasury)
 │   │   │   ├── monsters.css            #     Monster library styles
 │   │   │   ├── notifications.css       #     Notification bell, panel and toasts
+│   │   │   ├── range.css               #     One slider look (map zoom, music, prepare-map grid), finger-sized thumb
 │   │   │   ├── stories.css             #     Stories (dashboard/builder/viewer) styles
 │   │   │   ├── table-sheet-popout.css  #     Scoped layout for the popped-out character sheet
 │   │   │   ├── table-theme-modern.css  #     Modern HUD table theme
@@ -91,11 +94,12 @@ char_sheet/
 │   │   │   │   ├── panel-pad.js        #       Info panel: what the gamepad does here
 │   │   │   │   ├── panel-realtime.js   #       Info panel: live events, link to the map screen, start-up
 │   │   │   │   └── table-console.js    #       Map screen: console frame, link to the info panel, gamepad half
-│   │   │   ├── index/                  #     Character sheet — 15 modules
+│   │   │   ├── index/                  #     Character sheet — 16 modules
 │   │   │   │   ├── index-actions.js    #       Actions tab (weapons + action spells + custom actions)
 │   │   │   │   ├── index-calc.js       #       AC / init / speed / derived stat calc
 │   │   │   │   ├── index-calendar.js   #       Player calendar tab
 │   │   │   │   ├── index-char.js       #       Character data load/save + XML import/export
+│   │   │   │   ├── index-companions.js #       Companions tab: familiars, summons and beasts the player builds
 │   │   │   │   ├── index-dice.js       #       Dice rolling + roll history + toast
 │   │   │   │   ├── index-dice3d.js     #       3D dice animation + chat posting
 │   │   │   │   ├── index-handouts.js   #       Handouts tab — blind Examine, unread badge
@@ -127,18 +131,19 @@ char_sheet/
 │   │   │   │   ├── stories-auth.js     #       Stories login gate + authenticated fetch
 │   │   │   │   ├── template.js         #       Display template + UI size: applies the choice before first paint, the palette button and pop-up
 │   │   │   │   └── weather-ui.js       #       Shared weather icons, tooltip, day markers
-│   │   │   ├── table/                  #     Virtual table — 17 modules
+│   │   │   ├── table/                  #     Virtual table — 19 modules
 │   │   │   │   ├── table-addtoken.js   #       Add-token modal
 │   │   │   │   ├── table-auth.js       #       Session load, authHeaders(), logout
 │   │   │   │   ├── table-chat.js       #       Table chat, dice broadcast, info cards
+│   │   │   │   ├── table-companions.js #       Companion tokens: summon, attacks, own initiative row, dismiss
 │   │   │   │   ├── table-handouts.js   #       Handout pop-up, right-panel tab, multi-character hand-out modal
 │   │   │   │   ├── table-hppanel.js    #       HP panel + group ability/save rolls
 │   │   │   │   ├── table-initiative.js #       Initiative tracker UI
 │   │   │   │   ├── table-main.js       #       Bootstrap + DM tools modal
-│   │   │   │   ├── table-map.js        #       Canvas, tokens, drawing, fog, ruler, ping
+│   │   │   │   ├── table-map.js        #       Canvas, tokens, drawing, fog, ruler, ping, click/shift/box selection
 │   │   │   │   ├── table-monsters.js   #       Monster tokens + stat block
 │   │   │   │   ├── table-music.js      #       Synced music playback
-│   │   │   │   ├── table-panel.js      #       Right-side token quick-roll panel
+│   │   │   │   ├── table-panel.js      #       Right-side token quick-roll panel, attack → damage prompt, crit damage
 │   │   │   │   ├── table-popout.js     #       Pop panels into separate windows
 │   │   │   │   ├── table-realtime.js   #       Live event handling
 │   │   │   │   ├── table-state.js      #       Shared state + session
@@ -186,7 +191,7 @@ char_sheet/
 │   │   └── seed_demo_data.py           #   Installs the demo campaign from demo_campaign.zip (zip is not in git)
 │   ├── server/                         # Backend
 │   │   ├── notify.js                   #   Notification emitter — ctx.notify(), fan-out + coalescing
-│   │   └── routes/                     #   17 Express route modules (each exports register(app, ctx))
+│   │   └── routes/                     #   18 Express route modules (each exports register(app, ctx))
 │   │       ├── auth.js                 #     Login, logout, captcha, passwords, stories gate
 │   │       ├── backup.js               #     Per-section JSON export / restore, raw database backup
 │   │       ├── campaigns.js            #     Campaign registry API — list/detail/enter/create/settings/delete
@@ -203,24 +208,29 @@ char_sheet/
 │   │       ├── sound.js                #     Playlists & synced playback
 │   │       ├── stories.js              #     Stories & panels (images, MP4/WebM videos)
 │   │       ├── table.js                #     Tokens, map, fog, ping, prepared maps, waiting screens
+│   │       ├── telemetry.js            #     Install-report collector (licensor's server only)
 │   │       └── treasury.js             #     Unified catalogue: modes, claim, purchase, images, ledger
-│   ├── tests/                          # Vitest suites — 51 files, 1341 tests
-│   │   ├── api/                        #   API / integration tests (19)
+│   ├── tests/                          # Vitest suites — 64 files, 1705 tests
+│   │   ├── api/                        #   API / integration tests (23)
 │   │   │   ├── auth.api.test.js        #     Login, captcha, lockout, sessions
 │   │   │   ├── backup-restore.api.test.js  # Backup restore, upload-path safety
 │   │   │   ├── calendar.api.test.js    #     Calendar events & journal visibility
 │   │   │   ├── campaigns.api.test.js   #     Campaign registry, per-campaign DM passwords, isolation
 │   │   │   ├── characters.api.test.js  #     Characters, quick-roll, roll history, spell slots
 │   │   │   ├── chat.api.test.js        #     Chat per campaign, private messages, login for table writes
+│   │   │   ├── companions.api.test.js  #     Companions: who may summon, move and dismiss
 │   │   │   ├── handouts.api.test.js    #     Handout redaction boundary, blind roll, DC guidance
 │   │   │   ├── import-roundtrip.api.test.js  # Export → import round-trips
 │   │   │   ├── initiative.api.test.js  #     Initiative CRUD + turn control
+│   │   │   ├── live-images.api.test.js #     Live image sharing
 │   │   │   ├── maintenance.api.test.js #     Maintenance page API
 │   │   │   ├── notifications.api.test.js  #  Notification addressing and folding
 │   │   │   ├── sound.api.test.js       #     Playlists & playback
 │   │   │   ├── stories-context.api.test.js  # Story uploads inside the campaign context
 │   │   │   ├── stories.api.test.js     #     Stories, panels, videos
 │   │   │   ├── table.api.test.js       #     Tokens, map, ping, prepared maps
+│   │   │   ├── telemetry.api.test.js   #     Install-report collector
+│   │   │   ├── treasury-piles.api.test.js#     Treasury piles
 │   │   │   ├── treasury-requests.api.test.js  # Loot requests queue
 │   │   │   ├── treasury.api.test.js    #     Treasury: modes, claim/purchase, redaction, images
 │   │   │   ├── waiting-screens.api.test.js  # Waiting screens + parked table
@@ -229,12 +239,14 @@ char_sheet/
 │   │   │   ├── make-ldb.js             #     In-memory localdb factory
 │   │   │   ├── setup.test.js           #     Global test setup
 │   │   │   └── test-app.js             #     Express app builder for tests
-│   │   └── unit/                       #   Unit tests (31)
+│   │   └── unit/                       #   Unit tests (40)
 │   │       ├── auth-events.test.js     #     Login audit events
 │   │       ├── auth.test.js            #     lib/auth.js token checks
 │   │       ├── backup-tar.test.js      #     Raw backup tar stream
+│   │       ├── calendar-list.test.js   #     Calendar list view
 │   │       ├── captcha.test.js         #     Captcha issue/verify
 │   │       ├── chat-html.test.js       #     Chat HTML sanitiser
+│   │       ├── crit-and-bulk.test.js   #     Critical damage, multi-select keeps its first token, hidden-token rolls are DM-only
 │   │       ├── dice-fairness.test.js   #     Seeded chi-square dice fairness
 │   │       ├── index-actions.test.js   #     Actions tab
 │   │       ├── index-calc.test.js      #     Derived-stat calc
@@ -258,9 +270,12 @@ char_sheet/
 │   │       ├── sessions.test.js        #     Session tokens
 │   │       ├── table-map.test.js       #     Table map/canvas
 │   │       ├── table-monster-damage.test.js  # Monster damage extraction
+│   │       ├── table-spells.test.js    #     Table spell list
 │   │       ├── table-utils.test.js     #     Table helpers
 │   │       ├── table-ux.test.js        #     Table ease-of-use helpers: zoom steps, quick HP, tool keys, hover/menu markup
 │   │       ├── upload-paths.test.js    #     Upload paths (server wiring)
+│   │       ├── treasury-ui.test.js     #     Treasury manager UI
+│   │       ├── weather-words.test.js   #     Weather in words
 │   │       ├── console-gamepad.test.js #     Console gamepad: reading, repeat, routing, focus movement
 │   │       ├── console-panel.test.js   #     Console info panel: who may see what in the initiative order
 │   │       ├── sw-precache.test.js     #     Service worker list matches files on disk; version numbers agree
@@ -274,6 +289,7 @@ char_sheet/
 ├── Android/                            # Android app (com.rpgplay.console), app 1.4: two-screen console, or the whole app on one screen
 │   ├── app/build.gradle.kts            #   versionCode / versionName (raise both to publish an update), signing, androidx.webkit
 │   ├── app/src/main/AndroidManifest.xml  # Activities, install permission, update-status receiver
+│   ├── app/src/main/res/               #   Launcher icon (mipmap-xxxhdpi), strings.xml, themes.xml
 │   ├── app/src/main/java/com/rpgplay/console/
 │   │   ├── LaunchActivity.kt           #     The icon: both console screens, or the whole app on one screen
 │   │   ├── MapActivity.kt              #     MapActivity (top), PanelActivity (bottom), AppActivity (one screen), MaintenanceActivity
@@ -284,6 +300,8 @@ char_sheet/
 │   │   └── Settings.kt                 #     The server address
 │   ├── docker/Dockerfile               #   Android build tools image (JDK 17, SDK 34, Gradle 8.7)
 │   ├── build.sh                        #   Builds dist/rpg-console.apk + dist/rpg-console.json in Docker
+│   ├── gradle.properties               #   Gradle settings
+│   ├── settings.gradle.kts             #   Gradle project settings
 │   ├── make-keystore.sh                #   Makes the signing key once (keystore/, outside git)
 │   └── README.md                       #   How it works, building, publishing, installing
 ├── Desktop/                            # Electron desktop client (thin client over the web app), v1.0.3
@@ -301,6 +319,7 @@ char_sheet/
 │   │   │   ├── menu.js                 #       Application menu (rebuilt on display change)
 │   │   │   ├── session-store.js        #       Shared login state across windows
 │   │   │   ├── shortcuts.js            #       Global hotkeys
+│   │   │   ├── telemetry.js            #       Launch install report (once a day; Settings switch turns it off)
 │   │   │   ├── tray.js                 #       Tray icon and menu
 │   │   │   └── windows.js              #       Window roles, geometry, navigation policy
 │   │   ├── preload/                    #     Preload scripts
@@ -365,6 +384,7 @@ char_sheet/
 ├── DOCKER.md                           # Docker deployment guide
 ├── Dockerfile.dev                      # Development Docker image
 ├── FEATURES.md                         # Historical: the original single-file backup
+├── LICENSE                             # Business Source License 1.1
 ├── README.md                           # Project readme
 ├── docker-compose.yml                  # Docker Compose configuration
 ├── docker-start.sh                     # Start helper script
@@ -395,7 +415,7 @@ char_sheet/
 | Path | Purpose |
 |---|---|
 | `server.js` | Express entry point; injects the cache-busting `?v=N`, redirects retired pages, wires route modules |
-| `server/routes/` | 17 route modules, each `register(app, ctx)` |
+| `server/routes/` | 18 route modules, each `register(app, ctx)` |
 | `db/campaignsdb.js` | Campaign registry — the only cross-tenant database (also holds login sessions) |
 | `db/campaign-store.js` | Per-campaign database handles, provisioning, bootstrap migration |
 | `db/localdb.js`, `db/mediadb.js`, `db/storiesdb.js` | Per-campaign SQLite data layers (factories) |
@@ -403,10 +423,10 @@ char_sheet/
 | `lib/auth.js`, `lib/sessions.js` | Who a request is: session tokens and the checks routes call |
 | `lib/realtime-audience.js` | Which live events each connection may receive |
 | `public/` | All served HTML/CSS/JS and the companion PWA |
-| `public/js/index/` | 15 character-sheet modules |
-| `public/js/table/` | 17 virtual-table modules |
+| `public/js/index/` | 16 character-sheet modules |
+| `public/js/table/` | 19 virtual-table modules |
 | `public/js/lib/` | 19 shared frontend helpers (escaping, dice engine, chat render, private messages, calendar, weather, …) |
-| `tests/` | 51 Vitest unit + API files (1341 tests) |
+| `tests/` | 64 Vitest unit + API files (1705 tests) |
 
 ## Retired pages
 

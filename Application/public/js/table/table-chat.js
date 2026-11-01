@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 15:37
+// Written by Irmak Hakman — 2026-11-01 18:40
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -292,11 +292,24 @@ function _pushRollToChar(charId, entry) {
 // `groups` (optional) carries a multi-type damage roll so every other client
 // replays the same grouped overlay. sides/dieResults stay populated from the
 // first group, so a client that does not understand groups still animates.
+/**
+ * Is this roll the DM's, for a token hidden from players? Then it is DM-only
+ * everywhere: chat, bell, pop-up and the 3D dice. The token is the one whose
+ * panel the roll came from (or the selected one, for a chat /r roll), so a
+ * hidden monster's attack, damage, save or check never reaches a player.
+ */
+function rollIsSecret() {
+  if (typeof isDM !== 'function' || !isDM()) return false;
+  const id = _sideQrollTokenId || selectedTokenId;
+  const tok = id ? tokens.find(t => t.id === id) : null;
+  return !!(tok && tok.visible === false);
+}
+
 function _broadcastDiceRoll(rollId, sides, dieResults, modifier, total, label, duration, usedIdx = -1, groups = null) {
   fetch('/api/dice/broadcast', {
     method: 'POST',
     headers: authHeaders(),
-    body: JSON.stringify({ rollId, sides, dieResults: Array.isArray(dieResults) ? dieResults : [dieResults], modifier, total, label, duration, usedIdx, ...(groups ? { groups } : {}), sender: getChatSender() })
+    body: JSON.stringify({ rollId, sides, dieResults: Array.isArray(dieResults) ? dieResults : [dieResults], modifier, total, label, duration, usedIdx, ...(groups ? { groups } : {}), sender: getChatSender(), ...(rollIsSecret() ? { dmOnly: true } : {}) })
   }).catch(() => {});
 }
 
@@ -305,7 +318,7 @@ async function postToChat(payload) {
     await fetch('/api/chat', {
       method: 'POST',
       headers: authHeaders(),
-      body: JSON.stringify({ ...payload, type: 'roll' })
+      body: JSON.stringify({ ...payload, type: 'roll', ...(rollIsSecret() ? { dmOnly: true } : {}) })
     });
   } catch {}
 }
@@ -342,7 +355,9 @@ function postChatInfoCard({ name, meta, text, html, sender } = {}) {
   return fetch('/api/chat', {
     method: 'POST',
     headers: authHeaders({ 'Content-Type': 'application/json' }),
-    body: JSON.stringify({ sender: sender || getChatSender(), type: 'text', message: body, html: true })
+    body: JSON.stringify({ sender: sender || getChatSender(), type: 'text', message: body, html: true,
+      // A hidden monster's action (its Use button) stays with the DM.
+      ...(rollIsSecret() ? { dmOnly: true } : {}) })
   }).catch(() => {});
 }
 
@@ -356,7 +371,7 @@ async function sendChatInput() {
     // Typed damage — "/dmg 1d6 fire" or "/r 1d6 piercing, 2d8 fire".
     if (roll.damage) {
       const dmg = rollDamageSpec(roll.damage);
-      const lbl = roll.expr;
+      const lbl = roll.crit ? critLabel(roll.expr) : roll.expr;
       const duration = 1000 + Math.random() * 2000;
       const rollId = Math.random().toString(36).slice(2);
       const first = dmg.parts[0];

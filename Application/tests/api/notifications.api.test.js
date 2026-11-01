@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-11 22:10
+// Written by Irmak Hakman — 2026-11-01 17:05
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -335,6 +335,36 @@ describe('notifications — chat and dice, folded', () => {
     expect(seen.unread).toBe(1);
   });
 
+  it('a folded row lists every roll, newest first', async () => {
+    const { app } = setup();
+    await roll(app, 'Aliyr', 18, { label: 'Longsword Atk' });
+    await roll(app, 'Aliyr', 9, { label: 'Longsword Dmg' });
+    await roll(app, 'Aliyr', 4);
+    const item = (await inbox(app, asGerion)).body.items[0];
+    expect(item.title).toBe('Aliyr rolled 3 times');
+    expect(item.body.split('\n')).toEqual(['4', '9 (Longsword Dmg)', '18 (Longsword Atk)']);
+  });
+
+  it('a folded broadcast carries the one new roll for the pop-up', async () => {
+    const { app, broadcasts } = setup();
+    await roll(app, 'Aliyr', 18, { label: 'Longsword Atk' });
+    await roll(app, 'Aliyr', 9, { label: 'Longsword Dmg' });
+    const sent = broadcasts.filter(b => b.channel === 'notification');
+    expect(sent).toHaveLength(2);
+    expect(sent[1].payload.count).toBe(2);
+    expect(sent[1].payload.title).toBe('Aliyr rolled 2 times');
+    expect(sent[1].payload.latest).toEqual({ title: 'Aliyr rolled 9 (Longsword Dmg)', body: '' });
+  });
+
+  it('keeps the newest rolls and counts the rest', async () => {
+    const { app } = setup();
+    for (let i = 1; i <= 15; i++) await roll(app, 'Aliyr', i);
+    const lines = (await inbox(app, asGerion)).body.items[0].body.split('\n');
+    expect(lines[0]).toBe('15');
+    expect(lines).toHaveLength(13);              // 12 rolls + the "earlier" line
+    expect(lines[12]).toBe('… and 3 earlier');
+  });
+
   it('keeps different people apart', async () => {
     const { app } = setup();
     await roll(app, 'Aliyr', 5);
@@ -361,6 +391,53 @@ describe('notifications — chat and dice, folded', () => {
     expect((await inbox(app, asGerion)).body.items).toEqual([]);
   });
 
+  it('never folds a DM-only roll into a row the players can see', async () => {
+    const { app } = setup();
+    await roll(app, 'Aliyr', 7, { label: 'Stealth' });
+    await roll(app, 'Aliyr', 19, { label: 'Secret check', dmOnly: true });
+
+    const gerion = (await inbox(app, asGerion)).body.items;
+    expect(gerion).toHaveLength(1);
+    // What a player can read: the row's wording (ids and times aside).
+    const shown = gerion.map(i => `${i.title}|${i.body}|${i.dataJson || ''}`).join(' ');
+    expect(shown).not.toContain('19');
+    expect(shown).not.toContain('Secret');
+    // The DM has both, as two rows.
+    expect((await inbox(app, asDM)).body.items).toHaveLength(2);
+  });
+
+  it('a public roll after a DM-only one still reaches the players', async () => {
+    const { app } = setup();
+    await roll(app, 'Aliyr', 19, { label: 'Secret check', dmOnly: true });
+    await roll(app, 'Aliyr', 7, { label: 'Stealth' });
+    const gerion = (await inbox(app, asGerion)).body.items;
+    expect(gerion).toHaveLength(1);
+    expect(gerion[0].title).toContain('7');
+  });
+
+  it('DM-only rolls, folded or not, are broadcast to the DM alone', async () => {
+    const { app, broadcasts } = setup();
+    await roll(app, 'Aliyr', 12, { dmOnly: true });
+    await roll(app, 'Aliyr', 15, { dmOnly: true });
+    const sent = broadcasts.filter(b => b.channel === 'notification');
+    expect(sent).toHaveLength(2);
+    expect(sent[1].payload.count).toBe(2);                 // they did fold together
+    for (const b of sent) {
+      expect(b.payload.recipients).toEqual(['dm']);
+      expect(b.opts).toEqual({ to: ['dm'] });
+    }
+  });
+
+  it('a DM-only text line tells no player', async () => {
+    const { app } = setup();
+    await asDM(request(app).post('/api/chat')).send({
+      type: 'text', sender: 'DM', message: 'Initiative — 2 rolls', dmOnly: true,
+      notice: { label: 'Initiative', rolls: [{ name: 'Goblin', total: 14 }, { name: 'Orc', total: 9 }] },
+    });
+    expect((await inbox(app, asAliyr)).body.items).toEqual([]);
+    expect((await inbox(app, asGerion)).body.items).toEqual([]);
+  });
+
   it('carries a chat line, minus the sender', async () => {
     const { app } = setup();
     await say(app, 'Aliyr', 'I search the chest');
@@ -382,6 +459,65 @@ describe('notifications — chat and dice, folded', () => {
     const { app } = setup();
     await say(app, 'DM', '<br>');
     expect((await inbox(app, asAliyr)).body.items).toEqual([]);
+  });
+
+  // A group roll is dice, like any other roll: a line and a count per token.
+  const groupRoll = (app, label, rolls, extra = {}) =>
+    asDM(request(app).post('/api/chat')).send({
+      type: 'text', sender: 'DM', html: true,
+      message: `<strong>${label} — ${rolls.length} rolls</strong>`,
+      notice: { label, rolls }, ...extra,
+    });
+
+  it('a group roll is a dice notification: one line and one count per token', async () => {
+    const { app } = setup();
+    await groupRoll(app, 'DEX Save', [{ name: 'Goblin', total: 15 }, { name: 'Orc', total: 12 }, { name: 'Wolf', total: 9 }]);
+    const item = (await inbox(app, asAliyr)).body.items[0];
+    expect(item).toMatchObject({ kind: 'dice', count: 3, title: 'DM rolled 3 times' });
+    expect(item.body.split('\n')).toEqual(['Goblin 15 (DEX Save)', 'Orc 12 (DEX Save)', 'Wolf 9 (DEX Save)']);
+  });
+
+  it('folds group rolls together, counting every token', async () => {
+    const { app } = setup();
+    await groupRoll(app, 'DEX Save', [{ name: 'Goblin', total: 17 }]);
+    await groupRoll(app, 'WIS Save', [{ name: 'Aliyr', total: 8 }, { name: 'Gerion', total: 19 }]);
+    const items = (await inbox(app, asAliyr)).body.items;
+    expect(items).toHaveLength(1);
+    expect(items[0]).toMatchObject({ kind: 'dice', count: 3, title: 'DM rolled 3 times' });
+    expect(items[0].body.split('\n')).toEqual(['Aliyr 8 (WIS Save)', 'Gerion 19 (WIS Save)', 'Goblin 17 (DEX Save)']);
+  });
+
+  it('the DM who made a group roll has it in the bell too', async () => {
+    const { app } = setup();
+    await groupRoll(app, 'DEX Save', [{ name: 'Goblin', total: 15 }, { name: 'Aliyr', total: 7 }]);
+    const dm = (await inbox(app, asDM)).body.items;
+    expect(dm).toHaveLength(1);
+    expect(dm[0]).toMatchObject({ kind: 'dice', title: 'DM rolled 2 times' });
+  });
+
+  it('a DM-only group roll reaches the DM and no player', async () => {
+    const { app } = setup();
+    await groupRoll(app, 'Initiative', [{ name: 'Goblin', total: 14 }, { name: 'Orc', total: 9 }], { dmOnly: true });
+    const dm = (await inbox(app, asDM)).body.items;
+    expect(dm).toHaveLength(1);
+    expect(dm[0].body).toContain('Goblin 14 (Initiative)');
+    expect((await inbox(app, asAliyr)).body.items).toEqual([]);
+    expect((await inbox(app, asGerion)).body.items).toEqual([]);
+  });
+
+  it('its pop-up names the group roll and every result', async () => {
+    const { app, broadcasts } = setup();
+    await groupRoll(app, 'DEX Save', [{ name: 'Goblin', total: 15 }, { name: 'Orc', total: null }]);
+    const sent = broadcasts.filter(b => b.channel === 'notification');
+    expect(sent[0].payload.latest).toEqual({ title: 'DM rolled DEX Save for 2 tokens', body: 'Goblin 15 · Orc —' });
+  });
+
+  it('strips markup from a group roll', async () => {
+    const { app } = setup();
+    await groupRoll(app, '<b>T</b>', [{ name: '<i>B</i>', total: 3 }]);
+    const items = (await inbox(app, asAliyr)).body.items;
+    expect(items).toHaveLength(1);
+    expect(items[0].title + items[0].body).not.toContain('<');
   });
 
   it('does not announce shared media', async () => {

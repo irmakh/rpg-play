@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-11 22:10
+// Written by Irmak Hakman — 2026-11-01 18:40
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -189,8 +189,14 @@ export default function register(app, ctx) {
    * sender, so a combat round becomes "Gerion rolled 6 times" rather than six
    * separate rows. A private message is an 'alert' — it pops up for the one
    * person it is for.
+   *
+   * `notice` ({ label, rolls: [{ name, total }] }, optional) marks a formatted
+   * message as a GROUP ROLL. It is announced as dice, like any other roll, not
+   * as chat: one line per token ("Goblin 15 (DEX Save)"), each counting as a
+   * roll, so a 3-token save reads "DM rolled 3 times" and folds with the DM's
+   * other rolls. It goes into the bell only; the chat log keeps the message.
    */
-  function notifyChat(entry) {
+  function notifyChat(entry, notice = null) {
     if (!ctx.notify || !entry || entry.type === 'media') return;
     const sender = entry.sender || '';
     // The sender is a display name; find whose it is so they are not told about
@@ -223,6 +229,28 @@ export default function register(app, ctx) {
       return;
     }
 
+    // A group roll: dice, one line and one count per token. Unlike a single
+    // roll it is not kept from the DM who made it: it is the record of several
+    // tokens' results, which the DM wants in the bell — and a DM-only one
+    // (hidden tokens, group initiative) would otherwise reach nobody at all.
+    if (notice) {
+      exclude = exclude.filter(k => k !== 'dm');
+      const label = notice.label ? ` (${notice.label})` : '';
+      const n = notice.rolls.length;
+      ctx.notify({
+        to: entry.dmOnly ? 'dm' : 'all', exclude,
+        kind: 'dice', actorName: sender, priority: 'feed',
+        title: `${sender} rolled {count} times`.replace('{count}', String(n)),
+        coalesce: true,
+        coalesceTitle: `${sender} rolled {count} times`,
+        lines: notice.rolls.map(r => `${r.name} ${r.total == null ? '—' : r.total}${label}`),
+        toastTitle: `${sender} rolled ${notice.label || 'a group roll'} for ${n} token${n !== 1 ? 's' : ''}`,
+        toastBody: notice.rolls.map(r => `${r.name} ${r.total == null ? '—' : r.total}`).join(' · '),
+        data: { href: '/table.html' },
+      });
+      return;
+    }
+
     const isRoll = entry.type !== 'text';
     if (isRoll) {
       const label = entry.label ? ' (' + entry.label + ')' : '';
@@ -234,18 +262,22 @@ export default function register(app, ctx) {
         coalesce: true,
         coalesceTitle: `${sender} rolled {count} times`,
         coalesceBody: `Latest: ${entry.total}${label}`,
+        // A folded row lists every roll, newest first, not only the latest.
+        line: `${entry.total}${label}`,
         data: { href: '/table.html' },
       });
     } else {
       const text = String(entry.message || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
       if (!text) return;
+      const body = text.slice(0, 140);
       ctx.notify({
-        to: 'all', exclude,
+        to: entry.dmOnly ? 'dm' : 'all', exclude,
         kind: 'chat', actorName: sender, priority: 'feed',
-        title: sender, body: text.slice(0, 140),
+        title: sender, body,
         coalesce: true,
         coalesceTitle: `${sender} — {count} messages`,
-        coalesceBody: text.slice(0, 140),
+        coalesceBody: body,
+        line: body,
         data: { href: '/table.html' },
       });
     }
@@ -257,7 +289,7 @@ export default function register(app, ctx) {
   // write into the table's chat.
   app.post('/api/chat', (req, res) => {
     if (!sessionAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
-    const { sender, dice, results, modifier, total, label, type, message, description, dmOnly, html, parts, to } = req.body;
+    const { sender, dice, results, modifier, total, label, type, message, description, dmOnly, html, parts, to, notice } = req.body;
     // `to` makes this a private message (checked below against who is sending);
     // without it the line goes to the whole table.
     let pm;
@@ -288,6 +320,10 @@ export default function register(app, ctx) {
         message: String(message).slice(0, isHtml ? 4000 : 500),
         type: 'text',
         ...(isHtml ? { html: true } : {}),
+        // A DM-only line (a group roll with hidden tokens, group initiative) is
+        // kept from players exactly as a dmOnly roll is. Only the DM may set it:
+        // from a player it would be a private message without the recipient checks.
+        ...(dmOnly === true && !pm && masterAuth(req) ? { dmOnly: true } : {}),
         ...(pm || {}),
         timestamp: new Date().toISOString()
       };
@@ -330,7 +366,17 @@ export default function register(app, ctx) {
     // page — readable by anyone watching the socket.)
     if (pm) broadcast('chat-pm', { id: entry.id }, undefined, { to: [entry.to, entry.fromId, 'dm'] });
     else broadcast('chat', entry, undefined, entry.dmOnly ? { dmOnly: true } : {});
-    notifyChat(entry);
+    // A group roll's results, for the bell (see notifyChat). Plain text only.
+    const clean = (v, n) => String(v ?? '').replace(/[<>]/g, '').slice(0, n);
+    const nt = type === 'text' && !pm && notice && typeof notice === 'object'
+        && Array.isArray(notice.rolls) && notice.rolls.length
+      ? { label: clean(notice.label, 60),
+          rolls: notice.rolls.slice(0, 50).map(r => ({
+            name: clean(r && r.name, 40) || '?',
+            total: r && Number.isFinite(Number(r.total)) && r.total !== null ? parseInt(r.total) : null,
+          })) }
+      : null;
+    notifyChat(entry, nt);
     res.json(entry);
   });
 
@@ -353,7 +399,7 @@ export default function register(app, ctx) {
   // The 3D dice every screen replays. Same rule as the chat post it goes with.
   app.post('/api/dice/broadcast', (req, res) => {
     if (!sessionAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
-    const { rollId, sides, dieResults, modifier, total, label, duration, sender, usedIdx, groups } = req.body || {};
+    const { rollId, sides, dieResults, modifier, total, label, duration, sender, usedIdx, groups, dmOnly } = req.body || {};
     if (!sides || !Array.isArray(dieResults) || dieResults.length === 0)
       return res.status(400).json({ error: 'sides and dieResults[] required' });
     // A multi-type damage roll adds `groups` so every client replays the same
@@ -370,11 +416,14 @@ export default function register(app, ctx) {
         dice: g && g.dice ? String(g.dice).slice(0, 20) : '',
       }));
     }
+    // The DM rolling for a token hidden from players: the dice show on DM
+    // screens only, as the roll's chat entry does (dmOnly there too).
+    const secret = dmOnly === true && masterAuth(req);
     broadcast('dice-roll', {
       rollId, sides, dieResults, modifier: modifier || 0, total, label, duration, sender,
       ...(usedIdx !== undefined ? { usedIdx } : {}),
       ...(safeGroups ? { groups: safeGroups } : {}),
-    });
+    }, undefined, secret ? { dmOnly: true } : {});
     res.json({ ok: true });
   });
 

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Written by Irmak Hakman — 2026-10-28 14:25 -->
+<!-- Written by Irmak Hakman — 2026-11-01 18:40 -->
 <!-- Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) -->
 <html lang="en" class="lamplit">
 <head>
@@ -34,11 +34,12 @@
 
   <div class="dm-controls" style="display:none;display:contents">
     <button class="btn primary" id="btn-add-token" onclick="openAddTokenModal()">+ Token</button>
-    <button class="btn" data-notif-bell title="Notifications"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-bell"></use></svg> </button>
     <button class="btn" id="btn-music" onclick="openMusicModal()" title="Music Player"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-music"></use></svg> </button>
     <button class="btn" id="btn-handouts" onclick="openHandoutModal()" title="Hand out a handout to one or more characters"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-document"></use></svg> </button>
     <button class="btn" id="btn-waiting" onclick="openWaitingPicker()" title="Park the table on a waiting screen — players stop seeing the map"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-pause"></use></svg> </button>
   </div>
+  <!-- The bell is everyone's: players get their rolls, loot and handouts here too. -->
+  <button class="btn" data-notif-bell title="Notifications"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-bell"></use></svg> </button>
   <button class="btn" onclick="logout()" style="margin-left:calc(4px*var(--fs, 1))" title="Logout">
     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;display:inline-block"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
   </button>
@@ -76,6 +77,9 @@
       </div>
       <div class="ux-pop-row" onclick="if(!event.target.closest('button'))toggleDiceAnim()"><span>Dice animation</span>
         <button class="dice-anim-switch on" id="btn-dice-anim" role="switch" aria-checked="true" onclick="toggleDiceAnim()" title="Dice animation on/off"><span class="das-knob"></span></button>
+      </div>
+      <div class="ux-pop-row" onclick="if(!event.target.closest('button'))toggleCritArmed()" title="Critical hit: the next damage roll rolls its dice twice and adds modifiers once. A natural 20 on an attack turns this on by itself."><span>Next damage is a crit</span>
+        <button class="dice-anim-switch" id="btn-crit-next" role="switch" aria-checked="false" onclick="toggleCritArmed()" title="Next damage roll is a critical hit"><span class="das-knob"></span></button>
       </div>
     </div>
   </div>
@@ -689,7 +693,8 @@
 <div id="weapon-dmg-prompt" style="display:none;position:fixed;bottom:calc(22px*var(--fs, 1));left:50%;transform:translateX(-50%);background:var(--slate);border:1px solid var(--rule-hi);border-radius:calc(8px*var(--fs, 1));padding:calc(10px*var(--fs, 1)) calc(16px*var(--fs, 1));z-index:3200;align-items:center;gap:calc(12px*var(--fs, 1));box-shadow:0 4px 18px #000a">
   <span id="weapon-dmg-prompt-label" style="font-size:calc(13px * var(--fs, 1));color:var(--bone);font-weight:bold"></span>
   <button class="btn sm" onclick="weaponDmgMiss()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg> Miss</button>
-  <button class="btn primary sm" onclick="weaponDmgRoll()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg> Roll Damage</button>
+  <button class="btn primary sm" id="weapon-dmg-btn-hit" onclick="weaponDmgRoll(false)"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg> Roll Damage</button>
+  <button class="btn sm" id="weapon-dmg-btn-crit" onclick="weaponDmgRoll(true)" title="Critical hit: damage dice are rolled twice, modifiers added once"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg> Crit</button>
 </div>
 
 <!-- Confirm modal -->

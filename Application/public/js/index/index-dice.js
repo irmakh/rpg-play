@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 14:25
+// Written by Irmak Hakman — 2026-11-01 15:10
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -8,6 +8,7 @@ let toastDismissHandler = null;
 let _autoSaveTimer = null;
 let _initEditMode  = false;
 let _spAtkEditMode = false;
+let _sheetCritArmed = false;  // a natural-20 attack makes the next damage roll a crit
 
 function startRoll(label, modifier) {
   rollPending = { label, modifier: parseInt(modifier) || 0 };
@@ -40,6 +41,7 @@ function confirmRoll(type) {
   pushRoll(entry);
   showToast(entry);
   if (isInitiative) submitInitiativeRoll(total, initCharName);
+  if (isAttackLabel(label)) _sheetCritArmed = used === 20;
   const chatLabel = type === 'adv' ? `${label} (Adv)` : type === 'dis' ? `${label} (Dis)` : label;
   postToChat({ sender: getChatSender(), dice: '1d20', results: [used], modifier, total, label: chatLabel });
 }
@@ -48,9 +50,13 @@ function confirmRoll(type) {
 function rollDamage(label, expr, description = '') {
   // Typed/multi-part damage ("1d6 piercing, 2d8 fire") rolls every part in one
   // go; parseDamage also covers the plain single-part case, so there is one path.
-  const dmg = parseDamage(expr.trim());
+  // Critical (5e): after a natural-20 attack the dice roll twice, modifiers once.
+  const crit = _sheetCritArmed;
+  _sheetCritArmed = false;
+  const dmg = parseDamage(expr.trim(), crit);
   if (!dmg) return;
-  const entry = { time: new Date(), label, type: 'dmg', detail: dmg.detail, total: dmg.total, isCrit: false, isFail: false, isDamage: true };
+  if (crit) label = critLabel(label);
+  const entry = { time: new Date(), label, type: 'dmg', detail: dmg.detail, total: dmg.total, isCrit: crit, isFail: false, isDamage: true };
   pushRoll(entry);
   showToast(entry);
   postToChat({ sender: getChatSender(), ...dmgChatPayload(dmg, label, description ? { description } : {}) });

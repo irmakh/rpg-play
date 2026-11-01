@@ -21,6 +21,89 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [313–319] — 2026-11-01 — Critical hits, and rolls you can see
+
+*(313–318 were local test builds; 319 is the release.)*
+
+- **Critical damage, by the 5e rules.** A critical hit rolls all of the attack's damage
+  dice twice and adds the modifiers once: `1d8+3` becomes `2d8+3`, and every typed part
+  doubles (`1d6 piercing, 2d8 fire` → `2d6 piercing, 4d8 fire`). Flat damage is not doubled.
+- **A natural 20 on an attack makes the damage a crit by itself.** On the table the
+  Hit prompt turns red, reads "critical hit!" and leads with **Crit**. A monster's
+  attack, which rolls damage from a separate row, carries the crit to the next damage
+  roll. The character sheet and the console's second screen do the same.
+- **A Crit button on the Hit prompt** for features that crit on less than 20, or a
+  paralysed target, plus a **"Next damage is a crit"** switch in the dice options
+  for any other damage roll. Chat takes **`/crit 1d8+3 slashing`**.
+- Crit damage is labelled **(Crit)** in chat and in the roll history.
+- **Fix: multi-selection skipped the first token.** Clicking a token, then
+  shift-clicking others, left the first one out of the selection while it still
+  looked selected, so a group saving throw or check never rolled for it, and bulk
+  HP, conditions, show/hide and initiative passed over it. It now joins the
+  selection; a shift-drag box keeps it too.
+- **Group rolls notify like every other roll.** A group check, save or initiative
+  posted under the name of the token open in the side panel (the first one
+  selected), and its notification was a chat message with the whole table squashed
+  into one line. It now posts as the **DM**, its chat heading counts the rolls
+  ("DEX Save — 3 rolls"), and its notification is an ordinary 🎲 dice one: each
+  token's result is a roll line ("Goblin 15 (DEX Save)") and counts as a roll, so a
+  3-token save reads **"DM rolled 3 times"** and folds with the DM's other rolls.
+  Its pop-up reads "DM rolled DEX Save for 3 tokens" with every result.
+- **The DM sees group rolls in the bell.** A roll is announced to everyone but the
+  person who made it, and group rolls come from "DM", so the DM never had them,
+  and a DM-only group roll (hidden tokens, group initiative) reached nobody. Group
+  rolls now always reach the DM's bell and pop-up; the table's separate "Rolled …
+  for 3 tokens" message is gone, since the pop-up now carries the results.
+- **Folded roll notifications list every roll.** A burst of rolls from one person
+  shows as one row, "Aliyr rolled 12 times", which used to say only the latest
+  result. The row now lists the rolls, newest first, one per line ("10 (Longsword
+  Dmg (Crit))", "18 (Longsword Atk)", …), up to 12 with "… and N earlier" below.
+  Folded chat messages list each one the same way.
+- **Rolls pop up on screen.** Every roll (attacks, damage, checks, saves) and
+  every table chat line, group rolls included, now shows as a pop-up as well as in
+  the bell; before, only alerts did. A pop-up names the one roll that just came
+  in, even when the bell folds it into a "rolled 12 times" row.
+- **Pop-ups stack and stay.** A new one goes on top and any already showing move
+  down, so two rolls in a row are both on screen. Each stays 30 seconds (was 6)
+  or until its **×** is clicked; past eight at once the oldest make room. The
+  bell's ⚙ settings have a switch to turn the roll and chat pop-ups off.
+- **One kind of pop-up, top centre.** The table's own messages ("Rolled DEX Save
+  for 3 tokens", "Critical hit!", errors) used a separate plain bar; they now use
+  the notification pop-up too, with errors edged in red. The whole stack moved
+  from the top right to the top centre of the screen.
+- **Fix: a hidden roll could reach the players' bell.** Rolls fold together by who
+  rolled, without checking who each roll was for. So a blind handout check, or the
+  DM's private initiative roll, made within 45 seconds of a public roll by the same
+  name folded into the row the players could see, with its result. In the other
+  direction, a public roll after a hidden one was folded where only the DM saw it.
+  A roll now folds only into a row with exactly the same audience.
+- **Group initiative is DM-only,** like rolling one token's initiative from its
+  panel: the DM's chat and bell show each die, players see the order in the tracker.
+- **Hidden tokens stay hidden in group checks and saves.** Visible tokens' results
+  post to everyone as before; the results of tokens hidden from players go in a
+  second message, "… · hidden tokens", that only the DM sees. Before, a hidden
+  monster's label and result showed in every player's chat.
+- **A hidden token's rolls stay with the DM, everywhere.** When the DM rolled an
+  attack, damage, save or check for a token hidden from players (from its panel,
+  the chat's /r, or the console), it went to every player: chat, bell, pop-up and
+  the 3D dice. Such a roll is now DM-only in all four, and so is a hidden
+  monster's **Use** card. The server takes the DM-only mark from the DM alone.
+- **A bell for players on the table.** It sat with the DM's tools, so players had
+  none there; it now sits beside Logout for everyone.
+- **The character sheet's "Alerts" button is now the bell icon,** as on the table.
+- *(backend)* `POST /api/dice/broadcast` takes `dmOnly: true` from the DM: the
+  dice reach DM connections only.
+- *(backend)* A text message may carry `dmOnly: true`, from the DM only (a player's
+  is ignored): it is kept from players in the log, the live feed and the bell,
+  exactly as a `dmOnly` roll is.
+- *(backend)* `POST /api/chat` takes an optional `notice` `{ label, rolls: [{ name,
+  total }] }` on a public text message, marking it a group roll: it is announced as
+  dice, a line and a count per token. Not stored in the chat log. `notify()` takes
+  `lines` (several rolls in one event) and `toastTitle`/`toastBody`; a notification
+  row is created with its count.
+
+---
+
 ## [312] — 2026-10-28 — Unique monsters
 
 - **A "Unique" choice on a monster**, in the monster editor under Source, for a named

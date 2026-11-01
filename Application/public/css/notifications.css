@@ -1,4 +1,4 @@
-/* Written by Irmak Hakman — 2026-10-15 14:25 */
+/* Written by Irmak Hakman — 2026-11-01 17:30 */
 /* Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) */
 
 /* ── Notifications ───────────────────────────────────────────────────────────
@@ -56,7 +56,7 @@
   display:inline-block;margin-left:calc(6px*var(--fs, 1));padding:0 calc(5px*var(--fs, 1));border-radius:calc(8px*var(--fs, 1));
   background:var(--rule-hi);color:var(--bone);
   font-size:calc(10px * var(--fs, 1));font-weight:bold;vertical-align:middle}
-.notif-row-body{color:var(--ash);font-size:calc(11px * var(--fs, 1));line-height:1.35;margin-top:1px;word-break:break-word}
+.notif-row-body{color:var(--ash);font-size:calc(11px * var(--fs, 1));line-height:1.35;margin-top:1px;word-break:break-word;white-space:pre-line}
 .notif-row-when{font-size:calc(10px * var(--fs, 1));color:var(--ash);white-space:nowrap;flex-shrink:0;padding-top:calc(2px*var(--fs, 1))}
 
 #notif-settings{
@@ -67,8 +67,11 @@
 .notif-set-note{font-size:calc(10px * var(--fs, 1));color:var(--ash);margin-top:calc(5px*var(--fs, 1))}
 
 /* ── Toasts ──────────────────────────────────────────────────────────────── */
+/* One pop-up for everything: notifications and the table's own messages
+   (showToast) share this stack, top centre, newest on top. */
 #notif-toasts{
-  position:fixed;top:calc(14px*var(--fs, 1));right:calc(14px*var(--fs, 1));z-index:5000;
+  position:fixed;top:calc(14px*var(--fs, 1));left:50%;transform:translateX(-50%);z-index:5000;
+  width:max-content;
   display:flex;flex-direction:column;gap:calc(8px*var(--fs, 1));
   max-width:min(calc(360px*var(--fs, 1)), calc(100vw - calc(28px*var(--fs, 1))));pointer-events:none}
 .notif-toast{
@@ -77,16 +80,22 @@
   box-shadow:0 6px 20px #0008;color:var(--bone);font-size:calc(12px * var(--fs, 1));
   animation:notif-in .22s ease-out}
 .notif-toast.out{animation:notif-out .35s ease-in forwards}
+.notif-toast.err{border-color:var(--blood)}
+.notif-toast.err .notif-toast-title{color:var(--blood)}
 .notif-toast-icon{font-size:calc(15px * var(--fs, 1));line-height:1.2;flex-shrink:0}
 .notif-toast-title{font-weight:bold;line-height:1.35}
-.notif-toast-body{color:var(--ash);font-size:calc(11px * var(--fs, 1));line-height:1.35;margin-top:1px}
-@keyframes notif-in{from{opacity:0;transform:translateX(18px)}to{opacity:1;transform:none}}
-@keyframes notif-out{to{opacity:0;transform:translateX(18px)}}
+.notif-toast-body{color:var(--ash);font-size:calc(11px * var(--fs, 1));line-height:1.35;margin-top:1px;white-space:pre-line}
+.notif-toast-text{flex:1;min-width:0}
+.notif-toast-close{flex-shrink:0;background:none;border:0;padding:0 calc(2px*var(--fs, 1));margin:calc(-2px*var(--fs, 1)) calc(-4px*var(--fs, 1)) 0 0;
+  color:var(--ash);font-size:calc(16px * var(--fs, 1));line-height:1;cursor:pointer}
+.notif-toast-close:hover,.notif-toast-close:focus-visible{color:var(--bone)}
+@keyframes notif-in{from{opacity:0;transform:translateY(-12px)}to{opacity:1;transform:none}}
+@keyframes notif-out{to{opacity:0;transform:translateY(-12px)}}
 
 /* Phones: the panel becomes a sheet under the header, toasts span the width. */
 @media (max-width:520px){
   #notif-panel{left:calc(8px*var(--fs, 1));right:calc(8px*var(--fs, 1));width:auto;max-height:62vh}
-  #notif-toasts{left:calc(10px*var(--fs, 1));right:calc(10px*var(--fs, 1));max-width:none}
+  #notif-toasts{left:calc(10px*var(--fs, 1));right:calc(10px*var(--fs, 1));max-width:none;width:auto;transform:none}
 }
 @media (prefers-reduced-motion:reduce){
   .notif-toast,.notif-toast.out{animation:none}

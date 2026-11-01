@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-28 14:25
+// Written by Irmak Hakman — 2026-11-01 17:30
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -11,7 +11,14 @@ function parseConditions(raw) {
 
 // ── UI helpers ────────────────────────────────────────────────────────────────
 let _toastTimer = null;
+// The table's own messages ("Rolled DEX Save for 3 tokens", errors) use the
+// notification pop-up (js/lib/notifications.js), so there is one kind of
+// pop-up on screen. The old #toast bar is the fallback for a page without it.
 function showToast(msg, isErr) {
+  if (typeof notifToast === 'function') {
+    notifToast({ kind: isErr ? 'error' : 'info', title: String(msg || '') });
+    return;
+  }
   const el = document.getElementById('toast');
   if (!el) return;
   el.textContent = msg;

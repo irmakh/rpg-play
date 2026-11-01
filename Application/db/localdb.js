@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-28 16:10
+// Written by Irmak Hakman — 2026-11-01 17:55
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -548,11 +548,12 @@ function listClaimedItemIds(charId) {
 // ── Notifications ─────────────────────────────────────────────────────────────
 // Written by server/notify.js; read by the bell in js/lib/notifications.js.
 function createNotification(id, fields) {
-  db.prepare(`INSERT INTO notifications (id, kind, priority, title, body, dataJson, actorName, createdAt)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
+  db.prepare(`INSERT INTO notifications (id, kind, priority, title, body, dataJson, actorName, createdAt, count)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`)
     .run(id, fields.kind || '', fields.priority === 'alert' ? 'alert' : 'feed',
          fields.title || '', fields.body || '', fields.dataJson || '{}',
-         fields.actorName || '', fields.createdAt || new Date().toISOString());
+         fields.actorName || '', fields.createdAt || new Date().toISOString(),
+         Math.max(1, parseInt(fields.count) || 1));
 }
 function addNotificationRecipient(id, notificationId, recipient) {
   db.prepare('INSERT INTO notification_recipients (id, notificationId, recipient, seenAt) VALUES (?, ?, ?, ?)')
@@ -594,9 +595,19 @@ function findRecentNotification(kind, actorName, sinceIso) {
 /** Folds another event into an existing row: new wording, new time, count + 1. */
 function bumpNotification(id, fields) {
   db.prepare(`UPDATE notifications
-                 SET title = ?, body = ?, createdAt = ?, count = COALESCE(count, 1) + 1
+                 SET title = ?, body = ?, createdAt = ?,
+                     count = COALESCE(?, COALESCE(count, 1) + 1)
                WHERE id = ?`)
-    .run(fields.title || '', fields.body || '', fields.createdAt || new Date().toISOString(), id);
+    .run(fields.title || '', fields.body || '', fields.createdAt || new Date().toISOString(),
+         fields.count != null ? parseInt(fields.count) || null : null, id);
+  // Only when given: a fold that keeps its event lines carries them in data.
+  if (fields.dataJson !== undefined)
+    db.prepare('UPDATE notifications SET dataJson = ? WHERE id = ?').run(fields.dataJson, id);
+}
+/** Who a notification was delivered to (recipient keys: charIds and 'dm'). */
+function listNotificationRecipients(notificationId) {
+  return db.prepare('SELECT recipient FROM notification_recipients WHERE notificationId = ?')
+    .all(notificationId).map(r => r.recipient);
 }
 /** A folded-in event makes the row new again, so it comes back as unread. */
 function resetNotificationSeen(notificationId) {
@@ -1601,7 +1612,7 @@ function exportAll() {
     createLootLog, listClaimedItemIds,
     createNotification, addNotificationRecipient, listNotificationsFor, unreadNotificationCount,
     markNotificationSeen, markAllNotificationsSeen, clearNotificationsFor, pruneNotifications,
-    findRecentNotification, bumpNotification, resetNotificationSeen,
+    findRecentNotification, bumpNotification, resetNotificationSeen, listNotificationRecipients,
     listTreasuryRequests, listTreasuryRequestsForItem, listTreasuryRequestsForChar,
     getTreasuryRequest, getPendingTreasuryRequest, createTreasuryRequest, updateTreasuryRequest,
     deleteTreasuryRequest, declinePendingTreasuryRequests,

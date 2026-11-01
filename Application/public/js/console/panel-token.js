@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-11 00:16
+// Written by Irmak Hakman — 2026-11-01 18:40
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -363,6 +363,15 @@ function sSetRollMode(mode) {
     b.setAttribute('aria-selected', String(b.dataset.rollmode === mode)));
 }
 
+// The DM rolling for a token hidden from players: DM-only, like the table's.
+function sRollIsSecret() {
+  return typeof sIsDM === 'function' && sIsDM() && !!(sSelectedToken && sSelectedToken.visible === false);
+}
+
+// A natural 20 on an attack ("… Atk", "Spell Attack") makes the next damage
+// roll a critical: dice rolled twice, modifiers once (5e).
+let sCritArmed = false;
+
 // A d20 plus a modifier, posted to chat. Advantage and disadvantage roll two
 // dice and keep the higher or the lower.
 function sQrollRoll(label, modifier) {
@@ -374,6 +383,10 @@ function sQrollRoll(label, modifier) {
   else if (sRollMode === 'dis') { used = Math.min(r1, r2); typeLabel = `${label} (Dis)`; }
   else                          { used = r1;                typeLabel = label; }
   const total = used + mod;
+  if (/(atk|attack)/i.test(label)) {
+    sCritArmed = used === 20;
+    if (sCritArmed) sToast('Critical hit! The next damage roll doubles its dice.');
+  }
   fetch('/api/chat', {
     method: 'POST',
     headers: sAuthHeaders(),
@@ -381,6 +394,7 @@ function sQrollRoll(label, modifier) {
       type: 'roll', dice: '1d20', results: [used], modifier: mod,
       total, sender: sGetSender(), label: typeLabel,
       rollId: Math.random().toString(36).slice(2),
+      ...(sRollIsSecret() ? { dmOnly: true } : {}),
     }),
   }).catch(() => {});
   sMark('chat', sCurrentTab !== 'chat');
@@ -389,9 +403,12 @@ function sQrollRoll(label, modifier) {
 function sRollDamageStr(label, dmgStr) {
   const m = dmgStr.trim().match(/^(\d*)d(\d+)([+-]\d+)?/i);
   if (!m) return;
-  const count   = parseInt(m[1] || '1');
+  const crit    = sCritArmed;
+  sCritArmed = false;
+  const count   = parseInt(m[1] || '1') * (crit ? 2 : 1);
   const sides   = parseInt(m[2]);
   const mod     = parseInt(m[3] || '0');
+  if (crit) { label = `${label} (Crit)`; dmgStr = `${count}d${sides}${m[3] || ''}`; }
   const results = Array.from({ length: count }, () => Math.ceil(Math.random() * sides));
   const total   = results.reduce((a, b) => a + b, 0) + mod;
   fetch('/api/chat', {
@@ -401,6 +418,7 @@ function sRollDamageStr(label, dmgStr) {
       type: 'roll', dice: dmgStr, results, modifier: mod,
       total, sender: sGetSender(), label,
       rollId: Math.random().toString(36).slice(2),
+      ...(sRollIsSecret() ? { dmOnly: true } : {}),
     }),
   }).catch(() => {});
   sMark('chat', sCurrentTab !== 'chat');

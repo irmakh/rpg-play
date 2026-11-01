@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-28 17:14
+// Written by Irmak Hakman — 2026-11-01 17:55
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -580,10 +580,11 @@ export function makeLdb() {
 
   // ── Notifications (mirror db/localdb.js) ────────────────────────────────────
   function createNotification(id, f) {
-    db.prepare(`INSERT INTO notifications (id, kind, priority, title, body, dataJson, actorName, createdAt)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
+    db.prepare(`INSERT INTO notifications (id, kind, priority, title, body, dataJson, actorName, createdAt, count)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`)
       .run(id, f.kind || '', f.priority === 'alert' ? 'alert' : 'feed', f.title || '', f.body || '',
-           f.dataJson || '{}', f.actorName || '', f.createdAt || new Date().toISOString());
+           f.dataJson || '{}', f.actorName || '', f.createdAt || new Date().toISOString(),
+           Math.max(1, parseInt(f.count) || 1));
   }
   function addNotificationRecipient(id, notificationId, recipient) {
     db.prepare('INSERT INTO notification_recipients (id, notificationId, recipient, seenAt) VALUES (?, ?, ?, ?)')
@@ -616,8 +617,15 @@ export function makeLdb() {
                         ORDER BY createdAt DESC LIMIT 1`).get(kind, actorName || '', sinceIso) || null;
   }
   function bumpNotification(id, f) {
-    db.prepare(`UPDATE notifications SET title = ?, body = ?, createdAt = ?, count = COALESCE(count, 1) + 1
-                 WHERE id = ?`).run(f.title || '', f.body || '', f.createdAt || new Date().toISOString(), id);
+    db.prepare(`UPDATE notifications SET title = ?, body = ?, createdAt = ?,
+                 count = COALESCE(?, COALESCE(count, 1) + 1) WHERE id = ?`)
+      .run(f.title || '', f.body || '', f.createdAt || new Date().toISOString(),
+           f.count != null ? parseInt(f.count) || null : null, id);
+    if (f.dataJson !== undefined) db.prepare('UPDATE notifications SET dataJson = ? WHERE id = ?').run(f.dataJson, id);
+  }
+  function listNotificationRecipients(notificationId) {
+    return db.prepare('SELECT recipient FROM notification_recipients WHERE notificationId = ?')
+      .all(notificationId).map(r => r.recipient);
   }
   function resetNotificationSeen(notificationId) {
     return db.prepare("UPDATE notification_recipients SET seenAt = '' WHERE notificationId = ?")
@@ -770,7 +778,7 @@ export function makeLdb() {
     // notifications
     createNotification, addNotificationRecipient, listNotificationsFor, unreadNotificationCount,
     markNotificationSeen, markAllNotificationsSeen, clearNotificationsFor, pruneNotifications,
-    findRecentNotification, bumpNotification, resetNotificationSeen,
+    findRecentNotification, bumpNotification, resetNotificationSeen, listNotificationRecipients,
     // treasury requests
     listTreasuryRequests, listTreasuryRequestsForItem, listTreasuryRequestsForChar,
     getTreasuryRequest, getPendingTreasuryRequest, createTreasuryRequest, updateTreasuryRequest,
