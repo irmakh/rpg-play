@@ -14,7 +14,7 @@ A self-hosted web app for running D&D 5e sessions. It hosts any number of **camp
 
 Vanilla JS, no build step, no framework. Runs on SQLite by default; nothing to provision.
 
-![The virtual table — battle map, tokens with HP bars, fog regions and the dice-mode toolbar](docs/screenshots/virtual-table.webp)
+![The virtual table — a battle map with player and monster tokens, HP bars and conditions, the initiative tracker on the left and the dice-mode switch in the toolbar](docs/screenshots/virtual-table.webp)
 
 ---
 
@@ -111,7 +111,7 @@ Uploaded images and audio are split the same way: new uploads land in `public/up
 
 ### Virtual Table (`/table.html`)
 
-![The table with the chat dock open — dice rolls posted from the sheet arrive here live](docs/screenshots/table-chat.webp)
+![The table with the chat dock open — rolls from the sheets and the table arrive live, a natural 20 marked as such, under the running initiative order](docs/screenshots/table-chat.webp)
 
 - Shared battle map with a configurable grid overlay; upload any image as the background
 - Token system for PC / NPC / monster tokens, each with a portrait (thumbnails auto-generated on upload)
@@ -149,15 +149,12 @@ Uploaded images and audio are split the same way: new uploads land in `public/up
 
 ### DM Dashboard (`/dm.html`)
 
-![The DM dashboard — tools grouped by At the table / Prepare / Manage, over the initiative tracker and monster table](docs/screenshots/dm-dashboard.webp)
+![The DM dashboard — tools grouped by At the table / Prepare / Manage, over media sharing and the chat](docs/screenshots/dm-dashboard.webp)
 
-- Initiative tracker with full CRUD: add PCs and NPCs, set/reorder initiatives, edit, delete
-- Start / stop combat, next / previous turn, skip; **Clean Orphans** removes stale entries without disrupting a running encounter
-- Monster library table: search, filter, add to initiative in one click (identifier shown in chat rolls)
-- Monster stat-block popup with correct multi-line trait/action rendering
+- Every DM tool one click away, grouped **At the table** (Tactical Map, Waiting Screens, Music), **Prepare** (Map Prep, Monsters, Spells, Handouts, Events) and **Manage** (Characters, Treasury, Music Library). Initiative is run on the [table](#virtual-table-tablehtml), monsters on the [Monster Library](#monster-library-monstershtml--dm-only)
 - Media sharing: drag-and-drop image / video → shared instantly to the table
 - DM chat: free text or `/r` rolls (broadcasts the 3D animation to all screens); **per-message delete** removes it from every client live
-- Data backup / restore: per-section JSON export (characters, monsters, treasury, maps), non-destructive merge import; treasury backups carry item images, and older `shop` / `loot` backup files still restore
+- Data backup / restore: per-section JSON export (characters, monsters, treasury, maps, waiting screens, handouts, spells, events, music, chat and its media), non-destructive merge import; treasury backups carry item images, and older `shop` / `loot` backup files still restore
 - **Raw database backup:** one-click download of all SQLite databases (`localdb`, `media`, `stories`, plus any old `aiDM` file) as-is, bundled into a single streamed `.tar.gz` for full off-site backup (uploaded media under `uploads/` is stored separately and not yet included)
 - Display templates and UI size, as on every page
 
@@ -197,7 +194,7 @@ Uploaded images and audio are split the same way: new uploads land in `public/up
 
 ### Treasury (`/treasury.html`) — DM only
 
-![The treasury — items grouped by tag on the left, and the selected item's distribution, description, image and weapon properties on the right](docs/screenshots/treasury.webp)
+![The treasury — players' loot requests along the top, piles on the left, the pile's items with their prices in the middle, and the selected item's picture, kind, where it is, description and weapon properties on the right](docs/screenshots/treasury.webp)
 One catalogue for everything you hand out, replacing the separate Merchant and Loot managers. Every item carries the full D&D data set — type, price (PP/GP/EP/SP/CP), stock, AC / initiative / speed / spell bonuses, attunement, weapon damage and properties, description — plus a **distribution mode** you flip in place:
 
 | Mode | Players see it | Cost |
@@ -238,7 +235,7 @@ One catalogue for everything you hand out, replacing the separate Merchant and L
 
 ### Waiting Screens (`/waiting-screens.html`) — DM only
 
-![Waiting screens — named full-bleed images with an optional caption, parked over the players' map between scenes](docs/screenshots/waiting-screens.webp)
+![Waiting screens — named full-bleed images with an optional caption; the table is parked on one, and Bring players back returns them to the map](docs/screenshots/waiting-screens.webp)
 
 Park the table on a full-bleed image between scenes — a title card while everyone
 gets a drink, while the DM lays out the next encounter unseen.

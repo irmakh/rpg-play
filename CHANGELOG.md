@@ -23,12 +23,12 @@ went out with, marked *(no frontend bump)*.
 
 ## [333] — 2026-11-11 — Book names in the Official monsters filter
 
-*(Committed, not uploaded yet.)*
+*(Released.)*
 
 - The book filter on the Monsters page's Official tab shows the books' names
   ("Monster Manual (2025)") instead of their codes (XMM), without opening Books… first.
 - README: the spellcasting redesign, the spell library, monster spellcasting and official
-  monsters are described, with new screenshots. *(no frontend bump)*
+  monsters are described, and every page screenshot that had gone stale is retaken. *(no frontend bump)*
 
 ## [332] — 2026-11-11 — Official monsters get their own tab on the table
 
