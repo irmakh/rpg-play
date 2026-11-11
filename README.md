@@ -5,7 +5,7 @@
 [![SQLite](https://img.shields.io/badge/SQLite-better--sqlite3-003B57?style=flat-square&logo=sqlite&logoColor=white)](https://www.sqlite.org)
 [![Electron](https://img.shields.io/badge/Electron-44-47848F?style=flat-square&logo=electron&logoColor=white)](https://www.electronjs.org)
 [![JavaScript](https://img.shields.io/badge/Vanilla_JS-no_build_step-F7DF1E?style=flat-square&logo=javascript&logoColor=black)](#tech-stack)
-[![PWA](https://img.shields.io/badge/PWA-installable-5A0FC8?style=flat-square&logo=pwa&logoColor=white)](#mobile-companion-pwa-console)
+[![PWA](https://img.shields.io/badge/PWA-installable-5A0FC8?style=flat-square&logo=pwa&logoColor=white)](#console--two-screen-handheld-mode-console)
 [![Android](https://img.shields.io/badge/Android-console_app-3DDC84?style=flat-square&logo=android&logoColor=white)](#android-app-android--two-screen-handhelds-and-phones)
 [![Vitest](https://img.shields.io/badge/Vitest-1856_passing-6E9F18?style=flat-square&logo=vitest&logoColor=white)](#tech-stack)
 [![Docker](https://img.shields.io/badge/Docker-compose-2496ED?style=flat-square&logo=docker&logoColor=white)](#option-a--docker-recommended-for-local--lan-play)
@@ -13,6 +13,28 @@
 A self-hosted web app for running D&D 5e sessions. It hosts any number of **campaigns**, each a fully separate world with its own DM password and its own data. Every campaign bundles a full character sheet, a shared virtual battle map, a real-time initiative tracker, a monster library, a treasury for loot and shop items, a synced music player, handouts with blind skill checks, a comic-style story builder with image and video panels, and a mobile companion — all kept live across every connected browser with no external cloud required.
 
 Vanilla JS, no build step, no framework. Runs on SQLite by default; nothing to provision.
+
+<!-- index:start -->
+## Contents
+
+- [Play it as a desktop app](#play-it-as-a-desktop-app)
+- [Feature Overview](#feature-overview)
+  <br>[Campaigns](#campaigns---the-front-door) · [Character Sheet](#character-sheet-indexhtml) · [Virtual Table](#virtual-table-tablehtml) · [DM Dashboard](#dm-dashboard-dmhtml) · [DM Calendar](#dm-calendar-eventshtml--dm-only) · [Player Calendar](#player-calendar-tab-on-indexhtml) · [Handouts](#handouts-handoutshtml--dm-only) · [Treasury](#treasury-treasuryhtml--dm-only) · [Maintenance](#maintenance-maintenancehtml--dm-only-unlisted) · [Map Prep](#map-prep-prepare-maphtml--dm-only) · [Waiting Screens](#waiting-screens-waiting-screenshtml--dm-only) · [Monster Library](#monster-library-monstershtml--dm-only) · [Spell Library](#spell-library-spellshtml--dm-only) · [Music & Sound Player](#music--sound-player-playlistshtml--dm-only) · [AI Dungeon Master](#ai-dungeon-master--retired) · [Stories](#stories-storieshtml--password-protected) · [Console](#console--two-screen-handheld-mode-console) · [Android App](#android-app-android--two-screen-handhelds-and-phones) · [Desktop App](#desktop-app-desktop--windows)
+- [Authentication & Security](#authentication--security)
+  <br>[Who can log in as what](#who-can-log-in-as-what) · [What needs a login](#what-needs-a-login) · [Session tokens](#session-tokens--the-password-is-checked-once) · [A maths problem on every login](#a-maths-problem-on-every-login) · [Lockout, hashing and headers](#lockout-hashing-and-headers)
+- [Pages at a Glance](#pages-at-a-glance)
+- [Storage](#storage)
+- [Deployment](#deployment)
+  <br>[Docker](#option-a--docker-recommended-for-local--lan-play) · [PM2 on a server](#option-b--pm2-production--https-server) · [HTTPS / SSL](#https--ssl-lets-encrypt)
+- [Desktop Client](#desktop-client-windows)
+- [Android App](#android-app)
+- [Environment Variables](#environment-variables)
+  <br>[Install reporting](#install-reporting)
+- [Tech Stack](#tech-stack)
+  <br>[Frontend cache-busting](#frontend-cache-busting)
+- [Project Structure](#project-structure)
+- [Troubleshooting](#troubleshooting)
+<!-- index:end -->
 
 ![The virtual table — a battle map with player and monster tokens, HP bars and conditions, the initiative tracker on the left and the dice-mode switch in the toolbar](docs/screenshots/virtual-table.webp)
 
