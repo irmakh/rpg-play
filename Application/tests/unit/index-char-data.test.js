@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-28 14:25
+// Written by Irmak Hakman — 2026-11-11 17:10
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -22,6 +22,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const ESC_SRC  = readFileSync(resolve(__dirname, '../../public/js/lib/esc.js'), 'utf-8');
 const CHAR_SRC = readFileSync(resolve(__dirname, '../../public/js/index/index-char.js'), 'utf-8');
+const SPELL_SRC = readFileSync(resolve(__dirname, '../../public/js/lib/spell-data.js'), 'utf-8');
 
 function extractFunctions(src, ...names) {
   return names.map(name => {
@@ -194,6 +195,7 @@ function load({
   companions   = [],
   actions      = [],
   actionIdCounter = 0,
+  spells       = [],
 } = {}) {
   const dom = makeDom({ keyValues, inspire, wpnRows, spellRows });
 
@@ -205,6 +207,7 @@ function load({
     companions:    companions.map(c => ({ ...c })),
     actions:       actions.map(a => ({ ...a })),
     actionIdCounter,
+    spells:        spells.map(x => ({ ...x })),
     _lastSavedData: {},
     document:      dom,
     // side-effect stubs (called by applyData but not under test here)
@@ -215,11 +218,13 @@ function load({
     renderClaimedLoots:          () => {},
     renderCompanions:            () => {},
     renderActionsTab:            () => {},
+    renderSpells:                () => {},
     recalcAll:                   () => {},
     parseInt, Math, JSON, String, Date,
   });
 
   runInContext(ESC_SRC, ctx);
+  runInContext(SPELL_SRC, ctx);
   runInContext(FN_SRC,  ctx);
 
   return {
@@ -234,6 +239,7 @@ function load({
     get companions()   { return ctx.companions; },
     get actions()      { return ctx.actions; },
     get actionIdCounter(){ return ctx.actionIdCounter; },
+    get spells()       { return ctx.spells; },
   };
 }
 
@@ -561,50 +567,21 @@ describe('collectData — custom actions', () => {
 });
 
 // ── collectData — spell action category ([13]) ────────────────────────────────
-describe('collectData — spell action category', () => {
-  it('captures the .spell-action value at index 13', () => {
-    const { collectData } = load({
-      spellRows: [makeSpellRow({ lvl: '1', name: 'Entangle', action: 'action' })],
-    });
-    const rows = JSON.parse(collectData()._spells);
-    expect(rows[0][1]).toBe('Entangle');
-    expect(rows[0][13]).toBe('action');
+describe('collectData — spells', () => {
+  it('serialises the spells list to _spells', () => {
+    const sp = { id: 'sp-1', name: 'Magic Missile', level: 1, cast: 'action', prepared: true };
+    const { collectData } = load({ spells: [sp] });
+    expect(JSON.parse(collectData()._spells)).toEqual([sp]);
   });
 
-  it('defaults to empty string when no action category is set', () => {
-    const { collectData } = load({
-      spellRows: [makeSpellRow({ lvl: '0', name: 'Fire Bolt' })],
-    });
-    const rows = JSON.parse(collectData()._spells);
-    expect(rows[0][13]).toBe('');
+  it('serialises an empty list', () => {
+    const { collectData } = load();
+    expect(collectData()._spells).toBe('[]');
   });
 });
+
 
 // ── collectData — spell duration ([14]) ───────────────────────────────────────
-describe('collectData — spell duration', () => {
-  it('captures the .spell-duration value at index 14', () => {
-    const { collectData } = load({
-      spellRows: [makeSpellRow({ lvl: '1', name: 'Entangle', duration: 'Concentration, up to 1 minute' })],
-    });
-    const rows = JSON.parse(collectData()._spells);
-    expect(rows[0][14]).toBe('Concentration, up to 1 minute');
-  });
-
-  it('reads notes by class independently of duration', () => {
-    const { collectData } = load({
-      spellRows: [makeSpellRow({ name: 'Bless', notes: '2d6 radiant', duration: 'Instantaneous' })],
-    });
-    const rows = JSON.parse(collectData()._spells);
-    expect(rows[0][6]).toBe('2d6 radiant');   // notes
-    expect(rows[0][14]).toBe('Instantaneous'); // duration
-  });
-
-  it('defaults to empty string when duration is absent', () => {
-    const { collectData } = load({ spellRows: [makeSpellRow({ name: 'Fire Bolt' })] });
-    const rows = JSON.parse(collectData()._spells);
-    expect(rows[0][14]).toBe('');
-  });
-});
 
 // ── applyData — custom actions ────────────────────────────────────────────────
 describe('applyData — custom actions', () => {
@@ -641,27 +618,54 @@ describe('applyData — custom actions', () => {
 });
 
 // ── applyData — spell action category renders into the row ────────────────────
-describe('applyData — spell action category', () => {
-  it('marks the matching action option as selected in the appended row', () => {
-    const { applyData, dom } = load();
-    applyData({ _spells: JSON.stringify([['1', 'Entangle', 'Action', '90 ft', false, false, '', true, 'Conj', false, false, false, '', 'action']]) });
-    expect(dom.spellAppended).toHaveLength(1);
-    expect(dom.spellAppended[0].innerHTML).toContain('value="action" selected');
+describe('applyData — spells', () => {
+  // The pre-v320 positional row: [lvl, name, time, range, conc, ritual, notes,
+  // prepared, school, v, s, m, material, actionCategory, duration]
+  const OLD = ['3', 'Counterspell', '1 Reaction', '60 feet', false, false, 'my note', true,
+               'Abj', false, true, false, '', 'reaction', 'Instantaneous'];
+
+  it('converts an old array row into a spell object', () => {
+    const t = load();
+    t.applyData({ _spells: JSON.stringify([OLD]) });
+    expect(t.spells).toHaveLength(1);
+    const s = t.spells[0];
+    expect(s).toMatchObject({
+      level: 3, name: 'Counterspell', castText: '1 Reaction', cast: 'reaction', range: '60 feet',
+      notes: 'my note', prepared: true, school: 'Abj', s: true, v: false, duration: 'Instantaneous',
+    });
+    expect(s.id).toMatch(/^sp-/);
   });
 
-  it('defaults to the "not an action" option when [13] is absent', () => {
-    const { applyData, dom } = load();
-    applyData({ _spells: JSON.stringify([['0', 'Fire Bolt', 'Action', '120 ft', false, false, '', false, 'Evoc']]) });
-    expect(dom.spellAppended[0].innerHTML).toContain('value="" selected');
+  it('takes the old "show in Actions" choice when the casting time says nothing', () => {
+    const row = OLD.slice(); row[2] = ''; row[13] = 'bonus';
+    const t = load();
+    t.applyData({ _spells: JSON.stringify([row]) });
+    expect(t.spells[0].cast).toBe('bonus');
   });
 
-  it('renders the duration value ([14]) into the appended row', () => {
-    const { applyData, dom } = load();
-    applyData({ _spells: JSON.stringify([['1', 'Entangle', 'Action', '90 ft', true, false, '', true, 'Conj', false, false, false, '', 'action', '1 minute']]) });
-    expect(dom.spellAppended[0].innerHTML).toContain('class="spell-duration"');
-    expect(dom.spellAppended[0].innerHTML).toContain('value="1 minute"');
+  it('keeps spell objects as they are', () => {
+    const sp = { id: 'sp-x', name: 'Shield', level: 1, cast: 'reaction', noSlot: true, uses: 1, used: 1, recharge: 'long',
+                 source: { kind: 'feat', detail: 'Magic Initiate' } };
+    const t = load();
+    t.applyData({ _spells: JSON.stringify([sp]) });
+    expect(t.spells[0]).toMatchObject(sp);
+  });
+
+  it('empties the list for a sheet without spells', () => {
+    const t = load({ spells: [{ id: 'a', name: 'Old', level: 0 }] });
+    t.applyData({});
+    expect(t.spells).toEqual([]);
+  });
+
+  it('round-trips through collectData unchanged', () => {
+    const t = load();
+    t.applyData({ _spells: JSON.stringify([OLD]) });
+    const once = t.collectData()._spells;
+    t.applyData({ _spells: once });
+    expect(t.collectData()._spells).toBe(once);
   });
 });
+
 
 // ── applyPartial — concurrency guard (the cross-editor fix) ───────────────────
 describe('applyPartial', () => {

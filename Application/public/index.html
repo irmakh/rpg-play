@@ -1,5 +1,5 @@
-<!DOCTYPE html>
-<!-- Written by Irmak Hakman — 2026-11-01 18:40 -->
+<!-- Written by Irmak Hakman — 2026-11-11 18:30 -->
+<!-- Written by Irmak Hakman — 2026-11-11 15:20 -->
 <!-- Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) -->
 <html lang="en" class="lamplit">
 <head>
@@ -332,11 +332,16 @@
         <div class="field"><label class="lbl">Spell Save DC</label><input type="number" data-key="sp-dc"></div>
         <div class="field"><label class="lbl">Spell Atk Bonus</label><div class="rollable-field"><input type="text" data-key="sp-atk"><button class="edit-btn" onclick="setSpAtkEditMode()" title="Edit value"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-pencil"></use></svg> </button></div></div>
         <div class="field"><label class="lbl">Spell Modifier</label><input type="text" data-key="sp-mod"></div>
-        <div class="field"><label class="lbl">Prepared</label><input type="text" id="prep-count" readonly style="text-align:center;font-weight:bold;cursor:default"></div>
+        <div class="field" id="prep-count-field"><label class="lbl">Prepared</label><input type="text" id="prep-count" readonly style="text-align:center;font-weight:bold;cursor:default"></div>
       </div>
+      <label class="sp-noprep"><input type="checkbox" data-key="sp-no-prep" onchange="onSpellPrepModeChange()"> Knows its spells, no preparing <span>(Warlock, Sorcerer…): every spell is always ready</span></label>
     </div></div>
 
-    <div class="card"><div class="ct">Spell Slots</div><div class="cb">
+    <div class="card"><div class="ct ct-row"><span>Spell Slots</span>
+      <span class="sp-ct-tools">
+        <button type="button" class="char-btn" onclick="actionRest('short')" title="Restore what recharges on a Short Rest"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-refresh"></use></svg> Short Rest</button>
+        <button type="button" class="char-btn" onclick="actionRest('long')" title="Refill every slot and use"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-refresh"></use></svg> Long Rest</button>
+      </span></div><div class="cb">
       <div class="slots-wrap" id="slots-wrap">
         <div class="slot-g"><div class="lbl2">Level 1</div><div class="sub">Total / Used</div><div class="row"><input type="number" data-key="slot-1-total" style="text-align:center"><input type="number" data-key="slot-1-used" style="text-align:center"></div></div>
         <div class="slot-g"><div class="lbl2">Level 2</div><div class="sub">Total / Used</div><div class="row"><input type="number" data-key="slot-2-total" style="text-align:center"><input type="number" data-key="slot-2-used" style="text-align:center"></div></div>
@@ -350,24 +355,19 @@
       </div>
     </div></div>
 
-    <div class="card"><div class="ct">Cantrips & Prepared Spells</div><div class="cb">
-      <div class="tbl-wrap">
-      <table id="spell-tbl">
-        <tr>
-          <th class="sp-sortable" style="text-align:center" onclick="sortSpells(0)">Prep<span class="sort-ind" id="spth-0"></span></th>
-          <th class="sp-sortable" onclick="sortSpells(1)">Lvl<span class="sort-ind" id="spth-1"></span></th>
-          <th class="sp-sortable" onclick="sortSpells(2)">Name<span class="sort-ind" id="spth-2"></span></th>
-          <th class="sp-sortable" onclick="sortSpells(3)">Time<span class="sort-ind" id="spth-3"></span></th>
-          <th class="sp-sortable" onclick="sortSpells(4)">Range<span class="sort-ind" id="spth-4"></span></th>
-          <th class="sp-sortable" onclick="sortSpells(5)">Dur<span class="sort-ind" id="spth-5"></span></th>
-          <th class="sp-sortable" style="text-align:center" onclick="sortSpells(6)">Conc<span class="sort-ind" id="spth-6"></span></th>
-          <th class="sp-sortable" style="text-align:center" onclick="sortSpells(7)">Ritual<span class="sort-ind" id="spth-7"></span></th>
-          <th class="sp-sortable" onclick="sortSpells(8)">School<span class="sort-ind" id="spth-8"></span></th>
-          <th>V/S/M</th><th>Notes</th><th></th>
-        </tr>
-      </table>
+    <div class="card"><div class="ct ct-row"><span>Spells</span>
+      <span class="sp-ct-tools">
+        <button type="button" class="char-btn" onclick="openSpellLibrary()" title="Add spells from the campaign's spell library"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-book"></use></svg> From library</button>
+        <button type="button" class="char-btn" onclick="openSpellImport()" title="Paste or upload spell JSON (5etools format)"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-upload"></use></svg> Import JSON</button>
+        <button type="button" class="char-btn primary" onclick="openSpellModal(null)"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-plus"></use></svg> Add spell</button>
+      </span></div><div class="cb">
+      <div class="sp-filters" role="group" aria-label="Which spells to show">
+        <button type="button" class="act-chip active" data-f="all" onclick="setSpellFilter('all', this)">All</button>
+        <button type="button" class="act-chip" data-f="ready" onclick="setSpellFilter('ready', this)">Ready to cast</button>
+        <button type="button" class="act-chip" data-f="unprepared" onclick="setSpellFilter('unprepared', this)">Not prepared</button>
+        <input type="search" id="sp-search" class="sp-search" placeholder="Find a spell…" aria-label="Find a spell" oninput="renderSpells()">
       </div>
-      <button class="add-btn" onclick="addSpell()">+ Add Spell</button>
+      <div id="spell-list"></div>
     </div></div>
   </div>
 
@@ -804,6 +804,96 @@
   </div>
 </div>
 
+<!-- Spell edit modal (index-spells.js) -->
+<div id="spell-modal" class="modal-overlay" style="display:none">
+  <div class="modal-box" style="max-width:calc(520px*var(--fs, 1));width:94%">
+    <div class="ct" id="spm-title">Add Spell</div>
+    <div class="modal-body" style="max-height:72vh;overflow-y:auto">
+      <div class="spm-grid">
+        <div class="field spm-wide"><label class="lbl" for="spm-name">Name</label><input type="text" id="spm-name" maxlength="120" placeholder="Magic Missile"></div>
+        <div class="field"><label class="lbl" for="spm-level">Level</label>
+          <select id="spm-level"><option value="0">Cantrip</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option></select></div>
+        <div class="field"><label class="lbl" for="spm-school">School</label><select id="spm-school"></select></div>
+        <div class="field"><label class="lbl" for="spm-cast">Casting time</label><select id="spm-cast"></select></div>
+        <div class="field"><label class="lbl" for="spm-casttext">Casting time, in words</label><input type="text" id="spm-casttext" maxlength="300" placeholder="1 reaction, when you are hit"></div>
+        <div class="field"><label class="lbl" for="spm-range">Range</label><input type="text" id="spm-range" maxlength="80" placeholder="120 feet"></div>
+        <div class="field"><label class="lbl" for="spm-duration">Duration</label><input type="text" id="spm-duration" maxlength="80" placeholder="Instantaneous"></div>
+      </div>
+      <div class="spm-checks">
+        <label><input type="checkbox" id="spm-conc"> Concentration</label>
+        <label><input type="checkbox" id="spm-ritual"> Ritual</label>
+        <label><input type="checkbox" id="spm-v"> V</label>
+        <label><input type="checkbox" id="spm-s"> S</label>
+        <label><input type="checkbox" id="spm-m" onchange="spmMaterialToggle()"> M</label>
+      </div>
+      <div class="field" id="spm-material-field" style="display:none"><label class="lbl" for="spm-material">Material</label><input type="text" id="spm-material" maxlength="300" placeholder="a sprig of mistletoe"></div>
+
+      <div class="spm-section">Where it comes from</div>
+      <div class="spm-grid">
+        <div class="field"><label class="lbl" for="spm-src-kind">Source</label><select id="spm-src-kind"></select></div>
+        <div class="field spm-wide"><label class="lbl" for="spm-src-detail">Which one</label><input type="text" id="spm-src-detail" maxlength="80" placeholder="Magic Initiate, Wizard, High Elf…"></div>
+      </div>
+
+      <div class="spm-section">Casting it</div>
+      <label class="spm-line" id="spm-prepared-line"><input type="checkbox" id="spm-prepared"> Prepared</label>
+      <label class="spm-line"><input type="checkbox" id="spm-noslot" onchange="spmNoSlotToggle()"> No spell slot needed <span>(e.g. a feat's or species' free casting)</span></label>
+      <div class="spm-grid" id="spm-uses-row" style="display:none">
+        <div class="field"><label class="lbl" for="spm-uses">Uses <span style="color:var(--ash)">(blank = at will)</span></label><input type="number" id="spm-uses" min="0" max="99"></div>
+        <div class="field"><label class="lbl" for="spm-recharge">Recharges on</label>
+          <select id="spm-recharge"><option value="long">Long Rest</option><option value="short">Short Rest</option><option value="">Never (by hand)</option></select></div>
+      </div>
+
+      <div class="spm-section">Notes</div>
+      <div id="spm-desc" class="sp-desc" style="display:none"></div>
+      <div class="field"><textarea id="spm-notes" maxlength="4000" style="min-height:calc(60px*var(--fs, 1))" placeholder="Your own notes: damage, targets, reminders…"></textarea></div>
+    </div>
+    <div class="modal-btns">
+      <button class="char-btn" onclick="closeSpellModal()">Cancel</button>
+      <button class="char-btn primary" onclick="saveSpellModal()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Spell library picker (index-spells.js) -->
+<div id="spell-lib-modal" class="modal-overlay" style="display:none">
+  <div class="modal-box" style="max-width:calc(600px*var(--fs, 1));width:94%">
+    <div class="ct">Add spells from the library</div>
+    <div class="modal-body">
+      <div class="spl-tools">
+        <input type="search" id="spl-search" placeholder="Find a spell…" aria-label="Find a spell" oninput="renderSpellLibrary()">
+        <select id="spl-level" aria-label="Level" onchange="renderSpellLibrary()"><option value="">Any level</option><option value="0">Cantrip</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option></select>
+        <select id="spl-class" aria-label="Class" onchange="renderSpellLibrary()"><option value="">Any class</option></select>
+      </div>
+      <div id="spl-list" class="spl-list"></div>
+    </div>
+    <div class="modal-btns">
+      <span id="spl-count" class="spl-count"></span>
+      <button class="char-btn" onclick="closeSpellLibrary()">Cancel</button>
+      <button class="char-btn primary" id="spl-add" onclick="addSpellsFromLibrary()" disabled>Add</button>
+    </div>
+  </div>
+</div>
+
+<!-- Spell JSON import (index-spells.js) -->
+<div id="spell-import-modal" class="modal-overlay" style="display:none">
+  <div class="modal-box" style="max-width:calc(520px*var(--fs, 1));width:94%">
+    <div class="ct">Import spell JSON</div>
+    <div class="modal-body">
+      <p class="spi-hint">Paste one spell, a list of spells, or a whole 5etools spell file. The spells are added to this sheet and to the campaign&rsquo;s spell library.</p>
+      <textarea id="spi-text" spellcheck="false" style="min-height:calc(160px*var(--fs, 1));font-family:monospace;font-size:calc(11px * var(--fs, 1))" placeholder="{ &quot;name&quot;: &quot;Magic Missile&quot;, &quot;level&quot;: 1, ... }"></textarea>
+      <div class="spi-row">
+        <button type="button" class="char-btn" onclick="document.getElementById('spi-file').click()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-folder"></use></svg> Choose a file…</button>
+        <input type="file" id="spi-file" accept=".json,application/json" style="display:none" onchange="onSpellImportFile(this)">
+        <span id="spi-msg" class="spi-msg" role="status"></span>
+      </div>
+    </div>
+    <div class="modal-btns">
+      <button class="char-btn" onclick="closeSpellImport()">Close</button>
+      <button class="char-btn primary" id="spi-go" onclick="runSpellImport()">Import</button>
+    </div>
+  </div>
+</div>
+
 <!-- Companion modal (index-companions.js) -->
 <div id="companion-modal" class="modal-overlay" style="display:none">
   <div class="modal-box" style="max-width:calc(460px*var(--fs, 1));width:92%">
@@ -942,6 +1032,7 @@
 <script src="/js/lib/chat-render.js" defer></script>
 <script src="/js/lib/chat-pm.js" defer></script>
 <script src="/js/lib/dnd-data.js" defer></script>
+<script src="/js/lib/spell-data.js" defer></script>
 <script src="/js/lib/realtime.js" defer></script>
 <script src="/js/lib/notifications.js" defer></script>
 <script src="/js/index/index-state.js" defer></script>
@@ -951,6 +1042,7 @@
 <script src="/js/index/index-dice.js" defer></script>
 <script src="/js/index/index-items.js" defer></script>
 <script src="/js/index/index-companions.js" defer></script>
+<script src="/js/index/index-spells.js" defer></script>
 <script src="/js/index/index-actions.js" defer></script>
 <script src="/js/index/index-media.js" defer></script>
 <script src="/js/index/index-treasury.js" defer></script>

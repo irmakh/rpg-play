@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-28 14:25
+// Written by Irmak Hakman — 2026-11-11 16:40
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -40,7 +40,8 @@ export default function register(app, ctx) {
       // hpcur/hpmax/hptemp and speed are here for the table's tokenless "My sheet"
       // view, which has no token to read live HP / speed off and would otherwise
       // render those stats blank.
-      const STAT_KEYS   = ['init','init-bonus','sp-atk','ac','prof-bonus','pb','proficiency','passive-perception','pp','sp-dc','speed','hpcur','hpmax','hptemp'];
+      // sp-no-prep: the character does not prepare spells, so every spell is ready.
+      const STAT_KEYS   = ['init','init-bonus','sp-atk','ac','prof-bonus','pb','proficiency','passive-perception','pp','sp-dc','speed','hpcur','hpmax','hptemp','sp-no-prep'];
       const META_KEYS   = ['race','race-name','class','class-name','class-1','subclass','subclass-1','level','total-level','char-level'];
       const SLOT_KEYS   = Array.from({ length: 9 }, (_, i) => [`slot-${i+1}-total`,`slot-${i+1}-used`]).flat();
       const qroll = {};
@@ -139,7 +140,9 @@ export default function register(app, ctx) {
   });
 
   // Reset spent uses on a rest. type 'short' restores short-recharge actions;
-  // 'long' restores both long- and short-recharge actions.
+  // 'long' restores both long- and short-recharge actions. Spells follow the
+  // same rule for their own uses (a feat's free casting), and a long rest also
+  // empties every spell-slot level's "used" count.
   app.post('/api/characters/:id/action-rest', async (req, res) => {
     try {
       const charId = req.params.id;
@@ -164,6 +167,23 @@ export default function register(app, ctx) {
         try { its = JSON.parse(data._items || '[]'); } catch {}
         its.forEach(i => { if (i && i.chargesRecharge === 'long') i.chargesUsed = 0; });
         data._items = JSON.stringify(its);
+        for (let i = 1; i <= 9; i++) if (data[`slot-${i}-used`] !== undefined) data[`slot-${i}-used`] = '0';
+      }
+      // Spells' own uses. Only spell objects carry them; a sheet still holding
+      // the pre-v320 array rows has none, and is left exactly as it is.
+      if (data._spells !== undefined) {
+        let sps = null;
+        try { sps = JSON.parse(data._spells || '[]'); } catch {}
+        if (Array.isArray(sps)) {
+          let changed = false;
+          for (const sp of sps) {
+            if (sp && !Array.isArray(sp) && typeof sp === 'object' && sp.used
+                && (sp.recharge === 'short' || (type === 'long' && sp.recharge === 'long'))) {
+              sp.used = 0; changed = true;
+            }
+          }
+          if (changed) data._spells = JSON.stringify(sps);
+        }
       }
       const dataJson = JSON.stringify(data);
       ldb.updateCharacter(charId, { dataJson });

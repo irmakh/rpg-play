@@ -73,3 +73,9 @@ build/
 # by hand as one zip and never committed — neither its data nor its media.
 Application/scripts/demo_campaign*.zip
 Application/scripts/demo_campaign/
+
+# Security audit reports hold unfixed findings — the repo is public, keep them local.
+docs/security/
+
+# Local safety copies of campaign databases (e.g. before running a script on them).
+*.db.before-*

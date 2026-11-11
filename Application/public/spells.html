@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<!-- Written by Irmak Hakman — 2026-11-11 19:50 -->
+<!-- Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) -->
+<html lang="en" class="lamplit app-page">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spells — DM Panel</title>
+<script>(function(){try{var s=JSON.parse(sessionStorage.getItem('rpgSession')||'null');if(!s||s.role!=='dm'){location.replace('/login.html?next='+encodeURIComponent(location.pathname));}}catch(e){location.replace('/login.html');}})();</script>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#080C15">
+<script>if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js');</script>
+<link rel="stylesheet" href="/css/tokens.css">
+<link rel="stylesheet" href="/css/templates.css">
+<script src="/js/lib/template.js"></script>
+<script src="/js/lib/header-fit.js" defer></script>
+<link rel="stylesheet" href="/css/fonts.css">
+<link rel="stylesheet" href="/css/base.css">
+<link rel="stylesheet" href="/css/app-shell.css">
+<link rel="stylesheet" href="/css/monsters.css">
+<link rel="stylesheet" href="/css/spells.css">
+<link rel="stylesheet" href="/css/notifications.css">
+<script src="/js/lib/icons.js"></script>
+</head>
+<body>
+
+<!-- Password gate -->
+<script src="/js/lib/auth-ui.js"></script>
+<div class="gate" id="gate">
+  <div class="gate-box">
+    <div style="font-size:calc(36px * var(--fs, 1));margin-bottom:calc(10px*var(--fs, 1))"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-star"></use></svg> </div>
+    <h2>Spells</h2>
+    <p>Enter master password to manage the spell library.</p>
+    <input type="password" id="gate-pw" placeholder="Master password…" autocomplete="off"
+           onkeydown="if(event.key==='Enter')authenticate()">
+    <div id="gate-cap"></div>
+    <div id="gate-err"></div>
+    <button class="btn primary" style="width:100%" onclick="authenticate()">Unlock</button>
+  </div>
+</div>
+
+<div class="sheet app-shell" id="main-content" style="display:none">
+
+  <div class="hdr">
+    <div class="hdr-left">
+      <button class="btn" onclick="location.href='/dm.html'" title="Back to DM Panel"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-arrow-left"></use></svg> DM</button>
+      <h1><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-star"></use></svg> Spells</h1>
+      <span id="sl-total" class="sl-total"></span>
+    </div>
+    <div class="hdr-right">
+      <button class="btn danger" id="sl-del-sel" onclick="deleteSelected()" style="display:none"></button>
+      <button class="btn" data-notif-bell="connect" title="Notifications"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-bell"></use></svg> </button>
+      <button class="btn" onclick="loadSpells()" title="Refresh"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-refresh"></use></svg> </button>
+      <button class="btn" onclick="openImportModal()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-upload"></use></svg> Import JSON</button>
+      <button class="btn primary" onclick="openBooksModal()" title="Import every spell from chosen books"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-book"></use></svg> Import from books</button>
+    </div>
+  </div>
+
+  <div id="status-msg" role="status"></div>
+
+  <div class="app-body">
+    <aside class="app-side" style="--side-w:340px">
+      <div class="app-side-top sl-filters">
+        <input type="search" id="sl-search" placeholder="Find a spell…  ( / )" aria-label="Find a spell" oninput="renderList()">
+      </div>
+      <div class="app-side-top sl-filters">
+        <select id="sl-level" aria-label="Level" onchange="renderList()">
+          <option value="">Any level</option><option value="0">Cantrip</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option>
+        </select>
+        <select id="sl-class" aria-label="Class" onchange="renderList()"><option value="">Any class</option></select>
+        <select id="sl-book" aria-label="Book" onchange="renderList()"><option value="">Any book</option></select>
+      </div>
+      <label class="sl-all"><input type="checkbox" id="sl-all" onchange="selectAllShown(this.checked)"> <span id="sl-shown"></span></label>
+      <div class="app-list" id="sl-list">
+        <div class="app-empty">Loading</div>
+      </div>
+    </aside>
+
+    <main class="app-main" id="sl-detail" aria-live="polite">
+      <div class="app-empty">Select a spell to read it.</div>
+    </main>
+  </div>
+</div>
+
+<!-- Import spell JSON -->
+<div class="modal-overlay" id="import-modal" style="display:none">
+  <div class="modal-box" style="max-width:calc(640px*var(--fs, 1));width:96%">
+    <div class="ct">Import spells</div>
+    <div class="modal-body">
+      <div class="field">
+        <label class="lbl" for="import-text">Paste spell JSON &mdash; one spell, a list of spells, or a whole 5etools spell file (<code>{"spell": [...]}</code>)</label>
+        <textarea id="import-text" spellcheck="false" style="min-height:calc(180px*var(--fs, 1));font-family:ui-monospace,Consolas,monospace;font-size:calc(12px * var(--fs, 1))" placeholder="{ &quot;name&quot;: &quot;Magic Missile&quot;, &quot;source&quot;: &quot;XPHB&quot;, &quot;level&quot;: 1, ... }"></textarea>
+      </div>
+      <div class="sl-import-row">
+        <button type="button" class="btn" onclick="document.getElementById('import-file').click()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-folder"></use></svg> Choose files…</button>
+        <input type="file" id="import-file" accept=".json,application/json" multiple style="display:none" onchange="onImportFiles(this)">
+        <span id="import-status" class="sl-import-status" role="status"></span>
+      </div>
+      <p class="sl-hint">A spell already in the library (same name and book) is replaced by the imported one.</p>
+    </div>
+    <div class="modal-btns">
+      <button class="btn" onclick="closeImportModal()">Close</button>
+      <button class="btn primary" id="import-go" onclick="runImport()">Import</button>
+    </div>
+  </div>
+</div>
+
+<!-- Import whole books from the 5etools data -->
+<div class="modal-overlay" id="books-modal" style="display:none">
+  <div class="modal-box" style="max-width:calc(560px*var(--fs, 1));width:96%">
+    <div class="ct">Import from books</div>
+    <div class="modal-body">
+      <p class="sl-hint" style="margin-top:0">Every spell in the books you tick goes into the spell library of <strong id="books-camp">this campaign</strong>. The files are downloaded from the 5etools data, imported, and discarded &mdash; nothing is kept on the server. A spell already in the library (same name and book) is replaced.</p>
+      <div class="sl-books-tools">
+        <button type="button" class="btn sm" onclick="setAllBooks(true)">All</button>
+        <button type="button" class="btn sm" onclick="setAllBooks(false)">None</button>
+      </div>
+      <div id="books-list" class="sl-books"></div>
+      <div id="books-status" class="sl-import-status" role="status"></div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn" onclick="closeBooksModal()">Close</button>
+      <button class="btn primary" id="books-go" onclick="runBooksImport()" disabled>Import</button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/lib/esc.js" defer></script>
+<script src="/js/lib/spell-data.js" defer></script>
+<script src="/js/lib/realtime.js" defer></script>
+<script src="/js/lib/notifications.js" defer></script>
+<script src="/js/lib/modal-guard.js" defer></script>
+<script src="/js/spells.js" defer></script>
+</body>
+</html>

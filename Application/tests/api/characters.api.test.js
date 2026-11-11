@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-11 20:10
+// Written by Irmak Hakman — 2026-11-11 17:30
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -729,6 +729,48 @@ describe('POST /api/characters/:id/action-rest', () => {
     expect(used(ldb, 1)).toBe(0);
     expect(used(ldb, 2)).toBe(0);
     expect(used(ldb, 3)).toBe(1);
+  });
+
+  // Spells (v320): spell objects carry their own uses; a long rest also empties
+  // every slot level's "used".
+  function seedSpells(ldb, spells) {
+    ldb.createCharacter('c1', {
+      name: 'Hero',
+      dataJson: JSON.stringify({ 'slot-1-total': '4', 'slot-1-used': '3', 'slot-3-used': '2', _spells: JSON.stringify(spells) }),
+      createdAt: new Date().toISOString(),
+    });
+  }
+  const data = ldb => JSON.parse(ldb.getCharacter('c1').dataJson);
+  const spellUsed = (ldb, id) => JSON.parse(data(ldb)._spells).find(s => s.id === id).used;
+  const SPELLS = [
+    { id: 'a', name: 'Misty Step', noSlot: true, uses: 1, used: 1, recharge: 'long' },
+    { id: 'b', name: 'Hex',        noSlot: true, uses: 2, used: 2, recharge: 'short' },
+    { id: 'c', name: 'Bless',      noSlot: true, uses: 1, used: 1, recharge: '' },
+  ];
+
+  it('short rest refills short-recharge spell uses and leaves the slots', async () => {
+    const { app, ldb } = makeApp();
+    seedSpells(ldb, SPELLS);
+    await dm(request(app).post('/api/characters/c1/action-rest')).send({ type: 'short' });
+    expect([spellUsed(ldb, 'a'), spellUsed(ldb, 'b'), spellUsed(ldb, 'c')]).toEqual([1, 0, 1]);
+    expect(data(ldb)['slot-1-used']).toBe('3');
+  });
+
+  it('long rest refills spell uses and empties every slot level', async () => {
+    const { app, ldb } = makeApp();
+    seedSpells(ldb, SPELLS);
+    await dm(request(app).post('/api/characters/c1/action-rest')).send({ type: 'long' });
+    expect([spellUsed(ldb, 'a'), spellUsed(ldb, 'b'), spellUsed(ldb, 'c')]).toEqual([0, 0, 1]);
+    expect(data(ldb)['slot-1-used']).toBe('0');
+    expect(data(ldb)['slot-3-used']).toBe('0');
+  });
+
+  it('leaves a sheet still holding pre-v320 spell rows as it is', async () => {
+    const { app, ldb } = makeApp();
+    const rows = JSON.stringify([['1', 'Shield', '1 Reaction', 'Self', false, false, '', true]]);
+    ldb.createCharacter('c1', { name: 'Hero', dataJson: JSON.stringify({ _spells: rows }), createdAt: new Date().toISOString() });
+    await dm(request(app).post('/api/characters/c1/action-rest')).send({ type: 'long' });
+    expect(data(ldb)._spells).toBe(rows);
   });
 });
 

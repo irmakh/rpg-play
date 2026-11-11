@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-09-27 12:58
+// Written by Irmak Hakman — 2026-11-11 17:10
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -6,7 +6,7 @@
  * Unit tests for characterToXML() in index-char.js — the per-character XML export.
  *
  * Verifies the newer character fields added in later sessions survive export:
- *   - spell action category (s[13]) and duration (s[14]) as <spell> attributes
+ *   - every field of a spell object as <spell> attributes and children
  *   - custom actions (_actions / _actionIdCounter) as an <actions> block
  *
  * The companion importer xmlToCharacterData() relies on DOMParser, which is not
@@ -24,6 +24,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const ESC_SRC  = readFileSync(resolve(__dirname, '../../public/js/lib/esc.js'), 'utf-8');
 const CHAR_SRC = readFileSync(resolve(__dirname, '../../public/js/index/index-char.js'), 'utf-8');
+const SPELL_SRC = readFileSync(resolve(__dirname, '../../public/js/lib/spell-data.js'), 'utf-8');
 
 function extractFunction(src, name) {
   const re = new RegExp(`function ${name}\\s*\\([^)]*\\)\\s*\\{`);
@@ -49,27 +50,46 @@ function load({ items = [], itemIdCounter = 0 } = {}) {
     JSON, String,
   });
   runInContext(ESC_SRC, ctx);
+  runInContext(SPELL_SRC, ctx);
   runInContext(FN_SRC,  ctx);
   return ctx.characterToXML;
 }
 
-describe('characterToXML — spell action category & duration', () => {
-  it('writes action and duration attributes on the spell tag', () => {
+describe('characterToXML — spells', () => {
+  it('writes every part of a spell object', () => {
     const characterToXML = load();
-    const spell = ['1', 'Entangle', 'Action', '90 ft', true, false, 'Restrains', true,
-                   'Conj', true, true, false, '', 'action', 'Concentration, 1 minute'];
-    const xml = characterToXML({ _spells: JSON.stringify([spell]) });
-    expect(xml).toContain('action="action"');
-    expect(xml).toContain('duration="Concentration, 1 minute"');
+    const sp = { id: 'sp-1', name: 'Entangle', level: 1, cast: 'action', castText: '1 Action', range: '90 feet',
+                 conc: true, prepared: true, school: 'Conj', v: true, s: true, duration: 'Up to 1 minute',
+                 noSlot: true, uses: 1, used: 0, recharge: 'long', source: { kind: 'feat', detail: 'Magic Initiate' } };
+    const xml = characterToXML({ _spells: JSON.stringify([sp]) });
+    expect(xml).toContain('cast="action"');
+    expect(xml).toContain('duration="Up to 1 minute"');
+    expect(xml).toContain('noslot="true" uses="1" used="0" recharge="long" source_kind="feat"');
+    expect(xml).toContain('<source>Magic Initiate</source>');
     expect(xml).toContain('<name>Entangle</name>');
   });
 
-  it('emits empty action/duration attributes for legacy spells without them', () => {
+  it('converts a pre-v320 array row, taking its "show in Actions" choice', () => {
     const characterToXML = load();
-    const spell = ['0', 'Fire Bolt', 'Action', '120 ft', false, false, '', false, 'Evoc'];
+    const spell = ['1', 'Healing Word', '', '60 ft', false, false, '', true,
+                   'Evoc', true, false, false, '', 'bonus', 'Instantaneous'];
     const xml = characterToXML({ _spells: JSON.stringify([spell]) });
-    expect(xml).toContain('action=""');
-    expect(xml).toContain('duration=""');
+    expect(xml).toContain('cast="bonus"');
+    expect(xml).toContain('prepared="true"');
+    expect(xml).toContain('duration="Instantaneous"');
+  });
+
+  it('keeps a library spell\'s 5etools text, escaped', () => {
+    const characterToXML = load();
+    const sp = { name: 'Magic Missile', level: 1, entries: ['A dart deals {@damage 1d4 + 1} <b>Force</b> damage.'] };
+    const xml = characterToXML({ _spells: JSON.stringify([sp]) });
+    expect(xml).toMatch(/<text>[^<]*\{@damage 1d4 \+ 1\}[^<]*&lt;b&gt;Force/);
+  });
+
+  it('says when the character does not prepare spells', () => {
+    const characterToXML = load();
+    expect(characterToXML({ 'sp-no-prep': true })).toContain('<spells_always_ready>true</spells_always_ready>');
+    expect(characterToXML({})).toContain('<spells_always_ready>false</spells_always_ready>');
   });
 });
 
@@ -188,6 +208,7 @@ describe('parseCreatorFormat — full-caster spell slots', () => {
   const PCF_SRC = extractFunction(CHAR_SRC, 'parseCreatorFormat');
   function parse(fields) {
     const ctx = createContext({ JSON, String, parseInt, Math, Set, Array });
+    runInContext(SPELL_SRC, ctx);
     runInContext(PCF_SRC, ctx);
     const doc = {
       querySelector: sel => (sel in fields ? { textContent: String(fields[sel]) } : null),

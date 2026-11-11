@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-28 14:25
+// Written by Irmak Hakman — 2026-11-11 15:40
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -38,6 +38,9 @@ function sheetAuthHeaders(extra) {
 // Dice / rolls
 let rollPending = null;
 const rollHistory = [];
+
+// Spells — a list of spell objects (js/lib/spell-data.js), shown by index-spells.js
+let spells = [];
 
 // Items (shared between index-calc.js, index-char.js, index-items.js)
 let items = [];

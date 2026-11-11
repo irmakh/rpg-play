@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-11 21:30
+// Written by Irmak Hakman — 2026-11-11 17:15
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -19,12 +19,14 @@ const read = p => readFileSync(resolve(__dirname, '../../public', p), 'utf-8');
 
 const ctx = createContext({ console, document: { getElementById: () => null }, setTimeout: () => 0, clearTimeout: () => {} });
 runInContext(read('js/lib/esc.js'), ctx);
+runInContext(read('js/lib/spell-data.js'), ctx);
 runInContext(read('js/table/table-utils.js'), ctx);
-const { spellShown, spellCounts, spellSlotsHTML, spellbookHTML } = ctx;
+const { spellShown, spellCounts, spellSlotsHTML, spellbookHTML, normalizeSpell } = ctx;
 
-// A sheet spell row: [level, name, time, range, conc, ritual, notes, prepared, ...]
-const sp = (level, name, prepared, { conc = false, ritual = false } = {}) =>
-  [String(level), name, 'Action', '60 ft', conc, ritual, '', prepared, 'Evocation'];
+// A sheet spell (js/lib/spell-data.js). "Prepared" in the panel means ready to
+// cast: cantrips are, whatever their prepared flag says.
+const sp = (level, name, prepared, { conc = false, ritual = false, noSlot = false } = {}) =>
+  normalizeSpell({ level, name, castText: '1 Action', range: '60 feet', conc, ritual, prepared, school: 'Evoc', noSlot });
 const BOOK = [
   sp(0, 'Fire Bolt', true),
   sp(1, 'Magic Missile', true),
@@ -37,7 +39,7 @@ const count = (html, re) => (html.match(re) || []).length;
 
 describe('spellShown', () => {
   it('filters by prepared, not prepared and all', () => {
-    const names = f => BOOK.filter(s => spellShown(s, f, '')).map(s => s[1]);
+    const names = f => BOOK.filter(s => spellShown(s, f, '')).map(s => s.name);
     expect(names('prepared')).toEqual(['Fire Bolt', 'Magic Missile', 'Mirror Image']);
     expect(names('unprepared')).toEqual(['Detect Magic', 'Misty Step']);
     expect(names('all')).toHaveLength(5);
@@ -50,6 +52,15 @@ describe('spellShown', () => {
   });
   it('never shows an empty row', () => {
     expect(spellShown(null, 'all', '')).toBe(false);
+  });
+  it('counts a cantrip and a spell that needs no slot as ready, prepared or not', () => {
+    expect(spellShown(sp(0, 'Light', false), 'prepared', '')).toBe(true);
+    expect(spellShown(sp(2, 'Misty Step', false, { noSlot: true }), 'prepared', '')).toBe(true);
+  });
+  it('makes every spell ready for a character who does not prepare', () => {
+    expect(spellShown(BOOK[4], 'prepared', '', false)).toBe(true);
+    expect(spellShown(BOOK[4], 'unprepared', '', false)).toBe(false);
+    expect(spellCounts(BOOK, false)).toEqual({ prepared: 5, unprepared: 0, all: 5 });
   });
 });
 
@@ -139,7 +150,7 @@ describe('spellbookHTML', () => {
   it('shows the filter in use, with counts, and keeps the search text', () => {
     const html = spellbookHTML(BOOK, { filter: 'unprepared', query: 'st"ep' });
     expect(html).toMatch(/class="rp-sb-f on" data-f="unprepared"[^>]*>Not prepared <span class="rp-sb-fc">2</);
-    expect(html).toMatch(/data-f="prepared"[^>]*>Prepared <span class="rp-sb-fc">3</);
+    expect(html).toMatch(/data-f="prepared"[^>]*>Ready <span class="rp-sb-fc">3</);
     expect(html).toContain('value="st&quot;ep"');
   });
   it('offers a spell attack only when the character has one', () => {
@@ -147,7 +158,8 @@ describe('spellbookHTML', () => {
     expect(spellbookHTML(BOOK, { filter: 'all', spAtk: null })).not.toContain('rp-sb-atk');
   });
   it('escapes names and levels typed on the sheet', () => {
-    const html = spellbookHTML([['<b>9</b>', '<img src=x onerror=alert(1)>', '', '', false, false, '', true]], { filter: 'all', spAtk: '+1' });
+    // An old array row with markup where the level and name go, converted as the panel does.
+    const html = spellbookHTML([normalizeSpell(['<b>9</b>', '<img src=x onerror=alert(1)>', '', '', false, false, '', true])], { filter: 'all', spAtk: '+1' });
     expect(html).not.toContain('<img');
     expect(html).not.toContain('<b>9</b>');
   });

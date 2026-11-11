@@ -1,0 +1,44 @@
+/* Written by Irmak Hakman — 2026-11-11 19:50 */
+/* Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) */
+
+/* spells.html — the DM's spell library. Loaded after monsters.css, which gives
+   the page its buttons, gate, modals and form fields; this adds the list and the
+   spell card only. */
+
+.sl-total{color:var(--ash);font-size:var(--t-sm)}
+.sl-filters{padding-top:var(--s1);padding-bottom:var(--s1)}
+.sl-filters select{flex:1;min-width:0;width:auto}
+.sl-all{display:flex;align-items:center;gap:var(--s2);padding:var(--s1) var(--s3);border-bottom:1px solid var(--rule-hi);color:var(--ash);font-size:var(--t-xs);cursor:pointer}
+.sl-all input,.sl-chk{accent-color:var(--arc)}
+.sl-lvl{position:sticky;top:0;z-index:1;background:var(--slate);font-family:var(--display);color:var(--arc);font-size:var(--t-sm);padding:var(--s1) var(--s3);border-bottom:1px solid var(--rule-hi)}
+
+.sl-card{max-width:calc(720px*var(--fs, 1))}
+.sl-card h2{font-family:var(--display);font-size:var(--t-xl);color:var(--bone);margin:0}
+.sl-sub{color:var(--ash);font-style:italic;margin:var(--s1) 0 var(--s3)}
+.sl-facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(calc(160px*var(--fs, 1)),1fr));gap:var(--s2) var(--s4);border-top:1px solid var(--rule-hi);border-bottom:1px solid var(--rule-hi);padding:var(--s2) 0;margin-bottom:var(--s3)}
+.sl-facts span{display:block;color:var(--ash);font-size:var(--t-xs);text-transform:uppercase;letter-spacing:.05em}
+.sl-text{line-height:1.55;font-size:var(--t-base)}
+.sl-text p{margin:0 0 var(--s2)}
+.sl-text ul{margin:0 0 var(--s2);padding-left:var(--s4)}
+.sl-text table{border-collapse:collapse;margin:0 0 var(--s2);width:auto}
+.sl-text td,.sl-text th{border:1px solid var(--rule);padding:2px var(--s2)}
+.sl-none{color:var(--ash)}
+.sl-classes{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s1);margin-top:var(--s3)}
+.sl-classes > span:first-child{color:var(--ash);font-size:var(--t-xs);text-transform:uppercase;letter-spacing:.05em;margin-right:var(--s1)}
+.sl-chip{background:var(--wash);border-radius:var(--r-full);padding:0 var(--s2);font-size:var(--t-xs)}
+.sl-card footer{display:flex;align-items:center;justify-content:space-between;gap:var(--s2);margin-top:var(--s4);padding-top:var(--s2);border-top:1px solid var(--rule)}
+.sl-added{color:var(--ash);font-size:var(--t-xs)}
+
+.sl-import-row{display:flex;align-items:center;gap:var(--s2);flex-wrap:wrap}
+.sl-import-status{font-size:var(--t-sm);color:var(--verdigris)}
+.sl-hint{color:var(--ash);font-size:var(--t-xs);margin-top:var(--s2)}
+.sl-books-tools{display:flex;gap:var(--s1);margin:var(--s2) 0}
+.sl-books{max-height:50vh;overflow-y:auto;border:1px solid var(--rule);border-radius:var(--r-sm);margin-bottom:var(--s2)}
+.sl-book{display:flex;align-items:center;gap:var(--s2);padding:var(--s2) var(--s3);border-bottom:1px solid var(--rule);cursor:pointer}
+.sl-book:last-child{border-bottom:none}
+.sl-book:hover{background:var(--wash)}
+.sl-book input{accent-color:var(--arc)}
+.sl-book-name{flex:1;min-width:0}
+.sl-book-code{color:var(--ash);font-size:var(--t-xs);font-family:ui-monospace,Consolas,monospace}
+.sl-book-have{color:var(--verdigris);font-size:var(--t-xs)}
+.sl-card code,.modal-body code{font-family:ui-monospace,Consolas,monospace}

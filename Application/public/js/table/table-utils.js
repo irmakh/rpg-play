@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-01 17:30
+// Written by Irmak Hakman — 2026-11-11 16:20
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -185,22 +185,24 @@ function makeDraggable(box, handle) {
 
 // ── Spells in the character panel ─────────────────────────────────────────────
 // Pure builders for the Spells tab of the right panel (table-panel.js) and its
-// pop-out. A spell is the sheet's own row: [0] level, [1] name, [4]
-// concentration, [5] ritual, [7] prepared.
+// pop-out. A spell is a sheet spell object (js/lib/spell-data.js). "Prepared"
+// here means READY to cast: a cantrip, a spell that needs no slot, a prepared
+// spell — or any spell of a character who does not prepare (`prepares` false).
 
 // Does a spell belong in the list, for this filter ('prepared' | 'unprepared' |
 // 'all') and this search text?
-function spellShown(s, filter, query) {
+function spellShown(s, filter, query, prepares = true) {
   if (!s) return false;
-  if (filter === 'prepared' && !s[7]) return false;
-  if (filter === 'unprepared' && s[7]) return false;
+  const ready = spellIsReady(s, prepares);
+  if (filter === 'prepared' && !ready) return false;
+  if (filter === 'unprepared' && ready) return false;
   const q = String(query || '').trim().toLowerCase();
-  return !q || String(s[1] || '').toLowerCase().includes(q);
+  return !q || String(s.name || '').toLowerCase().includes(q);
 }
 
-function spellCounts(spells) {
+function spellCounts(spells, prepares = true) {
   const all = (spells || []).filter(Boolean);
-  const prepared = all.filter(s => s[7]).length;
+  const prepared = all.filter(s => spellIsReady(s, prepares)).length;
   return { prepared, unprepared: all.length - prepared, all: all.length };
 }
 
@@ -231,7 +233,7 @@ function spellSlotsHTML(slots, canEdit) {
 }
 
 const SPELL_FILTERS = [
-  { key: 'prepared',   label: 'Prepared' },
+  { key: 'prepared',   label: 'Ready' },
   { key: 'unprepared', label: 'Not prepared' },
   { key: 'all',        label: 'All' },
 ];
@@ -241,16 +243,17 @@ const SPELL_FILTERS = [
  * ones the filter and search leave out are only hidden, so changing either
  * never has to rebuild the panel (which would take the cursor out of the
  * search box).
- * o: { filter, query, spAtk }   spAtk null = no spell attack button
+ * o: { filter, query, spAtk, prepares }   spAtk null = no spell attack button
  */
 function spellbookHTML(spells, o) {
   const list = (spells || []).map((s, idx) => ({ s, idx })).filter(x => x.s);
   if (!list.length) return '';
   const filter = o.filter || 'prepared';
-  const counts = spellCounts(spells);
+  const prepares = o.prepares !== false;
+  const counts = spellCounts(spells, prepares);
   const byLevel = new Map();
   for (const x of list) {
-    const lvl = String(x.s[0] || 0);
+    const lvl = String(x.s.level || 0);
     if (!byLevel.has(lvl)) byLevel.set(lvl, []);
     byLevel.get(lvl).push(x);
   }
@@ -258,14 +261,15 @@ function spellbookHTML(spells, o) {
   const groups = [...byLevel.keys()].sort((a, b) => Number(a) - Number(b)).map(lvl => {
     let shown = 0;
     const rows = byLevel.get(lvl).map(({ s, idx }) => {
-      const show = spellShown(s, filter, o.query);
+      const show = spellShown(s, filter, o.query, prepares);
+      const ready = spellIsReady(s, prepares);
       if (show) shown++;
-      const name = s[1] || '?';
-      return `<div class="rp-sb-row${s[7] ? '' : ' unprep'}" data-idx="${idx}"${show ? '' : ' style="display:none"'}>`
-        + `<span class="rp-sb-mark" title="${s[7] ? 'Prepared' : 'Not prepared'}"></span>`
+      const name = s.name || '?';
+      return `<div class="rp-sb-row${ready ? '' : ' unprep'}" data-idx="${idx}"${show ? '' : ' style="display:none"'}>`
+        + `<span class="rp-sb-mark" title="${ready ? 'Ready to cast' : 'Not prepared'}"></span>`
         + `<span class="rp-spell-name rp-sb-name" onclick="postSpellInfoFromAll(${idx})" title="Send to chat">${esc(name)}</span>`
-        + (s[4] ? '<span class="rp-sb-flag conc" title="Concentration">C</span>' : '')
-        + (s[5] ? '<span class="rp-sb-flag rit" title="Ritual">R</span>' : '')
+        + (s.conc ? '<span class="rp-sb-flag conc" title="Concentration">C</span>' : '')
+        + (s.ritual ? '<span class="rp-sb-flag rit" title="Ritual">R</span>' : '')
         + (o.spAtk != null
           ? `<span class="qroll-val rp-sb-atk" onclick="qroll('${escJs(name)}','${escJs(String(o.spAtk))}')" title="Spell attack"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-bolt"></use></svg></span>`
           : '')

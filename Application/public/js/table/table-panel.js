@@ -1,10 +1,11 @@
-// Written by Irmak Hakman — 2026-11-01 15:10
+// Written by Irmak Hakman — 2026-11-11 16:25
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
 // ── Side panel Quick Roll ─────────────────────────────────────────────────────
 let _sideCharId = null; // character ID currently displayed in the side panel
-let _sideAllSpells = []; // full parsed _spells of the displayed char (for action spell description posting)
+let _sideAllSpells = []; // the displayed char's spells, as spell objects (js/lib/spell-data.js)
+let _sidePrepares = true; // whether that character prepares spells (sheet's "no preparing" box off)
 let _sideActiveTab = 'skills'; // active right-panel sheet tab (skills|combat|spells|items|handouts)
 let _sideCombatTab = 'attacks'; // active Combat sub-tab (attacks|action|bonus|reaction|other)
 
@@ -98,15 +99,13 @@ function renderSideCharacter() {
     if (total > 0) spellSlots.push({ level: i, total, used: parseInt(d['slot-' + i + '-used']) || 0 });
   }
 
-  // Prepared spells (index 7 = prepared flag). Keep the full list for the Actions
-  // sections, which reference spells by their index in _sideAllSpells.
-  _sideAllSpells = [];
-  let preparedSpells = [];
-  try {
-    _sideAllSpells = JSON.parse(d['_spells'] || '[]');
-    preparedSpells = _sideAllSpells.filter(s => s && s[7]);
-  } catch {}
-  // Actions sections (action-flagged spells [13] + custom actions from _actions)
+  // Spells, as objects (old sheets' arrays are converted). Keep the full list
+  // for the Actions sections, which reference spells by their index in
+  // _sideAllSpells; "ready" spells are what the character can cast now.
+  _sideAllSpells = parseSpellList(d['_spells']);
+  _sidePrepares = spellPrepares(d);
+  const preparedSpells = _sideAllSpells.filter(s => spellIsReady(s, _sidePrepares));
+  // Actions sections (spells that take an action / bonus / reaction + custom actions)
   const canEditActions = isDM() || isCharSession();
   const { sections: actionSections, restHtml: actionRestHtml } = _sidePanelActionSections(d, canEditActions);
 
@@ -137,7 +136,7 @@ function renderSideCharacter() {
   // Items (wear / unwear, charges)
   const itemsHtml = _buildSidePanelItems(d, canEditSlots);
   _sideSpells = preparedSpells;
-  const spellListHtml = spellbookHTML(_sideAllSpells, { filter: _sideSpellFilter, query: _sideSpellQuery, spAtk });
+  const spellListHtml = spellbookHTML(_sideAllSpells, { filter: _sideSpellFilter, query: _sideSpellQuery, spAtk, prepares: _sidePrepares });
 
   // ── Secondary stats bar: Initiative (clickable) | Prof | Passive Perc | Spell DC ──
   const secStats = [];
@@ -272,7 +271,7 @@ function _applySideSpellFilter() {
   root.querySelectorAll('.rp-sb-group').forEach(group => {
     let shown = 0;
     group.querySelectorAll('.rp-sb-row').forEach(row => {
-      const show = spellShown(_sideAllSpells[parseInt(row.dataset.idx)], _sideSpellFilter, _sideSpellQuery);
+      const show = spellShown(_sideAllSpells[parseInt(row.dataset.idx)], _sideSpellFilter, _sideSpellQuery, _sidePrepares);
       row.style.display = show ? '' : 'none';
       if (show) shown++;
     });
@@ -457,11 +456,12 @@ function _sidePanelActionSections(d, canEdit) {
   let acts = [];
   try { acts = JSON.parse(d['_actions'] || '[]'); } catch {}
   const sections = [];
-  const hasLimited = acts.some(a => a && (parseInt(a.uses) || 0) > 0);
+  const hasLimited = acts.some(a => a && (parseInt(a.uses) || 0) > 0)
+    || _sideAllSpells.some(s => s.noSlot && s.uses > 0);
   for (const [key, label] of _RP_ACT_CATS) {
     const spells = _sideAllSpells
       .map((s, idx) => ({ s, idx }))
-      .filter(o => o.s && o.s[13] === key);
+      .filter(o => o.s && spellActionCategory(o.s) === key && spellIsReady(o.s, _sidePrepares));
     const customs = acts.filter(a => a && a.category === key);
     if (!spells.length && !customs.length) continue;
     const body = spells.map(o => _renderSidePanelSpell(o.s, o.idx, d)).join('')
@@ -478,8 +478,8 @@ function _sidePanelActionSections(d, canEdit) {
 }
 
 function _renderSidePanelSpell(s, idx, d) {
-  const sName = s[1] || '?';
-  const lvl = (s[0] && String(s[0]) !== '0') ? `(${esc(String(s[0]))})` : '(cantrip)';
+  const sName = s.name || '?';
+  const lvl = s.level ? `(${esc(String(s.level))})` : '(cantrip)';
   const spAtk = d['sp-atk'];
   const nameSpan = `<span class="rp-spell-name" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px" onclick="postSpellInfoFromAll(${idx})" title="Send to chat">${esc(sName)}</span>`;
   const atk = (spAtk !== undefined && spAtk !== null && spAtk !== '')
@@ -586,7 +586,12 @@ async function tableActionRest(type) {
     try { its = JSON.parse(qrollData._items || '[]'); } catch {}
     its.forEach(i => { if (i && i.chargesRecharge === 'long') i.chargesUsed = 0; });
     qrollData._items = JSON.stringify(its);
+    for (let i = 1; i <= 9; i++) if (qrollData[`slot-${i}-used`] !== undefined) qrollData[`slot-${i}-used`] = '0';
   }
+  // Spells' own uses, as the server does it (routes/characters.js action-rest).
+  const sps = parseSpellList(qrollData._spells);
+  sps.forEach(s => { if (s.used && (s.recharge === 'short' || (type === 'long' && s.recharge === 'long'))) s.used = 0; });
+  if (qrollData._spells !== undefined) qrollData._spells = JSON.stringify(sps);
   const content = document.getElementById('side-qroll-content');
   if (content) content.innerHTML = renderSideCharacter();
   try {
@@ -991,15 +996,16 @@ function _spell5eUrl(name) {
 
 function _postSpellInfo(s) {
   if (!s) return;
-  const name = s[1] || 'Spell';
-  const desc = s[6] || ''; // already HTML (spell notes)
-  const lvl  = s[0];
+  const name = s.name || 'Spell';
+  // A library spell's own text (built safe by spell-data.js), then the
+  // player's notes, which may carry links (chat sanitises them).
+  const desc = spellDescHTML(s) + (s.notes || '');
   // Raw meta values — postChatInfoCard escapes them.
-  const meta = [];
-  if (lvl !== undefined && lvl !== '' && lvl !== null) meta.push(String(lvl) === '0' ? 'Cantrip' : `Level ${String(lvl)}`);
-  if (s[2])  meta.push(`⏱ ${s[2]}`);
-  if (s[3])  meta.push(`🎯 ${s[3]}`);
-  if (s[14]) meta.push(`⏳ ${s[14]}`);
+  const meta = [spellLevelLabel(s.level)];
+  const cast = s.castText || spellCastLabel(s);
+  if (cast)  meta.push(`⏱ ${cast}`);
+  if (s.range)  meta.push(`🎯 ${s.range}`);
+  if (s.duration) meta.push(`⏳ ${s.conc ? 'Concentration, ' : ''}${s.duration}`);
   const link = `<div style="margin-top:calc(4px*var(--fs, 1))"><a href="${esc(_spell5eUrl(name))}" target="_blank" rel="noopener"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-book"></use></svg> Open on 5e.tools <svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-external"></use></svg></a></div>`;
   postChatInfoCard({ name, meta, html: (desc || '') + link });
 }

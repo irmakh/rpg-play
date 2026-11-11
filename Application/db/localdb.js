@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-01 17:55
+// Written by Irmak Hakman — 2026-11-11 14:20
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -288,6 +288,18 @@ db.exec(`
     outcome TEXT DEFAULT 'pending', seenAt TEXT DEFAULT '',
     createdAt TEXT DEFAULT (datetime('now')),
     UNIQUE(handoutId, charId)
+  );
+  -- The campaign's spell library, imported from 5etools JSON (server/routes/
+  -- spells.js). dataJson is the original spell object, kept whole; the columns
+  -- beside it are what the list, search and duplicate check need. nameKey is
+  -- the lower-cased name: "Magic Missile" from two books are two rows, the same
+  -- spell imported twice is one.
+  CREATE TABLE IF NOT EXISTS spells (
+    id TEXT PRIMARY KEY, name TEXT NOT NULL DEFAULT '', nameKey TEXT NOT NULL DEFAULT '',
+    source TEXT DEFAULT '', level INTEGER DEFAULT 0, school TEXT DEFAULT '',
+    dataJson TEXT DEFAULT '{}', addedBy TEXT DEFAULT '',
+    createdAt TEXT DEFAULT (datetime('now')), updatedAt TEXT DEFAULT '',
+    UNIQUE(nameKey, source)
   );
 `);
 
@@ -1154,6 +1166,50 @@ function _insertRaw(table, rows, conflict = 'IGNORE') {
 
 const _selectAll = (table) => db.prepare(`SELECT * FROM ${table}`).all();
 
+// ── Spell library ─────────────────────────────────────────────────────────────
+function _spellRow(r) {
+  if (!r) return null;
+  let data = {};
+  try { data = JSON.parse(r.dataJson || '{}'); } catch {}
+  return { id: r.id, name: r.name, source: r.source || '', level: r.level || 0, school: r.school || '',
+           data, addedBy: r.addedBy || '', createdAt: r.createdAt || '', updatedAt: r.updatedAt || '' };
+}
+function listSpells() {
+  return db.prepare('SELECT * FROM spells ORDER BY level, nameKey, source').all().map(_spellRow);
+}
+function getSpell(id) {
+  return _spellRow(db.prepare('SELECT * FROM spells WHERE id = ?').get(id));
+}
+function findSpell(name, source) {
+  return _spellRow(db.prepare('SELECT * FROM spells WHERE nameKey = ? AND source = ?')
+    .get(String(name || '').trim().toLowerCase(), String(source || '')));
+}
+function createSpell(id, f) {
+  db.prepare('INSERT INTO spells (id, name, nameKey, source, level, school, dataJson, addedBy, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+    .run(id, f.name, String(f.name).trim().toLowerCase(), f.source || '', f.level || 0, f.school || '',
+         JSON.stringify(f.data || {}), f.addedBy || '', f.createdAt || new Date().toISOString(), '');
+  return getSpell(id);
+}
+function updateSpell(id, f) {
+  db.prepare('UPDATE spells SET name = ?, nameKey = ?, level = ?, school = ?, dataJson = ?, updatedAt = ? WHERE id = ?')
+    .run(f.name, String(f.name).trim().toLowerCase(), f.level || 0, f.school || '',
+         JSON.stringify(f.data || {}), new Date().toISOString(), id);
+  return getSpell(id);
+}
+function deleteSpells(ids) {
+  const del = db.prepare('DELETE FROM spells WHERE id = ?');
+  let n = 0;
+  db.transaction(() => { for (const id of ids) n += del.run(String(id)).changes; })();
+  return n;
+}
+function exportSpells() { return _selectAll('spells'); }
+// Rows a library already has (same name and book) are kept as they are.
+function importSpells(rows) {
+  let n = 0;
+  db.transaction(() => { n = _insertRaw('spells', rows); })();
+  return n;
+}
+
 // ── Handouts backup ───────────────────────────────────────────────────────────
 function exportHandouts() {
   return { handouts: _selectAll('handouts'), handoutRecipients: _selectAll('handout_recipients') };
@@ -1636,6 +1692,7 @@ function exportAll() {
     updateCalendarEvent, deleteCalendarEvent, listSoundFiles, getSoundFile, createSoundFile, deleteSoundFile,
     updateSoundFile, listPlaylists, getPlaylist, createPlaylist, updatePlaylist, deletePlaylist,
     getSoundsForPlaylist, exportAll, SHOP_MAX_ACTIVE_TAGS, normalizeShopTags, lootRowToTreasury, shopRowToTreasury,
+    listSpells, getSpell, findSpell, createSpell, updateSpell, deleteSpells, exportSpells, importSpells,
     listHandouts, getHandout, createHandout, updateHandout, deleteHandout,
     listHandoutRecipients, listHandoutsForChar, getHandoutRecipient, addHandoutRecipient,
     updateHandoutRecipient, removeHandoutRecipient, clearHandoutRecipients,

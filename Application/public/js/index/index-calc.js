@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 14:25
+// Written by Irmak Hakman — 2026-11-11 15:40
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -120,12 +120,7 @@ function recalcAll() {
 
 // ── Prepared spell counter ────────────────────────────────────────────────────
 function recalcPreparedCount() {
-  let count = 0;
-  document.querySelectorAll('#spell-tbl tr:not(:first-child)').forEach(tr => {
-    const lvlInput = tr.querySelector('input[type=text]');
-    const prepChk  = tr.querySelector('input[type=checkbox]');
-    if (parseInt(lvlInput?.value) > 0 && prepChk?.checked) count++;
-  });
+  const count = spellPreparedCount(spells);
   const ABILITY_MAP = {
     strength:'str', str:'str', dexterity:'dex', dex:'dex',
     constitution:'con', con:'con', intelligence:'int', int:'int',
@@ -153,16 +148,8 @@ function toggleInspire() {
 
 // ── Add / Delete rows ─────────────────────────────────────────────────────────
 function delRow(btn) {
-  const tr = btn.closest('tr');
-  const isSpell = tr.closest('#spell-tbl') !== null;
-  if (isSpell) {
-    const name = tr.querySelector('input[type=text]')?.value?.trim() || 'this spell';
-    showConfirm('Delete ' + name + '?', () => { tr.remove(); recalcPreparedCount(); scheduleAutoSave(); });
-  } else {
-    tr.remove(); recalcPreparedCount(); renderWeaponsSummary(); scheduleAutoSave();
-  }
+  btn.closest('tr').remove(); recalcPreparedCount(); renderWeaponsSummary(); scheduleAutoSave();
 }
-function toggleSpellExpand(el) { el.closest('tr').classList.toggle('spell-expanded'); }
 
 function addWeapon() {
   const tbl = document.getElementById('wpn-tbl');
@@ -172,55 +159,3 @@ function addWeapon() {
   renderWeaponsSummary();
 }
 
-function addSpell() {
-  const tbl = document.getElementById('spell-tbl');
-  const tr = document.createElement('tr');
-  tr.innerHTML = `<td style="text-align:center"><input type="checkbox" onchange="recalcPreparedCount()"></td><td><input type="text" class="spell-lvl" value="0"></td><td><div style="display:flex;align-items:center;gap:calc(3px*var(--fs, 1))"><span class="spell-tog" onclick="toggleSpellExpand(this)"></span><input type="text" placeholder="Spell name"><a href="#" class="tools-link" onclick="openSpell5e(this);return false" title="Open in 5e.tools"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-external"></use></svg></a></div></td><td><input type="text" value="Action" style="width:calc(70px*var(--fs, 1))"></td><td><input type="text" placeholder="Range" style="width:calc(65px*var(--fs, 1))"></td><td><input type="text" class="spell-duration" placeholder="Duration" style="width:calc(75px*var(--fs, 1))"></td><td style="text-align:center"><input type="checkbox"></td><td style="text-align:center"><input type="checkbox"></td><td><select class="spell-school" style="width:calc(60px*var(--fs, 1));font-size:calc(11px * var(--fs, 1));padding:1px calc(2px*var(--fs, 1))"><option value="">—</option><option value="Abj">Abj</option><option value="Conj">Conj</option><option value="Div">Div</option><option value="Ench">Ench</option><option value="Evoc">Evoc</option><option value="Illu">Illu</option><option value="Necro">Necro</option><option value="Trans">Trans</option></select></td><td style="white-space:nowrap"><div style="display:flex;align-items:center;gap:calc(3px*var(--fs, 1))"><label style="font-size:calc(10px * var(--fs, 1));display:flex;align-items:center;gap:1px;cursor:pointer"><input type="checkbox" class="spell-v" style="width:calc(11px*var(--fs, 1));height:calc(11px*var(--fs, 1))">V</label><label style="font-size:calc(10px * var(--fs, 1));display:flex;align-items:center;gap:1px;cursor:pointer"><input type="checkbox" class="spell-s" style="width:calc(11px*var(--fs, 1));height:calc(11px*var(--fs, 1))">S</label><label style="font-size:calc(10px * var(--fs, 1));display:flex;align-items:center;gap:1px;cursor:pointer"><input type="checkbox" class="spell-m" style="width:calc(11px*var(--fs, 1));height:calc(11px*var(--fs, 1))" onchange="spellMChange(this)">M</label></div></td><td><input type="text" class="spell-notes" placeholder="Notes"><input type="text" class="spell-mat" placeholder="Material…" style="display:none;width:100%;font-size:calc(10px * var(--fs, 1));margin-top:calc(2px*var(--fs, 1))"><select class="spell-action" onchange="scheduleAutoSave()" title="Show this spell in the Actions tab" style="width:100%;font-size:calc(10px * var(--fs, 1));margin-top:calc(2px*var(--fs, 1))"><option value="">— not an action —</option><option value="action"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-play"></use></svg> Action</option><option value="bonus"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-play"></use></svg> Bonus Action</option><option value="reaction"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-play"></use></svg> Reaction</option></select></td><td><button class="del-btn" onclick="delRow(this)"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg></button></td>`;
-  tbl.appendChild(tr);
-}
-
-function spellMChange(cb) {
-  const mat = cb.closest('tr').querySelector('.spell-mat');
-  if (mat) mat.style.display = cb.checked ? 'block' : 'none';
-}
-
-// ── Spell table column sort ───────────────────────────────────────────────────
-let spellSortCol = null, spellSortDir = 1;
-
-function sortSpells(col) {
-  spellSortDir = spellSortCol === col ? -spellSortDir : 1;
-  spellSortCol = col;
-
-  const tbl  = document.getElementById('spell-tbl');
-  const rows = Array.from(tbl.querySelectorAll('tr:not(:first-child)'));
-  rows.sort((a, b) => {
-    const av = _spellCellVal(a, col), bv = _spellCellVal(b, col);
-    if (av < bv) return -spellSortDir;
-    if (av > bv) return  spellSortDir;
-    return 0;
-  });
-  rows.forEach(r => tbl.appendChild(r));
-  scheduleAutoSave();
-
-  for (let i = 0; i <= 8; i++) {
-    const ind = document.getElementById('spth-' + i);
-    if (ind) ind.textContent = i === spellSortCol ? (spellSortDir === 1 ? ' ▲' : ' ▼') : '';
-  }
-}
-
-function _spellCellVal(row, col) {
-  const cell = row.querySelectorAll('td')[col];
-  if (!cell) return '';
-  switch (col) {
-    case 0: case 6: case 7:  // Prep / Conc / Ritual — checked sorts first (asc)
-      return cell.querySelector('input[type=checkbox]')?.checked ? 0 : 1;
-    case 1:  // Lvl — numeric
-      return parseInt(cell.querySelector('input')?.value || '0', 10);
-    case 2:  // Name — text inside flex div
-      return (cell.querySelector('input[type=text]')?.value || '').toLowerCase();
-    case 8:  // School — select
-      return (cell.querySelector('select')?.value || '').toLowerCase();
-    default:  // Time (3), Range (4), Duration (5) — plain text input
-      return (cell.querySelector('input')?.value || '').toLowerCase();
-  }
-}

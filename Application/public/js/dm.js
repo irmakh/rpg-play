@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 14:25
+// Written by Irmak Hakman — 2026-11-11 14:45
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -115,7 +115,7 @@ function closeBackupModal() {
   document.getElementById('backup-modal').style.display = 'none';
 }
 
-const BACKUP_SECTIONS = ['characters', 'monsters', 'treasury', 'maps', 'waiting', 'handouts', 'events', 'music', 'chat', 'chatmedia'];
+const BACKUP_SECTIONS = ['characters', 'monsters', 'treasury', 'maps', 'waiting', 'handouts', 'spells', 'events', 'music', 'chat', 'chatmedia'];
 const _selectedBackupParts = () => BACKUP_SECTIONS.filter(p => document.getElementById('bk-' + p)?.checked);
 
 /**

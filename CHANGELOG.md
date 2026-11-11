@@ -21,6 +21,51 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [320–321] — 2026-11-11 — A spell library, and spells that know where they come from
+
+*(320 was a local test build; 321 is the release. First of four parts of the
+spellcasting redesign; the Cast a Spell button comes in the next one.)*
+
+- **Spell library for each campaign.** The DM has a new **Spells** page (DM screen →
+  Spells): import spells as 5etools JSON — one spell, a list, or a whole spell file, and
+  several files at once — then browse them by level, class and book, read each one, and
+  delete what is not wanted. Importing a spell the library already has replaces it.
+- **Players add spells from the library.** The sheet's Spells tab has **From library**
+  (search, level and class filters, starting on the character's own class) and **Import
+  JSON**, which adds pasted or uploaded spells to the sheet and to the library. A spell
+  added from the library brings its description, casting time, range, components and
+  duration with it.
+- **The Spells tab is rebuilt.** Spells are listed by level with their casting time
+  (Action, Bonus, Reaction, or the time in words), concentration, ritual, range and
+  duration; click a name for the full text. Every detail is edited in one window.
+- **Where a spell comes from.** Each spell can say its source: Class, Subclass, Feat,
+  Species, Class feature, Item or Other, plus which one — "Feat: Magic Initiate".
+- **Spells that need no slot.** Tick "No spell slot needed" for a feat's or species'
+  free casting, and give it uses that come back on a short or long rest — or leave the
+  uses empty for at will.
+- **Characters who do not prepare.** "Knows its spells, no preparing" (Warlock,
+  Sorcerer…) makes every spell always ready and hides the Prepared column.
+- **Rests refill spells.** A long rest now empties every spell slot level's "used" count
+  and refills spell uses; a short rest refills what recharges on one. The Spell Slots
+  card has its own Short Rest and Long Rest buttons.
+- The table's spellbook and the console's sheet show the same spells: their "Ready"
+  filter means castable now (cantrips, no-slot spells, prepared spells), and the Actions
+  lists show the ready spells that take an action, a bonus action or a reaction.
+- Existing characters keep every spell: the old spell rows are converted when a sheet is
+  opened, and old backups and XML files still import. Backups gain a **Spell library**
+  section.
+- **Import whole books.** The DM's Spells page has **Import from books**: tick the books
+  (Player's Handbook 2024 and 2014, Xanathar's, Tasha's and the rest) and every spell in
+  them goes into the library of the campaign on screen. The files are downloaded,
+  imported and discarded; nothing is kept on the server.
+- **Spell import script** *(server side, run by hand)*: `scripts/import_spells.mjs` fills a
+  campaign's library with every spell from the official books and links the spells already
+  on its character sheets, adding their descriptions. A dry run lists every change first.
+- A reaction's casting time can now hold its whole trigger ("1 Reaction, which you take
+  when…"); it was cut off at 120 characters.
+
+---
+
 ## [313–319] — 2026-11-01 — Critical hits, and rolls you can see
 
 *(313–318 were local test builds; 319 is the release.)*

@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-11-11 17:00
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -22,6 +22,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const DND_SRC   = readFileSync(resolve(__dirname, '../../public/js/lib/dnd-data.js'),    'utf-8');
 const UTILS_SRC = readFileSync(resolve(__dirname, '../../public/js/index/index-utils.js'),'utf-8');
 const CALC_SRC  = readFileSync(resolve(__dirname, '../../public/js/index/index-calc.js'), 'utf-8');
+const SPELL_SRC = readFileSync(resolve(__dirname, '../../public/js/lib/spell-data.js'), 'utf-8');
 
 /**
  * Builds a minimal DOM backed by plain JS objects.
@@ -100,11 +101,13 @@ function load(textVals = {}, checkedVals = {}, itemsArr = []) {
   const ctx = createContext({
     document,
     items: itemsArr,
+    spells: [],
     clearTimeout: () => {},
     setTimeout: () => 0,
     console,
   });
   runInContext(DND_SRC,   ctx);
+  runInContext(SPELL_SRC, ctx);
   runInContext(UTILS_SRC, ctx);
   runInContext(CALC_SRC,  ctx);
   return { recalcProfBonus: ctx.recalcProfBonus, recalcAll: ctx.recalcAll, text, checked, byId };

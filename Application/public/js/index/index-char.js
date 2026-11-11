@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-28 14:25
+// Written by Irmak Hakman — 2026-11-11 15:55
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -34,25 +34,8 @@ function collectData() {
     if (inp.length >= 4) wpnRows.push([inp[0].value, inp[1].value, inp[2].value, inp[3].value, tr.dataset.itemId ? parseInt(tr.dataset.itemId) : null]);
   });
   out['_weapons'] = JSON.stringify(wpnRows);
-  // Spell rows: [lvl, name, time, range, conc, ritual, notes, prepared, school, v, s, m, material, actionCategory, duration]
-  const spRows = [];
-  document.querySelectorAll('#spell-tbl tr:not(:first-child)').forEach(tr => {
-    const txts = tr.querySelectorAll('input[type=text], input[type=number]');
-    const chks = tr.querySelectorAll('input[type=checkbox]');
-    if (txts.length >= 4) spRows.push([
-      txts[0].value, txts[1].value, txts[2].value, txts[3].value,
-      chks[1]?.checked || false, chks[2]?.checked || false,
-      tr.querySelector('.spell-notes')?.value || '', chks[0]?.checked || false,
-      tr.querySelector('.spell-school')?.value || '',
-      tr.querySelector('.spell-v')?.checked || false,
-      tr.querySelector('.spell-s')?.checked || false,
-      tr.querySelector('.spell-m')?.checked || false,
-      tr.querySelector('.spell-mat')?.value || '',
-      tr.querySelector('.spell-action')?.value || '',
-      tr.querySelector('.spell-duration')?.value || ''
-    ]);
-  });
-  out['_spells'] = JSON.stringify(spRows);
+  // Spells: a list of spell objects (js/lib/spell-data.js), edited in index-spells.js.
+  out['_spells'] = JSON.stringify(spells);
   out['_actions'] = JSON.stringify(actions);
   out['_actionIdCounter'] = actionIdCounter;
   out['_rollHistory'] = JSON.stringify(rollHistory.map(e => ({...e, time: e.time.toISOString()})));
@@ -75,7 +58,8 @@ function clearSheet() {
     if (el) el.value = '+0';
   });
   document.querySelectorAll('#wpn-tbl tr:not(:first-child)').forEach(r => r.remove());
-  document.querySelectorAll('#spell-tbl tr:not(:first-child)').forEach(r => r.remove());
+  spells = [];
+  if (typeof renderSpells === 'function') renderSpells();
   const pc = document.getElementById('prep-count');
   if (pc) { pc.value = ''; pc.style.color = ''; }
   rollHistory.length = 0;
@@ -128,23 +112,11 @@ function _applyLists(d, which) {
       tbl.appendChild(tr);
     });
   }
-  // Spells — index 7 = prepared checkbox
-  if (want('spells') && d['_spells']) {
-    let rows; try { rows = JSON.parse(d['_spells']); } catch { rows = []; }
-    const tbl = document.getElementById('spell-tbl');
-    tbl.querySelectorAll('tr:not(:first-child)').forEach(r => r.remove());
-    rows.forEach(r => {
-      const tr = document.createElement('tr');
-      const bold = r[0] !== '0' ? 'bold' : 'normal';
-      const school = r[8] || '';
-      const rv = !!r[9], rs = !!r[10], rm = !!r[11], rmat = r[12] || '';
-      const act = r[13] || '';
-      const dur = r[14] || '';
-      const schoolOpts = ['','Abj','Conj','Div','Ench','Evoc','Illu','Necro','Trans'].map(o => `<option value="${o}" ${school===o?'selected':''}>${o||'—'}</option>`).join('');
-      const actOpts = [['','— not an action —'],['action','▸ Action'],['bonus','▸ Bonus Action'],['reaction','▸ Reaction']].map(([v,l]) => `<option value="${v}" ${act===v?'selected':''}>${l}</option>`).join('');
-      tr.innerHTML = `<td style="text-align:center"><input type="checkbox" onchange="recalcPreparedCount()" ${r[7]?'checked':''}></td><td><input type="text" class="spell-lvl" value="${esc(r[0])}"></td><td><div style="display:flex;align-items:center;gap:calc(3px*var(--fs, 1))"><span class="spell-tog" onclick="toggleSpellExpand(this)"></span><input type="text" value="${esc(r[1])}" style="font-weight:${bold}"><a href="#" class="tools-link" onclick="openSpell5e(this);return false" title="Open in 5e.tools"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-external"></use></svg></a></div></td><td><input type="text" value="${esc(r[2])}" style="width:calc(70px*var(--fs, 1))"></td><td><input type="text" value="${esc(r[3])}" style="width:calc(65px*var(--fs, 1))"></td><td><input type="text" class="spell-duration" value="${esc(dur)}" placeholder="Duration" style="width:calc(75px*var(--fs, 1))"></td><td style="text-align:center"><input type="checkbox" ${r[4]?'checked':''}></td><td style="text-align:center"><input type="checkbox" ${r[5]?'checked':''}></td><td><select class="spell-school" style="width:calc(60px*var(--fs, 1));font-size:calc(11px * var(--fs, 1));padding:1px calc(2px*var(--fs, 1))">${schoolOpts}</select></td><td style="white-space:nowrap"><div style="display:flex;align-items:center;gap:calc(3px*var(--fs, 1))"><label style="font-size:calc(10px * var(--fs, 1));display:flex;align-items:center;gap:1px;cursor:pointer"><input type="checkbox" class="spell-v" style="width:calc(11px*var(--fs, 1));height:calc(11px*var(--fs, 1))" ${rv?'checked':''}>V</label><label style="font-size:calc(10px * var(--fs, 1));display:flex;align-items:center;gap:1px;cursor:pointer"><input type="checkbox" class="spell-s" style="width:calc(11px*var(--fs, 1));height:calc(11px*var(--fs, 1))" ${rs?'checked':''}>S</label><label style="font-size:calc(10px * var(--fs, 1));display:flex;align-items:center;gap:1px;cursor:pointer"><input type="checkbox" class="spell-m" style="width:calc(11px*var(--fs, 1));height:calc(11px*var(--fs, 1))" onchange="spellMChange(this)" ${rm?'checked':''}>M</label></div></td><td><input type="text" class="spell-notes" value="${esc(r[6]||'')}"><input type="text" class="spell-mat" placeholder="Material…" value="${esc(rmat)}" style="display:${rm?'block':'none'};width:100%;font-size:calc(10px * var(--fs, 1));margin-top:calc(2px*var(--fs, 1))"><select class="spell-action" onchange="scheduleAutoSave()" title="Show this spell in the Actions tab" style="width:100%;font-size:calc(10px * var(--fs, 1));margin-top:calc(2px*var(--fs, 1))">${actOpts}</select></td><td><button class="del-btn" onclick="delRow(this)"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg></button></td>`;
-      tbl.appendChild(tr);
-    });
+  // Spells — old sheets hold 15-element arrays; parseSpellList() converts them.
+  // A full apply with no _spells at all (a brand-new sheet) means none.
+  if (want('spells') && (d['_spells'] !== undefined || !which)) {
+    spells = parseSpellList(d['_spells'] || '[]');
+    if (typeof renderSpells === 'function') renderSpells();
   }
   // Items — migrate legacy 'item' type to 'wondrous'
   if (want('items')) {
@@ -893,11 +865,14 @@ function characterToXML(d) {
   for (let i = 1; i <= 9; i++)
     p(`      <slot level="${i}" total="${xe(d['slot-'+i+'-total'])}" used="${xe(d['slot-'+i+'-used'])}"/>`);
   p('    </spell_slots>');
-  let spells = []; try { spells = JSON.parse(d._spells||'[]'); } catch {}
+  const spellList = parseSpellList(d._spells);
+  p(`    <spells_always_ready>${b(!spellPrepares(d))}</spells_always_ready>`);
   p('    <spells>');
-  spells.forEach(s => {
-    p(`      <spell level="${xe(s[0])}" conc="${b(s[4])}" ritual="${b(s[5])}" prepared="${b(s[7])}" school="${xe(s[8]||'')}" v="${b(s[9])}" s="${b(s[10])}" m="${b(s[11])}" action="${xe(s[13]||'')}" duration="${xe(s[14]||'')}">`);
-    p(`        <name>${xe(s[1])}</name><time>${xe(s[2])}</time><range>${xe(s[3])}</range><notes>${xe(s[6]||'')}</notes>${s[11]?`<material>${xe(s[12]||'')}</material>`:''}`);
+  spellList.forEach(s => {
+    p(`      <spell level="${xe(s.level)}" conc="${b(s.conc)}" ritual="${b(s.ritual)}" prepared="${b(s.prepared)}" school="${xe(s.school)}" v="${b(s.v)}" s="${b(s.s)}" m="${b(s.m)}" cast="${xe(s.cast)}" duration="${xe(s.duration)}" noslot="${b(s.noSlot)}" uses="${xe(s.uses)}" used="${xe(s.used)}" recharge="${xe(s.recharge)}" source_kind="${xe(s.source.kind)}" libid="${xe(s.libId)}" book="${xe(s.book)}">`);
+    p(`        <name>${xe(s.name)}</name><time>${xe(s.castText)}</time><range>${xe(s.range)}</range><source>${xe(s.source.detail)}</source><notes>${xe(s.notes)}</notes>${s.m?`<material>${xe(s.material)}</material>`:''}`);
+    // The 5etools text of a library spell, so the sheet keeps its description.
+    if (s.entries.length || s.higher.length) p(`        <text>${xe(JSON.stringify({ entries: s.entries, higher: s.higher }))}</text>`);
     p(`      </spell>`);
   });
   p('    </spells>');
@@ -1029,7 +1004,7 @@ function parseCreatorFormat(doc) {
   for (let sl = 0; sl <= 9; sl++) {
     const raw = get('spells'+sl);
     if (raw) raw.split(',').map(s=>s.trim()).filter(s=>s).forEach(name => {
-      spells.push([String(sl), name, 'Action', '', false, false, '', false]);
+      spells.push(normalizeSpell({ level: sl, name, castText: '1 Action', cast: 'action' }));
     });
   }
   d._spells = JSON.stringify(spells);
@@ -1124,23 +1099,32 @@ function xmlToCharacterData(xmlText) {
     d['slot-'+lv+'-used']=el.getAttribute('used')||'0';
   });
   const spells = [];
-  doc.querySelectorAll('spellcasting > spells > spell').forEach(el => spells.push([
-    el.getAttribute('level')||'0',
-    el.querySelector('name')?.textContent?.trim()||'',
-    el.querySelector('time')?.textContent?.trim()||'',
-    el.querySelector('range')?.textContent?.trim()||'',
-    el.getAttribute('conc')==='true',
-    el.getAttribute('ritual')==='true',
-    el.querySelector('notes')?.textContent?.trim()||'',
-    el.getAttribute('prepared')==='true',
-    el.getAttribute('school')||'',
-    el.getAttribute('v')==='true',
-    el.getAttribute('s')==='true',
-    el.getAttribute('m')==='true',
-    el.querySelector('material')?.textContent?.trim()||'',
-    el.getAttribute('action')||'',
-    el.getAttribute('duration')||''
-  ]));
+  // Files written before v320 have no cast/noslot/source attributes; the old
+  // `action` attribute and the casting-time text stand in for the type.
+  doc.querySelectorAll('spellcasting > spells > spell').forEach(el => {
+    const txt = sel => el.querySelector(sel)?.textContent?.trim() || '';
+    const attr = (n, dflt = '') => el.getAttribute(n) ?? dflt;
+    let text = {};
+    try { text = JSON.parse(txt('text') || '{}') || {}; } catch {}
+    const time = txt('time');
+    const oldAct = attr('action');
+    let cast = attr('cast');
+    if (!cast) {
+      cast = spellCastFromText(time);
+      if ((cast === 'other' || !time) && ['action', 'bonus', 'reaction'].includes(oldAct)) cast = oldAct;
+    }
+    spells.push(normalizeSpell({
+      level: attr('level', '0'), name: txt('name'), castText: time, cast, range: txt('range'),
+      conc: attr('conc') === 'true', ritual: attr('ritual') === 'true', prepared: attr('prepared') === 'true',
+      school: attr('school'), v: attr('v') === 'true', s: attr('s') === 'true', m: attr('m') === 'true',
+      material: txt('material'), duration: attr('duration'), notes: txt('notes'),
+      noSlot: attr('noslot') === 'true', uses: attr('uses'), used: attr('used'), recharge: attr('recharge'),
+      source: { kind: attr('source_kind'), detail: txt('source') },
+      libId: attr('libid'), book: attr('book'),
+      entries: Array.isArray(text.entries) ? text.entries : [], higher: Array.isArray(text.higher) ? text.higher : [],
+    }));
+  });
+  if (doc.querySelector('spellcasting > spells_always_ready')?.textContent?.trim() === 'true') d['sp-no-prep'] = true;
   d._spells = JSON.stringify(spells);
 
   d.features=get('class_features'); d.feats=get('feats'); d.traits=get('species_traits');
@@ -1228,10 +1212,10 @@ function xmlToCharacterData(xmlText) {
 }
 
 // ── 5e.tools links ────────────────────────────────────────────────────────────
-function openSpell5e(el) {
-  const name = el.closest('td').querySelector('input[type=text]').value.trim();
-  if (!name) return;
-  window.open('https://5e.tools/spells.html#' + name.toLowerCase() + '_xphb', '_blank');
+function openSpell5e(name) {
+  const n = String(name || '').trim();
+  if (!n) return;
+  window.open('https://5e.tools/spells.html#' + encodeURIComponent(n.toLowerCase()) + '_xphb', '_blank', 'noopener');
 }
 
 function open5e(dataKey, page) {

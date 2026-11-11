@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-28 16:10
+// Written by Irmak Hakman — 2026-11-11 14:40
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -51,7 +51,7 @@ export default function register(app, ctx) {
   // posted to chat was pulled into a map backup — on a real campaign that was 45
   // of 57 media rows and most of an 80 MB download. It is its own part now.
   // Restore still reads chatMedia out of an older 'maps' file.
-  const BACKUP_PARTS = ['characters', 'monsters', 'treasury', 'maps', 'waiting', 'handouts', 'events', 'music', 'chat', 'chatmedia'];
+  const BACKUP_PARTS = ['characters', 'monsters', 'treasury', 'maps', 'waiting', 'handouts', 'spells', 'events', 'music', 'chat', 'chatmedia'];
 
   // A handout carries two images (the success and failure reveals); everything
   // else that references a picture has one.
@@ -156,6 +156,10 @@ export default function register(app, ctx) {
           }),
           handoutRecipients,
         };
+      }
+      case 'spells': {
+        // The campaign's spell library. Text only — no files.
+        return { ...base, spells: ldb.exportSpells() };
       }
       case 'events': {
         // The Events screen is a single blob plus the calendar and weather tables.
@@ -426,6 +430,10 @@ export default function register(app, ctx) {
           };
         });
         await w(',"handoutRecipients":'); await _writeJsonArray(w, handoutRecipients, r => r);
+        break;
+      }
+      case 'spells': {
+        await w(',"spells":'); await _writeJsonArray(w, ldb.exportSpells(), r => r);
         break;
       }
       case 'events': {
@@ -805,6 +813,12 @@ export default function register(app, ctx) {
         }
         ldb.importHandouts({ handouts: restored, handoutRecipients: backup.handoutRecipients });
         broadcast('handouts', { action: 'reload' });
+        break;
+      }
+      case 'spells': {
+        // Spells the library already has (same name and book) are kept.
+        ldb.importSpells(Array.isArray(backup.spells) ? backup.spells : []);
+        broadcast('spells', { action: 'updated' });
         break;
       }
       case 'events': {

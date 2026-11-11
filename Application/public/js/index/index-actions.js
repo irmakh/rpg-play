@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 14:25
+// Written by Irmak Hakman — 2026-11-11 16:00
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -42,22 +42,18 @@ function _actCollectAttacks() {
   return rows;
 }
 
-// Spells flagged with an action category, grouped by category.
+// Spells that take an action, a bonus action or a reaction, grouped by which —
+// the ones this character can cast now (cantrips, spells needing no slot, and
+// prepared spells, or every spell for a character who does not prepare).
 function _actCollectSpells() {
   const out = { action: [], bonus: [], reaction: [] };
-  document.querySelectorAll('#spell-tbl tr:not(:first-child)').forEach(tr => {
-    const cat = tr.querySelector('.spell-action')?.value || '';
-    if (!out[cat]) return;
-    const txts = tr.querySelectorAll('input[type=text], input[type=number]');
-    const name = (txts[1]?.value || '').trim();
-    if (!name) return;
-    out[cat].push({
-      name,
-      level: txts[0]?.value || '0',
-      notes: tr.querySelector('.spell-notes')?.value || '',
-      duration: tr.querySelector('.spell-duration')?.value || ''
-    });
-  });
+  const prepares = typeof _spPrepares === 'function' ? _spPrepares() : true;
+  for (const sp of (typeof spells !== 'undefined' ? spells : [])) {
+    const cat = spellActionCategory(sp);
+    if (!cat || !sp.name || !spellIsReady(sp, prepares)) continue;
+    out[cat].push(sp);
+  }
+  for (const k of Object.keys(out)) out[k].sort((a, b) => a.level - b.level || a.name.localeCompare(b.name));
   return out;
 }
 
@@ -113,7 +109,7 @@ function renderActionsTab() {
     if (inner.trim()) html += `<div class="act-section"><div class="act-section-hdr">Other</div>${inner}</div>`;
   }
 
-  body.innerHTML = html || _actEmpty('Nothing here yet. Add weapons in Inventory, flag spells on the Spells tab, or click MANAGE CUSTOM.');
+  body.innerHTML = html || _actEmpty('Nothing here yet. Add weapons in Inventory, add spells that take an action on the Spells tab, or click MANAGE CUSTOM.');
 }
 
 function _actEmpty(msg) {
@@ -146,11 +142,13 @@ function _actRenderSpellList(list) {
   const spAtk = spAtkEl ? spAtkEl.value : '';
   return list.map(sp => {
     const n = esc(sp.name);
-    const lvl = sp.level && sp.level !== '0' ? `(${esc(sp.level)})` : '(cantrip)';
+    const lvl = sp.level ? `(${esc(sp.level)})` : '(cantrip)';
     const atkBtn = spAtk
       ? `<button class="roll-btn" data-name="${n}" data-val="${esc(spAtk)}" onclick="startRoll(this.dataset.name + ' (Spell Atk)', this.dataset.val)" title="Roll spell attack"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg></button>`
       : '';
-    const dmgMatch = (sp.notes || '').match(/\d+d\d+(\s*[+-]\s*\d+)?/);
+    // Damage dice from the player's notes, else from a library spell's own text.
+    const libDmg = /\{@damage ([^}|]+)/.exec(JSON.stringify(sp.entries || []));
+    const dmgMatch = (sp.notes || '').match(/\d+d\d+(\s*[+-]\s*\d+)?/) || (libDmg ? [libDmg[1].trim()] : null);
     const dmgBtn = dmgMatch
       ? `<button class="roll-btn" data-name="${n}" data-val="${esc(dmgMatch[0])}" onclick="rollDamage(this.dataset.name + ' Damage', this.dataset.val)" title="Roll damage ${esc(dmgMatch[0])}"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-swords"></use></svg></button>`
       : '';
@@ -158,6 +156,7 @@ function _actRenderSpellList(list) {
       <div class="act-head"><span class="act-name">${n}</span> <span class="act-lvl">${lvl}</span>
         <span class="act-controls">${atkBtn}${dmgBtn}</span></div>
       ${sp.notes ? `<div class="act-desc">${esc(sp.notes)}</div>` : ''}
+      ${sp.noSlot && sp.uses ? `<div class="act-desc">${esc(sp.uses - sp.used)} of ${esc(sp.uses)} uses left</div>` : ''}
     </div>`;
   }).join('');
 }
@@ -225,6 +224,8 @@ function actionRest(type) {
   });
   // Items that refill on a long rest come back with it.
   if (typeof restItemCharges === 'function') changed += restItemCharges(type);
+  // Spell slots (long rest) and spells' own uses.
+  if (typeof restSpells === 'function') changed += restSpells(type);
   renderActionsTab();
   if (changed) scheduleAutoSave();
 }

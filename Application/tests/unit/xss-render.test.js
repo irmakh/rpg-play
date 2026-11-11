@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-10 21:42
+// Written by Irmak Hakman — 2026-11-11 17:00
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -201,7 +201,7 @@ describe('console info panel (console/panel-*.js)', () => {
   // context can reassign (a property set on ctx would be a different variable).
   function panel() {
     const { ctx, els } = browserContext();
-    run(ctx, 'lib/esc.js', 'lib/dnd-data.js', 'console/panel-core.js', 'console/panel-nav.js',
+    run(ctx, 'lib/esc.js', 'lib/dnd-data.js', 'lib/spell-data.js', 'console/panel-core.js', 'console/panel-nav.js',
       'console/panel-turn.js', 'console/panel-token.js', 'console/panel-sheet.js', 'console/panel-table.js', 'console/panel-handouts.js');
     runInContext('sessionRole = "dm"; masterPw = "t";', ctx);
     return { ctx, els };
@@ -209,8 +209,9 @@ describe('console info panel (console/panel-*.js)', () => {
 
   it('escapes every part of a character sheet: skills, combat, spells, items', () => {
     const { ctx, els } = panel();
-    // A spell row is positional: 0 level, 1 name, 4 concentration, 5 ritual,
-    // 7 prepared, 13 the action kind it is filed under.
+    // A spell in the pre-v320 positional form: 0 level, 1 name, 4 concentration,
+    // 5 ritual, 7 prepared, 13 the action kind. The panel converts it
+    // (spell-data.js normalizeSpell) and must still escape every part.
     const spell = (lvl, name, kind) => { const s = []; s[0] = lvl; s[1] = name; s[4] = true; s[7] = true; s[13] = kind; return s; };
     ctx.__data = {
       str: '16', dex: TAG, 'sp-atk': JSOUT + TAG, 'sp-dc': TAG, pb: DQ, pp: SQ,

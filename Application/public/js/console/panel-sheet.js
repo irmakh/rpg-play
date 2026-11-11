@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-11 00:16
+// Written by Irmak Hakman — 2026-11-11 16:35
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -103,12 +103,14 @@ function sSheetCombatHTML() {
   }
   if (!attacks) attacks = '<p class="p-empty">No weapons on this character sheet.</p>';
 
-  // Each kind of action: spells the player filed under it (spell row index 13)
+  // Each kind of action: the ready spells that take one (js/lib/spell-data.js)
   // and the character's own custom actions.
-  const spells  = sSheetList('_spells');
+  const spells  = sSheetSpells();
+  const prepares = spellPrepares(sQrollData);
   const actions = sSheetList('_actions');
   const groups = S_ACTION_CATS.map(([key, label]) => {
-    const sp = spells.map((s, idx) => ({ s, idx })).filter(o => o.s && o.s[13] === key);
+    const sp = spells.map((s, idx) => ({ s, idx }))
+      .filter(o => spellActionCategory(o.s) === key && spellIsReady(o.s, prepares));
     const cu = actions.filter(a => a && a.category === key);
     if (!sp.length && !cu.length) return '';
     return sGroupHTML(label,
@@ -127,10 +129,15 @@ function sSheetCombatHTML() {
 
 // A spell as one row: tap it to put its description in chat.
 function sSheetSpellRowHTML(s, idx) {
-  const lvl = (s[0] && String(s[0]) !== '0') ? `level ${s[0]}` : 'cantrip';
-  const flags = (s[4] ? ', concentration' : '') + (s[5] ? ', ritual' : '');
+  const lvl = s.level ? `level ${s.level}` : 'cantrip';
+  const flags = (s.conc ? ', concentration' : '') + (s.ritual ? ', ritual' : '') + (s.noSlot ? ', no slot' : '');
   return `<button type="button" class="p-roll two" onclick="sSheetPostSpell(${idx})">
-    <span class="lbl"><span>${esc(s[1] || 'Spell')}</span><small>${esc(lvl + flags)}</small></span><span class="val post">Post</span></button>`;
+    <span class="lbl"><span>${esc(s.name || 'Spell')}</span><small>${esc(lvl + flags)}</small></span><span class="val post">Post</span></button>`;
+}
+
+// The sheet's spells as spell objects; old sheets' arrays are converted.
+function sSheetSpells() {
+  return parseSpellList(sQrollData ? sQrollData._spells : '[]');
 }
 
 // A custom action: what it does, its dice, and one box per limited use.
@@ -239,11 +246,12 @@ function sSheetSpellsHTML() {
       + `<span>${avail} of ${total} left</span></div></div>`;
   }
 
-  const spells   = sSheetList('_spells');
-  const prepared = spells.map((s, idx) => ({ s, idx })).filter(o => o.s && o.s[7]);   // index 7 = prepared
+  const spells   = sSheetSpells();
+  const prepares = spellPrepares(sQrollData);
+  const prepared = spells.map((s, idx) => ({ s, idx })).filter(o => spellIsReady(o.s, prepares));
   const byLevel  = new Map();
   for (const o of prepared) {
-    const lvl = String(o.s[0] || 0);
+    const lvl = String(o.s.level || 0);
     if (!byLevel.has(lvl)) byLevel.set(lvl, []);
     byLevel.get(lvl).push(o);
   }
@@ -252,7 +260,7 @@ function sSheetSpellsHTML() {
 
   if (!slots && !lists) return '<p class="p-empty">No spell slots or prepared spells on this character sheet.</p>';
   return (slots ? `<h3 class="p-h">Spell slots</h3>${slots}` : '')
-       + (lists ? `<h3 class="p-h">Prepared spells</h3>${lists}` : '');
+       + (lists ? `<h3 class="p-h">Ready spells</h3>${lists}` : '');
 }
 
 // Tapping an available slot spends one; tapping a spent slot gives one back.
@@ -275,17 +283,17 @@ function sSheetSlot(level, pipIndex) {
 // HTML (links allowed); the server keeps html only from a logged-in sender and
 // every chat page renders it through an allowlist (chat-render.js).
 function sSheetPostSpell(idx) {
-  const s = sSheetList('_spells')[idx];
+  const s = sSheetSpells()[idx];
   if (!s) return;
-  const name = s[1] || 'Spell';
-  const meta = [];
-  if (s[0] !== undefined && s[0] !== '' && s[0] !== null) meta.push(String(s[0]) === '0' ? 'Cantrip' : `Level ${s[0]}`);
-  if (s[2])  meta.push(`Casting time ${s[2]}`);
-  if (s[3])  meta.push(`Range ${s[3]}`);
-  if (s[14]) meta.push(`Duration ${s[14]}`);
+  const name = s.name || 'Spell';
+  const meta = [spellLevelLabel(s.level)];
+  const cast = s.castText || spellCastLabel(s);
+  if (cast) meta.push(`Casting time ${cast}`);
+  if (s.range) meta.push(`Range ${s.range}`);
+  if (s.duration) meta.push(`Duration ${s.conc ? 'concentration, ' : ''}${s.duration}`);
   const url  = `https://5e.tools/spells.html#${encodeURIComponent(String(name).trim().toLowerCase())}_xphb`;
   const link = `<div style="margin-top:4px"><a href="${esc(url)}" target="_blank" rel="noopener">${esc(name)} on 5e.tools</a></div>`;
-  sPostInfoCard({ name, meta, html: (s[6] || '') + link });
+  sPostInfoCard({ name, meta, html: spellDescHTML(s) + (s.notes || '') + link });
 }
 
 // ── Items ────────────────────────────────────────────────────────────────────

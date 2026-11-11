@@ -152,6 +152,29 @@ granted.
 - Table right panel: a fifth tab beside Items, from the same `GET /api/handouts` — the DM shape or the redacted player shape, chosen by which credentials `authHeaders()` sends. Rows are collapsible (`_sideHandoutOpen`/`_sideHandoutShut` remember explicit clicks; anything wanting attention opens itself). `toggleSideHandout` keys off the RENDERED state, not just the explicit sets, or an auto-opened row would need two clicks to close. The toolbar 📜 button opens `openHandoutModal()` — one dialog covering give → roll → verdict. Every character appears once: a tick box when they are not yet a recipient, or `_hoModalRecipientRow()` with their roll, the DC suggestion and Success/Fail/re-roll/recall when they are. The `handouts` realtime event calls `_hoModalLoad()` while it is open, so a DM watches checks land; `_hoModalCaptureChecks()` preserves ticks across that repaint
 - Tests: `tests/api/handouts.api.test.js` (34), built on the real `openCampaignDb(':memory:')` because the thing under test is what the server puts in a response
 
+## Application — Spells (v320, spellcasting redesign release 1)
+
+> A per-campaign spell library imported from 5etools JSON, and one spell shape
+> for every page. Plan: `docs/plans/spellcasting-redesign.md`.
+
+**`_spells` is a list of spell OBJECTS since v320.** It used to be 15-element
+arrays read by position. Never index a spell; read it through
+`parseSpellList()` / `normalizeSpell()`, which accept both shapes, so old
+sheets, backups and XML files keep working. Server code that edits `_spells`
+must leave array rows alone (see `action-rest` in `routes/characters.js`).
+
+- **`Application/public/js/lib/spell-data.js`** — pure helpers, no DOM, loaded by the sheet, table, console and `spells.html`: `normalizeSpell`, `parseSpellList`, `spellFrom5e(raw, libId)` (5etools spell -> sheet spell), `spellTextHTML` / `spellInlineHTML` / `spellDescHTML` (5etools text as escaped HTML), `spellIsReady(sp, prepares)`, `spellPrepares(data)` (the sheet stores the opposite, `sp-no-prep`), `spellActionCategory`, `spellPreparedCount`, `spellClasses`, label helpers, and the tables `SPELL_SCHOOLS` / `SPELL_CAST_TYPES` / `SPELL_SOURCE_KINDS`
+- Table `spells` (unique on `nameKey, source`; `dataJson` holds the 5etools object whole)
+- `ldb.listSpells / getSpell / findSpell / createSpell / updateSpell / deleteSpells / exportSpells / importSpells`
+- Routes `server/routes/spells.js`: `GET /api/spells` (any login) · `GET /api/spells/:id` · `POST /api/spells/import` (any login; a player only adds, the DM also updates) · `DELETE /api/spells/:id` + `POST /api/spells/delete` (DM). Exports `unwrapImport`, `checkSpell`
+- Backup part `spells` (records only, no files)
+- DM page `spells.html` + `js/spells.js` + `css/spells.css` (on top of `monsters.css`), linked from the DM screen nav
+- Sheet: `js/index/index-spells.js` — Spells tab list, edit modal, library picker, JSON import, `restSpells(type)` (called by `actionRest`)
+- Tests: `tests/unit/spell-data.test.js`, `tests/api/spells.api.test.js`
+- **`Application/lib/spell-source.js`** — the 5etools spell books from the GitHub copy `5etools-mirror-3/5etools-src` (5e.tools itself answers scripts with a Cloudflare 403): `listBooks()`, `fetchBooks(codes)` (chosen books + `sources.json` class lists), `collectSpells(files, sources)`, `BOOK_NAMES`. Everything is fetched INTO MEMORY for one import and discarded — nothing is written to disk, and nothing from that repository is ever stored in or committed to this project
+- DM button **Import from books** on `spells.html`: `GET /api/spells/books` + `POST /api/spells/import-books { books: [codes] }` (DM only, one at a time, into the campaign on screen; DM rule: a spell already there is replaced)
+- **`Application/scripts/import_spells.mjs`** — fills a campaign's spell library from the 5etools data and links every sheet spell to it. `node scripts/import_spells.mjs (--campaign <name|id|slug> | --all) [--apply] [--books XPHB,PHB | --link-only] [--from <dir>] [--verbose]` (`--link-only`: no download, links the sheets to the library as it already is, e.g. after the DM's Import from books), run from `Application/` (local: `docker exec char_sheet_dev node scripts/import_spells.mjs ...`). Dry run unless `--apply`. Downloads through `lib/spell-source.js` (in memory, nothing saved); `--from` reads hand-saved files instead. Names matched ignoring case/spacing/punctuation, by SRD name and without a wizard's possessive; XPHB > PHB > other books; no typo guessing (unmatched names are listed with the closest ones). The library overwrites level, school, casting time, range, duration, components, concentration and ritual and adds the text; prepared, notes, source and uses are kept (an empty source becomes the character's class when the spell is on its list). Tests: `tests/unit/import-spells-script.test.js`, `tests/api/spells.api.test.js`
+
 ## Application — Console screens (AYN Thor two-screen mode, redesign from v246)
 
 > `/console/` is the two-screen mode: the map on the top screen
