@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-12 02:10
+// Written by Irmak Hakman — 2026-11-11 17:45
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -584,6 +584,195 @@ function spellCastOptions(sp, data) {
   if (!out.castable && !out.reason) {
     const anySlot = spellSlotsFrom(data).some(s => s.level >= sp.level) || out.options.some(o => o.mode === 'pact');
     out.reason = sp.noSlot && sp.uses && !anySlot ? 'No uses left' : 'No spell slots left';
+  }
+  return out;
+}
+
+// ── Monsters (release 3, v329) ────────────────────────────────────────────────
+// A monster's spellcasting is the 5etools `spellcasting` list on its data: at
+// will spells, X/day (shared, or "each"), and — in older stat blocks — slots
+// per spell level. Each TOKEN keeps its own uses in `spellUses` (a JSON object
+// use key -> times used), so two Mages run out separately. Empty means full.
+
+/** "{@spell Fire Bolt|XPHB}" -> { name: 'Fire Bolt', source: 'XPHB' }. */
+function _spRef(ref) {
+  const s = typeof ref === 'string' ? ref : (ref && (ref.entry || ref.name)) || '';
+  const m = /\{@spell ([^}|]+)(?:\|([^}|]*))?/.exec(s);
+  return m ? { name: m[1].trim(), source: (m[2] || '').trim() } : { name: spellInlineText(s).replace(/\*/g, '').trim(), source: '' };
+}
+
+/**
+ * A monster's spellcasting, as groups:
+ *   { dc, hit, casterLevel, groups: [{ key, kind, label, max, each, level, entry, spells: [{name, source}] }] }
+ * kind: 'will' | 'daily' (also per-rest / weekly) | 'cantrip' | 'slot'.
+ */
+/** Every string inside a 5etools entry (strings, {entries}, list items "name entry"). */
+function _spEntryStrings(e, out = []) {
+  if (typeof e === 'string') out.push(e);
+  else if (Array.isArray(e)) e.forEach(x => _spEntryStrings(x, out));
+  else if (e && typeof e === 'object') {
+    if (e.name && (e.entry || e.entries) && e.type === 'item') {
+      const body = []; _spEntryStrings(e.entry || e.entries, body);
+      out.push(`${e.name} ${body.join(' ')}`);
+    } else { _spEntryStrings(e.entries, out); _spEntryStrings(e.entry, out); _spEntryStrings(e.items, out); }
+  }
+  return out;
+}
+
+/** "{@spell Ray of Frost|XPHB} (3d8), Mage Hand" -> ['{@spell Ray of Frost|XPHB}', 'Mage Hand']. */
+function _spListRefs(text) {
+  const tags = text.match(/\{@spell [^}]+\}/g);
+  if (tags) return tags;
+  return text.replace(/\([^)]*\)/g, '').replace(/\*/g, '').split(/,|;|\band\b/)
+    .map(x => x.trim().replace(/\.$/, '')).filter(x => x && x.length < 60);
+}
+
+/**
+ * A stat block whose spellcasting is only TEXT (an action or trait named
+ * "Spellcasting" / "Innate Spellcasting" — the 2024 layout, hand-made monsters,
+ * and any monster saved by the monster editor) -> the 5etools `spellcasting`
+ * shape. Lines it reads: "At will: …", "N/day (each): …", "N/rest", "N/week",
+ * "Cantrips (at will): …", "3rd level (2 slots): …". The rest is the header
+ * (DC, to hit, caster level).
+ */
+function monsterSpellcastingFromText(data) {
+  const out = [];
+  if (!data || typeof data !== 'object') return out;
+  for (const sec of ['trait', 'action', 'bonus', 'reaction', 'legendary']) {
+    for (const e of (Array.isArray(data[sec]) ? data[sec] : [])) {
+      if (!e || !/spellcasting/i.test(String(e.name || ''))) continue;
+      const sc = { name: e.name, headerEntries: [], displayAs: sec };
+      // Each list starts at its label, wherever the line breaks fall.
+      const text = _spEntryStrings(e.entries || e.entry).join('\n');
+      const LABEL = /(at will|cantrips(?:\s*\(at will\))?|\d+\s*\/\s*(?:day|long rest|short rest|rest|week)(?:\s+each)?|\d+(?:st|nd|rd|th)[\s-]level(?:\s*\(\s*\d+\s*slots?\s*\))?)\s*:/gi;
+      const marks = [];
+      let m;
+      while ((m = LABEL.exec(text))) marks.push({ at: m.index, end: LABEL.lastIndex, label: m[1].toLowerCase() });
+      if (!marks.length) continue;
+      sc.headerEntries.push(text.slice(0, marks[0].at).trim());
+      let any = false;
+      marks.forEach((mk, i) => {
+        const body = text.slice(mk.end, i + 1 < marks.length ? marks[i + 1].at : text.length).split(/\n\s*\n/)[0];
+        const refs = _spListRefs(body);
+        if (!refs.length) return;
+        any = true;
+        const lab = mk.label;
+        let x;
+        if (lab === 'at will') (sc.will = sc.will || []).push(...refs);
+        else if (lab.startsWith('cantrip')) ((sc.spells = sc.spells || {})[0] = { spells: refs });
+        else if ((x = /^(\d+)\s*\/\s*(day|long rest|short rest|rest|week)(\s+each)?/.exec(lab))) {
+          const period = x[2] === 'day' ? 'daily' : x[2] === 'week' ? 'weekly' : 'rest';
+          const key = x[1] + (x[3] ? 'e' : '');
+          const by = (sc[period] = sc[period] || {});
+          (by[key] = by[key] || []).push(...refs);
+        } else if ((x = /^(\d+)(?:st|nd|rd|th)[\s-]level(?:\s*\(\s*(\d+)\s*slots?)?/.exec(lab))) {
+          (sc.spells = sc.spells || {})[x[1]] = { slots: parseInt(x[2], 10) || 0, spells: refs };
+        }
+      });
+      if (any) out.push(sc);
+    }
+  }
+  return out;
+}
+
+function monsterSpellcasting(data) {
+  const out = { dc: '', hit: '', casterLevel: 0, groups: [] };
+  const list = Array.isArray(data && data.spellcasting) && data.spellcasting.length
+    ? data.spellcasting : monsterSpellcastingFromText(data);
+  list.forEach((sc, i) => {
+    if (!sc || typeof sc !== 'object') return;
+    const head = JSON.stringify(sc.headerEntries || []);
+    const dc = /\{@dc (\d+)/.exec(head) || /\bDC\s*(\d+)/i.exec(head); if (dc && !out.dc) out.dc = dc[1];
+    const hit = /\{@hit ([+-]?\d+)/.exec(head) || /([+-]\d+) to hit/i.exec(head); if (hit && !out.hit) out.hit = (parseInt(hit[1], 10) >= 0 ? '+' : '') + parseInt(hit[1], 10);
+    const lvl = /(\d+)(?:st|nd|rd|th)-level spellcaster/.exec(head); if (lvl && !out.casterLevel) out.casterLevel = parseInt(lvl[1], 10);
+    const refs = arr => (Array.isArray(arr) ? arr : []).map(_spRef).filter(r => r.name);
+    if (Array.isArray(sc.will) && sc.will.length) out.groups.push({ key: `${i}:will`, kind: 'will', label: 'At will', max: null, each: false, level: 0, entry: i, spells: refs(sc.will) });
+    for (const [period, word] of [['daily', 'day'], ['rest', 'rest'], ['weekly', 'week']]) {
+      const by = sc[period];
+      if (!by || typeof by !== 'object') continue;
+      // Larger counts first, as stat blocks list them (JS would put a bare "1" key first).
+      for (const [k, arr] of Object.entries(by).sort((x, y) => (parseInt(y[0], 10) || 1) - (parseInt(x[0], 10) || 1))) {
+        const n = parseInt(k, 10) || 1;
+        const each = /e$/.test(k);
+        out.groups.push({ key: `${i}:${period}:${k}`, kind: 'daily', label: `${n}/${word}${each ? ' each' : ''}`, max: n, each, level: 0, entry: i, spells: refs(arr) });
+      }
+    }
+    if (sc.spells && typeof sc.spells === 'object') {
+      for (const [l, sd] of Object.entries(sc.spells)) {
+        const level = parseInt(l, 10) || 0;
+        if (!sd) continue;
+        if (level === 0) out.groups.push({ key: `${i}:s0`, kind: 'cantrip', label: 'Cantrips', max: null, each: false, level: 0, entry: i, spells: refs(sd.spells) });
+        else out.groups.push({ key: `${i}:s${level}`, kind: 'slot', label: `Level ${level}`, max: parseInt(sd.slots, 10) || 0, each: false, level, entry: i, spells: refs(sd.spells) });
+      }
+    }
+  });
+  return out;
+}
+
+/** A token's spellUses value (JSON string or object) as an object. */
+function parseSpellUses(v) {
+  let o = v;
+  if (typeof v === 'string') { try { o = JSON.parse(v || '{}'); } catch { o = {}; } }
+  return o && typeof o === 'object' && !Array.isArray(o) ? o : {};
+}
+
+/**
+ * Every spell a monster can cast, ready for the Cast a Spell pop-up:
+ *   [{ s: spell object (id = "<group key>|<name>"), group, lib, how: { castable, reason, options, best } }]
+ * findLib(name, source) returns the library's { id, data } or null; a spell
+ * not in the library still casts, with its name only. Options carry `useKey`,
+ * the key in spellUses that the cast spends.
+ */
+function monsterSpellRows(data, usesValue, findLib) {
+  const sc = monsterSpellcasting(data);
+  const uses = parseSpellUses(usesValue);
+  const used = k => Math.max(0, parseInt(uses[k], 10) || 0);
+  const slotGroups = sc.groups.filter(g => g.kind === 'slot');
+  const rows = [];
+  for (const g of sc.groups) {
+    for (const ref of g.spells) {
+      const lib = typeof findLib === 'function' ? findLib(ref.name, ref.source) : null;
+      const s = lib && lib.data ? spellFrom5e(lib.data, lib.id) : normalizeSpell({ name: ref.name, level: g.level });
+      if (g.kind === 'slot' || g.kind === 'cantrip') s.level = g.level;
+      s.id = `${g.key}|${ref.name}`;
+      s.prepared = true;
+      const options = [];
+      if (g.kind === 'will') options.push({ mode: 'will', level: s.level, available: true, useKey: '', label: 'At will' });
+      else if (g.kind === 'cantrip') options.push({ mode: 'cantrip', level: 0, available: true, useKey: '', label: 'Cantrip' });
+      else if (g.kind === 'daily') {
+        const useKey = g.each ? `${g.key}|${ref.name.toLowerCase()}` : g.key;
+        const left = Math.max(0, g.max - used(useKey));
+        options.push({ mode: 'daily', level: s.level, available: left > 0, left, useKey, label: `${g.label} (${left} of ${g.max} left)` });
+      } else {
+        // A slotted spell may use a slot of its level or higher, from the same stat block entry.
+        for (const sg of slotGroups) {
+          if (sg.entry !== g.entry || sg.level < g.level || !sg.max) continue;
+          const left = Math.max(0, sg.max - used(sg.key));
+          options.push({ mode: 'slot', level: sg.level, available: left > 0, left, useKey: sg.key, label: `Level ${sg.level} slot (${left} of ${sg.max} left)` });
+        }
+      }
+      const open = options.filter(o => o.available);
+      rows.push({ s, group: g, lib: lib || null, how: {
+        castable: open.length > 0,
+        reason: open.length ? '' : (g.kind === 'daily' ? 'No uses left' : 'No spell slots left'),
+        options, best: open[0] || null, ritualOnly: false,
+      } });
+    }
+  }
+  return rows;
+}
+
+/** How many uses a monster token has spent, for its panel: [{ label, left, max }]. */
+function monsterSpellUsage(data, usesValue) {
+  const sc = monsterSpellcasting(data);
+  const uses = parseSpellUses(usesValue);
+  const out = [];
+  for (const g of sc.groups) {
+    if (g.kind === 'slot' && g.max) out.push({ label: `Level ${g.level} slots`, left: Math.max(0, g.max - (parseInt(uses[g.key], 10) || 0)), max: g.max });
+    if (g.kind === 'daily') {
+      if (g.each) for (const r of g.spells) out.push({ label: `${r.name} (${g.label})`, left: Math.max(0, g.max - (parseInt(uses[`${g.key}|${r.name.toLowerCase()}`], 10) || 0)), max: g.max });
+      else out.push({ label: `${g.spells.map(r => r.name).join(', ')} (${g.label})`, left: Math.max(0, g.max - (parseInt(uses[g.key], 10) || 0)), max: g.max });
+    }
   }
   return out;
 }

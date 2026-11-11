@@ -2,8 +2,7 @@
 
 Status: **release 1 released as v320–321** (11 November 2026, commit 806981c).
 **Release 2 released as v322–323** (11 November 2026). **Release 4 (console) released as v324–327**
-(12 November 2026), with class rules (rituals, Warlock, Sorcerer, slots from level, always prepared). Release 3 (monsters) on hold: the user may or may not
-want it.
+(12 November 2026), with class rules (rituals, Warlock, Sorcerer, slots from level, always prepared). **Release 3 (monsters) released as v329–v330** (11 November 2026), including monsters whose spellcasting is only text.
 Source: player feedback (below) plus spell import from 5etools JSON.
 
 ## The feedback, in short

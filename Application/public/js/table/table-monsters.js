@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 14:25
+// Written by Irmak Hakman — 2026-11-11 17:45
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -139,6 +139,68 @@ function renderMonsterActionsPanel(data, tok) {
   </div>`;
 }
 
+
+// ── Monster spellcasting (DM, v329) ──────────────────────────────────────────
+// The monster's spells cast through the shared pop-up (openMonsterSpellCast in
+// js/lib/spell-cast.js); each token keeps its own spent uses (tok.spellUses),
+// spent by POST /api/table/tokens/:id/cast and given back by the Rest buttons.
+let _sideMonsterCast = null;   // { tok, data } of the monster in the panel
+
+function _monsterSpellsHTML(data, tok) {
+  if (!isDM() || !tok || !monsterSpellcasting(data).groups.length
+      || typeof openMonsterSpellCast !== 'function') return '';
+  _sideMonsterCast = { tok, data };
+  const rows = monsterSpellUsage(data, tok.spellUses).map(u =>
+    `<div class="rp-slot-row${u.left ? '' : ' spent'}"><span class="rp-slot-lvl rp-mon-sp-lbl">${esc(u.label)}</span>`
+    + `<span class="rp-slot-count"><b>${u.left}</b> of ${u.max} left</span></div>`).join('');
+  return `<div class="rp-flat-hdr">Spellcasting</div>`
+    + `<div class="rp-cast-bar rp-mon-cast">`
+    + `<button type="button" class="spc-open" onclick="openTableMonsterCast()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-star"></use></svg> Cast a Spell</button>`
+    + `<button type="button" class="btn sm" onclick="restMonsterSpells()" title="This monster gets every spell use back">Rest</button>`
+    + `<button type="button" class="btn sm" onclick="restAllMonsterSpells()" title="Every monster on the table gets its spell uses back">Rest all monsters</button>`
+    + `</div>`
+    + (rows ? `<div class="rp-slot-list">${rows}</div>` : '');
+}
+
+function openTableMonsterCast() {
+  const m = _sideMonsterCast;
+  if (!m) return;
+  const tok = tokens.find(t => t.id === m.tok.id) || m.tok;
+  openMonsterSpellCast({
+    tokenId: tok.id, data: m.data, spellUses: tok.spellUses,
+    headers: () => authHeaders(),
+    onDone: (out) => _monsterUsesChanged(tok.id, out && out.spellUses),
+  });
+}
+
+function _monsterUsesChanged(id, uses) {
+  const t = tokens.find(x => x.id === id);
+  if (t) t.spellUses = uses || '';
+  if (_sideQrollTokenId === id) { _sideQrollTokenId = null; loadSideQroll(); }
+}
+
+async function restMonsterSpells() {
+  const m = _sideMonsterCast;
+  if (!m) return;
+  try {
+    const r = await fetch(`/api/table/tokens/${encodeURIComponent(m.tok.id)}/spell-rest`, { method: 'POST', headers: authHeaders() });
+    if (!r.ok) { showToast('Could not reset the spells.', true); return; }
+    _monsterUsesChanged(m.tok.id, '');
+    showToast('Spell uses restored.');
+  } catch { showToast('Network error.', true); }
+}
+
+async function restAllMonsterSpells() {
+  if (!await showConfirm('Give every monster on the table all its spell uses back (a long rest)?')) return;
+  try {
+    const r = await fetch('/api/table/spell-rest', { method: 'POST', headers: authHeaders() });
+    if (!r.ok) { showToast('Could not reset the spells.', true); return; }
+    const out = await r.json().catch(() => ({}));
+    for (const t of tokens) if (t.type === 'monster') t.spellUses = '';
+    if (_sideMonsterCast) { _sideQrollTokenId = null; loadSideQroll(); }
+    showToast(`Spell uses restored for ${out.rested || 0} monster${out.rested === 1 ? '' : 's'}.`);
+  } catch { showToast('Network error.', true); }
+}
 
 function renderMonsterFullStats(data, tok) {
   // ── Shared data ──
@@ -294,7 +356,7 @@ function renderMonsterFullStats(data, tok) {
     return actionRowHtml+secStatsHtml
       +`<div class="rp-flat-hdr rp-abil-hdr">Abilities</div>`+abilityGridHtml
       +`<div class="rp-flat-hdr">Saving Throws</div>`+saveGridHtml
-      +skillsHtml+actionsHtml+traitsHtml+defenseHtml+linkHtml;
+      +skillsHtml+_monsterSpellsHTML(data, tok)+actionsHtml+traitsHtml+defenseHtml+linkHtml;
   }
 
   // ── Classic path (unchanged) ─────────────────────────────────────────────────

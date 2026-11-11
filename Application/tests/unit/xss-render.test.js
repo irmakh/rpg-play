@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-11 23:35
+// Written by Irmak Hakman — 2026-11-12 12:40
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -118,7 +118,8 @@ describe('renderMonsterStatBlock (monster-stat-block.js)', () => {
 describe('renderMonsterFullStats (table-monsters.js)', () => {
   function load(theme) {
     const { ctx } = browserContext();
-    run(ctx, 'lib/esc.js', 'monster-stat-block.js', 'table/table-utils.js', 'table/table-monsters.js');
+    run(ctx, 'lib/esc.js', 'monster-stat-block.js', 'lib/spell-data.js', 'lib/spell-cast.js', 'table/table-utils.js', 'table/table-monsters.js');
+    runInContext('var masterPw = "";', ctx);
     ctx.document.body.dataset.theme = theme;
     ctx._sideOpenSections = new Set();
     ctx._sideSecArrow = () => '';
@@ -129,6 +130,19 @@ describe('renderMonsterFullStats (table-monsters.js)', () => {
 
   it('keeps the modern HUD free of markup from the stat block', () => {
     expectInert(load('modern').renderMonsterFullStats(hostileMonster(), tok));
+  });
+
+  // The DM's Spellcasting section (v329): spell names, groups and counts from the stat block.
+  it("keeps the DM's monster Spellcasting section free of markup", () => {
+    const ctx = load('modern');
+    runInContext('masterPw = "t";', ctx);
+    const mon = { ...hostileMonster(), spellcasting: [{ name: TAG, headerEntries: [TAG + ' {@dc 15}'],
+      will: ['{@spell ' + TAG + '|XPHB}'], daily: { '2e': ['{@spell ' + JSOUT + '}'] },
+      spells: { 3: { slots: 2, spells: [TAG] } } }] };
+    const html = ctx.renderMonsterFullStats(mon, { ...tok, spellUses: JSON.stringify({ ['0:daily:2e|' + JSOUT.toLowerCase()]: 1 }) });
+    expect(html).toContain('openTableMonsterCast()');
+    expect(html).toContain('of 2 left');
+    expectInert(html);
   });
 
   it('keeps the classic panel free of markup from the stat block', () => {

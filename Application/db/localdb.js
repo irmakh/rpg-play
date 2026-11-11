@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-11 14:20
+// Written by Irmak Hakman — 2026-11-12 11:30
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -345,6 +345,8 @@ try { db.exec(`ALTER TABLE table_tokens ADD COLUMN customPortrait INTEGER DEFAUL
 // A player's companion (familiar, summon, beast) placed from their sheet: the
 // stats the token was summoned with, as JSON (see the summon route in table.js).
 try { db.exec(`ALTER TABLE table_tokens ADD COLUMN companion TEXT DEFAULT ''`); } catch {}
+// A monster token's spent spell uses: JSON { use key: times used } (v329, spell-data.js monsterSpellRows).
+try { db.exec(`ALTER TABLE table_tokens ADD COLUMN spellUses TEXT DEFAULT ''`); } catch {}
 try { db.exec(`ALTER TABLE calendar_events ADD COLUMN author_char_id TEXT DEFAULT ''`); } catch {}
 try { db.exec(`ALTER TABLE calendar_events ADD COLUMN author_name    TEXT DEFAULT ''`); } catch {}
 try { db.exec(`ALTER TABLE calendar_events ADD COLUMN media_json     TEXT DEFAULT '[]'`); } catch {}
@@ -1196,6 +1198,10 @@ function updateSpell(id, f) {
          JSON.stringify(f.data || {}), new Date().toISOString(), id);
   return getSpell(id);
 }
+/** Every book's version of a spell, by name (monsters name spells without always naming the book). */
+function findSpellsByName(name) {
+  return db.prepare('SELECT * FROM spells WHERE nameKey = ?').all(String(name || '').trim().toLowerCase()).map(_spellRow);
+}
 function deleteSpells(ids) {
   const del = db.prepare('DELETE FROM spells WHERE id = ?');
   let n = 0;
@@ -1692,7 +1698,7 @@ function exportAll() {
     updateCalendarEvent, deleteCalendarEvent, listSoundFiles, getSoundFile, createSoundFile, deleteSoundFile,
     updateSoundFile, listPlaylists, getPlaylist, createPlaylist, updatePlaylist, deletePlaylist,
     getSoundsForPlaylist, exportAll, SHOP_MAX_ACTIVE_TAGS, normalizeShopTags, lootRowToTreasury, shopRowToTreasury,
-    listSpells, getSpell, findSpell, createSpell, updateSpell, deleteSpells, exportSpells, importSpells,
+    listSpells, getSpell, findSpell, findSpellsByName, createSpell, updateSpell, deleteSpells, exportSpells, importSpells,
     listHandouts, getHandout, createHandout, updateHandout, deleteHandout,
     listHandoutRecipients, listHandoutsForChar, getHandoutRecipient, addHandoutRecipient,
     updateHandoutRecipient, removeHandoutRecipient, clearHandoutRecipients,

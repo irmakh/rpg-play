@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-12 02:15
+// Written by Irmak Hakman — 2026-11-11 17:46
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -339,6 +339,94 @@ describe('slots from level (v326)', () => {
     expect(auto({ class: 'Warlock', level: '17' }).pact).toEqual({ slots: 4, level: 5 });
     expect(auto({ class: 'Sorcerer', level: '1' }).sorc).toBe(0);
     expect(auto({ class: 'Warlock 3, Sorcerer 5' })).toMatchObject({ slots: '432000000', pact: { slots: 2, level: 2 }, sorc: 5 });
+  });
+});
+
+describe('monster spellcasting (v329)', () => {
+  // A 2024 stat block (the demo campaign's Malgrith) and a 2014 one (a Mage).
+  const MALGRITH = { cr: '6', spellcasting: [{ name: 'Spellcasting', headerEntries: ['… (spell save {@dc 15}):'],
+    will: ['{@spell Chill Touch|XPHB}', '{@spell Mage Hand|XPHB}'],
+    daily: { '2e': ['{@spell Blight|XPHB}', '{@spell Fear|XPHB}'], '1': ['{@spell Animate Dead|XPHB}', '{@spell Darkness|XPHB}'] } }] };
+  const MAGE = { cr: '6', spellcasting: [{ headerEntries: ['The mage is a 9th-level spellcaster (spell save {@dc 14}, {@hit 6} to hit with spell attacks).'],
+    spells: { 0: { spells: ['{@spell fire bolt}'] }, 1: { slots: 4, spells: ['{@spell magic missile}', '{@spell shield}'] },
+              3: { slots: 3, spells: ['{@spell fireball}'] }, 5: { slots: 1, spells: ['{@spell cone of cold}'] } } }] };
+  const byId = (rows) => Object.fromEntries(rows.map(r => [r.s.id, r]));
+
+  it('reads the header: save DC, spell attack, caster level', () => {
+    expect(S.monsterSpellcasting(MAGE)).toMatchObject({ dc: '14', hit: '+6', casterLevel: 9 });
+    expect(S.monsterSpellcasting(MALGRITH)).toMatchObject({ dc: '15', hit: '', casterLevel: 0 });
+    expect(S.monsterSpellcasting({}).groups).toEqual([]);
+  });
+
+  it('at will always casts; "each" counts per spell; a shared X/day counts together', () => {
+    const rows = byId(S.monsterSpellRows(MALGRITH, { '0:daily:2e|blight': 2, '0:daily:1': 1 }, () => null));
+    expect(rows['0:will|Chill Touch'].how).toMatchObject({ castable: true, best: { mode: 'will' } });
+    expect(rows['0:daily:2e|Blight'].how).toMatchObject({ castable: false, reason: 'No uses left' });
+    expect(rows['0:daily:2e|Fear'].how.best).toMatchObject({ mode: 'daily', left: 2, useKey: '0:daily:2e|fear' });
+    expect(rows['0:daily:1|Darkness'].how.castable).toBe(false);   // Animate Dead used the shared 1/day
+  });
+
+  it('a slotted spell may use its level or higher, from the token\'s own slots', () => {
+    const rows = byId(S.monsterSpellRows(MAGE, { '0:s3': 3 }, () => null));
+    expect(rows['0:s1|magic missile'].how.options.map(o => [o.level, o.available])).toEqual([[1, true], [3, false], [5, true]]);
+    expect(rows['0:s3|fireball'].how.best).toMatchObject({ mode: 'slot', level: 5, useKey: '0:s5' });
+    expect(rows['0:s0|fire bolt'].how.best.mode).toBe('cantrip');
+    expect(byId(S.monsterSpellRows(MAGE, { '0:s3': 3, '0:s5': 1 }, () => null))['0:s3|fireball'].how.castable).toBe(false);
+  });
+
+  it('takes a spell\'s text from the library when it has it', () => {
+    const lib = { id: 'L1', data: { name: 'Fireball', level: 3, school: 'V', entries: ['{@damage 8d6} Fire damage.'] } };
+    const rows = byId(S.monsterSpellRows(MAGE, '', (name) => (name === 'fireball' ? lib : null)));
+    expect(rows['0:s3|fireball'].s).toMatchObject({ name: 'Fireball', libId: 'L1', school: 'Evoc' });
+    expect(rows['0:s1|shield'].s.libId).toBe('');
+  });
+
+  it('reads spellUses in either form and lists what is left', () => {
+    expect(S.parseSpellUses('{"a":1}')).toEqual({ a: 1 });
+    expect(S.parseSpellUses('junk')).toEqual({});
+    expect(S.parseSpellUses(null)).toEqual({});
+    expect(S.monsterSpellUsage(MAGE, { '0:s1': 1 })).toEqual([
+      { label: 'Level 1 slots', left: 3, max: 4 }, { label: 'Level 3 slots', left: 3, max: 3 }, { label: 'Level 5 slots', left: 1, max: 1 }]);
+    expect(S.monsterSpellUsage(MALGRITH, '').map(u => u.label)).toEqual(['Blight (2/day each)', 'Fear (2/day each)', 'Animate Dead, Darkness (1/day)']);
+  });
+});
+
+describe('monster spellcasting written only as text', () => {
+  // A homebrew 2024-layout stat block: spells live in an action's text.
+  const ECE = { name: 'Denizlerin Ecesi', action: [
+    { name: 'Multiattack', entries: ['She can replace one of his attacks with Spellcasting.'] },
+    { name: 'Spellcasting', entries: ['Denizlerin Ecesi casts one of the following spells, requiring no Material components and using Wisdom as the spellcasting ability (spell save {@dc 15}):\n\nAt will: {@spell Ray of Frost|XPHB} (3d8), {@spell Cure Wounds|XPHB}, {@spell Guidance|XPHB}\n\n1/day each: {@spell Control Water|XPHB}, {@spell Sleet Storm|XPHB}, {@spell Cone of Cold|XPHB}'] }],
+    bonus: [{ name: 'Create Water', entries: ['Casts {@spell Create or Destroy Water|XPHB}.'] }] };
+
+  it('reads at will and each/day lists, the DC, and the spell sources', () => {
+    const sc = S.monsterSpellcasting(ECE);
+    expect(sc.dc).toBe('15');
+    expect(sc.groups.map(g => [g.label, g.spells.map(r => r.name)])).toEqual([
+      ['At will', ['Ray of Frost', 'Cure Wounds', 'Guidance']],
+      ['1/day each', ['Control Water', 'Sleet Storm', 'Cone of Cold']]]);
+    expect(sc.groups[0].spells[0].source).toBe('XPHB');
+    const rows = S.monsterSpellRows(ECE, { '0:daily:1e|sleet storm': 1 }, () => null);
+    expect(rows.find(r => r.s.name === 'Sleet Storm').how.castable).toBe(false);
+    expect(rows.find(r => r.s.name === 'Cone of Cold').how.castable).toBe(true);
+  });
+
+  it('reads what the monster editor writes back (slots, cantrips, plain names)', () => {
+    const SAVED = { trait: [{ name: 'Spellcasting', entries: [
+      'The mage is a 9th-level spellcaster. Its spellcasting ability is Intelligence (spell save DC 14, +6 to hit with spell attacks).\n'
+      + 'Cantrips (at will): fire bolt, light\n1st-level (4 slots): magic missile, shield\n3rd-level (2 slots): fireball\n2/day: misty step'] }] };
+    const sc = S.monsterSpellcasting(SAVED);
+    expect(sc).toMatchObject({ dc: '14', hit: '+6', casterLevel: 9 });
+    expect(sc.groups.map(g => [g.kind, g.label, g.max, g.spells.map(r => r.name)])).toEqual([
+      ['daily', '2/day', 2, ['misty step']],
+      ['cantrip', 'Cantrips', null, ['fire bolt', 'light']],
+      ['slot', 'Level 1', 4, ['magic missile', 'shield']],
+      ['slot', 'Level 3', 2, ['fireball']]]);
+  });
+
+  it('ignores monsters with no spellcasting entry, and prefers the structured list', () => {
+    expect(S.monsterSpellcasting({ action: [{ name: 'Bite', entries: ['At will: chomp'] }] }).groups).toEqual([]);
+    const both = { spellcasting: [{ will: ['{@spell light}'] }], action: ECE.action };
+    expect(S.monsterSpellcasting(both).groups.map(g => g.label)).toEqual(['At will']);
   });
 });
 

@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-09-27 11:13
+// Written by Irmak Hakman — 2026-11-12 12:15
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -34,8 +34,12 @@ function startSSE() {
           // Initiative HP bars read token HP first — keep them live on any token change.
           renderInitiativeTracker();
           if (selectedTokenId === d.token.id) updateHpPanel(d.token);
-          // Refresh side qroll if it was the active token (HP changed)
-          if (d.token.id === getActiveTurnTokenId()) { _sideQrollTokenId = null; loadSideQroll(); }
+          // Refresh side qroll if it was the active token (HP changed), or if a
+          // monster in the panel spent or got back spell uses (another DM screen).
+          if (d.token.id === getActiveTurnTokenId()
+              || (d.token.id === _sideQrollTokenId && prevU && (prevU.spellUses || '') !== (d.token.spellUses || ''))) {
+            _sideQrollTokenId = null; loadSideQroll();
+          }
           break;
         }
         case 'token-removed':

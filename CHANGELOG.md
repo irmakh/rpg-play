@@ -21,6 +21,37 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [330] — 2026-11-11 — Monsters whose spells are written as text can cast
+
+*(Released together with v329.)*
+
+- **Cast a Spell now works for monsters whose spellcasting is only text** — an action or
+  trait named *Spellcasting* / *Innate Spellcasting* with lines like "At will: …",
+  "1/day each: …", "Cantrips (at will): …" or "3rd level (2 slots): …". This covers the
+  2024-style stat blocks, homebrew monsters such as Denizlerin Ecesi, and every monster
+  saved through the monster editor. The DC and to-hit are read from the same text.
+
+## [329] — 2026-11-12 — Monsters cast spells
+
+*(Third and last part of the spellcasting redesign. Released together with v330.)*
+
+- **Cast a Spell for monsters.** When the DM selects a monster whose stat block has
+  spellcasting, its panel on the table shows a **Spellcasting** section: **Cast a Spell**,
+  **Rest**, **Rest all monsters**, and what is left of each spell group. The Cast a Spell
+  window lists the monster's spells grouped as its stat block does (At will, 2/day each,
+  1/day, Level 3 slots…); spent ones are greyed out, and a slotted spell can be cast with a
+  higher slot.
+- **Every token keeps its own uses.** Two Mages on the table run out of slots separately.
+  Rest gives one monster all its uses back; Rest all monsters does it for the whole table.
+- **The card in chat** shows the spell under the monster's identifier (players never see
+  its name), with the stat block's save DC and spell attack and the damage scaled for the
+  slot. A hidden monster's card goes to the DM only.
+- Spells in the campaign's library bring their full text and damage; a spell the library
+  does not have still casts, by name.
+- Players are never sent a monster's spell uses.
+
+---
+
 ## [328] — 2026-11-12 — Faster pages
 
 *(Needs `npm install` on the server once: a new package.)*

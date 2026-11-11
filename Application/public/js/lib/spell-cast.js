@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-12 00:35
+// Written by Irmak Hakman — 2026-11-12 12:00
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -12,6 +12,7 @@
 // the server spends the slot and posts the spell card to chat.
 //
 //   openSpellCast({ charId, data, headers, onDone, spellId })
+//   openMonsterSpellCast({ tokenId, data, spellUses, headers, onDone })   (DM, v329)
 //     data     the character's data (the sheet's collectData() / the table's qrollData)
 //     headers  () => fetch headers carrying the session
 //     onDone   (result) => void — result.data holds the keys the server changed
@@ -59,8 +60,54 @@ function openSpellCast(opts) {
     .map(s => ({ s, how: spellCastOptions(s, data) }))
     .filter(r => spellIsReady(r.s, prepares) || r.how.ritualOnly)
     .sort((a, b) => a.s.level - b.s.level || a.s.name.localeCompare(b.s.name));
+  _spcShow(opts, data, rows);
+}
+
+/**
+ * A monster token's spells (DM). The stat block decides what it can cast and
+ * the token's spellUses what is left (monsterSpellRows in spell-data.js); the
+ * campaign's spell library fills in each spell's text when it has it.
+ */
+let _spcLib = null, _spcLibAt = 0;
+async function openMonsterSpellCast(opts) {
+  if (!_spcLib || Date.now() - _spcLibAt > 5 * 60 * 1000) {
+    try {
+      const r = await fetch('/api/spells', { headers: (opts.headers && opts.headers()) || {} });
+      _spcLib = r.ok ? await r.json() : [];
+      _spcLibAt = Date.now();
+    } catch { _spcLib = _spcLib || []; }
+  }
+  const byName = new Map();
+  for (const row of _spcLib) {
+    const k = String(row.name || '').toLowerCase();
+    if (!byName.has(k)) byName.set(k, []);
+    byName.get(k).push(row);
+  }
+  const ORDER = ['XPHB', 'PHB'];
+  const findLib = (name, source) => {
+    const list = byName.get(String(name || '').toLowerCase()) || [];
+    if (!list.length) return null;
+    const rank = r => (source && r.source === source ? -1 : (ORDER.indexOf(r.source) + 1 || ORDER.length + 1));
+    return [...list].sort((a, b) => rank(a) - rank(b))[0];
+  };
+  const rows = monsterSpellRows(opts.data, opts.spellUses, findLib);
+  _spcShow({
+    ...opts,
+    monster: true,
+    url: `/api/table/tokens/${encodeURIComponent(opts.tokenId)}/cast`,
+    body: (r, o) => ({ spellId: r.s.id, useKey: o.useKey, mode: o.mode, slotLevel: o.mode === 'slot' ? o.level : undefined }),
+  }, (() => {
+    // The stat block's own numbers, for the preview line (attack, DC, cantrip scaling).
+    const sc = monsterSpellcasting(opts.data);
+    return { 'sp-atk': sc.hit, 'sp-dc': sc.dc, level: String(sc.casterLevel || '') };
+  })(), rows);
+}
+
+function _spcShow(opts, data, rows) {
   _spc = { opts, data, rows, filter: 'all', query: '', sel: -1, option: null, busy: false, meta: new Set() };
   const ov = _spcEl();
+  const title = document.getElementById('spc-title');
+  if (title) title.textContent = opts.monster ? 'Cast a Spell (monster)' : 'Cast a Spell';
   document.getElementById('spc-q').value = '';
   if (opts.spellId) {
     const i = rows.findIndex(r => r.s.id === opts.spellId);
@@ -99,16 +146,19 @@ function _spcRender() {
 function _spcRenderList() {
   const list = document.getElementById('spc-list');
   if (!_spc.rows.length) {
-    list.innerHTML = '<div class="spc-empty">No spells ready to cast. Prepare spells on the Spells tab of the character sheet.</div>';
+    list.innerHTML = _spc.opts.monster
+      ? '<div class="spc-empty">This monster has no spells in its stat block.</div>'
+      : '<div class="spc-empty">No spells ready to cast. Prepare spells on the Spells tab of the character sheet.</div>';
     return;
   }
   let html = '', last = null, any = false;
   _spc.rows.forEach((r, i) => {
     if (!_spcShown(r)) return;
     any = true;
-    if (r.s.level !== last) {
-      last = r.s.level;
-      html += `<div class="spc-lvl">${last === 0 ? 'Cantrips' : 'Level ' + last}</div>`;
+    const head = _spc.opts.monster ? r.group.label : r.s.level;
+    if (head !== last) {
+      last = head;
+      html += `<div class="spc-lvl">${_spc.opts.monster ? _spEsc(head) : (head === 0 ? 'Cantrips' : 'Level ' + head)}</div>`;
     }
     const off = !r.how.castable;
     const cast = r.s.cast === 'bonus' ? 'Bonus' : r.s.cast === 'reaction' ? 'Reaction' : r.s.cast === 'action' ? 'Action' : (r.s.castText || 'Other');
@@ -226,11 +276,11 @@ async function _spcCast() {
   if (btn) btn.disabled = true;
   const headers = { 'Content-Type': 'application/json', ...((_spc.opts.headers && _spc.opts.headers()) || {}) };
   try {
-    const res = await fetch(`/api/characters/${encodeURIComponent(_spc.opts.charId)}/cast`, {
-      method: 'POST', headers,
-      body: JSON.stringify({ spellId: r.s.id, name: r.s.name, level: r.s.level, mode: o.mode, slotLevel: o.mode === 'slot' ? o.level : undefined,
-                             metamagic: o.mode === 'ritual' ? [] : [..._spc.meta] }),
-    });
+    const url = _spc.opts.url || `/api/characters/${encodeURIComponent(_spc.opts.charId)}/cast`;
+    const body = _spc.opts.body ? _spc.opts.body(r, o)
+      : { spellId: r.s.id, name: r.s.name, level: r.s.level, mode: o.mode, slotLevel: o.mode === 'slot' ? o.level : undefined,
+          metamagic: o.mode === 'ritual' ? [] : [..._spc.meta] };
+    const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body) });
     const out = await res.json().catch(() => ({}));
     if (!res.ok) {
       if (err) err.textContent = out.error || 'The spell could not be cast.';

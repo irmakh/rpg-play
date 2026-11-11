@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-28 17:10
+// Written by Irmak Hakman — 2026-11-12 11:45
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -59,8 +59,10 @@ export default function register(app, ctx) {
   const isHiddenToken = (t) => !!t && !t.visible;
   const tokenOwner = (t) => (t && (t.assignedCharId || (t.type !== 'monster' ? t.linkedId : ''))) || '';
   /** Tokens a non-DM may be sent: every visible one, plus their own. */
+  // A monster token's spent spell uses (routes/monster-cast.js) are the DM's alone.
+  const withoutUses = (t) => { if (!t || !('spellUses' in t)) return t; const { spellUses, ...rest } = t; return rest; };
   const tokensForPlayer = (list, charId) =>
-    list.filter(t => !isHiddenToken(t) || (charId && tokenOwner(t) === String(charId)));
+    list.filter(t => !isHiddenToken(t) || (charId && tokenOwner(t) === String(charId))).map(withoutUses);
   // ── Companions ────────────────────────────────────────────────────────────────
   // A familiar, summon or beast the player built on their sheet (_companions)
   // and put on the map themselves. The token belongs to them (assignedCharId),
@@ -102,7 +104,12 @@ export default function register(app, ctx) {
   }
 
   function broadcastToken(tok, payload) {
-    if (!isHiddenToken(tok)) return broadcast('table', payload);
+    if (!isHiddenToken(tok)) {
+      if (payload && payload.token && payload.token.spellUses) {
+        return broadcast('table', payload, undefined, { dmOnly: true, forOthers: { ...payload, token: withoutUses(payload.token) } });
+      }
+      return broadcast('table', payload);
+    }
     return broadcast('table', payload, undefined, {
       dmOnly: true,
       alsoFor: tokenOwner(tok) || undefined,
