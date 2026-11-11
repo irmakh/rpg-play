@@ -21,6 +21,18 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [328] — 2026-11-12 — Faster pages
+
+*(Needs `npm install` on the server once: a new package.)*
+
+- **Pages load faster.** The server now compresses what it sends: the character sheet's
+  page goes from 89 KB to 16 KB and its scripts and styles from about 600 KB to 180 KB,
+  which matters most on a slow or uneven connection and on the first visit after each
+  release. Live updates (chat, tokens, dice) are not compressed, so they still arrive at
+  once.
+
+---
+
 ## [324–327] — 2026-11-12 — Cast a Spell on the console, and class rules
 
 *(324–326 were local test builds; 327 is the release. Fourth part of the spellcasting

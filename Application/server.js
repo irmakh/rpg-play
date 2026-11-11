@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-12 02:20
+// Written by Irmak Hakman — 2026-11-12 10:40
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -21,6 +21,7 @@ import { createLoginGuard, clientIp } from './lib/login-guard.js';
 import { createSessionStore, createSetupTickets } from './lib/sessions.js';
 import { createAuth } from './lib/auth.js';
 import { securityHeaders, jsonBody, bodyErrors, sessionGate } from './lib/security-middleware.js';
+import { compress } from './lib/compress.js';
 import {
   requestContext, currentCampaignId, currentCampaign,
   ldb as ldbProxy, sdb as sdbProxy,
@@ -503,7 +504,7 @@ const MAX_MEDIA_BYTES = 25 * 1024 * 1024;
 // Bump this number whenever frontend JS or CSS files change.
 // Also bump CACHE in public/sw.js to the same value.
 // Both must always match. See deployment notes in CLAUDE.md.
-const FRONTEND_VERSION = 327;
+const FRONTEND_VERSION = 328;
 
 // ── Express app ───────────────────────────────────────────────────────────────
 const app = express();
@@ -519,6 +520,10 @@ const COLLECTOR_ON = collectorEnabled();
 // HSTS only when this process serves HTTPS itself, decided from the same env
 // vars the listener reads at the bottom of this file.
 app.use(securityHeaders({ hsts: !!(process.env.SSL_KEY && process.env.SSL_CERT) }));
+
+// Compressed responses for every page, script, style and API answer the browser
+// accepts them for — not the live event streams (lib/compress.js).
+app.use(compress());
 
 // Body size by caller: a live session may send up to 200 MB, anyone else 1 MB.
 //
