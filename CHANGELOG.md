@@ -21,6 +21,30 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [322–323] — 2026-11-11 — Cast a Spell
+
+*(322 was a local test build; 323 is the release. Second of four parts of the spellcasting redesign.)*
+
+- **Cast a Spell.** A button on the character sheet (Spells and Actions tabs) and on the
+  table's character panel (Spells and Combat tabs, and in the pop-out) opens a list of the
+  spells the character can cast now, filtered by Action, Bonus, Reaction or Ritual. Each
+  ready spell also has its own **Cast** button.
+- **Slots are spent for you.** Pick a spell, then how to cast it: a spell slot of its level
+  or higher (upcasting), its own free use, or as a ritual. Levels with no slots left are
+  greyed out, and a spell with nothing left to cast it with is greyed and cannot be chosen.
+  The server checks and spends the slot, so two screens cannot both use the last one.
+- **A spell card in chat.** Every cast posts a card: the spell, the level it was cast at,
+  casting time, range, duration and components, its save DC, and **Attack** and
+  **Damage** buttons for the caster and the DM. Damage is already scaled for the slot
+  (Fireball at level 5 is 10d6), and a cantrip's for the character's level.
+- Spells no longer link out to 5e.tools; their text is on the sheet and the card.
+- The pop-up shows the chosen spell's components, full description and your notes under
+  its casting time and range.
+- **The table panel's Spells tab is gone.** Casting is the Cast a Spell button, and the
+  spell slot markers (still clickable, to fix a slot by hand) moved to the Combat tab.
+
+---
+
 ## [320–321] — 2026-11-11 — A spell library, and spells that know where they come from
 
 *(320 was a local test build; 321 is the release. First of four parts of the

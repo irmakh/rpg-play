@@ -1,0 +1,79 @@
+/* Written by Irmak Hakman — 2026-11-11 22:55 */
+/* Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) */
+
+/* The Cast a Spell pop-up (js/lib/spell-cast.js) on the sheet and the table,
+   and the spell card in chat (js/lib/chat-render.js). Uses the shared tokens
+   only, so it looks the same on both pages. */
+
+.spc-overlay{position:fixed;inset:0;z-index:4000;background:var(--scrim);display:flex;align-items:center;justify-content:center;padding:var(--s3)}
+.spc-box{background:var(--slate);border:1px solid var(--rule-hi);border-radius:var(--r-md);box-shadow:var(--cast);width:min(calc(760px*var(--fs, 1)),100%);max-height:min(88vh,calc(720px*var(--fs, 1)));display:flex;flex-direction:column;color:var(--bone);font-family:var(--ui)}
+.spc-hdr{display:flex;align-items:center;justify-content:space-between;padding:var(--s2) var(--s3);border-bottom:1px solid var(--rule-hi);font-family:var(--display);font-size:var(--t-md);color:var(--arc)}
+.spc-x{background:none;border:none;color:var(--ash);font-size:calc(22px*var(--fs, 1));line-height:1;cursor:pointer;padding:0 var(--s1)}
+.spc-x:hover{color:var(--bone)}
+.spc-tools{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s2);padding:var(--s2) var(--s3);border-bottom:1px solid var(--rule)}
+.spc-chips{display:flex;flex-wrap:wrap;gap:var(--s1)}
+.spc-chip{background:var(--slate-hi);border:1px solid var(--rule-hi);color:var(--ash);border-radius:var(--r-full);padding:2px var(--s2);font-size:var(--t-xs);font-weight:600;cursor:pointer}
+.spc-chip.on{background:var(--arc);border-color:var(--arc);color:var(--ink)}
+.spc-q{flex:1;min-width:calc(140px*var(--fs, 1));background:var(--sunken);border:1px solid var(--rule-hi);color:var(--bone);border-radius:var(--r-sm);padding:var(--s1) var(--s2);font-size:var(--t-sm)}
+.spc-body{display:flex;min-height:0;flex:1}
+.spc-list{flex:1;min-width:0;overflow-y:auto;border-right:1px solid var(--rule);padding:var(--s1) 0}
+.spc-pick{flex:1;min-width:0;overflow-y:auto;padding:var(--s3);display:flex;flex-direction:column;gap:var(--s2)}
+.spc-lvl{font-family:var(--display);color:var(--arc);font-size:var(--t-sm);padding:var(--s1) var(--s3) 2px}
+.spc-row{display:flex;align-items:center;gap:var(--s1);width:100%;background:none;border:none;border-left:3px solid transparent;color:var(--bone);padding:var(--s1) var(--s3);text-align:left;cursor:pointer;font:inherit;font-size:var(--t-sm);min-height:calc(34px*var(--fs, 1))}
+.spc-row:hover{background:var(--wash)}
+.spc-row.sel{background:var(--arc-fill);border-left-color:var(--arc)}
+.spc-row.off{opacity:.42;cursor:not-allowed}
+.spc-row.off:hover{background:none}
+.spc-name{flex:1;min-width:0;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.spc-tag{font-size:var(--t-xs);border:1px solid var(--rule-hi);border-radius:var(--r-sm);padding:0 var(--s1);color:var(--ash);white-space:nowrap}
+.spc-action{border-color:var(--arc-line);color:var(--arc)}
+.spc-bonus{border-color:color-mix(in srgb, var(--verdigris) 45%, transparent);color:var(--verdigris)}
+.spc-reaction{border-color:color-mix(in srgb, var(--blood) 45%, transparent);color:var(--blood)}
+.spc-flag{font-size:calc(10px*var(--fs, 1));font-weight:bold;color:var(--ink);background:var(--ash);border-radius:var(--r-sm);padding:0 3px}
+.spc-why{font-size:var(--t-xs);color:var(--blood);white-space:nowrap}
+.spc-empty{color:var(--ash);font-size:var(--t-sm);padding:var(--s3)}
+.spc-sel-name{font-family:var(--display);font-size:var(--t-lg);color:var(--bone)}
+.spc-sel-meta{color:var(--ash);font-size:var(--t-sm)}
+.spc-sel-src{font-size:var(--t-xs);color:var(--bone);background:var(--wash);border-radius:var(--r-full);padding:0 var(--s2);align-self:flex-start}
+.spc-desc{font-size:var(--t-sm);line-height:1.45;color:var(--bone);background:var(--sunken);border-radius:var(--r-sm);padding:var(--s2);max-height:calc(220px*var(--fs, 1));overflow-y:auto;flex-shrink:0}
+.spc-desc p{margin:0 0 var(--s1)}
+.spc-desc ul{margin:0 0 var(--s1);padding-left:var(--s4)}
+.spc-desc table{border-collapse:collapse;font-size:var(--t-xs);margin:0 0 var(--s1)}
+.spc-desc td,.spc-desc th{border:1px solid var(--rule);padding:1px var(--s1)}
+.spc-comp{color:var(--ash);font-size:var(--t-xs);margin-bottom:var(--s1)}
+.spc-notes{white-space:pre-wrap;border-top:1px solid var(--rule);margin-top:var(--s1);padding-top:var(--s1)}
+.spc-opts{display:flex;flex-direction:column;gap:var(--s1);margin-top:var(--s1)}
+.spc-opt{display:flex;align-items:center;gap:var(--s2);font-size:var(--t-sm);padding:var(--s1) var(--s2);border:1px solid var(--rule);border-radius:var(--r-sm);cursor:pointer}
+.spc-opt:has(input:checked){border-color:var(--arc);background:var(--arc-fill)}
+.spc-opt.off{opacity:.42;cursor:not-allowed}
+.spc-opt input{accent-color:var(--arc)}
+.spc-fx{font-size:var(--t-sm);color:var(--bone);background:var(--sunken);border-radius:var(--r-sm);padding:var(--s2)}
+.spc-err{color:var(--blood);font-size:var(--t-sm);min-height:1em}
+.spc-go{margin-top:auto;background:var(--arc);color:var(--ink);border:none;border-radius:var(--r-sm);padding:var(--s2) var(--s3);font-weight:700;font-size:var(--t-base);cursor:pointer;min-height:calc(42px*var(--fs, 1))}
+.spc-go:hover{background:var(--arc-hi)}
+.spc-go:disabled{opacity:.5;cursor:not-allowed}
+@media (max-width:640px){
+  .spc-overlay{padding:0;align-items:stretch}
+  .spc-box{max-height:none;height:100%;border-radius:0}
+  .spc-body{flex-direction:column}
+  .spc-list{border-right:none;border-bottom:1px solid var(--rule);max-height:45%}
+}
+
+/* A "Cast a Spell" button, wherever a page puts one. */
+.spc-open{display:inline-flex;align-items:center;gap:var(--s1);background:var(--arc);color:var(--ink);border:none;border-radius:var(--r-sm);padding:var(--s1) var(--s3);font-weight:700;font-size:var(--t-sm);cursor:pointer;min-height:calc(32px*var(--fs, 1))}
+.spc-open:hover{background:var(--arc-hi)}
+
+/* ── The spell card in chat (chatSpellCardHTML in js/lib/chat-render.js) ── */
+.chat-spell{border-left:2px solid var(--arc);padding-left:6px}
+.cs-card{display:flex;flex-direction:column;gap:3px}
+.cs-title{line-height:1.3}
+.cs-name{font-family:var(--display);font-weight:700;color:var(--arc)}
+.cs-lvl{color:var(--ash);font-size:calc(10px*var(--fs, 1))}
+.cs-meta{color:var(--ash);font-size:calc(10px*var(--fs, 1));line-height:1.35}
+.cs-fx{display:flex;flex-wrap:wrap;gap:4px;margin-top:2px}
+.cs-btn{background:var(--arc-fill);border:1px solid var(--arc-line);color:var(--bone);border-radius:var(--r-sm);padding:2px 8px;font-size:calc(11px*var(--fs, 1));font-weight:600;cursor:pointer}
+.cs-btn:hover{background:var(--arc);color:var(--ink)}
+.cs-fact{background:var(--wash);border-radius:var(--r-sm);padding:2px 8px;font-size:calc(11px*var(--fs, 1))}
+.cs-desc summary{cursor:pointer;color:var(--ash);font-size:calc(10px*var(--fs, 1))}
+.cs-desc .chat-html{font-size:calc(11px*var(--fs, 1));line-height:1.45;margin-top:3px}
+.cs-desc p{margin:0 0 3px}

@@ -1,7 +1,7 @@
 # Spellcasting redesign — plan
 
-Status: **release 1 built locally as v320** (11 November 2026), not committed or
-uploaded, waiting for the user's test on local Docker. Releases 2–4 not started.
+Status: **release 1 released as v320–321** (11 November 2026, commit 806981c).
+**Release 2 released as v322–323** (11 November 2026). Releases 3–4 not started.
 Source: player feedback (below) plus spell import from 5etools JSON.
 
 ## The feedback, in short

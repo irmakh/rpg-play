@@ -184,6 +184,94 @@ describe('readiness', () => {
   });
 });
 
+describe('spellCastOptions — what the pop-up greys out and the server allows', () => {
+  const sp = o => S.normalizeSpell({ name: 'x', level: 3, prepared: true, ...o });
+  const slots = (o) => ({ 'slot-1-total': '4', 'slot-1-used': '0', 'slot-3-total': '2', 'slot-3-used': '2', 'slot-5-total': '1', 'slot-5-used': '0', ...o });
+
+  it('offers the spell\'s level and higher, greys the spent ones, and starts on the lowest open one', () => {
+    const r = S.spellCastOptions(sp({}), slots());
+    expect(r.options.map(o => [o.level, o.available])).toEqual([[3, false], [5, true]]);
+    expect(r.castable).toBe(true);
+    expect(r.best).toMatchObject({ mode: 'slot', level: 5 });
+  });
+
+  it('cannot be cast when every slot of its level or higher is spent', () => {
+    const r = S.spellCastOptions(sp({}), slots({ 'slot-5-used': '1' }));
+    expect(r.castable).toBe(false);
+    expect(r.reason).toBe('No spell slots left');
+  });
+
+  it('never offers a lower slot than the spell needs', () => {
+    expect(S.spellCastOptions(sp({}), slots()).options.some(o => o.level === 1)).toBe(false);
+  });
+
+  it('a cantrip always casts', () => {
+    const r = S.spellCastOptions(sp({ level: 0 }), {});
+    expect(r).toMatchObject({ castable: true, best: { mode: 'cantrip' } });
+  });
+
+  it('a no-slot spell uses itself first, then slots once its uses are gone', () => {
+    const fresh = S.spellCastOptions(sp({ noSlot: true, uses: 1, used: 0, prepared: false }), slots());
+    expect(fresh.best).toMatchObject({ mode: 'free', left: 1 });
+    const spent = S.spellCastOptions(sp({ noSlot: true, uses: 1, used: 1 }), slots());
+    expect(spent.options[0]).toMatchObject({ mode: 'free', available: false });
+    expect(spent.best).toMatchObject({ mode: 'slot', level: 5 });
+    const atWill = S.spellCastOptions(sp({ noSlot: true }), {});
+    expect(atWill.best).toMatchObject({ mode: 'free', available: true, left: null });
+  });
+
+  it('says "No uses left" for a no-slot spell with nothing else to fall back on', () => {
+    const r = S.spellCastOptions(sp({ noSlot: true, uses: 1, used: 1 }), {});
+    expect(r).toMatchObject({ castable: false, reason: 'No uses left' });
+  });
+
+  it('a ritual can always be cast as one', () => {
+    const r = S.spellCastOptions(sp({ ritual: true }), slots({ 'slot-5-used': '1' }));
+    expect(r.castable).toBe(true);
+    expect(r.best.mode).toBe('ritual');
+  });
+
+  it('refuses a spell that is not prepared, unless the character does not prepare', () => {
+    expect(S.spellCastOptions(sp({ prepared: false }), slots()).reason).toBe('Not prepared');
+    expect(S.spellCastOptions(sp({ prepared: false }), slots({ 'sp-no-prep': true })).castable).toBe(true);
+  });
+});
+
+describe('spellCastInfo — the card\'s attack, save and damage', () => {
+  const FIREBALL = S.normalizeSpell({ name: 'Fireball', level: 3,
+    entries: ['Each creature in a 20-foot-radius Sphere makes a Dexterity saving throw, taking {@damage 8d6} Fire damage on a failed save.'],
+    higher: [{ type: 'entries', name: 'Using a Higher-Level Spell Slot', entries: ['The damage increases by {@scaledamage 8d6|3-9|1d6} for each spell slot level above 3.'] }] });
+
+  it('reads the save and damage from the text, and scales with the slot', () => {
+    expect(S.spellCastInfo(FIREBALL, null, 3, 5)).toMatchObject({ save: 'Dexterity', damage: '8d6', damageType: 'fire', attack: null });
+    expect(S.spellCastInfo(FIREBALL, null, 5, 9).damage).toBe('10d6');
+  });
+
+  it('takes attack, save and damage type from the library\'s 5etools object when it has one', () => {
+    const bolt = S.normalizeSpell({ name: 'Fire Bolt', level: 0, entries: ['Make a ranged spell attack. {@damage 1d10} Fire damage.'] });
+    const raw = { spellAttack: ['R'], damageInflict: ['fire'], scalingLevelDice: { label: 'fire damage', scaling: { 1: '1d10', 5: '2d10', 11: '3d10', 17: '4d10' } } };
+    expect(S.spellCastInfo(bolt, raw, 0, 4)).toMatchObject({ attack: 'ranged', damage: '1d10', damageType: 'fire' });
+    expect(S.spellCastInfo(bolt, raw, 0, 11).damage).toBe('3d10');
+  });
+
+  it('finds healing', () => {
+    const cure = S.normalizeSpell({ name: 'Cure Wounds', level: 1, entries: ['A creature you touch regains a number of Hit Points equal to {@dice 2d8} plus your modifier.'],
+      higher: [{ type: 'entries', entries: ['{@scaledice 2d8|1-9|2d8}'] }] });
+    expect(S.spellCastInfo(cure, null, 2, 3)).toMatchObject({ healing: true, damage: '4d8', damageType: 'healing' });
+  });
+
+  it('keeps a modifier and adds a different die on', () => {
+    const mm = S.normalizeSpell({ name: 'x', level: 1, entries: ['{@damage 1d4 + 1}'], higher: [{ type: 'entries', entries: ['{@scaledamage 1d4|1-9|1d8}'] }] });
+    expect(S.spellCastInfo(mm, null, 1, 1).damage).toBe('1d4+1');
+    expect(S.spellCastInfo(mm, null, 3, 1).damage).toBe('1d4+1+2d8');
+  });
+
+  it('reads dice from a typed spell\'s notes', () => {
+    const typed = S.normalizeSpell({ name: 'Zap', level: 1, notes: 'Deals 3d6 lightning' });
+    expect(S.spellCastInfo(typed, null, 1, 1).damage).toBe('3d6');
+  });
+});
+
 describe('labels', () => {
   it('names a source as kind and detail', () => {
     expect(S.spellSourceLabel({ kind: 'feat', detail: 'Magic Initiate' })).toBe('Feat: Magic Initiate');

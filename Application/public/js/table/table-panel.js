@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-11 16:25
+// Written by Irmak Hakman — 2026-11-11 22:50
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -9,7 +9,9 @@ let _sidePrepares = true; // whether that character prepares spells (sheet's "no
 let _sideActiveTab = 'skills'; // active right-panel sheet tab (skills|combat|spells|items|handouts)
 let _sideCombatTab = 'attacks'; // active Combat sub-tab (attacks|action|bonus|reaction|other)
 
-const _SIDE_TABS = ['skills', 'combat', 'spells', 'items', 'handouts', 'companions'];
+// No Spells tab since v323: casting is the Cast a Spell pop-up, and the slot
+// markers sit on the Combat tab.
+const _SIDE_TABS = ['skills', 'combat', 'items', 'handouts', 'companions'];
 
 // Switch the active right-panel tab without a full re-render (re-renders read
 // _sideActiveTab to restore the same tab on the next paint).
@@ -136,7 +138,13 @@ function renderSideCharacter() {
   // Items (wear / unwear, charges)
   const itemsHtml = _buildSidePanelItems(d, canEditSlots);
   _sideSpells = preparedSpells;
-  const spellListHtml = spellbookHTML(_sideAllSpells, { filter: _sideSpellFilter, query: _sideSpellQuery, spAtk, prepares: _sidePrepares });
+  // Cast a Spell: the DM, or the player on their own character (the server
+  // checks the same). Shown when the character has a spell ready to cast.
+  const canCast = !!_sideCharId && (isDM() || (isCharSession() && _sideCharId === sessionCharId))
+    && preparedSpells.length > 0 && typeof openSpellCast === 'function';
+  const castBar = canCast
+    ? `<div class="rp-cast-bar"><button type="button" class="spc-open" onclick="openTableSpellCast()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-star"></use></svg> Cast a Spell</button></div>`
+    : '';
 
   // ── Secondary stats bar: Initiative (clickable) | Prof | Passive Perc | Spell DC ──
   const secStats = [];
@@ -211,22 +219,22 @@ function renderSideCharacter() {
   const combatSubPanes = combatSecs.map(c =>
     `<div id="rp-ctab-${c.key}" class="rp-subtab-pane"${_sideCombatTab === c.key ? '' : ' style="display:none"'}>${c.body}</div>`
   ).join('');
-  const combatPane = combatSubBar + combatSubPanes + actionRestHtml;
-  const spellsPane = (spellSlotsHtml || spellListHtml)
-    ? `${spellSlotsHtml}${spellListHtml}`
-    : `<div class="rp-tab-empty">No spells or spell slots.</div>`;
+  // Combat: Cast a Spell and the slot markers (still clickable, to fix a slot
+  // by hand), then the attack / action sub-tabs.
+  const combatPane = castBar + spellSlotsHtml + combatSubBar + combatSubPanes + actionRestHtml;
   const itemsPane  = itemsHtml || `<div class="rp-tab-empty">No items.</div>`;
 
   // Handouts sits beside Items: for a player it is their own handouts, for the
   // DM it is the same character's plus the controls to hand out and resolve.
   const handoutBadge = (typeof sideHandoutBadge === 'function' && _sideCharId)
     ? sideHandoutBadge(_sideCharId) : 0;
-  const TABS = [['skills', 'Skills'], ['combat', 'Combat'], ['spells', 'Spells'], ['items', 'Items'],
+  const TABS = [['skills', 'Skills'], ['combat', 'Combat'], ['items', 'Items'],
                 ['handouts', handoutBadge ? `Handouts (${handoutBadge})` : 'Handouts']];
   // Companions (table-companions.js) only for a character that has some.
   let _hasCompanions = false;
   try { _hasCompanions = JSON.parse(d['_companions'] || '[]').length > 0; } catch {}
   if (_hasCompanions && typeof sideCompanionsPane === 'function') TABS.push(['companions', 'Companions']);
+  if (_sideActiveTab === 'spells') _sideActiveTab = 'combat';   // remembered from before v323
   if (!TABS.some(([id]) => id === _sideActiveTab)) _sideActiveTab = 'skills';
   const tabBarHtml = `<div class="rp-tabs">`
     + TABS.map(([id, lbl]) =>
@@ -242,7 +250,7 @@ function renderSideCharacter() {
     : '<div class="rp-tab-empty">Handouts unavailable.</div>';
 
   const panesHtml = pane('skills', skillsPane) + pane('combat', combatPane)
-                  + pane('spells', spellsPane) + pane('items', itemsPane)
+                  + pane('items', itemsPane)
                   + pane('handouts', handoutsPane)
                   + (_hasCompanions && typeof sideCompanionsPane === 'function'
                       ? pane('companions', sideCompanionsPane(d, _sideCharId || '', canEditSlots)) : '');
@@ -601,6 +609,25 @@ async function tableActionRest(type) {
       body: JSON.stringify({ type })
     });
   } catch {}
+}
+
+// ── Cast a Spell (js/lib/spell-cast.js) ──────────────────────────────────────
+// Opens the pop-up for the character in the panel. The server spends the slot
+// or use and posts the spell card; the panel takes the changed keys at once
+// rather than waiting for the live update.
+function openTableSpellCast(spellId) {
+  if (!_sideCharId || !qrollData || typeof openSpellCast !== 'function') return;
+  const charId = _sideCharId;
+  openSpellCast({
+    charId, data: qrollData, spellId,
+    headers: () => authHeaders(),
+    onDone: (out) => {
+      if (_sideCharId !== charId || !qrollData) return;
+      Object.assign(qrollData, (out && out.data) || {});
+      const content = document.getElementById('side-qroll-content');
+      if (content) content.innerHTML = renderSideCharacter();
+    },
+  });
 }
 
 // Post an action-flagged spell to chat (indexes into _sideAllSpells).
@@ -988,11 +1015,7 @@ function setCritArmed(on) {
 function toggleCritArmed() { setCritArmed(!_critArmed); }
 
 // Item 9: clicking a spell name posts it to chat rendered as raw HTML (so links
-// in the notes are clickable). Always posts — even with an empty description — and
-// appends a 5e.tools link for the spell that opens in a new tab.
-function _spell5eUrl(name) {
-  return `https://5e.tools/spells.html#${encodeURIComponent(String(name || '').trim().toLowerCase())}_xphb`;
-}
+// in the notes are clickable). Always posts, even with an empty description.
 
 function _postSpellInfo(s) {
   if (!s) return;
@@ -1006,8 +1029,7 @@ function _postSpellInfo(s) {
   if (cast)  meta.push(`⏱ ${cast}`);
   if (s.range)  meta.push(`🎯 ${s.range}`);
   if (s.duration) meta.push(`⏳ ${s.conc ? 'Concentration, ' : ''}${s.duration}`);
-  const link = `<div style="margin-top:calc(4px*var(--fs, 1))"><a href="${esc(_spell5eUrl(name))}" target="_blank" rel="noopener"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-book"></use></svg> Open on 5e.tools <svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-external"></use></svg></a></div>`;
-  postChatInfoCard({ name, meta, html: (desc || '') + link });
+  postChatInfoCard({ name, meta, html: desc || '' });
 }
 
 function postSpellInfoFromPanel(idx) { _postSpellInfo(_sideSpells[idx]); }

@@ -365,3 +365,123 @@ function spellActionCategory(sp) {
 function spellPreparedCount(list) {
   return (list || []).filter(s => s && s.level > 0 && s.prepared && !s.noSlot).length;
 }
+
+// ── Casting (release 2) ───────────────────────────────────────────────────────
+// Shared by the Cast a Spell pop-up (what to grey out) and the server's
+// POST /api/characters/:id/cast (what to allow), so the two cannot disagree.
+
+/** The character's slot levels that have any slots: [{ level, total, used, left }]. */
+function spellSlotsFrom(data) {
+  const out = [];
+  for (let l = 1; l <= 9; l++) {
+    const total = Math.max(0, parseInt(data && data[`slot-${l}-total`], 10) || 0);
+    if (!total) continue;
+    const used = Math.min(total, Math.max(0, parseInt(data[`slot-${l}-used`], 10) || 0));
+    out.push({ level: l, total, used, left: total - used });
+  }
+  return out;
+}
+
+/**
+ * The ways this spell can be cast right now.
+ *   { castable, reason, options: [{ mode, level, available, left, label }], best }
+ * mode: 'cantrip' | 'free' (its own use, or at will) | 'slot' | 'ritual'.
+ * A levelled spell may use a slot of its level OR HIGHER (upcasting); it
+ * cannot be cast when every such level is spent. `best` is the option the
+ * pop-up starts on: its own free use, else the lowest open slot, else ritual.
+ */
+function spellCastOptions(sp, data) {
+  const out = { castable: false, reason: '', options: [], best: null };
+  if (!sp) { out.reason = 'Unknown spell'; return out; }
+  if (!spellIsReady(sp, spellPrepares(data))) { out.reason = 'Not prepared'; return out; }
+  if (sp.level === 0) {
+    out.options.push({ mode: 'cantrip', level: 0, available: true, label: 'Cantrip' });
+  } else {
+    if (sp.noSlot) {
+      const atWill = !sp.uses;
+      const left = atWill ? null : sp.uses - sp.used;
+      out.options.push({ mode: 'free', level: sp.level, available: atWill || left > 0, left,
+        label: atWill ? 'No slot (at will)' : `No slot (${left} of ${sp.uses} left)` });
+    }
+    for (const s of spellSlotsFrom(data)) {
+      if (s.level < sp.level) continue;
+      out.options.push({ mode: 'slot', level: s.level, available: s.left > 0, left: s.left,
+        label: `Level ${s.level} slot (${s.left} of ${s.total} left)` });
+    }
+    if (sp.ritual) out.options.push({ mode: 'ritual', level: sp.level, available: true, label: 'As a ritual (no slot, +10 minutes)' });
+  }
+  const open = out.options.filter(o => o.available);
+  out.castable = open.length > 0;
+  out.best = open.find(o => o.mode === 'free' || o.mode === 'cantrip')
+    || open.find(o => o.mode === 'slot') || open[0] || null;
+  if (!out.castable) out.reason = sp.noSlot && sp.uses && !spellSlotsFrom(data).some(s => s.level >= sp.level)
+    ? 'No uses left' : 'No spell slots left';
+  return out;
+}
+
+/** "8d6" + "1d6" x2 -> "10d6"; anything that does not combine is added on. */
+function _spAddDice(base, step, times) {
+  if (!times || !step) return base;
+  const m = /^(\d+)d(\d+)$/.exec(String(step).replace(/\s/g, ''));
+  const b = /^(\d+)d(\d+)(.*)$/.exec(String(base).replace(/\s/g, ''));
+  if (m && b && m[2] === b[2]) return `${parseInt(b[1], 10) + parseInt(m[1], 10) * times}d${b[2]}${b[3]}`;
+  if (m) return `${base}+${parseInt(m[1], 10) * times}d${m[2]}`;
+  return base;
+}
+
+const _SP_ABILITIES = ['strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'];
+
+/**
+ * What a cast spell does, for the chat card's buttons:
+ *   { attack: 'ranged'|'melee'|null, save: 'Dexterity'|null,
+ *     damage: '10d6'|null, damageType: 'fire'|'', healing: bool }
+ * `raw` is the library's 5etools object when the spell is linked (it names
+ * the attack, save and damage type exactly); without it the spell's own text
+ * is read. Damage scales with the slot (5etools {@scaledamage}) and, for a
+ * cantrip, with the character's level (scalingLevelDice).
+ */
+function spellCastInfo(sp, raw, castLevel, charLevel) {
+  const s = sp || {};
+  const r = raw || {};
+  const text = JSON.stringify(s.entries || []) + ' ' + String(s.notes || '');
+  const higher = JSON.stringify(s.higher || []);
+  const out = { attack: null, save: null, damage: null, damageType: '', healing: false };
+
+  const atk = Array.isArray(r.spellAttack) ? r.spellAttack[0] : null;
+  if (atk === 'R' || /ranged spell attack/i.test(text)) out.attack = 'ranged';
+  else if (atk === 'M' || /melee spell attack/i.test(text)) out.attack = 'melee';
+
+  const sv = Array.isArray(r.savingThrow) ? String(r.savingThrow[0] || '') : '';
+  const svText = /\b(strength|dexterity|constitution|intelligence|wisdom|charisma) saving throw/i.exec(text);
+  const save = sv || (svText ? svText[1] : '');
+  if (save && _SP_ABILITIES.includes(save.toLowerCase())) out.save = save.charAt(0).toUpperCase() + save.slice(1).toLowerCase();
+
+  let m = /\{@damage ([^}|]+)/.exec(text);
+  const heals = (Array.isArray(r.miscTags) && r.miscTags.includes('HL')) || /regains? (?:a number of )?hit points/i.test(text);
+  if (!m && heals) { m = /\{@dice ([^}|]+)/.exec(text); out.healing = !!m; }
+  if (!m && !s.entries?.length) m = /\b(\d+d\d+(?:\s*[+-]\s*\d+)?)\b/.exec(String(s.notes || ''));   // a typed spell's notes
+  if (m) out.damage = m[1].replace(/\s+/g, '');
+
+  // A cantrip grows with the character's level.
+  if (s.level === 0 && r.scalingLevelDice) {
+    const sc = Array.isArray(r.scalingLevelDice) ? r.scalingLevelDice[0] : r.scalingLevelDice;
+    const table = sc && sc.scaling ? sc.scaling : null;
+    if (table) {
+      const lv = Math.max(1, parseInt(charLevel, 10) || 1);
+      let best = null;
+      for (const k of Object.keys(table).map(Number).sort((a, b) => a - b)) if (k <= lv) best = table[k];
+      if (best) out.damage = String(best).replace(/\s+/g, '');
+    }
+  }
+
+  // A levelled spell cast with a higher slot: {@scaledamage base|from-to|step}.
+  const sd = /\{@scale(?:damage|dice) ([^}|]+)\|(\d+)(?:-\d+)?\|([^}|]+)/.exec(higher);
+  if (out.damage && sd && castLevel > (parseInt(sd[2], 10) || s.level)) {
+    out.damage = _spAddDice(out.damage, sd[3].trim(), castLevel - (parseInt(sd[2], 10) || s.level));
+  }
+
+  const types = Array.isArray(r.damageInflict) ? r.damageInflict : [];
+  const dt = /\{@damage [^}]+\}\s+([A-Za-z]+) damage/.exec(text);
+  out.damageType = out.healing ? 'healing' : (types.length ? types.join('/') : (dt ? dt[1].toLowerCase() : ''));
+  return out;
+}

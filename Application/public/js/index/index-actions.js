@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-11 16:00
+// Written by Irmak Hakman — 2026-11-11 22:10
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -154,7 +154,7 @@ function _actRenderSpellList(list) {
       : '';
     return `<div class="act-item act-spell">
       <div class="act-head"><span class="act-name">${n}</span> <span class="act-lvl">${lvl}</span>
-        <span class="act-controls">${atkBtn}${dmgBtn}</span></div>
+        <span class="act-controls">${sp.id && typeof openSheetSpellCast === 'function' ? `<button class="sp-cast-btn" onclick="openSheetSpellCast(${esc(JSON.stringify(sp.id))})" title="Cast ${n}">Cast</button>` : ''}${atkBtn}${dmgBtn}</span></div>
       ${sp.notes ? `<div class="act-desc">${esc(sp.notes)}</div>` : ''}
       ${sp.noSlot && sp.uses ? `<div class="act-desc">${esc(sp.uses - sp.used)} of ${esc(sp.uses)} uses left</div>` : ''}
     </div>`;

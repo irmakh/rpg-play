@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-11 19:55
+// Written by Irmak Hakman — 2026-11-11 22:55
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -44,6 +44,7 @@ import registerSound      from './server/routes/sound.js';
 import registerStories    from './server/routes/stories.js';
 import registerHandouts   from './server/routes/handouts.js';
 import registerSpells     from './server/routes/spells.js';
+import registerCast       from './server/routes/cast.js';
 import registerNotifs     from './server/routes/notifications.js';
 import registerMaintenance from './server/routes/maintenance.js';
 import registerTelemetry, { collectorEnabled } from './server/routes/telemetry.js';
@@ -502,7 +503,7 @@ const MAX_MEDIA_BYTES = 25 * 1024 * 1024;
 // Bump this number whenever frontend JS or CSS files change.
 // Also bump CACHE in public/sw.js to the same value.
 // Both must always match. See deployment notes in CLAUDE.md.
-const FRONTEND_VERSION = 321;
+const FRONTEND_VERSION = 323;
 
 // ── Express app ───────────────────────────────────────────────────────────────
 const app = express();
@@ -936,6 +937,7 @@ registerSound(app, ctx);
 registerStories(app, ctx);
 registerHandouts(app, ctx);
 registerSpells(app, ctx);
+registerCast(app, ctx);
 registerNotifs(app, ctx);
 registerMaintenance(app, ctx);
 // Collector for install reports — the licensor's server only.

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Written by Irmak Hakman — 2026-11-11 20:10
+// Written by Irmak Hakman — 2026-11-11 20:40
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -13,10 +13,16 @@
  *   node scripts/import_spells.mjs --all --from ./my-spell-files
  *   node scripts/import_spells.mjs --campaign demo --books XPHB,XGE --apply
  *   node scripts/import_spells.mjs --campaign demo --link-only --apply
+ *   node scripts/import_spells.mjs --campaign demo --link-only --use-closest --apply
  *
  * --link-only skips the download and the library: it links the sheets to what
  * the campaign's library already holds (e.g. books the DM imported with the
  * Spells page's "Import from books").
+ *
+ * --use-closest links a spell with no exact match to the closest library name
+ * (the first of the names the report lists after "closest:") — for sheets
+ * whose misses are typos. Those lines are marked "~" in the report; check
+ * them in a dry run first. The sheet then shows the library's spelling.
  *
  * Run it from Application/ (in local Docker: docker exec char_sheet_dev node
  * scripts/import_spells.mjs ...). Without --apply nothing is written: it only
@@ -76,7 +82,7 @@ vm.runInContext(fs.readFileSync(path.join(APP, 'public/js/lib/spell-data.js'), '
 
 // ── Arguments ─────────────────────────────────────────────────────────────────
 function parseArgs(argv) {
-  const a = { campaign: '', all: false, apply: false, from: '', books: [], linkOnly: false, verbose: false };
+  const a = { campaign: '', all: false, apply: false, from: '', books: [], linkOnly: false, useClosest: false, verbose: false };
   for (let i = 0; i < argv.length; i++) {
     const k = argv[i];
     if (k === '--campaign') a.campaign = argv[++i] || '';
@@ -85,6 +91,7 @@ function parseArgs(argv) {
     else if (k === '--from') a.from = argv[++i] || '';
     else if (k === '--books') a.books = String(argv[++i] || '').split(',').map(x => x.trim()).filter(Boolean);
     else if (k === '--link-only') a.linkOnly = true;
+    else if (k === '--use-closest') a.useClosest = true;
     else if (k === '--verbose' || k === '-v') a.verbose = true;
     else if (k === '--help' || k === '-h') a.help = true;
     else throw new Error(`Unknown option: ${k}`);
@@ -236,10 +243,10 @@ function libraryPass(ldb, spells, apply) {
 
 const fmt = v => (v === true ? 'yes' : v === false ? 'no' : v === '' || v == null ? '—' : String(v));
 
-function sheetPass(ldb, rows, apply, verbose, log) {
+function sheetPass(ldb, rows, apply, verbose, log, useClosest = false) {
   const idx = buildIndex(rows);
   const byId = new Map(rows.map(r => [r.id, r]));
-  const t = { chars: 0, spells: 0, linked: 0, already: 0, unmatched: 0, changedChars: 0 };
+  const t = { chars: 0, spells: 0, linked: 0, already: 0, unmatched: 0, closest: 0, changedChars: 0 };
   for (const ch of ldb.listCharacters()) {
     let data = {};
     try { data = JSON.parse(ch.dataJson || '{}'); } catch { continue; }
@@ -253,7 +260,13 @@ function sheetPass(ldb, rows, apply, verbose, log) {
     const out = list.map(sp => {
       if (!sp.name) return sp;           // an empty row on the sheet: nothing to match
       t.spells++;
-      const row = findMatch(sp, idx, byId);
+      let row = findMatch(sp, idx, byId);
+      let guessed = false;
+      // A typo: take the closest library name, as if it had been typed.
+      if (!row && useClosest) {
+        const best = suggest(sp.name, rows, 1)[0];
+        if (best) { row = findMatch({ name: best, libId: '' }, idx, byId); guessed = !!row; }
+      }
       if (!row) {
         t.unmatched++;
         missing.push(sp.name || '(no name)');
@@ -262,9 +275,10 @@ function sheetPass(ldb, rows, apply, verbose, log) {
       const { spell, changes } = linkSpell(sp, row, String(data.class || '').trim());
       if (!changes.length) { t.already++; return sp; }
       t.linked++;
+      if (guessed) t.closest++;
       changed = true;
       const shown = verbose ? changes : changes.filter(([f]) => f !== 'description');
-      lines.push(`    ${sp.name} -> ${row.name} (${row.source}${row.data.page ? ' p' + row.data.page : ''})`
+      lines.push(`  ${guessed ? '~ ' : '  '}${sp.name} -> ${row.name} (${row.source}${row.data.page ? ' p' + row.data.page : ''})`
         + (shown.length ? ': ' + shown.map(([f, a, b]) => `${f} ${fmt(a)} -> ${fmt(b)}`).join('; ') : ''));
       return spell;
     });
@@ -278,7 +292,7 @@ function sheetPass(ldb, rows, apply, verbose, log) {
     }
     if (lines.length || missing.length || converted) {
       log(`  ${ch.name || 'Unnamed'}${data.class ? ' (' + data.class + ')' : ''}`
-        + `: ${lines.length} to link${missing.length ? `, ${missing.length} not found` : ''}${converted ? ', old spell rows converted' : ''}`);
+        + `: ${lines.length} to link${lines.some(l => l.startsWith('  ~')) ? ` (${lines.filter(l => l.startsWith('  ~')).length} by closest name)` : ''}${missing.length ? `, ${missing.length} not found` : ''}${converted ? ', old spell rows converted' : ''}`);
       for (const l of lines) log(l);
       for (const m of missing) {
         const s = suggest(m, rows);
@@ -290,7 +304,7 @@ function sheetPass(ldb, rows, apply, verbose, log) {
 }
 
 /** `spells` null = link only: no library changes, match against the library as it is. */
-export function runCampaign(campaign, spells, { apply, verbose, log = console.log }) {
+export function runCampaign(campaign, spells, { apply, verbose, useClosest = false, log = console.log }) {
   const file = path.join(campaignDir(campaign.id), DB_FILES.local);
   if (!fs.existsSync(file)) { log(`  (no database for ${campaign.name}; skipped)`); return null; }
   const ldb = openCampaignDb(file);
@@ -306,8 +320,8 @@ export function runCampaign(campaign, spells, { apply, verbose, log = console.lo
       log(`  Library: ${rows.length} spells already there (link only, nothing downloaded)`);
       if (!rows.length) { log('  The library is empty: import books first.'); return { lib, sheets: null }; }
     }
-    const t = sheetPass(ldb, rows, apply, verbose, log);
-    log(`  Sheets: ${t.chars} with spells, ${t.spells} spells — ${t.linked} to link/update, ${t.already} already up to date, ${t.unmatched} not found; ${t.changedChars} sheet(s) to save`);
+    const t = sheetPass(ldb, rows, apply, verbose, log, useClosest);
+    log(`  Sheets: ${t.chars} with spells, ${t.spells} spells — ${t.linked} to link/update${t.closest ? ` (${t.closest} by closest name)` : ''}, ${t.already} already up to date, ${t.unmatched} not found; ${t.changedChars} sheet(s) to save`);
     return { lib, sheets: t };
   } finally {
     ldb.close();
@@ -328,13 +342,15 @@ function previewRows(ldb, spells) {
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
-const HELP = `Usage: node scripts/import_spells.mjs (--campaign <name|id|slug> | --all) [--apply] [--books XPHB,PHB | --link-only] [--from <dir>] [--verbose]
+const HELP = `Usage: node scripts/import_spells.mjs (--campaign <name|id|slug> | --all) [--apply] [--books XPHB,PHB | --link-only] [--use-closest] [--from <dir>] [--verbose]
   --campaign  one campaign, by name, id or slug
   --all       every campaign
   --apply     write the changes (without it: a dry run that only reports)
   --from      read spell JSON files from this folder instead of downloading
   --books     only these books (5etools codes, comma-separated); all otherwise
   --link-only no download, no library changes: link the sheets to the library as it is
+  --use-closest  link a spell with no exact match to the closest library name
+              (marked ~ in the report; check a dry run first)
   --verbose   list every change, the added descriptions included`;
 
 async function main() {
@@ -366,7 +382,7 @@ async function main() {
 
   for (const c of campaigns) {
     console.log(`== ${c.name}`);
-    runCampaign(c, spells, { apply: args.apply, verbose: args.verbose });
+    runCampaign(c, spells, { apply: args.apply, verbose: args.verbose, useClosest: args.useClosest });
     console.log('');
   }
   if (args.apply) console.log('Done. Players reload their sheets to see the change.');

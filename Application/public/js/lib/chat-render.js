@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 14:25
+// Written by Irmak Hakman — 2026-11-11 21:45
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -130,6 +130,16 @@ function appendChatEntry(e) {
     return;
   }
 
+  if (e.type === 'spell') {
+    div.className = 'chat-entry chat-spell';
+    div.innerHTML = `<div style="display:flex;justify-content:space-between;margin-bottom:calc(2px*var(--fs, 1))">
+      <span class="ce-sender">${esc(e.sender || '?')}</span>
+      <span style="color:var(--ash);font-size:calc(10px * var(--fs, 1))">${time}</span>
+    </div>${chatSpellCardHTML(e)}`;
+    log.appendChild(div);
+    return;
+  }
+
   if (e.type === 'media') {
     // Server-built, but escaped like any other value that meets markup.
     const url = `/api/shared-media/${encodeURIComponent(e.mediaId)}`;
@@ -176,6 +186,82 @@ function appendChatEntry(e) {
   ${partsStr}
   <div class="ce-total" style="color:${isNat20 ? 'var(--verdigris)' : isNat1 ? 'var(--blood)' : 'var(--bone)'}">${e.total}${natStr}</div>${descStr}`;
   log.appendChild(div);
+}
+
+// ── Spell cards (POST /api/characters/:id/cast) ──────────────────────────────
+// The server builds the card; every value is still escaped here, and the
+// description (built escaped by spell-data.js) goes through sanitizeChatHtml.
+// The Attack and Damage buttons work for the caster and the DM, on pages that
+// can roll (the table, the sheet, the console); everyone else sees the text.
+const _chatSpellCards = Object.create(null);
+
+/** Who is looking: { dm, charId } from whatever this page knows. */
+function _chatViewer() {
+  let dm = false, charId = '';
+  try { dm = (typeof isDM === 'function' && isDM()) || (typeof indexIsDM === 'function' && indexIsDM()); } catch {}
+  try { charId = (typeof indexCharId === 'function' && indexCharId()) || (typeof sessionCharId !== 'undefined' && sessionCharId) || ''; } catch {}
+  return { dm: !!dm, charId: String(charId || '') };
+}
+
+function _chatCanRollSpell(e) {
+  const v = _chatViewer();
+  const canRoll = typeof qroll === 'function' || typeof startRoll === 'function' || typeof sQrollRoll === 'function';
+  return canRoll && (v.dm || (!!v.charId && v.charId === String(e.charId || '')));
+}
+
+function _chatSigned(v) {
+  const t = String(v ?? '').trim();
+  if (!t) return '+0';
+  return /^[+-]/.test(t) ? t : '+' + t;
+}
+
+function chatSpellCardHTML(e) {
+  const sp = e.spell || {};
+  if (e.id) _chatSpellCards[e.id] = e;
+  const lvl = sp.level ? `Level ${parseInt(sp.level, 10) || 0}${sp.school ? ' ' + String(sp.school).toLowerCase() : ''}` : `${sp.school || ''} cantrip`.trim();
+  const how = sp.mode === 'ritual' ? 'as a ritual'
+    : sp.mode === 'free' ? 'without a slot'
+    : (sp.castLevel > sp.level ? `at level ${parseInt(sp.castLevel, 10) || 0}` : '');
+  const meta = [sp.castText, sp.range, (sp.conc ? 'Concentration, ' : '') + (sp.duration || ''), sp.components]
+    .filter(x => x && String(x).trim()).map(esc).join(' · ');
+  const can = _chatCanRollSpell(e);
+  const id = escJs(e.id || '');
+  const btn = (kind, text) => can
+    ? `<button type="button" class="cs-btn" onclick="spellCardRoll('${id}','${kind}')">${text}</button>`
+    : `<span class="cs-fact">${text}</span>`;
+  const fx = [];
+  if (e.attack) fx.push(btn('attack', `${e.attack === 'melee' ? 'Melee' : 'Ranged'} attack ${esc(_chatSigned(e.attackBonus))}`));
+  if (e.save) fx.push(`<span class="cs-fact">DC ${esc(e.saveDc || '?')} ${esc(e.save)} save</span>`);
+  if (e.damage) fx.push(btn('damage', `${e.healing ? 'Heal' : 'Damage'} ${esc(e.damage)}${e.damageType && !e.healing ? ' ' + esc(e.damageType) : ''}`));
+  const desc = e.desc ? `<details class="cs-desc"><summary>Description</summary><div class="chat-html">${sanitizeChatHtml(e.desc)}</div></details>` : '';
+  return `<div class="cs-card">
+    <div class="cs-title"><span class="cs-name">${esc(sp.name || 'A spell')}</span> <span class="cs-lvl">${esc(lvl)}${how ? ' · ' + esc(how) : ''}</span></div>
+    ${meta ? `<div class="cs-meta">${meta}</div>` : ''}
+    ${fx.length ? `<div class="cs-fx">${fx.join('')}</div>` : ''}
+    ${desc}
+  </div>`;
+}
+
+/** An Attack or Damage button on a spell card: rolls through this page's own dice. */
+function spellCardRoll(id, kind) {
+  const e = _chatSpellCards[id];
+  if (!e) return;
+  const name = (e.spell && e.spell.name) || 'Spell';
+  if (kind === 'attack') {
+    const bonus = _chatSigned(e.attackBonus);
+    const label = `${name} (Spell Attack)`;
+    if (typeof qroll === 'function') return qroll(label, bonus);
+    if (typeof startRoll === 'function') return startRoll(label, bonus);
+    if (typeof sQrollRoll === 'function') return sQrollRoll(label, bonus);
+    return;
+  }
+  if (kind === 'damage' && e.damage) {
+    const expr = e.damageType && !e.healing ? `${e.damage} ${e.damageType.split('/')[0]}` : e.damage;
+    const label = `${name} ${e.healing ? 'Healing' : 'Damage'}`;
+    if (typeof rollDamageStr === 'function') return rollDamageStr(label, expr);
+    if (typeof rollDamage === 'function') return rollDamage(label, expr);
+    if (typeof sRollDamageStr === 'function') return sRollDamageStr(label, e.damage);
+  }
 }
 
 /**

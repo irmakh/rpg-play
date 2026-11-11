@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-11 15:55
+// Written by Irmak Hakman — 2026-11-11 22:10
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -1211,12 +1211,7 @@ function xmlToCharacterData(xmlText) {
   return d;
 }
 
-// ── 5e.tools links ────────────────────────────────────────────────────────────
-function openSpell5e(name) {
-  const n = String(name || '').trim();
-  if (!n) return;
-  window.open('https://5e.tools/spells.html#' + encodeURIComponent(n.toLowerCase()) + '_xphb', '_blank', 'noopener');
-}
+// ── 5e.tools links (classes, feats…; spells no longer link out) ───────────────
 
 function open5e(dataKey, page) {
   const val = document.querySelector(`[data-key="${dataKey}"]`)?.value?.trim();

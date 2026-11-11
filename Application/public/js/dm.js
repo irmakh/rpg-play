@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-11 14:45
+// Written by Irmak Hakman — 2026-11-11 21:50
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -712,6 +712,15 @@ function appendChatEntry(e) {
   if (e.id) div.dataset.entryId = e.id;
   const delBtn = e.id ? `<button onclick="deleteChatMsg('${escJs(e.id)}')" style="background:none;border:none;cursor:pointer;color:var(--ash);font-size:calc(11px * var(--fs, 1));padding:0 0 0 calc(4px*var(--fs, 1));opacity:.6;line-height:1;flex-shrink:0" title="Delete message">✕</button>` : '';
   const timeCol = `<span style="display:flex;align-items:center"><span style="color:var(--ash);font-size:calc(10px * var(--fs, 1))">${time}</span>${delBtn}</span>`;
+
+  // A spell card (POST /api/characters/:id/cast) — the shared builder in chat-render.js.
+  if (e.type === 'spell') {
+    div.className = 'chat-entry chat-spell';
+    div.innerHTML = `<div style="display:flex;justify-content:space-between;margin-bottom:calc(2px*var(--fs, 1))">
+      <span class="ce-sender">${esc(e.sender || '?')}</span>${timeCol}</div>${chatSpellCardHTML(e)}`;
+    log.appendChild(div);
+    return;
+  }
 
   if (e.type === 'text') {
     div.className = 'chat-entry chat-text';

@@ -1,4 +1,4 @@
-/* Written by Irmak Hakman — 2026-11-01 15:10 */
+/* Written by Irmak Hakman — 2026-11-11 22:05 */
 /* Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) */
 
 *{box-sizing:border-box;margin:0;padding:0}
@@ -843,6 +843,11 @@ input[type=search].rp-sb-search{width:100%;box-sizing:border-box;background:var(
 .rp-sb-flag.conc{color:var(--arc)}
 .rp-sb-flag.rit{color:#ddaaff}
 .rp-sb-atk{font-size:calc(11px * var(--fs, 1));cursor:pointer;flex-shrink:0}
+/* Cast a Spell (js/lib/spell-cast.js): the bar on top of the Spells and Combat
+   tabs, and the Cast mark on each ready spell in the spellbook. */
+.rp-cast-bar{display:flex;justify-content:flex-end;padding:calc(6px*var(--fs, 1)) calc(10px*var(--fs, 1)) 0}
+.rp-sb-cast{font-size:calc(10px * var(--fs, 1));font-weight:700;cursor:pointer;flex-shrink:0;color:var(--arc);border:1px solid var(--arc-line);border-radius:3px;padding:0 5px}
+.rp-sb-cast:hover{background:var(--arc);color:var(--ink)}
 
 /* ── Hiding the toolbar ───────────────────────────────────────────────────────
    The ▲ at the end of the toolbar hides it and leaves a thin strip, the way the

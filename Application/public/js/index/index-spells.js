@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-11 15:40
+// Written by Irmak Hakman — 2026-11-11 22:10
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -133,6 +133,7 @@ function _spRowHTML(s, prepares) {
     ${src ? `<span class="sp-src" title="Where this spell comes from">${esc(src)}</span>` : ''}
     ${uses}
     <span class="sp-btns">
+      ${ready && s.name ? `<button type="button" class="sp-cast-btn" onclick="openSheetSpellCast(${id})" title="Cast ${esc(s.name)}">Cast</button>` : ''}
       <button type="button" class="act-edit-btn" onclick="openSpellModal(${id})" title="Edit">${_spIco('pencil')}</button>
       <button type="button" class="del-btn" onclick="deleteSpell(${id})" title="Delete spell">${_spIco('close')}</button>
     </span>
@@ -147,14 +148,10 @@ function _spDetailHTML(s) {
     s.book ? 'Book: ' + s.book : '',
   ].filter(Boolean).map(esc).join(' · ');
   const desc = spellDescHTML(s);
-  const link = s.name
-    ? `<a href="#" class="tools-link" onclick="openSpell5e(${_spId(s.name)});return false">${_spIco('book')} Open on 5e.tools ${_spIco('external')}</a>`
-    : '';
   return `<div class="sp-detail">
     <div class="sp-facts">${facts}</div>
     ${desc ? `<div class="sp-desc">${desc}</div>` : ''}
     ${s.notes ? `<div class="sp-notes">${esc(s.notes)}</div>` : ''}
-    ${link}
   </div>`;
 }
 
@@ -207,6 +204,40 @@ function restSpells(type) {
   }
   if (changed) renderSpells();
   return changed;
+}
+
+// ── Cast a Spell (js/lib/spell-cast.js) ───────────────────────────────────────
+// Saves first, so the server casts from the sheet as it is now (a spell just
+// added or prepared is still waiting in the autosave). The server spends the
+// slot or use and returns the keys it changed; they go straight onto the sheet
+// and into the saved snapshot, so the autosave does not send them back.
+async function openSheetSpellCast(spellId) {
+  if (!currentCharId || typeof openSpellCast !== 'function') return;
+  clearTimeout(_autoSaveTimer);
+  try { await autoSaveCharacter(); } catch {}
+  openSpellCast({
+    charId: currentCharId, data: collectData(), spellId,
+    headers: () => sheetAuthHeaders(),
+    onDone: _sheetCastDone,
+  });
+}
+
+function _sheetCastDone(out) {
+  const d = (out && out.data) || {};
+  const keys = Object.keys(d);
+  _applyingData = true;
+  for (const k of keys) {
+    if (k === '_spells') spells = parseSpellList(d._spells);
+    else { const el = document.querySelector(`[data-key="${k}"]`); if (el) el.value = d[k]; }
+  }
+  _applyingData = false;
+  renderSpells();
+  recalcPreparedCount();
+  if (typeof renderActionsTab === 'function') renderActionsTab();
+  const now = collectData();
+  for (const k of keys) _lastSavedData[k] = now[k];
+  const sp = out && out.entry && out.entry.spell;
+  if (sp) setStatus(`Cast ${sp.name}${sp.castLevel > sp.level ? ' at level ' + sp.castLevel : ''}.`);
 }
 
 // ── Edit modal ────────────────────────────────────────────────────────────────

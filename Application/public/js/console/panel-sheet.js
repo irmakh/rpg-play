@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-11 16:35
+// Written by Irmak Hakman — 2026-11-11 22:10
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -291,9 +291,7 @@ function sSheetPostSpell(idx) {
   if (cast) meta.push(`Casting time ${cast}`);
   if (s.range) meta.push(`Range ${s.range}`);
   if (s.duration) meta.push(`Duration ${s.conc ? 'concentration, ' : ''}${s.duration}`);
-  const url  = `https://5e.tools/spells.html#${encodeURIComponent(String(name).trim().toLowerCase())}_xphb`;
-  const link = `<div style="margin-top:4px"><a href="${esc(url)}" target="_blank" rel="noopener">${esc(name)} on 5e.tools</a></div>`;
-  sPostInfoCard({ name, meta, html: spellDescHTML(s) + (s.notes || '') + link });
+  sPostInfoCard({ name, meta, html: spellDescHTML(s) + (s.notes || '') });
 }
 
 // ── Items ────────────────────────────────────────────────────────────────────

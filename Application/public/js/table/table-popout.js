@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 14:35
+// Written by Irmak Hakman — 2026-11-11 22:05
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -176,6 +176,8 @@
       '<link rel="stylesheet" href="/css/table.css' + v + '">' +
       '<link rel="stylesheet" href="/css/table-theme-modern.css' + v + '">' +
       '<link rel="stylesheet" href="/css/table-sheet-popout.css' + v + '">' +
+      // The Cast a Spell button and chat spell cards (js/lib/spell-cast.js, chat-render.js).
+      '<link rel="stylesheet" href="/css/spell-cast.css' + v + '">' +
       '<style>' +
         'html,body{margin:0;height:100%;overflow:hidden;background:var(--ink,#080C15);color:var(--bone,#E6EDF7)}' +
         '#po-host{position:fixed;inset:0;display:flex;flex-direction:column}' +

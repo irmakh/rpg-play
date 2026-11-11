@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-11 19:40
+// Written by Irmak Hakman — 2026-11-11 20:45
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -166,6 +166,19 @@ describe('running on a campaign', () => {
     const { ldb } = store.getCampaignData(camp.id);
     expect(ldb.listSpells().map(s => s.source + ':' + s.name).sort())
       .toEqual(['PHB:Magic Missile', "PHB:Tasha's Hideous Laughter", "XGE:Tidal Wave", "XPHB:Hunter's Mark", 'XPHB:Magic Missile']);
+  });
+
+  it('--use-closest links a typo to the closest library name, and only then', () => {
+    seedCharacter('typo', { class: 'Wizard', _spells: JSON.stringify([['1', 'Magic Misile', 'Action', '', false, false, '', true]]) });
+    const off = S.runCampaign(camp, null, { apply: true, log: () => {} });
+    expect(off.sheets.unmatched).toBeGreaterThanOrEqual(1);
+    expect(sheetSpells('typo')[0].libId).toBe('');
+    const lines = [];
+    const on = S.runCampaign(camp, null, { apply: true, useClosest: true, log: l => lines.push(l) });
+    expect(on.sheets.closest).toBeGreaterThanOrEqual(1);
+    const sp = sheetSpells('typo')[0];
+    expect(sp).toMatchObject({ name: 'Magic Missile', book: 'XPHB p295', prepared: true });
+    expect(lines.join('\n')).toMatch(/~ Magic Misile -> Magic Missile/);
   });
 
   it('a second run finds nothing left to do', () => {
