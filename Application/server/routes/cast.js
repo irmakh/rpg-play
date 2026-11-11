@@ -1,11 +1,16 @@
-// Written by Irmak Hakman — 2026-11-11 21:15
+// Written by Irmak Hakman — 2026-11-12 00:20
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
 /**
  * Casting a spell — POST /api/characters/:id/cast.
  *
- *   { spellId, name, level, mode: 'slot'|'free'|'ritual'|'cantrip', slotLevel }
+ *   { spellId, name, level, mode: 'slot'|'pact'|'free'|'ritual'|'cantrip', slotLevel, metamagic: [keys] }
+ *
+ * Class rules (v325): a Warlock's 'pact' slot is spent from the pact pool and
+ * casts the spell at the pact level; a Mystic Arcanum (Warlock spell of level
+ * 6-9) is its 'free' once-per-long-rest use; a Sorcerer's Metamagic costs
+ * sorcery points, checked before anything is spent.
  *
  * The server decides, with the same rules the Cast a Spell pop-up shows
  * (spellCastOptions in public/js/lib/spell-data.js): the spell must be ready,
@@ -21,7 +26,7 @@
  */
 import { SpellData as SD } from '../../lib/spell-data-node.js';
 
-const MODES = new Set(['slot', 'free', 'ritual', 'cantrip']);
+const MODES = new Set(['slot', 'pact', 'free', 'ritual', 'cantrip']);
 const MAX_DESC = 8000;
 
 export default function register(app, ctx) {
@@ -66,9 +71,34 @@ export default function register(app, ctx) {
         return res.status(409).json({ error: mode === 'slot' ? `No level ${slotLevel} slots left.` : (mode === 'free' ? `${sp.name} has no uses left.` : opts.reason), code: 'SPENT' });
       }
 
+      // Metamagic: only options this Sorcerer knows, paid in sorcery points.
+      const wanted = Array.isArray(b.metamagic) ? [...new Set(b.metamagic.map(String))].slice(0, 10) : [];
+      const known = SD.spellKnownMetamagic(data);
+      const meta = [];
+      for (const k of wanted) {
+        const m = known.find(x => x.key === k);
+        if (!m) return res.status(400).json({ error: `${k} is not a Metamagic option this character knows.` });
+        meta.push(m);
+      }
+      const points = meta.reduce((n, m) => n + m.cost, 0);
+      if (points) {
+        const sorc = SD.spellSorcFrom(data);
+        if (!sorc || sorc.left < points) return res.status(409).json({ error: `Not enough sorcery points (${points} needed, ${sorc ? sorc.left : 0} left).`, code: 'SPENT' });
+      }
+
       // Spend it.
       const keys = [];
-      if (mode === 'slot') {
+      if (points) {
+        data['sorc-used'] = String((parseInt(data['sorc-used'], 10) || 0) + points);
+        keys.push('sorc-used');
+      }
+      if (mode === 'pact') {
+        data['pact-used'] = String((parseInt(data['pact-used'], 10) || 0) + 1);
+        keys.push('pact-used');
+      } else if (mode === 'free' && SD.spellIsArcanum(sp, data)) {
+        sp.used = 1;
+        keys.push('_spells');
+      } else if (mode === 'slot') {
         const k = `slot-${slotLevel}-used`;
         data[k] = String((parseInt(data[k], 10) || 0) + 1);
         keys.push(k);
@@ -84,7 +114,8 @@ export default function register(app, ctx) {
       }
 
       // The card.
-      const castLevel = mode === 'slot' ? slotLevel : sp.level;
+      const castLevel = mode === 'slot' ? slotLevel : mode === 'pact' ? opt.level : sp.level;
+      const quick = meta.some(m => m.key === 'quickened');
       const lib = sp.libId ? ldb.getSpell(sp.libId) : null;
       const charLevel = parseInt(data.level || data['total-level'] || data['char-level'], 10) || 1;
       const info = SD.spellCastInfo(sp, lib ? lib.data : null, castLevel, charLevel);
@@ -96,7 +127,7 @@ export default function register(app, ctx) {
         spell: {
           name: sp.name, level: sp.level, castLevel, mode,
           school: SD.spellSchoolName(sp.school),
-          castText: sp.castText || SD.spellCastLabel(sp),
+          castText: quick ? '1 Bonus Action (Quickened)' : (sp.castText || SD.spellCastLabel(sp)),
           range: sp.range, duration: sp.duration, conc: sp.conc, ritual: sp.ritual,
           components: SD.spellComponentsLabel(sp),
         },
@@ -109,6 +140,7 @@ export default function register(app, ctx) {
         damage: info.damage,
         damageType: info.damageType,
         healing: info.healing,
+        ...(meta.length ? { metamagic: meta.map(m => m.name), points } : {}),
         timestamp: new Date().toISOString(),
       };
       ldb.appendChatLog(entry);

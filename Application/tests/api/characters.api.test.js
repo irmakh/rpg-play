@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-11 17:30
+// Written by Irmak Hakman — 2026-11-12 01:20
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -763,6 +763,27 @@ describe('POST /api/characters/:id/action-rest', () => {
     expect([spellUsed(ldb, 'a'), spellUsed(ldb, 'b'), spellUsed(ldb, 'c')]).toEqual([0, 0, 1]);
     expect(data(ldb)['slot-1-used']).toBe('0');
     expect(data(ldb)['slot-3-used']).toBe('0');
+  });
+
+  it('Warlock pact slots come back on a short rest; sorcery points and Arcanum on a long one', async () => {
+    const { app, ldb } = makeApp();
+    ldb.createCharacter('c1', { name: 'Hero', createdAt: new Date().toISOString(), dataJson: JSON.stringify({
+      class: 'Warlock / Sorcerer', 'pact-slots': '2', 'pact-used': '2', 'sorc-points': '4', 'sorc-used': '3',
+      _spells: JSON.stringify([{ id: 'eye', name: 'Eyebite', level: 6, used: 1 }]) }) });
+    await dm(request(app).post('/api/characters/c1/action-rest')).send({ type: 'short' });
+    expect(data(ldb)).toMatchObject({ 'pact-used': '0', 'sorc-used': '3' });
+    expect(spellUsed(ldb, 'eye')).toBe(1);
+    await dm(request(app).post('/api/characters/c1/action-rest')).send({ type: 'long' });
+    expect(data(ldb)['sorc-used']).toBe('0');
+    expect(spellUsed(ldb, 'eye')).toBe(0);
+  });
+
+  it('pact slots can be used and restored by hand (PATCH spell-slot, level "pact")', async () => {
+    const { app, ldb } = makeApp();
+    ldb.createCharacter('c1', { name: 'Hero', createdAt: new Date().toISOString(), dataJson: JSON.stringify({ 'pact-slots': '2', 'pact-used': '0' }) });
+    const r = await dm(request(app).patch('/api/characters/c1/spell-slot')).send({ level: 'pact', used: 5 });
+    expect(r.status).toBe(200);
+    expect(data(ldb)['pact-used']).toBe('2');     // never more than the pool
   });
 
   it('leaves a sheet still holding pre-v320 spell rows as it is', async () => {

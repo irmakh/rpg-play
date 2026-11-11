@@ -1,4 +1,4 @@
-/* Written by Irmak Hakman — 2026-11-01 17:30 */
+/* Written by Irmak Hakman — 2026-11-11 23:20 */
 /* Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) */
 
 /* ============================================================================
@@ -277,6 +277,18 @@ button.p-init-main:active{background:var(--c-surface-hi)}
 .p-ho.new .p-roll .val{color:var(--c-tx)}
 .p-roll.two .lbl{display:flex;flex-direction:column;white-space:normal}
 .p-roll.two .lbl small{font-size:var(--c-t-xs);color:var(--c-mute)}
+/* Cast a Spell (panel-sheet.js): a greyed spell, the cast view's rows. */
+.p-roll.off{opacity:.42;cursor:default}
+.p-roll.two .val{color:var(--c-turn)}
+.p-cast-head{display:flex;align-items:center;gap:.6rem;padding:.6rem var(--c-pad) .2rem}
+.p-cast-head strong{font-size:var(--c-t-lg);font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.p-cast-head .c-btn{flex:none;min-height:2.3rem;padding:0 .8rem}
+.p-cast-opt.on{background:var(--c-turn-fill);box-shadow:inset 3px 0 0 var(--c-turn)}
+.p-cast-opt.on .val{color:var(--c-turn)}
+.p-cast-fx{margin:0;padding:.6rem var(--c-pad);font-size:var(--c-t-sm);border-top:1px solid var(--c-rule)}
+.p-cast-go{padding-top:.6rem;padding-bottom:.6rem;border-top:1px solid var(--c-rule)}
+.p-cast-go .c-btn.primary{flex:1}
+.p-cast-notes{white-space:pre-wrap;border-top:1px solid var(--c-rule);padding-top:.4rem}
 .p-ho-body{padding:.6rem var(--c-pad) .9rem;border-bottom:1px solid var(--c-rule);background:var(--c-surface);user-select:text}
 .p-ho-body p{margin:0 0 .6rem}
 .p-ho-body p:last-child{margin-bottom:0}
@@ -352,3 +364,4 @@ button.p-init-main:active{background:var(--c-surface-hi)}
   position:fixed;z-index:60;left:50%;bottom:calc(var(--c-row) + .75rem);transform:translateX(-50%);max-width:calc(100% - 2rem);
   background:var(--c-tx);color:var(--c-bg);padding:.45rem .8rem;border-radius:2px;font-size:var(--c-t-sm);font-weight:500;
 }
+.p-sorc{font-size:var(--c-t-sm)}

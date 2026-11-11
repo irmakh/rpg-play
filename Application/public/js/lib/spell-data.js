@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-11 18:30
+// Written by Irmak Hakman — 2026-11-12 02:10
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -113,8 +113,12 @@ function normalizeSpell(x) {
     material: _spStr(o.material, 300),
     prepared: _spTruthy(o.prepared),
     noSlot: _spTruthy(o.noSlot),
+    // Always prepared (a feat, subclass feature or item grants it): ready without
+    // preparing and not counted among prepared spells; it still uses slots.
+    alwaysPrepared: _spTruthy(o.alwaysPrepared),
     uses,
-    used: Math.min(_spInt(o.used, 0, 99, 0), uses),
+    // A spell with no use count (a Mystic Arcanum) still records one use.
+    used: Math.min(_spInt(o.used, 0, 99, 0), uses || 1),
     recharge: o.recharge === 'short' || o.recharge === 'long' ? o.recharge : '',
     source: { kind: kindOk ? src.kind : '', detail: _spStr(src.detail, 80) },
     notes: _spStr(o.notes, 4000),
@@ -343,7 +347,7 @@ function spellComponentsLabel(sp) {
  */
 function spellIsReady(sp, prepares) {
   if (!sp) return false;
-  if (sp.level === 0 || sp.noSlot) return true;
+  if (sp.level === 0 || sp.noSlot || sp.alwaysPrepared) return true;
   return prepares === false ? true : !!sp.prepared;
 }
 
@@ -353,7 +357,147 @@ function spellIsReady(sp, prepares) {
  * the box — every sheet before v320 — keeps preparing as it always did.
  */
 function spellPrepares(data) {
-  return !_spTruthy(data ? data['sp-no-prep'] : false);
+  if (_spTruthy(data ? data['sp-no-prep'] : false)) return false;
+  // Warlocks and Sorcerers know their spells: every one is always ready.
+  const f = spellCasterFlags(data);
+  return !(f.warlock || f.sorcerer);
+}
+
+// ── Class rules: Warlock and Sorcerer (v325) ──────────────────────────────────
+// Read from the sheet's Class field, so a Warlock or Sorcerer gets them without
+// switching anything on. The keys live on the sheet with the other spell data:
+//   pact-slots, pact-level, pact-used     Warlock Pact Magic
+//   sorc-points, sorc-used                Sorcerer sorcery points (max, spent)
+//   mm-<key>                              a Metamagic option the Sorcerer knows
+
+/** Which of the two the character is (multiclass included): { warlock, sorcerer }. */
+function spellCasterFlags(data) {
+  const d = data || {};
+  const c = [d.class, d['class-name'], d['class-1'], d.subclass].map(v => String(v || '')).join(' ').toLowerCase();
+  return { warlock: /warlock/.test(c), sorcerer: /sorcerer/.test(c) };
+}
+
+/** Pact Magic slots per Warlock level: [slots, slot level] (PHB table). */
+const WARLOCK_PACT_TABLE = [null, [1, 1], [2, 1], [2, 2], [2, 2], [2, 3], [2, 3], [2, 4], [2, 4], [2, 5], [2, 5],
+  [3, 5], [3, 5], [3, 5], [3, 5], [3, 5], [3, 5], [4, 5], [4, 5], [4, 5], [4, 5]];
+
+/** The Warlock's pact slots, or null: { total, used, left, level }. */
+function spellPactFrom(data) {
+  if (!spellCasterFlags(data).warlock) return null;
+  const total = Math.max(0, parseInt(data['pact-slots'], 10) || 0);
+  const level = Math.max(0, Math.min(5, parseInt(data['pact-level'], 10) || 0));
+  if (!total || !level) return null;
+  const used = Math.min(total, Math.max(0, parseInt(data['pact-used'], 10) || 0));
+  return { total, used, left: total - used, level };
+}
+
+/** The Sorcerer's sorcery points, or null: { max, used, left }. */
+function spellSorcFrom(data) {
+  if (!spellCasterFlags(data).sorcerer) return null;
+  const max = Math.max(0, parseInt(data['sorc-points'], 10) || 0);
+  if (!max) return null;
+  const used = Math.min(max, Math.max(0, parseInt(data['sorc-used'], 10) || 0));
+  return { max, used, left: max - used };
+}
+
+/** Metamagic options (2024 costs): [key, name, points]. Twinned costs 1 since 2024. */
+const SPELL_METAMAGIC = [
+  ['careful', 'Careful Spell', 1], ['distant', 'Distant Spell', 1], ['empowered', 'Empowered Spell', 1],
+  ['extended', 'Extended Spell', 1], ['heightened', 'Heightened Spell', 2], ['quickened', 'Quickened Spell', 2],
+  ['seeking', 'Seeking Spell', 1], ['subtle', 'Subtle Spell', 1], ['transmuted', 'Transmuted Spell', 1],
+  ['twinned', 'Twinned Spell', 1],
+];
+
+/** Every Metamagic option, as a function so the server's vm copy can read it (a const is not). */
+function spellMetamagicList() { return SPELL_METAMAGIC.map(([key, name, cost]) => ({ key, name, cost })); }
+
+/** The Metamagic options this Sorcerer knows: [{ key, name, cost }]. */
+function spellKnownMetamagic(data) {
+  if (!spellCasterFlags(data).sorcerer) return [];
+  return SPELL_METAMAGIC.filter(([k]) => _spTruthy(data['mm-' + k])).map(([key, name, cost]) => ({ key, name, cost }));
+}
+
+// ── Slots from level (v326) ───────────────────────────────────────────────────
+// Spell slots by caster level, levels 1-9 (the full caster table). A half
+// caster uses it at half its level rounded up, a third caster (Eldritch
+// Knight, Arcane Trickster) at a third rounded up from level 3; multiclass
+// characters add full levels, half levels rounded up and third levels rounded
+// down into one caster level (2024 rules). Warlock levels give pact slots
+// instead, and Sorcerer levels sorcery points (from level 2).
+const FULL_CASTER_SLOTS = [null,
+  [2,0,0,0,0,0,0,0,0], [3,0,0,0,0,0,0,0,0], [4,2,0,0,0,0,0,0,0], [4,3,0,0,0,0,0,0,0], [4,3,2,0,0,0,0,0,0],
+  [4,3,3,0,0,0,0,0,0], [4,3,3,1,0,0,0,0,0], [4,3,3,2,0,0,0,0,0], [4,3,3,3,1,0,0,0,0], [4,3,3,3,2,0,0,0,0],
+  [4,3,3,3,2,1,0,0,0], [4,3,3,3,2,1,0,0,0], [4,3,3,3,2,1,1,0,0], [4,3,3,3,2,1,1,0,0], [4,3,3,3,2,1,1,1,0],
+  [4,3,3,3,2,1,1,1,0], [4,3,3,3,2,1,1,1,1], [4,3,3,3,3,1,1,1,1], [4,3,3,3,3,2,1,1,1], [4,3,3,3,3,2,2,1,1]];
+const _SP_CASTER_KIND = {
+  bard: 'full', cleric: 'full', druid: 'full', sorcerer: 'full', wizard: 'full',
+  paladin: 'half', ranger: 'half', artificer: 'half', warlock: 'pact', fighter: 'third', rogue: 'third',
+};
+
+/**
+ * The character's classes and their levels, from the Class field:
+ * "Wizard 5 / Cleric 3" -> [{ name: 'wizard', level: 5 }, { name: 'cleric', level: 3 }].
+ * A plain "Wizard" takes the sheet's Level field.
+ */
+function spellClassLevels(data) {
+  const d = data || {};
+  const text = String(d.class || '').toLowerCase();
+  const out = [];
+  const re = /(bard|cleric|druid|sorcerer|wizard|paladin|ranger|artificer|warlock|fighter|rogue|barbarian|monk)\D{0,3}?(\d{1,2})/g;
+  let m;
+  while ((m = re.exec(text))) out.push({ name: m[1], level: Math.min(20, parseInt(m[2], 10)) });
+  if (out.length) return out;
+  const names = text.match(/bard|cleric|druid|sorcerer|wizard|paladin|ranger|artificer|warlock|fighter|rogue|barbarian|monk/g) || [];
+  const lvl = Math.max(0, Math.min(20, parseInt(d.level || d['total-level'] || d['char-level'], 10) || 0));
+  return names.length && lvl ? [{ name: names[0], level: lvl }] : [];
+}
+
+/**
+ * What the level tables give this character:
+ *   { known, slots: [9 totals], pact: { slots, level } | null, sorc: number | null }
+ * `known` is false when no spellcasting class was found (nothing should change then).
+ */
+function spellAutoSlots(data) {
+  const sub = String((data && data.subclass) || '').toLowerCase();
+  const classes = spellClassLevels(data);
+  let full = 0, half = 0, third = 0, casters = 0, single = null;
+  let pact = null, sorc = null;
+  for (const c of classes) {
+    let kind = _SP_CASTER_KIND[c.name];
+    // Fighters and Rogues cast only as Eldritch Knights and Arcane Tricksters.
+    if (kind === 'third' && !(c.name === 'fighter' ? /eldritch knight/.test(sub) : /arcane trickster/.test(sub))) kind = null;
+    if (c.name === 'sorcerer') sorc = c.level >= 2 ? c.level : 0;
+    if (kind === 'pact') { const t = WARLOCK_PACT_TABLE[c.level]; pact = t ? { slots: t[0], level: t[1] } : null; continue; }
+    if (!kind) continue;
+    casters++; single = { kind, level: c.level };
+    if (kind === 'full') full += c.level;
+    else if (kind === 'half') half += c.level;
+    else third += c.level;
+  }
+  let level = 0;
+  if (casters === 1) {
+    level = single.kind === 'full' ? single.level
+      : single.kind === 'half' ? Math.ceil(single.level / 2)
+      : (single.level >= 3 ? Math.ceil(single.level / 3) : 0);
+  } else if (casters > 1) {
+    level = full + Math.ceil(half / 2) + Math.floor(third / 3);
+  }
+  const slots = (FULL_CASTER_SLOTS[Math.min(20, level)] || [0, 0, 0, 0, 0, 0, 0, 0, 0]).slice();
+  return { known: casters > 0 || !!pact || sorc !== null, slots, pact, sorc };
+}
+
+/** Font of Magic: sorcery points it costs to create a slot of each level (1-5). */
+const SORC_SLOT_COST = { 1: 2, 2: 3, 3: 5, 4: 6, 5: 7 };
+
+/**
+ * A Warlock's Mystic Arcanum: a spell of level 6-9 cast once per long rest
+ * without a slot. Any Warlock spell that high counts — unless its source names
+ * another class (a multiclass Wizard's 6th-level spell is not an Arcanum).
+ */
+function spellIsArcanum(sp, data) {
+  if (!sp || sp.level < 6 || sp.noSlot || !spellCasterFlags(data).warlock) return false;
+  const src = sp.source || {};
+  return !(src.kind === 'class' && src.detail && !/warlock/i.test(src.detail));
 }
 
 /** The Actions-tab group a spell belongs to: 'action' | 'bonus' | 'reaction' | ''. */
@@ -363,7 +507,7 @@ function spellActionCategory(sp) {
 
 /** Prepared spells of level 1+, the number the sheet's "Prepared" box counts. */
 function spellPreparedCount(list) {
-  return (list || []).filter(s => s && s.level > 0 && s.prepared && !s.noSlot).length;
+  return (list || []).filter(s => s && s.level > 0 && s.prepared && !s.noSlot && !s.alwaysPrepared).length;
 }
 
 // ── Casting (release 2) ───────────────────────────────────────────────────────
@@ -391,17 +535,40 @@ function spellSlotsFrom(data) {
  * pop-up starts on: its own free use, else the lowest open slot, else ritual.
  */
 function spellCastOptions(sp, data) {
-  const out = { castable: false, reason: '', options: [], best: null };
+  const out = { castable: false, reason: '', options: [], best: null, ritualOnly: false };
   if (!sp) { out.reason = 'Unknown spell'; return out; }
-  if (!spellIsReady(sp, spellPrepares(data))) { out.reason = 'Not prepared'; return out; }
+  if (!spellIsReady(sp, spellPrepares(data))) {
+    // A ritual you have not prepared can still be cast — as a ritual, never with a slot.
+    if (sp.ritual && sp.level > 0) {
+      out.ritualOnly = true;
+      out.options.push({ mode: 'ritual', level: sp.level, available: true, label: 'As a ritual (no slot, +10 minutes)' });
+      out.castable = true;
+      out.best = out.options[0];
+      return out;
+    }
+    out.reason = 'Not prepared';
+    return out;
+  }
   if (sp.level === 0) {
     out.options.push({ mode: 'cantrip', level: 0, available: true, label: 'Cantrip' });
+  } else if (spellIsArcanum(sp, data)) {
+    // Mystic Arcanum: once per long rest, no slot; never with a pact slot (they stop at 5).
+    const left = 1 - Math.min(1, sp.used);
+    out.options.push({ mode: 'free', level: sp.level, available: left > 0, left,
+      label: `Mystic Arcanum (${left} of 1 left)` });
+    if (!left) { out.reason = 'Arcanum used — back after a long rest'; return out; }
   } else {
     if (sp.noSlot) {
       const atWill = !sp.uses;
       const left = atWill ? null : sp.uses - sp.used;
       out.options.push({ mode: 'free', level: sp.level, available: atWill || left > 0, left,
         label: atWill ? 'No slot (at will)' : `No slot (${left} of ${sp.uses} left)` });
+    }
+    // Pact Magic: every pact slot is the pact level, and a spell cast with one is cast at it.
+    const pact = spellPactFrom(data);
+    if (pact && pact.level >= sp.level) {
+      out.options.push({ mode: 'pact', level: pact.level, available: pact.left > 0, left: pact.left,
+        label: `Pact slot, level ${pact.level} (${pact.left} of ${pact.total} left)` });
     }
     for (const s of spellSlotsFrom(data)) {
       if (s.level < sp.level) continue;
@@ -413,9 +580,11 @@ function spellCastOptions(sp, data) {
   const open = out.options.filter(o => o.available);
   out.castable = open.length > 0;
   out.best = open.find(o => o.mode === 'free' || o.mode === 'cantrip')
-    || open.find(o => o.mode === 'slot') || open[0] || null;
-  if (!out.castable) out.reason = sp.noSlot && sp.uses && !spellSlotsFrom(data).some(s => s.level >= sp.level)
-    ? 'No uses left' : 'No spell slots left';
+    || open.find(o => o.mode === 'pact') || open.find(o => o.mode === 'slot') || open[0] || null;
+  if (!out.castable && !out.reason) {
+    const anySlot = spellSlotsFrom(data).some(s => s.level >= sp.level) || out.options.some(o => o.mode === 'pact');
+    out.reason = sp.noSlot && sp.uses && !anySlot ? 'No uses left' : 'No spell slots left';
+  }
   return out;
 }
 

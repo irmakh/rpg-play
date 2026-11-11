@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-11 17:20
+// Written by Irmak Hakman — 2026-11-12 02:15
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -174,6 +174,16 @@ describe('readiness', () => {
     expect(S.spellPrepares({ 'sp-no-prep': true })).toBe(false);
     expect(S.spellPrepares({ 'sp-no-prep': 'false' })).toBe(true);
   });
+  it('an always-prepared spell is ready, uses slots, and does not count as prepared', () => {
+    const ap = sp({ alwaysPrepared: true, prepared: false });
+    expect(S.spellIsReady(ap, true)).toBe(true);
+    expect(S.spellPreparedCount([ap, sp({ prepared: true, alwaysPrepared: true }), sp({ prepared: true })])).toBe(1);
+    const how = S.spellCastOptions(ap, { 'slot-1-total': '2' });
+    expect(how.options.map(o => o.mode)).toEqual(['slot']);
+    expect(S.normalizeSpell({ alwaysPrepared: 'true' }).alwaysPrepared).toBe(true);
+    expect(S.normalizeSpell(['1', 'Old row']).alwaysPrepared).toBe(false);
+  });
+
   it('counts prepared levelled spells only', () => {
     const list = [sp({ level: 0, prepared: true }), sp({ prepared: true }), sp({ prepared: true, noSlot: true }), sp({})];
     expect(S.spellPreparedCount(list)).toBe(1);
@@ -234,6 +244,101 @@ describe('spellCastOptions — what the pop-up greys out and the server allows',
   it('refuses a spell that is not prepared, unless the character does not prepare', () => {
     expect(S.spellCastOptions(sp({ prepared: false }), slots()).reason).toBe('Not prepared');
     expect(S.spellCastOptions(sp({ prepared: false }), slots({ 'sp-no-prep': true })).castable).toBe(true);
+  });
+});
+
+describe('class rules (v325): rituals, Warlock, Sorcerer', () => {
+  const sp = o => S.normalizeSpell({ name: 'x', level: 1, ...o });
+
+  it('an unprepared ritual can be cast only as a ritual', () => {
+    const r = S.spellCastOptions(sp({ ritual: true, prepared: false }), { 'slot-1-total': '4' });
+    expect(r).toMatchObject({ castable: true, ritualOnly: true });
+    expect(r.options.map(o => o.mode)).toEqual(['ritual']);
+    expect(S.spellCastOptions(sp({ prepared: false }), {}).castable).toBe(false);
+  });
+
+  it('reads Warlock and Sorcerer from the class fields, multiclass included', () => {
+    expect(S.spellCasterFlags({ class: 'Warlock' })).toEqual({ warlock: true, sorcerer: false });
+    expect(S.spellCasterFlags({ class: 'Fighter / Sorcerer' })).toEqual({ warlock: false, sorcerer: true });
+    expect(S.spellCasterFlags({ class: 'Wizard' })).toEqual({ warlock: false, sorcerer: false });
+  });
+
+  it('Warlocks and Sorcerers do not prepare: every spell is ready', () => {
+    expect(S.spellPrepares({ class: 'Warlock' })).toBe(false);
+    expect(S.spellPrepares({ class: 'sorcerer' })).toBe(false);
+    expect(S.spellPrepares({ class: 'Cleric' })).toBe(true);
+    expect(S.spellIsReady(sp({ prepared: false }), S.spellPrepares({ class: 'Warlock' }))).toBe(true);
+  });
+
+  const WARLOCK = { class: 'Warlock', 'pact-slots': '2', 'pact-level': '3', 'pact-used': '0' };
+
+  it('Pact Magic: a pact slot casts at the pact level, and is offered first', () => {
+    const r = S.spellCastOptions(sp({ name: 'Hex' }), { ...WARLOCK, 'slot-1-total': '1' });
+    expect(r.options.map(o => o.mode)).toEqual(['pact', 'slot']);
+    expect(r.best).toMatchObject({ mode: 'pact', level: 3, left: 2 });
+    expect(S.spellPactFrom({ ...WARLOCK, 'pact-used': '2' }).left).toBe(0);
+    expect(S.spellPactFrom({ class: 'Wizard', 'pact-slots': '2', 'pact-level': '3' })).toBe(null);
+  });
+
+  it('a spell above the pact level cannot use a pact slot', () => {
+    const r = S.spellCastOptions(sp({ level: 4 }), WARLOCK);
+    expect(r).toMatchObject({ castable: false, reason: 'No spell slots left' });
+  });
+
+  it('Mystic Arcanum: a Warlock spell of level 6-9, once, no slot', () => {
+    const fresh = S.spellCastOptions(sp({ name: 'Eyebite', level: 6 }), WARLOCK);
+    expect(fresh.options).toEqual([expect.objectContaining({ mode: 'free', left: 1 })]);
+    const used = S.spellCastOptions(sp({ name: 'Eyebite', level: 6, used: 1 }), WARLOCK);
+    expect(used).toMatchObject({ castable: false });
+    expect(used.reason).toMatch(/long rest/);
+    // a multiclass Wizard's 6th-level spell is not an Arcanum
+    expect(S.spellIsArcanum(sp({ level: 6, source: { kind: 'class', detail: 'Wizard' } }), WARLOCK)).toBe(false);
+  });
+
+  it('Sorcerer: points and the Metamagic it knows', () => {
+    const d = { class: 'Sorcerer', 'sorc-points': '5', 'sorc-used': '2', 'mm-quickened': true, 'mm-twinned': 'true' };
+    expect(S.spellSorcFrom(d)).toEqual({ max: 5, used: 2, left: 3 });
+    expect(S.spellKnownMetamagic(d)).toEqual([
+      { key: 'quickened', name: 'Quickened Spell', cost: 2 }, { key: 'twinned', name: 'Twinned Spell', cost: 1 }]);
+    expect(S.spellKnownMetamagic({ ...d, class: 'Wizard' })).toEqual([]);
+    expect(S.spellMetamagicList()).toHaveLength(10);
+  });
+});
+
+describe('slots from level (v326)', () => {
+  const auto = d => { const r = S.spellAutoSlots(d); return { known: r.known, slots: r.slots.join(''), pact: r.pact, sorc: r.sorc }; };
+
+  it('reads class levels from the Class field, or the Level field for one class', () => {
+    expect(S.spellClassLevels({ class: 'Wizard 5 / Cleric 3' })).toEqual([{ name: 'wizard', level: 5 }, { name: 'cleric', level: 3 }]);
+    expect(S.spellClassLevels({ class: 'Warlock 3, Sorcerer 5' }).map(c => c.name)).toEqual(['warlock', 'sorcerer']);
+    expect(S.spellClassLevels({ class: 'Druid', level: '7' })).toEqual([{ name: 'druid', level: 7 }]);
+    expect(S.spellClassLevels({ class: 'Druid' })).toEqual([]);
+  });
+
+  it('full, half and third casters use their own tables', () => {
+    expect(auto({ class: 'Wizard', level: '5' }).slots).toBe('432000000');
+    expect(auto({ class: 'Cleric', level: '20' }).slots).toBe('433332211');
+    expect(auto({ class: 'Paladin', level: '1' }).slots).toBe('200000000');      // 2024: from level 1
+    expect(auto({ class: 'Ranger', level: '5' }).slots).toBe('420000000');
+    expect(auto({ class: 'Fighter', subclass: 'Eldritch Knight', level: '7' }).slots).toBe('420000000');
+    expect(auto({ class: 'Rogue', subclass: 'Arcane Trickster', level: '2' }).slots).toBe('000000000');
+  });
+
+  it('a Fighter or Rogue without a casting subclass, and a non-caster, change nothing', () => {
+    expect(auto({ class: 'Fighter', level: '7' }).known).toBe(false);
+    expect(auto({ class: 'Barbarian', level: '7' }).known).toBe(false);
+  });
+
+  it('multiclass casters add up their levels', () => {
+    expect(auto({ class: 'Wizard 5 / Cleric 3' }).slots).toBe('433200000');       // caster level 8
+    expect(auto({ class: 'Paladin 6 / Sorcerer 4' })).toMatchObject({ slots: '433100000', sorc: 4 });   // 4 + 3
+  });
+
+  it('Warlock levels give pact slots, Sorcerer levels sorcery points', () => {
+    expect(auto({ class: 'Warlock', level: '5' })).toMatchObject({ known: true, slots: '000000000', pact: { slots: 2, level: 3 } });
+    expect(auto({ class: 'Warlock', level: '17' }).pact).toEqual({ slots: 4, level: 5 });
+    expect(auto({ class: 'Sorcerer', level: '1' }).sorc).toBe(0);
+    expect(auto({ class: 'Warlock 3, Sorcerer 5' })).toMatchObject({ slots: '432000000', pact: { slots: 2, level: 2 }, sorc: 5 });
   });
 });
 

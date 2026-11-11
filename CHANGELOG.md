@@ -21,6 +21,56 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [324–327] — 2026-11-12 — Cast a Spell on the console, and class rules
+
+*(324–326 were local test builds; 327 is the release. Fourth part of the spellcasting
+redesign; the third, monsters, is on hold.)*
+
+- **Rituals without preparing.** A ritual spell that is not prepared appears under the
+  Ritual filter of the Cast a Spell window (and in a Rituals group on the console) and can
+  be cast as a ritual, never with a slot.
+- **Warlocks and Sorcerers know their spells.** When the sheet's Class says Warlock or
+  Sorcerer, every spell is always ready and the "no preparing" box is ticked and locked.
+- **Pact Magic.** A Warlock's sheet has a Pact Magic card: pact slots, their level (or
+  **From Warlock level**) and how many are used. Spells cast with a pact slot are cast at
+  the pact level; pact slots come back on a short rest. They show, clickable, on the table
+  and the console beside the spell slots.
+- **Mystic Arcanum.** A Warlock's spells of level 6–9 are cast once each per long rest,
+  without a slot.
+- **Sorcery Points and Font of Magic.** A Sorcerer's sheet has a Sorcery Points card:
+  maximum, spent and left, and Font of Magic — spend a slot for points equal to its level,
+  or points to get a spent slot back (2/3/5/6/7 for levels 1–5). Points come back on a
+  long rest.
+- **Metamagic.** Tick the Metamagic options the Sorcerer knows; the Cast a Spell window
+  (and the console's cast view) offers them, paid in sorcery points (Quickened and
+  Heightened 2, the others 1). The card in chat names them, and Quickened turns the casting
+  time into a bonus action. The server refuses Metamagic the points cannot pay for.
+- **Slots fill themselves from Level and Class.** Spell slot totals, a Warlock's pact
+  slots and a Sorcerer's sorcery points follow the sheet's Level and Class: full casters
+  (Bard, Cleric, Druid, Sorcerer, Wizard), half casters (Paladin, Ranger, Artificer) and
+  third casters (Eldritch Knight, Arcane Trickster, by subclass) each use their table, and
+  a multiclass Class such as "Wizard 5 / Cleric 3" adds the levels up by the multiclass
+  rules. "Used" counts are kept. **Fill from level** on the Spell Slots card does it at
+  once for a sheet that already exists.
+- **Always prepared.** A spell given by a feat, a subclass feature or an item can be marked
+  **Always prepared** in its edit window: it is always ready to cast, is not counted among
+  prepared spells, and still uses spell slots.
+- **"Can be cast for free"** is the new name of "No spell slot needed": the spell can be cast
+  without a slot (at will, or a set number of times per short or long rest), and once its
+  free uses are gone it can still be cast with a slot.
+
+- **Casting from the console.** On the console's info panel, a character's Spells part
+  (and the spells in its Combat part) now has **Cast** on every ready spell, with **Post**
+  beside it. Choosing one opens its cast view: the spell's facts, one row for each way to
+  cast it — a slot of its level or higher, its own free use, or a ritual — with spent ones
+  greyed out, the save DC and damage at that level, a **Cast** button and the spell's
+  full text. A spell that cannot be cast at all is greyed out in the list, with the reason.
+- Built from ordinary rows and buttons, so it works by touch and with the gamepad's
+  D-pad and A button like the rest of the panel. The DM can cast for any character, a
+  player for their own.
+
+---
+
 ## [322–323] — 2026-11-11 — Cast a Spell
 
 *(322 was a local test build; 323 is the release. Second of four parts of the spellcasting redesign.)*

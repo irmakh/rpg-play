@@ -1,5 +1,5 @@
 <!-- Written by Irmak Hakman — 2026-11-11 18:30 -->
-<!-- Written by Irmak Hakman — 2026-11-11 22:10 -->
+<!-- Written by Irmak Hakman — 2026-11-12 02:10 -->
 <!-- Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) -->
 <html lang="en" class="lamplit">
 <head>
@@ -336,11 +336,12 @@
         <div class="field"><label class="lbl">Spell Modifier</label><input type="text" data-key="sp-mod"></div>
         <div class="field" id="prep-count-field"><label class="lbl">Prepared</label><input type="text" id="prep-count" readonly style="text-align:center;font-weight:bold;cursor:default"></div>
       </div>
-      <label class="sp-noprep"><input type="checkbox" data-key="sp-no-prep" onchange="onSpellPrepModeChange()"> Knows its spells, no preparing <span>(Warlock, Sorcerer…): every spell is always ready</span></label>
+      <label class="sp-noprep" id="sp-noprep-label"><input type="checkbox" data-key="sp-no-prep" onchange="onSpellPrepModeChange()"> Knows its spells, no preparing <span id="sp-noprep-hint">(Warlock, Sorcerer…): every spell is always ready</span></label>
     </div></div>
 
     <div class="card"><div class="ct ct-row"><span>Spell Slots</span>
       <span class="sp-ct-tools">
+        <button type="button" class="char-btn" onclick="autoFillSlots(true)" title="Slot totals (and pact slots, sorcery points) from Level and Class; also done by itself when they change">Fill from level</button>
         <button type="button" class="char-btn" onclick="actionRest('short')" title="Restore what recharges on a Short Rest"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-refresh"></use></svg> Short Rest</button>
         <button type="button" class="char-btn" onclick="actionRest('long')" title="Refill every slot and use"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-refresh"></use></svg> Long Rest</button>
       </span></div><div class="cb">
@@ -355,6 +356,49 @@
         <div class="slot-g"><div class="lbl2">Level 8</div><div class="sub">Total / Used</div><div class="row"><input type="number" data-key="slot-8-total" style="text-align:center"><input type="number" data-key="slot-8-used" style="text-align:center"></div></div>
         <div class="slot-g"><div class="lbl2">Level 9</div><div class="sub">Total / Used</div><div class="row"><input type="number" data-key="slot-9-total" style="text-align:center"><input type="number" data-key="slot-9-used" style="text-align:center"></div></div>
       </div>
+    </div></div>
+
+    <!-- Warlock Pact Magic and Sorcerer sorcery points (index-spells.js updateClassCards):
+         shown when the Class field says Warlock / Sorcerer. -->
+    <div class="card" id="pact-card" style="display:none"><div class="ct ct-row"><span>Pact Magic</span>
+      <span class="sp-ct-tools"><button type="button" class="char-btn" onclick="fillPactFromLevel()" title="Pact slots and slot level from Level and Class (also done by itself when they change)">Fill from level</button></span></div><div class="cb">
+      <div class="g3">
+        <div class="field"><label class="lbl" for="pact-slots">Pact slots</label><input type="number" id="pact-slots" data-key="pact-slots" min="0" max="4" style="text-align:center" oninput="updateClassCards()"></div>
+        <div class="field"><label class="lbl" for="pact-level">Slot level</label><input type="number" id="pact-level" data-key="pact-level" min="1" max="5" style="text-align:center" oninput="updateClassCards()"></div>
+        <div class="field"><label class="lbl" for="pact-used">Used</label><input type="number" id="pact-used" data-key="pact-used" min="0" style="text-align:center" oninput="updateClassCards()"></div>
+      </div>
+      <p class="sp-hint">Every pact slot is the slot level above, and a spell cast with one is cast at that level. Pact slots come back on a short or long rest. Your spells of level 6&ndash;9 are your Mystic Arcanum: each once per long rest, without a slot.</p>
+    </div></div>
+
+    <div class="card" id="sorc-card" style="display:none"><div class="ct">Sorcery Points</div><div class="cb">
+      <div class="g3">
+        <div class="field"><label class="lbl" for="sorc-points">Maximum</label><input type="number" id="sorc-points" data-key="sorc-points" min="0" style="text-align:center" oninput="updateClassCards()"></div>
+        <div class="field"><label class="lbl" for="sorc-used">Spent</label><input type="number" id="sorc-used" data-key="sorc-used" min="0" style="text-align:center" oninput="updateClassCards()"></div>
+        <div class="field"><label class="lbl">Left</label><input type="text" id="sorc-left" readonly style="text-align:center;font-weight:bold;cursor:default"></div>
+      </div>
+      <div class="sp-font">
+        <span class="lbl">Font of Magic</span>
+        <select id="font-level" aria-label="Slot level"><option value="1">Level 1</option><option value="2">Level 2</option><option value="3">Level 3</option><option value="4">Level 4</option><option value="5">Level 5</option></select>
+        <button type="button" class="char-btn" onclick="fontSlotToPoints()" title="Spend a slot, gain points equal to its level">Slot &rarr; points</button>
+        <button type="button" class="char-btn" onclick="fontPointsToSlot()" title="Spend points to get back a spent slot (level 1: 2, 2: 3, 3: 5, 4: 6, 5: 7)">Points &rarr; slot</button>
+        <span id="font-msg" class="sp-hint" role="status"></span>
+      </div>
+      <div class="sp-mm">
+        <span class="lbl">Metamagic you know <span style="color:var(--ash)">(points each)</span></span>
+        <div class="sp-mm-list">
+          <label><input type="checkbox" data-key="mm-careful"> Careful Spell <span>(1)</span></label>
+          <label><input type="checkbox" data-key="mm-distant"> Distant Spell <span>(1)</span></label>
+          <label><input type="checkbox" data-key="mm-empowered"> Empowered Spell <span>(1)</span></label>
+          <label><input type="checkbox" data-key="mm-extended"> Extended Spell <span>(1)</span></label>
+          <label><input type="checkbox" data-key="mm-heightened"> Heightened Spell <span>(2)</span></label>
+          <label><input type="checkbox" data-key="mm-quickened"> Quickened Spell <span>(2)</span></label>
+          <label><input type="checkbox" data-key="mm-seeking"> Seeking Spell <span>(1)</span></label>
+          <label><input type="checkbox" data-key="mm-subtle"> Subtle Spell <span>(1)</span></label>
+          <label><input type="checkbox" data-key="mm-transmuted"> Transmuted Spell <span>(1)</span></label>
+          <label><input type="checkbox" data-key="mm-twinned"> Twinned Spell <span>(1)</span></label>
+        </div>
+      </div>
+      <p class="sp-hint">Sorcery points come back on a long rest. Metamagic you know is offered in the Cast a Spell window and paid from these points.</p>
     </div></div>
 
     <div class="card"><div class="ct ct-row"><span>Spells</span>
@@ -839,7 +883,8 @@
 
       <div class="spm-section">Casting it</div>
       <label class="spm-line" id="spm-prepared-line"><input type="checkbox" id="spm-prepared"> Prepared</label>
-      <label class="spm-line"><input type="checkbox" id="spm-noslot" onchange="spmNoSlotToggle()"> No spell slot needed <span>(e.g. a feat's or species' free casting)</span></label>
+      <label class="spm-line"><input type="checkbox" id="spm-always" onchange="spmAlwaysToggle()"> Always prepared <span>(given by a feat, subclass feature or item: always ready, not counted among prepared spells)</span></label>
+      <label class="spm-line"><input type="checkbox" id="spm-noslot" onchange="spmNoSlotToggle()"> Can be cast for free <span>(without a spell slot, e.g. a feat's or species' free casting; once the free uses are gone it can still be cast with a slot)</span></label>
       <div class="spm-grid" id="spm-uses-row" style="display:none">
         <div class="field"><label class="lbl" for="spm-uses">Uses <span style="color:var(--ash)">(blank = at will)</span></label><input type="number" id="spm-uses" min="0" max="99"></div>
         <div class="field"><label class="lbl" for="spm-recharge">Recharges on</label>

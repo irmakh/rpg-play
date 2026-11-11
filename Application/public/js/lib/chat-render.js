@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-11 21:45
+// Written by Irmak Hakman — 2026-11-12 00:55
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -221,6 +221,7 @@ function chatSpellCardHTML(e) {
   const lvl = sp.level ? `Level ${parseInt(sp.level, 10) || 0}${sp.school ? ' ' + String(sp.school).toLowerCase() : ''}` : `${sp.school || ''} cantrip`.trim();
   const how = sp.mode === 'ritual' ? 'as a ritual'
     : sp.mode === 'free' ? 'without a slot'
+    : sp.mode === 'pact' ? `with a pact slot (level ${parseInt(sp.castLevel, 10) || 0})`
     : (sp.castLevel > sp.level ? `at level ${parseInt(sp.castLevel, 10) || 0}` : '');
   const meta = [sp.castText, sp.range, (sp.conc ? 'Concentration, ' : '') + (sp.duration || ''), sp.components]
     .filter(x => x && String(x).trim()).map(esc).join(' · ');
@@ -237,6 +238,7 @@ function chatSpellCardHTML(e) {
   return `<div class="cs-card">
     <div class="cs-title"><span class="cs-name">${esc(sp.name || 'A spell')}</span> <span class="cs-lvl">${esc(lvl)}${how ? ' · ' + esc(how) : ''}</span></div>
     ${meta ? `<div class="cs-meta">${meta}</div>` : ''}
+    ${Array.isArray(e.metamagic) && e.metamagic.length ? `<div class="cs-meta">Metamagic: ${e.metamagic.map(esc).join(', ')}${e.points ? ` (${parseInt(e.points, 10) || 0} sorcery point${e.points == 1 ? '' : 's'})` : ''}</div>` : ''}
     ${fx.length ? `<div class="cs-fx">${fx.join('')}</div>` : ''}
     ${desc}
   </div>`;

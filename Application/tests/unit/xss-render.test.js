@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-11 17:00
+// Written by Irmak Hakman — 2026-11-11 23:35
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -233,6 +233,51 @@ describe('console info panel (console/panel-*.js)', () => {
     expect(els.get('s-pane-combat').innerHTML).toContain('2 of 3 left');
     expect(els.get('s-pane-spells').innerHTML).toContain('2 of 3 left');
     expect(els.get('s-pane-items').innerHTML).toContain('Worn');
+  });
+
+  // Cast a Spell on the console (panel-sheet.js, v324).
+  it('casts from the Spells part: greys what cannot be cast, sends the chosen slot', async () => {
+    const { ctx, els } = panel();
+    const sent = [];
+    ctx.fetch = async (url, opts) => {
+      sent.push({ url, body: JSON.parse(opts.body) });
+      return { ok: true, json: async () => ({ ok: true, keys: ['slot-5-used'], data: { 'slot-5-used': '1' },
+                                              entry: { spell: { name: 'Fireball', level: 3, castLevel: 5 } } }) };
+    };
+    ctx.__data = {
+      'sp-dc': '15', level: '9',
+      'slot-3-total': '2', 'slot-3-used': '2', 'slot-5-total': '1', 'slot-5-used': '0',
+      _spells: JSON.stringify([
+        { id: 'fb', name: 'Fireball', level: 3, prepared: true, entries: ['{@damage 8d6} Fire damage, Dexterity saving throw.'],
+          higher: [{ type: 'entries', entries: ['{@scaledamage 8d6|3-9|1d6}'] }] },
+        { id: 'ms', name: TAG, level: 6, noSlot: true, uses: 1, used: 1 },      // spent, and no slot that high
+        { id: 'di', name: 'Disintegrate', level: 6, prepared: true },            // no level 6+ slots at all
+        { id: 'sh', name: 'Shield', level: 1, prepared: true },                  // upcasts with the level 5 slot
+      ]),
+    };
+    runInContext('sQrollData = __data; sSelectedToken = { id: "t1", linkedId: "c1", type: "character" }; sCurrentTab = "token"; sTokenPane = "spells";', ctx);
+    ctx.sRenderSheetPane('spells');
+    let html = els.get('s-pane-spells').innerHTML;
+    expectInert(html);
+    expect(html).toContain('onclick="sCastOpen(0)"');                  // Fireball: a level 5 slot is left
+    expect(html).toMatch(/class="p-roll two off" disabled>\s*<span class="lbl"><span>Disintegrate<\/span><small>level 6 · No spell slots left/);
+    expect(html).toMatch(/No uses left/);                                // the spent no-slot spell
+    expect(html).toContain('onclick="sCastOpen(3)"');                  // Shield
+
+    ctx.sCastOpen(0);
+    html = els.get('s-pane-spells').innerHTML;
+    expect(html).toMatch(/Level 3 slot \(0 of 2 left\)<\/span>/);
+    expect(html).toMatch(/p-cast-opt off" disabled><span class="lbl">Level 3 slot/);
+    expect(html).toMatch(/p-cast-opt on" onclick="sCastChoose\(1\)"[^>]*><span class="lbl">Level 5 slot/);
+    expect(html).toContain('Cast Fireball at level 5');
+    expect(html).toContain('Damage 10d6 fire');
+
+    await ctx.sCastGo();
+    expect(sent).toHaveLength(1);
+    expect(sent[0].url).toBe('/api/characters/c1/cast');
+    expect(sent[0].body).toMatchObject({ spellId: 'fb', mode: 'slot', slotLevel: 5 });
+    expect(ctx.__data['slot-5-used']).toBe('1');                         // taken from the reply
+    expect(els.get('s-pane-spells').innerHTML).not.toContain('p-cast-opt');   // back to the list
   });
 
   it('escapes an imported monster in its rolls and its stat block', () => {

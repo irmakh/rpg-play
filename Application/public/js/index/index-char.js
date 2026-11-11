@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-11 22:10
+// Written by Irmak Hakman — 2026-11-12 02:10
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -869,7 +869,7 @@ function characterToXML(d) {
   p(`    <spells_always_ready>${b(!spellPrepares(d))}</spells_always_ready>`);
   p('    <spells>');
   spellList.forEach(s => {
-    p(`      <spell level="${xe(s.level)}" conc="${b(s.conc)}" ritual="${b(s.ritual)}" prepared="${b(s.prepared)}" school="${xe(s.school)}" v="${b(s.v)}" s="${b(s.s)}" m="${b(s.m)}" cast="${xe(s.cast)}" duration="${xe(s.duration)}" noslot="${b(s.noSlot)}" uses="${xe(s.uses)}" used="${xe(s.used)}" recharge="${xe(s.recharge)}" source_kind="${xe(s.source.kind)}" libid="${xe(s.libId)}" book="${xe(s.book)}">`);
+    p(`      <spell level="${xe(s.level)}" conc="${b(s.conc)}" ritual="${b(s.ritual)}" prepared="${b(s.prepared)}" school="${xe(s.school)}" v="${b(s.v)}" s="${b(s.s)}" m="${b(s.m)}" cast="${xe(s.cast)}" duration="${xe(s.duration)}" noslot="${b(s.noSlot)}" always="${b(s.alwaysPrepared)}" uses="${xe(s.uses)}" used="${xe(s.used)}" recharge="${xe(s.recharge)}" source_kind="${xe(s.source.kind)}" libid="${xe(s.libId)}" book="${xe(s.book)}">`);
     p(`        <name>${xe(s.name)}</name><time>${xe(s.castText)}</time><range>${xe(s.range)}</range><source>${xe(s.source.detail)}</source><notes>${xe(s.notes)}</notes>${s.m?`<material>${xe(s.material)}</material>`:''}`);
     // The 5etools text of a library spell, so the sheet keeps its description.
     if (s.entries.length || s.higher.length) p(`        <text>${xe(JSON.stringify({ entries: s.entries, higher: s.higher }))}</text>`);
@@ -1118,7 +1118,7 @@ function xmlToCharacterData(xmlText) {
       conc: attr('conc') === 'true', ritual: attr('ritual') === 'true', prepared: attr('prepared') === 'true',
       school: attr('school'), v: attr('v') === 'true', s: attr('s') === 'true', m: attr('m') === 'true',
       material: txt('material'), duration: attr('duration'), notes: txt('notes'),
-      noSlot: attr('noslot') === 'true', uses: attr('uses'), used: attr('used'), recharge: attr('recharge'),
+      noSlot: attr('noslot') === 'true', alwaysPrepared: attr('always') === 'true', uses: attr('uses'), used: attr('used'), recharge: attr('recharge'),
       source: { kind: attr('source_kind'), detail: txt('source') },
       libId: attr('libid'), book: attr('book'),
       entries: Array.isArray(text.entries) ? text.entries : [], higher: Array.isArray(text.higher) ? text.higher : [],

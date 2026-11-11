@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-11 22:10
+// Written by Irmak Hakman — 2026-11-12 02:10
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -28,6 +28,103 @@ const _spIco = name => `<svg class="lt-icon" aria-hidden="true" focusable="false
 function _spPrepares() {
   const el = document.querySelector('[data-key="sp-no-prep"]');
   return !(el && el.checked);
+}
+
+/** The sheet's class fields, which decide the Warlock / Sorcerer rules. */
+function _spClassData() {
+  const v = k => document.querySelector(`[data-key="${k}"]`)?.value || '';
+  const d = { class: v('class'), subclass: v('subclass') };
+  for (const k of ['pact-slots', 'pact-level', 'pact-used', 'sorc-points', 'sorc-used']) d[k] = v(k);
+  return d;
+}
+
+/**
+ * Show the Pact Magic / Sorcery Points cards for a Warlock / Sorcerer, keep the
+ * "no preparing" box ticked and locked for them (they know their spells), and
+ * refresh the points left.
+ */
+function updateClassCards() {
+  const f = spellCasterFlags(_spClassData());
+  const pact = document.getElementById('pact-card');
+  const sorc = document.getElementById('sorc-card');
+  if (pact) pact.style.display = f.warlock ? '' : 'none';
+  if (sorc) sorc.style.display = f.sorcerer ? '' : 'none';
+  const box = document.querySelector('[data-key="sp-no-prep"]');
+  const hint = document.getElementById('sp-noprep-hint');
+  if (box) {
+    const locked = f.warlock || f.sorcerer;
+    if (locked && !box.checked) { box.checked = true; scheduleAutoSave(); }
+    box.disabled = locked;
+    if (hint) hint.textContent = locked ? `(${f.warlock ? 'Warlock' : 'Sorcerer'}: every spell is always ready)` : '(Warlock, Sorcerer…): every spell is always ready';
+  }
+  const left = document.getElementById('sorc-left');
+  if (left) {
+    const s = spellSorcFrom(_spClassData());
+    left.value = s ? `${s.left} / ${s.max}` : '';
+  }
+}
+
+function fillPactFromLevel() { autoFillSlots(true); }
+
+/**
+ * Spell slot totals, pact slots and sorcery points from Level and Class
+ * (spellAutoSlots in spell-data.js; "Wizard 5 / Cleric 3" multiclasses). Runs
+ * by itself whenever Level, Class or Subclass changes — the totals always
+ * follow them — and from the Fill from level button. "Used" counts are kept,
+ * never above the new total. A sheet with no spellcasting class is left alone.
+ */
+function autoFillSlots(fromButton) {
+  const v = k => document.querySelector(`[data-key="${k}"]`)?.value || '';
+  const r = spellAutoSlots({ class: v('class'), subclass: v('subclass'), level: v('level') });
+  if (!r.known) {
+    if (fromButton) setStatus('No spellcasting class in the Class field (e.g. "Wizard" or "Wizard 5 / Cleric 3").', true);
+    return false;
+  }
+  const clampUsed = (usedKey, total) => { if (_num(usedKey) > total) _setNum(usedKey, total); };
+  for (let i = 1; i <= 9; i++) {
+    _setNum(`slot-${i}-total`, r.slots[i - 1]);
+    clampUsed(`slot-${i}-used`, r.slots[i - 1]);
+  }
+  if (r.pact) { _setNum('pact-slots', r.pact.slots); _setNum('pact-level', r.pact.level); clampUsed('pact-used', r.pact.slots); }
+  if (r.sorc !== null) { _setNum('sorc-points', r.sorc); clampUsed('sorc-used', r.sorc); }
+  updateClassCards();
+  renderSpells();
+  scheduleAutoSave();
+  if (fromButton) setStatus('Slots filled from level.');
+  return true;
+}
+
+// Font of Magic. Slot -> points: a slot of the level is spent, its level in
+// points comes back (never above the maximum). Points -> slot: the points are
+// spent and a SPENT slot of that level comes back (the sheet keeps no slots
+// beyond each level's total, so a level with none spent cannot take one).
+function _fontMsg(t) { const el = document.getElementById('font-msg'); if (el) el.textContent = t; }
+function _num(k) { return parseInt(document.querySelector(`[data-key="${k}"]`)?.value, 10) || 0; }
+function _setNum(k, v) { const el = document.querySelector(`[data-key="${k}"]`); if (el) el.value = String(v); }
+
+function fontSlotToPoints() {
+  const L = parseInt(document.getElementById('font-level')?.value, 10) || 1;
+  const s = spellSorcFrom(_spClassData());
+  if (!s) return _fontMsg('Set your sorcery point maximum first.');
+  if (_num(`slot-${L}-total`) - _num(`slot-${L}-used`) <= 0) return _fontMsg(`No level ${L} slot left to spend.`);
+  if (!s.used) return _fontMsg('Your sorcery points are already full.');
+  _setNum(`slot-${L}-used`, _num(`slot-${L}-used`) + 1);
+  _setNum('sorc-used', Math.max(0, s.used - L));
+  _fontMsg(`Level ${L} slot spent: +${Math.min(L, s.used)} points.`);
+  updateClassCards(); renderSpells(); scheduleAutoSave();
+}
+
+function fontPointsToSlot() {
+  const L = parseInt(document.getElementById('font-level')?.value, 10) || 1;
+  const cost = SORC_SLOT_COST[L];
+  const s = spellSorcFrom(_spClassData());
+  if (!s) return _fontMsg('Set your sorcery point maximum first.');
+  if (s.left < cost) return _fontMsg(`A level ${L} slot costs ${cost} points; ${s.left} left.`);
+  if (_num(`slot-${L}-used`) <= 0) return _fontMsg(`No spent level ${L} slot to get back.`);
+  _setNum(`slot-${L}-used`, _num(`slot-${L}-used`) - 1);
+  _setNum('sorc-used', s.used + cost);
+  _fontMsg(`${cost} points spent: a level ${L} slot is back.`);
+  updateClassCards(); renderSpells(); scheduleAutoSave();
 }
 
 function _spChanged() {
@@ -67,6 +164,7 @@ function _spMatches(s, q) {
 function renderSpells() {
   const box = document.getElementById('spell-list');
   if (!box) return;
+  updateClassCards();
   const prepares = _spPrepares();
   const pf = document.getElementById('prep-count-field');
   if (pf) pf.style.display = prepares ? '' : 'none';
@@ -101,18 +199,21 @@ function _spRowHTML(s, prepares) {
   const ready = spellIsReady(s, prepares);
   const open = _spellOpen.has(s.id);
   let prep;
-  if (prepares && s.level > 0 && !s.noSlot) {
+  if (prepares && s.level > 0 && !s.noSlot && !s.alwaysPrepared) {
     prep = `<input type="checkbox" ${s.prepared ? 'checked' : ''} onchange="toggleSpellPrepared(${id})" title="Prepared" aria-label="Prepared: ${esc(s.name)}">`;
   } else {
-    const why = s.level === 0 ? 'Cantrips are always ready' : s.noSlot ? 'Needs no spell slot' : 'Always ready';
+    const why = s.level === 0 ? 'Cantrips are always ready' : s.alwaysPrepared ? 'Always prepared' : s.noSlot ? 'Can be cast for free' : 'Always ready';
     prep = `<span class="sp-always" title="${why}" aria-label="${why}"></span>`;
   }
   const flags = (s.conc ? '<span class="sp-flag" title="Concentration">C</span>' : '')
-              + (s.ritual ? '<span class="sp-flag" title="Ritual">R</span>' : '');
+              + (s.ritual ? '<span class="sp-flag" title="Ritual">R</span>' : '')
+              + (s.alwaysPrepared && s.level > 0 ? '<span class="sp-ap" title="Always prepared: given by a feat, subclass feature or item">Always prepared</span>' : '');
   const meta = [s.range, s.duration].filter(Boolean).map(esc).join(' · ');
   const src = spellSourceLabel(s.source);
   let uses = '';
-  if (s.noSlot) {
+  if (spellIsArcanum(s, _spClassData())) {
+    uses = `<span class="sp-uses"><span class="act-box${s.used ? ' used' : ''}" onclick="clickSpellUse(${id},0)" title="${s.used ? 'Restore' : 'Use'}"></span><span class="act-recharge">Mystic Arcanum / Long Rest</span></span>`;
+  } else if (s.noSlot) {
     if (s.uses > 0) {
       let boxes = '';
       for (let i = 0; i < s.uses; i++) {
@@ -201,7 +302,14 @@ function restSpells(type) {
       const el = document.querySelector(`[data-key="slot-${i}-used"]`);
       if (el && (parseInt(el.value) || 0) !== 0) { el.value = '0'; changed++; }
     }
+    if (_num('sorc-used')) { _setNum('sorc-used', 0); changed++; }
+    // Mystic Arcanum spells are back.
+    const cd = _spClassData();
+    for (const s of spells) if (s.used && spellIsArcanum(s, cd)) { s.used = 0; changed++; }
   }
+  // Pact slots come back on any rest.
+  if (_num('pact-used')) { _setNum('pact-used', 0); changed++; }
+  if (changed) updateClassCards();
   if (changed) renderSpells();
   return changed;
 }
@@ -270,6 +378,7 @@ function openSpellModal(id) {
   set('spm-src-detail', sp.source.detail);
   chk('spm-prepared', sp.prepared);
   chk('spm-noslot', sp.noSlot);
+  chk('spm-always', sp.alwaysPrepared);
   set('spm-uses', sp.uses ? String(sp.uses) : '');
   set('spm-recharge', sp.uses ? sp.recharge : 'long');
   set('spm-notes', sp.notes);
@@ -283,6 +392,7 @@ function openSpellModal(id) {
   if (prepLine) prepLine.style.display = _spPrepares() ? '' : 'none';
   spmMaterialToggle();
   spmNoSlotToggle();
+  spmAlwaysToggle();
   document.getElementById('spell-modal').style.display = 'flex';
   setTimeout(() => document.getElementById('spm-name')?.focus(), 30);
 }
@@ -296,6 +406,13 @@ function spmMaterialToggle() {
   const on = document.getElementById('spm-m')?.checked;
   const f = document.getElementById('spm-material-field');
   if (f) f.style.display = on ? '' : 'none';
+}
+
+// "Always prepared" makes the Prepared box meaningless, so it is greyed out.
+function spmAlwaysToggle() {
+  const always = !!document.getElementById('spm-always')?.checked;
+  const prep = document.getElementById('spm-prepared');
+  if (prep) { prep.disabled = always; if (always) prep.checked = true; }
 }
 
 function spmNoSlotToggle() {
@@ -326,6 +443,7 @@ function saveSpellModal() {
     material: on('spm-m') ? val('spm-material').trim() : '',
     source: { kind: val('spm-src-kind'), detail: val('spm-src-detail').trim() },
     prepared: on('spm-prepared'),
+    alwaysPrepared: on('spm-always'),
     noSlot, uses,
     used: old && old.uses === uses ? old.used : 0,
     recharge: uses ? val('spm-recharge') : '',
@@ -534,4 +652,15 @@ async function runSpellImport() {
   } finally {
     btn.disabled = false;
   }
+}
+
+// Typing a class, subclass or level switches the Warlock / Sorcerer rules on
+// or off and refills the slot totals (a moment after the typing stops).
+let _autoSlotsTimer = null;
+for (const k of ['class', 'subclass', 'level']) {
+  document.querySelector(`[data-key="${k}"]`)?.addEventListener('input', () => {
+    renderSpells(); recalcPreparedCount();
+    clearTimeout(_autoSlotsTimer);
+    _autoSlotsTimer = setTimeout(() => autoFillSlots(false), 500);
+  });
 }

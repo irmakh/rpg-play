@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-11 22:50
+// Written by Irmak Hakman — 2026-11-12 00:35
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -53,11 +53,13 @@ function openSpellCast(opts) {
   const data = (opts && opts.data) || {};
   const spells = parseSpellList(data._spells);
   const prepares = spellPrepares(data);
-  // Ready spells only: an unprepared spell is not one you can cast today.
-  const rows = spells.filter(s => s.name && spellIsReady(s, prepares))
+  // Ready spells, plus rituals that are not prepared (castable only as a
+  // ritual, and listed only under the Ritual filter).
+  const rows = spells.filter(s => s.name)
     .map(s => ({ s, how: spellCastOptions(s, data) }))
+    .filter(r => spellIsReady(r.s, prepares) || r.how.ritualOnly)
     .sort((a, b) => a.s.level - b.s.level || a.s.name.localeCompare(b.s.name));
-  _spc = { opts, data, rows, filter: 'all', query: '', sel: -1, option: null, busy: false };
+  _spc = { opts, data, rows, filter: 'all', query: '', sel: -1, option: null, busy: false, meta: new Set() };
   const ov = _spcEl();
   document.getElementById('spc-q').value = '';
   if (opts.spellId) {
@@ -80,6 +82,7 @@ function _spcFilter(f) { if (_spc) { _spc.filter = f; _spcRender(); } }
 
 function _spcShown(r) {
   const f = _spc.filter;
+  if (r.how.ritualOnly && f !== 'ritual') return false;
   if (f === 'ritual' && !r.s.ritual) return false;
   if (f !== 'all' && f !== 'ritual' && r.s.cast !== f) return false;
   const q = _spc.query.trim().toLowerCase();
@@ -116,6 +119,7 @@ function _spcRenderList() {
       + (r.s.conc ? '<span class="spc-flag" title="Concentration">C</span>' : '')
       + (r.s.ritual ? '<span class="spc-flag" title="Ritual">R</span>' : '')
       + (off ? `<span class="spc-why">${_spEsc(r.how.reason)}</span>` : '')
+      + (r.how.ritualOnly ? '<span class="spc-why spc-ritual-only">not prepared</span>' : '')
       + `</button>`;
   });
   list.innerHTML = any ? html : '<div class="spc-empty">No spells match.</div>';
@@ -125,6 +129,7 @@ function _spcPick(i, quiet) {
   if (!_spc || !_spc.rows[i] || !_spc.rows[i].how.castable) return;
   _spc.sel = i;
   _spc.option = _spc.rows[i].how.best;
+  _spc.meta = new Set();
   if (!quiet) { _spcRenderList(); _spcRenderPick(); }
 }
 
@@ -133,6 +138,37 @@ function _spcChoose(j) {
   if (!r || !r.how.options[j] || !r.how.options[j].available) return;
   _spc.option = r.how.options[j];
   _spcRenderPick();
+}
+
+// Metamagic (Sorcerer): toggling an option that the points left cannot pay for
+// does nothing; the server checks the same.
+function _spcMetaToggle(key) {
+  if (!_spc) return;
+  if (_spc.meta.has(key)) _spc.meta.delete(key);
+  else {
+    const m = spellKnownMetamagic(_spc.data).find(x => x.key === key);
+    const sorc = spellSorcFrom(_spc.data);
+    if (!m || !sorc || _spcMetaCost() + m.cost > sorc.left) return;
+    _spc.meta.add(key);
+  }
+  _spcRenderPick();
+}
+function _spcMetaCost() {
+  return spellKnownMetamagic(_spc.data).filter(m => _spc.meta.has(m.key)).reduce((n, m) => n + m.cost, 0);
+}
+function _spcMetaHTML() {
+  const known = spellKnownMetamagic(_spc.data);
+  const sorc = spellSorcFrom(_spc.data);
+  if (!known.length || !sorc) return '';
+  const cost = _spcMetaCost();
+  const left = sorc.left - cost;
+  return `<div class="spc-meta"><div class="spc-meta-h">Metamagic <span>${left} of ${sorc.max} sorcery points left${cost ? ` (spending ${cost})` : ''}</span></div>`
+    + known.map(m => {
+      const on = _spc.meta.has(m.key);
+      const can = on || m.cost <= left;
+      return `<label class="spc-opt${can ? '' : ' off'}"><input type="checkbox" ${on ? 'checked' : ''} ${can ? `onchange="_spcMetaToggle('${m.key}')"` : 'disabled'}>`
+        + `<span>${_spEsc(m.name)} (${m.cost})</span></label>`;
+    }).join('') + `</div>`;
 }
 
 function _spcRenderPick() {
@@ -148,7 +184,7 @@ function _spcRenderPick() {
     `<label class="spc-opt${o.available ? '' : ' off'}">`
     + `<input type="radio" name="spc-opt" ${o === opt ? 'checked' : ''} ${o.available ? `onchange="_spcChoose(${j})"` : 'disabled'}>`
     + `<span>${_spEsc(o.label)}</span></label>`).join('');
-  const lv = opt ? (opt.mode === 'slot' ? opt.level : s.level) : s.level;
+  const lv = opt ? (opt.mode === 'slot' || opt.mode === 'pact' ? opt.level : s.level) : s.level;
   const charLevel = parseInt(_spc.data.level || _spc.data['total-level'], 10) || 1;
   const info = spellCastInfo(s, null, lv, charLevel);
   const fx = [
@@ -162,8 +198,9 @@ function _spcRenderPick() {
     ${_spcDetails(s)}
     <div class="spc-opts" role="radiogroup" aria-label="How to cast it">${options}</div>
     ${fx ? `<div class="spc-fx">${fx}</div>` : ''}
+    ${opt && opt.mode !== 'ritual' ? _spcMetaHTML() : ''}
     <div class="spc-err" id="spc-err" role="alert"></div>
-    <button type="button" class="spc-go" id="spc-go" onclick="_spcCast()" ${opt ? '' : 'disabled'}>Cast ${_spEsc(s.name)}${opt && opt.mode === 'slot' && opt.level > s.level ? ' at level ' + opt.level : ''}</button>`;
+    <button type="button" class="spc-go" id="spc-go" onclick="_spcCast()" ${opt ? '' : 'disabled'}>Cast ${_spEsc(s.name)}${opt && (opt.mode === 'slot' || opt.mode === 'pact') && opt.level > s.level ? ' at level ' + opt.level : ''}${opt && opt.mode === 'ritual' ? ' as a ritual' : ''}</button>`;
 }
 
 /** The spell's text under its casting time and range: components, description, notes. */
@@ -191,7 +228,8 @@ async function _spcCast() {
   try {
     const res = await fetch(`/api/characters/${encodeURIComponent(_spc.opts.charId)}/cast`, {
       method: 'POST', headers,
-      body: JSON.stringify({ spellId: r.s.id, name: r.s.name, level: r.s.level, mode: o.mode, slotLevel: o.mode === 'slot' ? o.level : undefined }),
+      body: JSON.stringify({ spellId: r.s.id, name: r.s.name, level: r.s.level, mode: o.mode, slotLevel: o.mode === 'slot' ? o.level : undefined,
+                             metamagic: o.mode === 'ritual' ? [] : [..._spc.meta] }),
     });
     const out = await res.json().catch(() => ({}));
     if (!res.ok) {

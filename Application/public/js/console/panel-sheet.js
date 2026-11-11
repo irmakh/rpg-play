@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-11 22:10
+// Written by Irmak Hakman — 2026-11-12 01:10
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -8,7 +8,8 @@
 //
 //   Skills   abilities, saving throws and skills - tap any of them to roll
 //   Combat   attacks, then the character's actions by kind, with limited uses
-//   Spells   spell slots and prepared spells
+//   Spells   spell slots and ready spells; choosing one opens its cast view
+//            (Cast a Spell, v324: the console's form of js/lib/spell-cast.js)
 //   Items    what is carried; tap to wear or take off
 //
 // It mirrors the table screen's right panel (js/table/table-panel.js) and uses
@@ -127,12 +128,23 @@ function sSheetCombatHTML() {
   return sRollModeHTML() + sGroupHTML('Attacks', attacks, true) + groups + rest;
 }
 
-// A spell as one row: tap it to put its description in chat.
+// A spell as one row. Whoever may cast for this character gets Cast (it opens
+// the cast view) with Post beside it; anyone else only Post (its text to chat).
+// A spell with nothing left to cast it with is greyed, with the reason.
 function sSheetSpellRowHTML(s, idx) {
   const lvl = s.level ? `level ${s.level}` : 'cantrip';
   const flags = (s.conc ? ', concentration' : '') + (s.ritual ? ', ritual' : '') + (s.noSlot ? ', no slot' : '');
-  return `<button type="button" class="p-roll two" onclick="sSheetPostSpell(${idx})">
-    <span class="lbl"><span>${esc(s.name || 'Spell')}</span><small>${esc(lvl + flags)}</small></span><span class="val post">Post</span></button>`;
+  const post = `onclick="sSheetPostSpell(${idx})"`;
+  if (!sSheetCanEdit()) {
+    return `<button type="button" class="p-roll two" ${post}>
+      <span class="lbl"><span>${esc(s.name || 'Spell')}</span><small>${esc(lvl + flags)}</small></span><span class="val post">Post</span></button>`;
+  }
+  const how = spellCastOptions(s, sQrollData);
+  const why = how.castable ? '' : ' · ' + how.reason;
+  return `<div class="p-roll-wrap">
+    <button type="button" class="p-roll two${how.castable ? '' : ' off'}" ${how.castable ? `onclick="sCastOpen(${idx})"` : 'disabled'}>
+      <span class="lbl"><span>${esc(s.name || 'Spell')}</span><small>${esc(lvl + flags + why)}</small></span><span class="val">${how.castable ? 'Cast' : ''}</span></button>
+    <button type="button" class="p-post" ${post}>Post</button></div>`;
 }
 
 // The sheet's spells as spell objects; old sheets' arrays are converted.
@@ -229,7 +241,146 @@ async function sSheetRest(type) {
 }
 
 // ── Spells ───────────────────────────────────────────────────────────────────
+// ── Cast a Spell ─────────────────────────────────────────────────────────────
+// The cast view replaces the Spells part while a spell is chosen: Back, the
+// spell's facts, one row per way to cast it (a slot of its level or higher,
+// its own free use, a ritual; spent ones disabled), Cast, and its text. The
+// rules are spellCastOptions() in js/lib/spell-data.js, the same ones the
+// server applies in POST /api/characters/:id/cast. Every control is a button,
+// so the gamepad's focus ring reaches them like any other row.
+let sCastIdx = null;     // index into sSheetSpells() of the chosen spell
+let sCastOpt = null;     // index into its options
+let sCastFor = null;     // the character it was chosen for
+let sCastBusy = false;
+let sCastMeta = new Set();   // Metamagic chosen for this cast (Sorcerer)
+
+function sCastOpen(idx) {
+  const s = sSheetSpells()[idx];
+  if (!s || !sSheetCanEdit()) return;
+  const how = spellCastOptions(s, sQrollData);
+  if (!how.castable) return;
+  sCastIdx = idx;
+  sCastOpt = how.options.indexOf(how.best);
+  sCastFor = sSheetCharId();
+  sCastMeta = new Set();
+  if (sTokenPane !== 'spells') sSetTokenPane('spells'); else sSheetRepaint();
+  setTimeout(() => sEl('s-cast-go')?.focus(), 0);
+}
+
+function sCastClose() {
+  sCastIdx = null; sCastOpt = null;
+  sSheetRepaint();
+}
+
+function sCastChoose(j) {
+  sCastOpt = j;
+  sSheetRepaint();
+  setTimeout(() => sEl('s-cast-go')?.focus(), 0);
+}
+
+function sCastMetaToggle(key) {
+  if (sCastMeta.has(key)) sCastMeta.delete(key);
+  else {
+    const m = spellKnownMetamagic(sQrollData).find(x => x.key === key);
+    const sorc = spellSorcFrom(sQrollData);
+    const spent = spellKnownMetamagic(sQrollData).filter(x => sCastMeta.has(x.key)).reduce((n, x) => n + x.cost, 0);
+    if (!m || !sorc || spent + m.cost > sorc.left) return;
+    sCastMeta.add(key);
+  }
+  sSheetRepaint();
+}
+
+function sCastMetaHTML() {
+  const known = spellKnownMetamagic(sQrollData);
+  const sorc = spellSorcFrom(sQrollData);
+  if (!known.length || !sorc) return '';
+  const cost = known.filter(m => sCastMeta.has(m.key)).reduce((n, m) => n + m.cost, 0);
+  const left = sorc.left - cost;
+  return `<h3 class="p-h">Metamagic · ${left} of ${sorc.max} points left${cost ? ` (spending ${cost})` : ''}</h3>`
+    + known.map(m => {
+      const on = sCastMeta.has(m.key);
+      const can = on || m.cost <= left;
+      return `<button type="button" class="p-roll p-cast-opt${on ? ' on' : ''}${can ? '' : ' off'}" ${can ? `onclick="sCastMetaToggle('${m.key}')" aria-pressed="${on}"` : 'disabled'}>`
+        + `<span class="lbl">${esc(m.name)} (${m.cost})</span><span class="val">${on ? '●' : ''}</span></button>`;
+    }).join('');
+}
+
+function sCastViewHTML() {
+  const s = sSheetSpells()[sCastIdx];
+  if (!s) { sCastIdx = null; return ''; }
+  const how = spellCastOptions(s, sQrollData);
+  let opt = how.options[sCastOpt];
+  if (!opt || !opt.available) { opt = how.best; sCastOpt = how.options.indexOf(opt); }
+  const facts = [spellLevelLabel(s.level) + (s.school ? ' ' + spellSchoolName(s.school).toLowerCase() : ''),
+                 s.castText || spellCastLabel(s), s.range, (s.conc ? 'Concentration, ' : '') + s.duration]
+    .filter(Boolean).map(v => `<span>${esc(v)}</span>`).join('');
+  const options = how.options.map((o, j) =>
+    `<button type="button" class="p-roll p-cast-opt${o === opt ? ' on' : ''}${o.available ? '' : ' off'}"`
+    + (o.available ? ` onclick="sCastChoose(${j})" aria-pressed="${o === opt}"` : ' disabled')
+    + `><span class="lbl">${esc(o.label)}</span><span class="val">${o === opt ? '●' : ''}</span></button>`).join('');
+  const lv = opt && (opt.mode === 'slot' || opt.mode === 'pact') ? opt.level : s.level;
+  const info = spellCastInfo(s, null, lv, parseInt(sQrollData.level || sQrollData['total-level'], 10) || 1);
+  const fx = [
+    info.attack ? `${info.attack === 'melee' ? 'Melee' : 'Ranged'} spell attack ${sQrollData['sp-atk'] || ''}` : '',
+    info.save ? `DC ${sQrollData['sp-dc'] || '?'} ${info.save} save` : '',
+    info.damage ? `${info.healing ? 'Healing' : 'Damage'} ${info.damage}${info.damageType && !info.healing ? ' ' + info.damageType : ''}` : '',
+  ].filter(Boolean).map(esc).join(' · ');
+  const comp = spellComponentsLabel(s);
+  const text = (comp ? `<p class="p-sb-line"><b>Components</b> ${esc(comp)}</p>` : '')
+    + spellDescHTML(s) + (s.notes ? `<p class="p-cast-notes">${esc(s.notes)}</p>` : '');
+  const up = opt && (opt.mode === 'slot' || opt.mode === 'pact') && opt.level > s.level ? ` at level ${opt.level}`
+           : opt && opt.mode === 'ritual' ? ' as a ritual' : '';
+  return `<div class="p-cast">
+    <div class="p-cast-head"><button type="button" class="c-btn" onclick="sCastClose()">Back</button><strong>${esc(s.name)}</strong></div>
+    <p class="p-facts">${facts}</p>
+    ${s.source && (s.source.kind || s.source.detail) ? `<p class="p-facts"><span>${esc(spellSourceLabel(s.source))}</span></p>` : ''}
+    <h3 class="p-h">How to cast it</h3>
+    ${options}
+    ${fx ? `<p class="p-cast-fx">${fx}</p>` : ''}
+    ${opt && opt.mode !== 'ritual' ? sCastMetaHTML() : ''}
+    <div class="p-inline pad p-cast-go">
+      <button type="button" class="c-btn primary" id="s-cast-go" onclick="sCastGo()" ${opt && !sCastBusy ? '' : 'disabled'}>Cast ${esc(s.name)}${esc(up)}</button>
+      <button type="button" class="c-btn" onclick="sSheetPostSpell(${sCastIdx})">Post text</button>
+    </div>
+    ${text ? `<div class="p-sb">${text}</div>` : ''}
+  </div>`;
+}
+
+async function sCastGo() {
+  const charId = sSheetCharId();
+  const s = sSheetSpells()[sCastIdx];
+  const opt = s && spellCastOptions(s, sQrollData).options[sCastOpt];
+  if (!charId || !s || !opt || !opt.available || sCastBusy) return;
+  sCastBusy = true;
+  sSheetRepaint();
+  try {
+    const res = await fetch(`/api/characters/${encodeURIComponent(charId)}/cast`, {
+      method: 'POST', headers: sAuthHeaders(),
+      body: JSON.stringify({ spellId: s.id, name: s.name, level: s.level, mode: opt.mode,
+                             slotLevel: opt.mode === 'slot' ? opt.level : undefined,
+                             metamagic: opt.mode === 'ritual' ? [] : [...sCastMeta] }),
+    });
+    const out = await res.json().catch(() => ({}));
+    sCastBusy = false;
+    if (!res.ok) { sToast(out.error || 'The spell could not be cast.'); sSheetRepaint(); return; }
+    if (sQrollData && sSheetCharId() === charId) Object.assign(sQrollData, out.data || {});
+    const sp = out.entry && out.entry.spell;
+    sToast(sp ? `Cast ${sp.name}${sp.castLevel > sp.level ? ' at level ' + sp.castLevel : ''}.` : 'Cast.');
+    sCastClose();
+  } catch {
+    sCastBusy = false;
+    sToast('Network error.');
+    sSheetRepaint();
+  }
+}
+
 function sSheetSpellsHTML() {
+  // A different character than the one a spell was chosen for: back to the list.
+  if (sCastIdx !== null && sCastFor !== sSheetCharId()) { sCastIdx = null; sCastOpt = null; }
+  if (sCastIdx !== null && sSheetCanEdit()) {
+    const view = sCastViewHTML();
+    if (view) return view;
+  }
   const d = sQrollData;
   const canEdit = sSheetCanEdit();
 
@@ -245,10 +396,23 @@ function sSheetSpellsHTML() {
           `<button type="button" class="p-use${j < avail ? '' : ' used'}" ${canEdit ? `onclick="sSheetSlot(${level},${j})"` : 'disabled'} aria-label="Level ${level} slot, ${j < avail ? 'available' : 'spent'}"></button>`).join('')
       + `<span>${avail} of ${total} left</span></div></div>`;
   }
+  // Warlock pact slots (tap to use / restore) and Sorcerer sorcery points (v325).
+  const pact = spellPactFrom(d);
+  if (pact) {
+    slots += `<div class="p-slots"><span class="lvl">Pact ${pact.level}</span><div class="p-uses">`
+      + Array.from({ length: pact.total }, (_, j) =>
+          `<button type="button" class="p-use${j < pact.left ? '' : ' used'}" ${canEdit ? `onclick="sSheetPact(${j})"` : 'disabled'} aria-label="Pact slot, ${j < pact.left ? 'available' : 'spent'}"></button>`).join('')
+      + `<span>${pact.left} of ${pact.total} left</span></div></div>`;
+  }
+  const sorc = spellSorcFrom(d);
+  if (sorc) slots += `<div class="p-slots"><span class="lvl">Sorcery</span><span class="p-sorc">${sorc.left} of ${sorc.max} points</span></div>`;
 
   const spells   = sSheetSpells();
   const prepares = spellPrepares(sQrollData);
   const prepared = spells.map((s, idx) => ({ s, idx })).filter(o => spellIsReady(o.s, prepares));
+  // Rituals that are not prepared: castable as a ritual only.
+  const rituals = canEdit ? spells.map((s, idx) => ({ s, idx }))
+    .filter(o => !spellIsReady(o.s, prepares) && spellCastOptions(o.s, d).ritualOnly) : [];
   const byLevel  = new Map();
   for (const o of prepared) {
     const lvl = String(o.s.level || 0);
@@ -256,11 +420,26 @@ function sSheetSpellsHTML() {
     byLevel.get(lvl).push(o);
   }
   const lists = [...byLevel.keys()].sort((a, b) => Number(a) - Number(b)).map(lvl =>
-    sGroupHTML(lvl === '0' ? 'Cantrips' : `Level ${lvl}`, byLevel.get(lvl).map(o => sSheetSpellRowHTML(o.s, o.idx)).join(''), true)).join('');
+    sGroupHTML(lvl === '0' ? 'Cantrips' : `Level ${lvl}`, byLevel.get(lvl).map(o => sSheetSpellRowHTML(o.s, o.idx)).join(''), true)).join('')
+    + (rituals.length ? sGroupHTML('Rituals (not prepared)', rituals.map(o => sSheetSpellRowHTML(o.s, o.idx)).join(''), false) : '');
 
   if (!slots && !lists) return '<p class="p-empty">No spell slots or prepared spells on this character sheet.</p>';
   return (slots ? `<h3 class="p-h">Spell slots</h3>${slots}` : '')
        + (lists ? `<h3 class="p-h">Ready spells</h3>${lists}` : '');
+}
+
+// A Warlock's pact slot, tapped like a spell slot.
+function sSheetPact(pipIndex) {
+  const charId = sSheetCharId();
+  const pact = sQrollData && spellPactFrom(sQrollData);
+  if (!charId || !pact) return;
+  const newUsed = pipIndex < pact.left ? Math.min(pact.total, pact.used + 1) : Math.max(0, pact.used - 1);
+  if (newUsed === pact.used) return;
+  sQrollData['pact-used'] = String(newUsed);
+  sSheetRepaint();
+  fetch(`/api/characters/${charId}/spell-slot`, {
+    method: 'PATCH', headers: sAuthHeaders(), body: JSON.stringify({ level: 'pact', used: newUsed }),
+  }).catch(() => {});
 }
 
 // Tapping an available slot spends one; tapping a spent slot gives one back.

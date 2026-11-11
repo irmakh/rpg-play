@@ -1,8 +1,9 @@
-// Written by Irmak Hakman — 2026-11-11 16:40
+// Written by Irmak Hakman — 2026-11-12 00:20
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
 import { clientIp } from '../../lib/login-guard.js';
+import { SpellData as SD } from '../../lib/spell-data-node.js';
 
 export default function register(app, ctx) {
   const {
@@ -41,7 +42,9 @@ export default function register(app, ctx) {
       // view, which has no token to read live HP / speed off and would otherwise
       // render those stats blank.
       // sp-no-prep: the character does not prepare spells, so every spell is ready.
-      const STAT_KEYS   = ['init','init-bonus','sp-atk','ac','prof-bonus','pb','proficiency','passive-perception','pp','sp-dc','speed','hpcur','hpmax','hptemp','sp-no-prep'];
+      const STAT_KEYS   = ['init','init-bonus','sp-atk','ac','prof-bonus','pb','proficiency','passive-perception','pp','sp-dc','speed','hpcur','hpmax','hptemp','sp-no-prep',
+                           // Warlock pact slots, Sorcerer points and the Metamagic it knows (v325)
+                           'pact-slots','pact-level','pact-used','sorc-points','sorc-used', ...SD.spellMetamagicList().map(m => 'mm-' + m.key)];
       const META_KEYS   = ['race','race-name','class','class-name','class-1','subclass','subclass-1','level','total-level','char-level'];
       const SLOT_KEYS   = Array.from({ length: 9 }, (_, i) => [`slot-${i+1}-total`,`slot-${i+1}-used`]).flat();
       const qroll = {};
@@ -67,6 +70,17 @@ export default function register(app, ctx) {
       }
       const { level, used } = req.body || {};
       if (!level || used === undefined) return res.status(400).json({ error: 'level and used required' });
+      // A Warlock's pact slots are their own pool.
+      if (level === 'pact') {
+        const char = await getCharacter(charId);
+        if (!char) return res.status(404).json({ error: 'Not found' });
+        let data = {};
+        try { data = JSON.parse(char.dataJson || '{}'); } catch {}
+        data['pact-used'] = String(Math.max(0, Math.min(parseInt(used) || 0, parseInt(data['pact-slots']) || 0)));
+        ldb.updateCharacter(charId, { dataJson: JSON.stringify(data) });
+        broadcast('characters', { action: 'updated', id: charId, keys: ['pact-used'] });
+        return res.json({ ok: true, used: parseInt(data['pact-used']) });
+      }
       // A spell level is 1–9; anything else would write an arbitrary slot-…-used key.
       if (!/^[1-9]$/.test(String(level))) return res.status(400).json({ error: 'level must be 1–9' });
       const char = await getCharacter(charId);
@@ -168,7 +182,10 @@ export default function register(app, ctx) {
         its.forEach(i => { if (i && i.chargesRecharge === 'long') i.chargesUsed = 0; });
         data._items = JSON.stringify(its);
         for (let i = 1; i <= 9; i++) if (data[`slot-${i}-used`] !== undefined) data[`slot-${i}-used`] = '0';
+        if (data['sorc-used'] !== undefined) data['sorc-used'] = '0';
       }
+      // Pact slots come back on any rest.
+      if (data['pact-used'] !== undefined) data['pact-used'] = '0';
       // Spells' own uses. Only spell objects carry them; a sheet still holding
       // the pre-v320 array rows has none, and is left exactly as it is.
       if (data._spells !== undefined) {
@@ -178,7 +195,9 @@ export default function register(app, ctx) {
           let changed = false;
           for (const sp of sps) {
             if (sp && !Array.isArray(sp) && typeof sp === 'object' && sp.used
-                && (sp.recharge === 'short' || (type === 'long' && sp.recharge === 'long'))) {
+                && (sp.recharge === 'short' || (type === 'long' && (sp.recharge === 'long'
+                    // a Mystic Arcanum is back after a long rest
+                    || SD.spellIsArcanum(SD.normalizeSpell(sp), data))))) {
               sp.used = 0; changed = true;
             }
           }

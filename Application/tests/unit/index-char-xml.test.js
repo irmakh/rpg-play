@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-11 17:10
+// Written by Irmak Hakman — 2026-11-12 02:15
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -64,7 +64,7 @@ describe('characterToXML — spells', () => {
     const xml = characterToXML({ _spells: JSON.stringify([sp]) });
     expect(xml).toContain('cast="action"');
     expect(xml).toContain('duration="Up to 1 minute"');
-    expect(xml).toContain('noslot="true" uses="1" used="0" recharge="long" source_kind="feat"');
+    expect(xml).toContain('noslot="true" always="false" uses="1" used="0" recharge="long" source_kind="feat"');
     expect(xml).toContain('<source>Magic Initiate</source>');
     expect(xml).toContain('<name>Entangle</name>');
   });

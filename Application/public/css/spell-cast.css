@@ -77,3 +77,8 @@
 .cs-desc summary{cursor:pointer;color:var(--ash);font-size:calc(10px*var(--fs, 1))}
 .cs-desc .chat-html{font-size:calc(11px*var(--fs, 1));line-height:1.45;margin-top:3px}
 .cs-desc p{margin:0 0 3px}
+/* Metamagic (Sorcerer) in the pop-up, and a ritual cast without preparing. */
+.spc-meta{display:flex;flex-direction:column;gap:var(--s1)}
+.spc-meta-h{font-size:var(--t-sm);font-weight:700;color:var(--bone)}
+.spc-meta-h span{font-weight:400;color:var(--ash);font-size:var(--t-xs);margin-left:var(--s1)}
+.spc-ritual-only{color:var(--ash)}

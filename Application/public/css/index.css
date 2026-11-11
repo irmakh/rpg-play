@@ -1,4 +1,4 @@
-/* Written by Irmak Hakman — 2026-11-11 22:15 */
+/* Written by Irmak Hakman — 2026-11-12 02:20 */
 /* Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) */
 
 *{box-sizing:border-box;margin:0;padding:0}
@@ -869,3 +869,14 @@ html.lamplit input.big[readonly]{color:var(--arc)}
 .sp-cast-btn:hover{background:var(--arc);color:var(--ink)}
 .sp-ct-tools .spc-open{min-height:0;padding:var(--s1) var(--s2);font-size:var(--t-xs)}
 .act-rest-bar .spc-open{margin-right:auto}
+/* Warlock Pact Magic / Sorcerer sorcery points cards (index-spells.js) */
+.sp-hint{color:var(--ash);font-size:var(--t-xs);margin:var(--s2) 0 0}
+.sp-font{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s2);margin-top:var(--s2)}
+.sp-font select{width:auto}
+.sp-font .char-btn{min-height:0;padding:var(--s1) var(--s2);font-size:var(--t-xs)}
+.sp-mm{margin-top:var(--s3)}
+.sp-mm-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(calc(170px*var(--fs, 1)),1fr));gap:var(--s1) var(--s3);margin-top:var(--s1)}
+.sp-mm-list label{display:flex;align-items:center;gap:var(--s1);font-size:var(--t-sm);cursor:pointer}
+.sp-mm-list label span{color:var(--ash);font-size:var(--t-xs)}
+.sp-mm-list input{accent-color:var(--arc)}
+.sp-ap{font-size:var(--t-xs);color:var(--verdigris);white-space:nowrap}

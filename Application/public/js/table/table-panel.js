@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-11 22:50
+// Written by Irmak Hakman — 2026-11-12 01:00
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -134,7 +134,7 @@ function renderSideCharacter() {
   // for whoever may edit; the book lists every spell, narrowed by the filter
   // and search the viewer last chose.
   const canEditSlots = isDM() || isCharSession();
-  const spellSlotsHtml = spellSlotsHTML(spellSlots, canEditSlots);
+  const spellSlotsHtml = spellSlotsHTML(spellSlots, canEditSlots) + _sideClassPoolsHTML(d, canEditSlots);
   // Items (wear / unwear, charges)
   const itemsHtml = _buildSidePanelItems(d, canEditSlots);
   _sideSpells = preparedSpells;
@@ -595,10 +595,12 @@ async function tableActionRest(type) {
     its.forEach(i => { if (i && i.chargesRecharge === 'long') i.chargesUsed = 0; });
     qrollData._items = JSON.stringify(its);
     for (let i = 1; i <= 9; i++) if (qrollData[`slot-${i}-used`] !== undefined) qrollData[`slot-${i}-used`] = '0';
+    if (qrollData['sorc-used'] !== undefined) qrollData['sorc-used'] = '0';
   }
+  if (qrollData['pact-used'] !== undefined) qrollData['pact-used'] = '0';
   // Spells' own uses, as the server does it (routes/characters.js action-rest).
   const sps = parseSpellList(qrollData._spells);
-  sps.forEach(s => { if (s.used && (s.recharge === 'short' || (type === 'long' && s.recharge === 'long'))) s.used = 0; });
+  sps.forEach(s => { if (s.used && (s.recharge === 'short' || (type === 'long' && (s.recharge === 'long' || spellIsArcanum(s, qrollData))))) s.used = 0; });
   if (qrollData._spells !== undefined) qrollData._spells = JSON.stringify(sps);
   const content = document.getElementById('side-qroll-content');
   if (content) content.innerHTML = renderSideCharacter();
@@ -609,6 +611,42 @@ async function tableActionRest(type) {
       body: JSON.stringify({ type })
     });
   } catch {}
+}
+
+// ── Warlock pact slots and Sorcerer sorcery points (v325) ─────────────────────
+// Drawn like the spell slots above them. Pact slots can be used and restored
+// by click, as slots can; sorcery points are shown (Font of Magic is on the sheet).
+function _sideClassPoolsHTML(d, canEdit) {
+  const pact = spellPactFrom(d);
+  const sorc = spellSorcFrom(d);
+  if (!pact && !sorc) return '';
+  let rows = '';
+  if (pact) {
+    const pips = Array.from({ length: pact.total }, (_, j) => {
+      const open = j < pact.left;
+      return `<span class="rp-slot-pip${open ? '' : ' used'}" title="${open ? 'Available' : 'Used'}${canEdit ? (open ? ' — click to use' : ' — click to restore') : ''}"`
+        + (canEdit ? ` onclick="clickPactPip(${j})"` : '') + `></span>`;
+    }).join('');
+    rows += `<div class="rp-slot-row${pact.left ? '' : ' spent'}${canEdit ? ' can-edit' : ''}"><span class="rp-slot-lvl">Pact (${pact.level})</span>`
+      + `<span class="rp-slot-pips">${pips}</span><span class="rp-slot-count"><b>${pact.left}</b> of ${pact.total} left</span></div>`;
+  }
+  if (sorc) {
+    rows += `<div class="rp-slot-row${sorc.left ? '' : ' spent'}"><span class="rp-slot-lvl">Sorcery</span>`
+      + `<span class="rp-slot-pips"></span><span class="rp-slot-count"><b>${sorc.left}</b> of ${sorc.max} points</span></div>`;
+  }
+  return `<div class="rp-flat-hdr">${pact && sorc ? 'Pact Magic &amp; Sorcery' : pact ? 'Pact Magic' : 'Sorcery Points'}</div><div class="rp-slot-list">${rows}</div>`;
+}
+
+function clickPactPip(pipIndex) {
+  if (!qrollData || !_sideCharId) return;
+  const pact = spellPactFrom(qrollData);
+  if (!pact) return;
+  const newUsed = pipIndex < pact.left ? Math.min(pact.total, pact.used + 1) : Math.max(0, pact.used - 1);
+  if (newUsed === pact.used) return;
+  qrollData['pact-used'] = String(newUsed);
+  const content = document.getElementById('side-qroll-content');
+  if (content) content.innerHTML = renderSideCharacter();
+  updateSpellSlot('pact', newUsed);
 }
 
 // ── Cast a Spell (js/lib/spell-cast.js) ──────────────────────────────────────

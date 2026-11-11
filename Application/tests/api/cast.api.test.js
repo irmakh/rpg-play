@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-11 22:25
+// Written by Irmak Hakman — 2026-11-12 01:20
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -176,6 +176,51 @@ describe('the chat card', () => {
     const r = await cast({ spellId: 'x', mode: 'cantrip' });
     expect(r.body.entry.desc).not.toContain('<img');
     expect(r.body.entry.desc).toContain('&lt;img');
+  });
+});
+
+describe('class rules (v325)', () => {
+  it('casts an unprepared ritual as a ritual, and refuses it with a slot', async () => {
+    seed({ _spells: JSON.stringify([{ id: 'r', name: 'Detect Magic', level: 1, ritual: true, prepared: false }]) });
+    expect((await cast({ spellId: 'r', mode: 'slot', slotLevel: 3 })).status).toBe(400);
+    expect((await cast({ spellId: 'r', mode: 'ritual' })).status).toBe(200);
+    expect(stored()['slot-3-used']).toBe('0');
+  });
+
+  it('Warlock: spends a pact slot and casts at the pact level', async () => {
+    seed({ class: 'Warlock', 'pact-slots': '2', 'pact-level': '3', 'pact-used': '0',
+           _spells: JSON.stringify([{ id: 'h', name: 'Hex', level: 1, entries: ['{@damage 1d6} Necrotic damage'] }]) });
+    const r = await cast({ spellId: 'h', mode: 'pact' });
+    expect(r.status).toBe(200);
+    expect(r.body).toMatchObject({ keys: ['pact-used'], data: { 'pact-used': '1' } });
+    expect(r.body.entry.spell).toMatchObject({ mode: 'pact', castLevel: 3 });
+    await cast({ spellId: 'h', mode: 'pact' });
+    expect((await cast({ spellId: 'h', mode: 'pact' })).status).toBe(409);
+  });
+
+  it('Warlock: a Mystic Arcanum casts once without a slot', async () => {
+    seed({ class: 'Warlock', _spells: JSON.stringify([{ id: 'e', name: 'Eyebite', level: 6 }]) });
+    expect((await cast({ spellId: 'e', mode: 'free' })).status).toBe(200);
+    expect(storedSpell('e').used).toBe(1);
+    expect((await cast({ spellId: 'e', mode: 'free' })).status).toBe(409);
+  });
+
+  it('Sorcerer: Metamagic costs sorcery points, is checked first, and shows on the card', async () => {
+    seed({ class: 'Sorcerer', 'sorc-points': '3', 'sorc-used': '0', 'mm-quickened': true, 'mm-twinned': true });
+    const r = await cast({ spellId: 'sp-fb', mode: 'slot', slotLevel: 3, metamagic: ['quickened', 'twinned'] });
+    expect(r.status).toBe(200);
+    expect(stored()['sorc-used']).toBe('3');
+    expect(r.body.entry).toMatchObject({ metamagic: ['Quickened Spell', 'Twinned Spell'], points: 3, spell: { castText: '1 Bonus Action (Quickened)' } });
+    // no points left: refused before the slot is spent
+    const broke = await cast({ spellId: 'sp-fb', mode: 'slot', slotLevel: 3, metamagic: ['twinned'] });
+    expect(broke.status).toBe(409);
+    expect(stored()['slot-3-used']).toBe('1');
+  });
+
+  it('refuses Metamagic the character does not know', async () => {
+    seed({ class: 'Sorcerer', 'sorc-points': '5', 'mm-quickened': true });
+    expect((await cast({ spellId: 'sp-fb', mode: 'slot', slotLevel: 3, metamagic: ['heightened'] })).status).toBe(400);
+    expect(stored()['slot-3-used']).toBe('0');
   });
 });
 
