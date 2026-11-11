@@ -1,4 +1,4 @@
-/* Written by Irmak Hakman — 2026-10-22 09:18 */
+/* Written by Irmak Hakman — 2026-11-11 18:11 */
 /* Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) */
 
 *{box-sizing:border-box;margin:0;padding:0}
@@ -69,3 +69,25 @@ tr:hover td{background:var(--wash)}
   .detail-actions{margin-left:0}
   .detail-body{max-width:none}
 }
+
+/* My Monsters / Official switch at the top of the sidebar */
+.mon-seg{display:flex;flex-shrink:0;border-bottom:1px solid var(--rule-hi)}
+.mon-seg-btn{flex:1;background:none;border:none;border-bottom:2px solid transparent;color:var(--ash);padding:var(--s2) var(--s3);cursor:pointer;font:inherit;font-weight:600;min-height:calc(40px*var(--fs, 1))}
+.mon-seg-btn:hover{color:var(--bone);background:var(--slate-hi)}
+.mon-seg-btn.active{color:var(--bone);border-bottom-color:var(--arc)}
+#official-tools select{flex:1;min-width:0}
+.ob-more{padding:var(--s3);text-align:center}
+
+/* Official monsters: the Books window */
+.ob-hint{color:var(--ash);font-size:var(--t-xs);margin:0 0 var(--s2)}
+.ob-tools{display:flex;gap:var(--s1);margin:var(--s2) 0;align-items:center}
+.ob-tools input{flex:1;min-width:0}
+.ob-list{max-height:50vh;overflow-y:auto;border:1px solid var(--rule);border-radius:var(--r-sm);margin-bottom:var(--s2)}
+.ob-book{display:flex;align-items:center;gap:var(--s2);padding:var(--s2) var(--s3);border-bottom:1px solid var(--rule);cursor:pointer}
+.ob-book:last-child{border-bottom:none}
+.ob-book:hover{background:var(--wash)}
+.ob-book input{accent-color:var(--arc)}
+.ob-name{flex:1;min-width:0}
+.ob-code{color:var(--ash);font-size:var(--t-xs);font-family:ui-monospace,Consolas,monospace;flex:none}
+.ob-have{color:var(--verdigris);font-size:var(--t-xs);flex:none}
+.ob-status{font-size:var(--t-sm);color:var(--verdigris)}

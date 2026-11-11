@@ -1,8 +1,8 @@
-// Written by Irmak Hakman — 2026-11-11 17:46
+// Written by Irmak Hakman — 2026-11-11 18:21
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
-const CACHE = 'rpg-v330';
+const CACHE = 'rpg-v332';
 
 const STATIC = [
   // Core pages
@@ -79,6 +79,7 @@ const STATIC = [
   '/js/lib/weather-ui.js',
   '/js/lib/spell-data.js',
   '/js/lib/spell-cast.js',
+  '/js/lib/official-monsters.js',
   '/css/spell-cast.css',
   // Table JS modules
   '/js/table/table-state.js',

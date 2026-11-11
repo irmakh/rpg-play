@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-11 17:46
+// Written by Irmak Hakman — 2026-11-11 18:21
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -38,6 +38,7 @@ import registerTreasury   from './server/routes/treasury.js';
 import registerInitiative from './server/routes/initiative.js';
 import registerChat       from './server/routes/chat.js';
 import registerMonsters   from './server/routes/monsters.js';
+import registerOfficialMonsters from './server/routes/official-monsters.js';
 import registerEvents     from './server/routes/events.js';
 import registerBackup     from './server/routes/backup.js';
 import registerTable      from './server/routes/table.js';
@@ -505,7 +506,7 @@ const MAX_MEDIA_BYTES = 25 * 1024 * 1024;
 // Bump this number whenever frontend JS or CSS files change.
 // Also bump CACHE in public/sw.js to the same value.
 // Both must always match. See deployment notes in CLAUDE.md.
-const FRONTEND_VERSION = 330;
+const FRONTEND_VERSION = 332;
 
 // ── Express app ───────────────────────────────────────────────────────────────
 const app = express();
@@ -935,6 +936,7 @@ registerShop(app, ctx);
 registerLoot(app, ctx);
 registerInitiative(app, ctx);
 registerChat(app, ctx);
+registerOfficialMonsters(app, ctx);   // before registerMonsters: /api/monsters/:id would take 'official'
 registerMonsters(app, ctx);
 registerEvents(app, ctx);
 registerBackup(app, ctx);

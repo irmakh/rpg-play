@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-12 01:00
+// Written by Irmak Hakman — 2026-11-11 18:08
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -880,11 +880,12 @@ async function loadSideQroll() {
         // DM: use cached full list
         if (_monsterList.length === 0) {
           try {
-            const r = await fetch('/api/monsters', { headers: authHeaders() });
+            const r = await fetch('/api/monsters?linked=1', { headers: authHeaders() });
             if (r.ok) _monsterList = await r.json();
           } catch {}
         }
-        const mon = _monsterList.find(m => m.id === activeTok.linkedId);
+        // An official monster placed after the list was loaded is fetched on its own.
+        const mon = _monsterList.find(m => m.id === activeTok.linkedId) || await ensureTableMonster(activeTok.linkedId);
         if (mon) {
           const md = mon.data || {};
           if (subtitleEl) {

@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-11 17:45
+// Written by Irmak Hakman — 2026-11-11 18:08
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -401,6 +401,27 @@ function renderMonsterFullStats(data, tok) {
     </div>
     <div id="side-sec-monster" class="qroll-rows" style="${_sideSecStyle('monster')}">${html}</div>
   </div>`;
+}
+
+// A monster a token links to that this screen has not loaded yet (an official
+// one another DM screen just placed): fetched once and kept in _monsterList.
+const _monsterLoading = new Map();
+function ensureTableMonster(id) {
+  if (!id || !isDM()) return Promise.resolve(null);
+  const have = _monsterList.find(m => m.id === id);
+  if (have) return Promise.resolve(have);
+  if (_monsterLoading.has(id)) return _monsterLoading.get(id);
+  const p = (async () => {
+    try {
+      const r = await fetch(`/api/monsters/${encodeURIComponent(id)}`, { headers: authHeaders() });
+      if (!r.ok) return null;
+      const mon = await r.json();
+      if (!_monsterList.some(m => m.id === id)) _monsterList.push(mon);
+      return mon;
+    } catch { return null; } finally { _monsterLoading.delete(id); }
+  })();
+  _monsterLoading.set(id, p);
+  return p;
 }
 
 // ── Monster info modal (full stat block popup for DM) ─────────────────────────

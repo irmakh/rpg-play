@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-28 17:12
+// Written by Irmak Hakman — 2026-11-11 18:09
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -1146,30 +1146,52 @@ async function handleImageUpload(input) {
 
 // ── Prepared Tokens ──────────────────────────────────────────────────────────
 async function loadPmMonsters() {
-  if (pmMonsterLoaded) return;
-  const listEl = document.getElementById('pm-mon-list');
-  try {
-    const res = await fetch('/api/monsters', { headers: { 'X-Master-Password': masterPw } });
-    if (res.ok) pmMonsterList = await res.json();
-    pmMonsterLoaded = true;
-  } catch {}
-  pmRenderMonsterList('');
+  if (!pmMonsterLoaded) {
+    try {
+      const res = await fetch('/api/monsters', { headers: { 'X-Master-Password': masterPw } });
+      if (res.ok) pmMonsterList = await res.json();
+      pmMonsterLoaded = true;
+    } catch {}
+  }
+  // A token being edited may be an official monster: load that one too.
+  if (pmSelectedMonsterId && !pmMonsterList.some(m => m.id === pmSelectedMonsterId) && typeof OfficialMonsters !== 'undefined') {
+    const mon = await OfficialMonsters.get(pmSelectedMonsterId, { 'X-Master-Password': masterPw });
+    if (mon && !pmMonsterList.some(m => m.id === mon.id)) pmMonsterList.push(mon);
+  }
+  pmRenderMonsterList(document.getElementById('pm-mon-search')?.value || '');
+}
+
+// An official monster from the search: loaded in full, then picked like the DM's own.
+async function pmPickOfficial(id) {
+  const mon = await OfficialMonsters.get(id, { 'X-Master-Password': masterPw });
+  if (!mon) { showStatus('Could not load that monster.', true); return; }
+  if (!pmMonsterList.some(m => m.id === id)) pmMonsterList.push(mon);
+  pmSelectMonster(id);
 }
 
 function pmRenderMonsterList(query) {
   const el = document.getElementById('pm-mon-list');
   if (!el) return;
   const q = (query || '').toLowerCase().trim();
-  const list = q ? pmMonsterList.filter(m => m.name.toLowerCase().includes(q)) : pmMonsterList;
+  const own = pmMonsterList.filter(m => !m.official);
+  const list = q ? own.filter(m => m.name.toLowerCase().includes(q)) : own;
   if (!pmMonsterLoaded) { el.innerHTML = '<div style="padding:calc(8px*var(--fs, 1));font-size:calc(11px * var(--fs, 1));color:var(--ash)">Loading…</div>'; return; }
-  if (!list.length) { el.innerHTML = '<div style="padding:calc(8px*var(--fs, 1));font-size:calc(11px * var(--fs, 1));color:var(--ash)">No monsters found.</div>'; return; }
-  el.innerHTML = list.slice(0, 60).map(m =>
+  el.innerHTML = (!list.length ? `<div style="padding:calc(8px*var(--fs, 1));font-size:calc(11px * var(--fs, 1));color:var(--ash)">${q ? 'None of your monsters match.' : 'No monsters of your own yet.'}</div>` : list.slice(0, 60).map(m =>
     `<div onclick="pmSelectMonster('${escJs(m.id)}')" data-mid="${esc(m.id)}"
       style="padding:calc(5px*var(--fs, 1)) calc(8px*var(--fs, 1));border-bottom:1px solid var(--rule);font-size:calc(11px * var(--fs, 1));cursor:pointer;display:flex;align-items:center;gap:calc(6px*var(--fs, 1))">
       <span style="flex:1">${esc(m.name)}</span>
       <span style="font-size:calc(10px * var(--fs, 1));color:var(--ash)">CR ${esc(String(m.cr||'?'))}</span>
     </div>`
-  ).join('');
+  ).join('')) + '<div id="pm-official"></div>';
+  if (typeof OfficialMonsters !== 'undefined') {
+    OfficialMonsters.searchInto(q, { 'X-Master-Password': masterPw }, html => {
+      const box = document.getElementById('pm-official');
+      if (!box) return;
+      box.innerHTML = html;
+      const row = pmSelectedMonsterId && box.querySelector(`[data-mid="${CSS.escape(pmSelectedMonsterId)}"]`);
+      if (row) row.style.background = 'var(--wash)';
+    }, 'pmPickOfficial');
+  }
   if (pmSelectedMonsterId) {
     const row = el.querySelector(`[data-mid="${CSS.escape(pmSelectedMonsterId)}"]`);
     if (row) row.style.background = 'var(--wash)';

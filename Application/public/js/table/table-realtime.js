@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-12 12:15
+// Written by Irmak Hakman — 2026-11-11 18:12
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -14,6 +14,7 @@ function startSSE() {
           fetchAll(); break;
         case 'token-added':
           if (!tokens.find(t => t.id === d.token.id)) tokens.push(d.token);
+          if (d.token.type === 'monster' && d.token.linkedId && typeof ensureTableMonster === 'function') ensureTableMonster(d.token.linkedId);
           renderTokens(); break;
         case 'token-moved': {
           // Record the pre-move position for Undo so any client can revert a move
@@ -173,6 +174,11 @@ function startSSE() {
       else showDiceAnimation(d.sides, d.dieResults || [d.dieResult], d.modifier, d.total, d.label, d.duration, d.usedIdx ?? -1);
     },
     monsters: (d) => {
+      // A copy of an official monster made on the Monsters page: pickable at once.
+      if (d.action === 'created' && d.id && !_monsterList.some(m => m.id === d.id)) {
+        _monsterList.push({ id: d.id, name: d.name, cr: d.cr, data: d.data || {} });
+        return;
+      }
       if (d.action === 'portrait-updated') {
         // Update local cache so the modal thumbnail is correct immediately
         const mon = _monsterList.find(m => m.id === d.id);

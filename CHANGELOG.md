@@ -21,6 +21,32 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [332] — 2026-11-11 — Official monsters get their own tab on the table
+
+*(Released together with v331.)*
+
+- **Add Token on the table has an Official tab.** Official monsters are searched there,
+  separately from your own monsters on the Monsters tab. Switching tabs clears the
+  selection, so a pick on one tab never becomes a token from another.
+
+## [331] — 2026-11-11 — Official monsters from the books
+
+*(Released together with v332.)*
+
+- **Official monsters.** The Monsters page has a second tab, **Official**. With **Books…**
+  the DM imports whole 5etools bestiary books into the campaign shown (all 114 books are
+  about 4,700 monsters). The files are downloaded, imported and discarded, as with the spell
+  books. Adventure monsters that copy another book's stat block (most of Curse of Strahd)
+  come in whole. A book can be imported again to update it, or removed.
+- **Read-only, but usable everywhere.** Official monsters cannot be edited, given a portrait
+  or deleted. They go into initiative, onto the table (Add Token searches them as you type)
+  and onto prepared maps like the DM's own monsters, show their stat block in the side
+  panel, and cast their spells.
+- **Copy to My Monsters** makes an editable copy. Tokens of the official monster stay as
+  they are.
+- Official monsters are not part of backups. Importing a book again after a restore
+  reconnects every token, because an official monster's id comes from its book and name.
+
 ## [330] — 2026-11-11 — Monsters whose spells are written as text can cast
 
 *(Released together with v329.)*

@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-28 17:09
+// Written by Irmak Hakman — 2026-11-11 18:11
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -106,6 +106,7 @@ let selectedMonsterId = null;
 // pane rather than a modal, so reading one monster and then the next no longer
 // means opening and closing a dialog each time.
 function renderTable() {
+  if (monTab === 'official') { renderOfficialList(); return; }
   const wrap = document.getElementById('monster-table-wrap');
   const q = (document.getElementById('search-input').value || '').toLowerCase();
   const filtered = monsters.filter(m => {
@@ -151,6 +152,231 @@ function selectMonster(monsterId) {
   renderTable();   // repaint so the selected row is marked
 }
 
+// ── Official monsters (whole 5etools books, read-only) ────────────────────────
+// The second tab of the sidebar. They live on the server
+// (server/routes/official-monsters.js) and can run to thousands, so the list
+// is searched there, a page at a time. The DM uses one as it is (initiative,
+// tokens) or copies it to My Monsters to change it.
+let monTab = 'mine';
+const official = { rows: [], total: 0, loading: false };
+const officialFull = new Map();   // id -> { id, name, cr, data, official, source }
+let officialBooks = null;         // the books 5etools offers (loaded with the Books window)
+let officialSources = [];         // [{ source, count }] in this campaign
+let _offSearchTimer = null;
+const OFFICIAL_PAGE = 100;
+
+function switchMonTab(tab) {
+  monTab = tab === 'official' ? 'official' : 'mine';
+  for (const t of ['mine', 'official']) {
+    const b = document.getElementById('seg-' + t);
+    b.classList.toggle('active', t === monTab);
+    b.setAttribute('aria-selected', t === monTab ? 'true' : 'false');
+  }
+  document.getElementById('official-tools').style.display = monTab === 'official' ? '' : 'none';
+  if (monTab === 'official') { loadOfficialSources(); loadOfficial(true); }
+  else renderTable();
+}
+
+function onMonSearch() {
+  if (monTab !== 'official') { renderTable(); return; }
+  clearTimeout(_offSearchTimer);
+  _offSearchTimer = setTimeout(() => loadOfficial(true), 250);
+}
+
+async function loadOfficialSources() {
+  try {
+    const r = await fetch('/api/monsters/official/sources', { headers: { 'X-Master-Password': masterPw } });
+    if (!r.ok) return;
+    officialSources = await r.json();
+  } catch { return; }
+  const sel = document.getElementById('official-book');
+  const cur = sel.value;
+  const name = code => (officialBooks && officialBooks.find(b => b.code === code)?.name) || code;
+  sel.innerHTML = '<option value="">All books</option>' + officialSources.map(s =>
+    `<option value="${esc(s.source)}">${esc(name(s.source))} (${s.count})</option>`).join('');
+  if (officialSources.some(s => s.source === cur)) sel.value = cur;
+}
+
+async function loadOfficial(reset) {
+  if (official.loading && !reset) return;
+  official.loading = true;
+  const q = (document.getElementById('search-input').value || '').trim();
+  const source = document.getElementById('official-book').value;
+  const offset = reset ? 0 : official.rows.length;
+  try {
+    const r = await fetch(`/api/monsters/official?q=${encodeURIComponent(q)}&source=${encodeURIComponent(source)}&limit=${OFFICIAL_PAGE}&offset=${offset}`,
+      { headers: { 'X-Master-Password': masterPw } });
+    if (r.status === 401) { location.href = '/dm.html'; return; }
+    const out = r.ok ? await r.json() : { rows: [], total: 0 };
+    official.rows = reset ? out.rows : official.rows.concat(out.rows);
+    official.total = out.total;
+  } catch { showStatus('Network error.', true); }
+  finally { official.loading = false; }
+  if (monTab === 'official') renderTable();
+}
+
+function renderOfficialList() {
+  const wrap = document.getElementById('monster-table-wrap');
+  if (!official.rows.length) {
+    const none = !officialSources.length && !(document.getElementById('search-input').value || '').trim();
+    wrap.innerHTML = none
+      ? `<div class="app-empty"><div>No official monsters in this campaign yet.<br><br><button class="btn primary" onclick="openOfficialBooks()">Import books…</button></div></div>`
+      : '<div class="app-empty">No official monsters match your search.</div>';
+    return;
+  }
+  wrap.innerHTML = official.rows.map(m => `
+    <div class="app-row${m.id === selectedMonsterId ? ' selected' : ''}"
+         role="button" tabindex="0" onclick="selectOfficial('${escJs(m.id)}')"
+         onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();selectOfficial('${escJs(m.id)}')}">
+      <span class="app-row-name">${esc(m.name)}</span>
+      <span class="ob-code" title="Book">${esc(m.source)}</span>
+      <span class="cr-badge">${esc(m.cr || '?')}</span>
+    </div>`).join('')
+    + (official.total > official.rows.length
+      ? `<div class="ob-more"><button class="btn sm" onclick="loadOfficial(false)">Show more (${official.total - official.rows.length} left)</button></div>` : '');
+}
+
+async function getOfficial(id) {
+  if (officialFull.has(id)) return officialFull.get(id);
+  try {
+    const r = await fetch(`/api/monsters/${encodeURIComponent(id)}`, { headers: { 'X-Master-Password': masterPw } });
+    if (!r.ok) return null;
+    const m = await r.json();
+    officialFull.set(id, m);
+    return m;
+  } catch { return null; }
+}
+
+async function selectOfficial(id) {
+  selectedMonsterId = id;
+  renderTable();
+  const m = await getOfficial(id);
+  if (!m || selectedMonsterId !== id) { if (!m) showStatus('Could not load that monster.', true); return; }
+  const d = m.data || {};
+  const book = (officialBooks && officialBooks.find(b => b.code === m.source)?.name) || m.source;
+  document.getElementById('monster-detail').innerHTML = `
+    <div class="detail-hdr">
+      <div>
+        <h2 class="detail-title">${esc(m.name)}</h2>
+        <div class="detail-sub"><span class="cr-badge" title="Official monsters cannot be edited">Official</span> ${esc(book)} &middot; ${esc(getTypeStr(d))} &middot; CR ${esc(m.cr || '?')} &middot; AC ${esc(getAcStr(d))} &middot; HP ${esc(getHpStr(d))} &middot; ${esc(getSpeedStr(d))}</div>
+      </div>
+      <div class="detail-actions">
+        <button class="btn success" onclick="openInitModal('${escJs(m.id)}')" title="Add to the initiative tracker">+ Initiative</button>
+        <button class="btn" onclick="copyOfficial('${escJs(m.id)}')" title="Make an editable copy in My Monsters">Copy to My Monsters</button>
+      </div>
+    </div>
+    <div class="detail-body">${renderMonsterStatBlock(d)}</div>`;
+}
+
+async function copyOfficial(id) {
+  const m = officialFull.get(id);
+  if (!m) return;
+  try {
+    const r = await fetch(`/api/monsters/official/${encodeURIComponent(id)}/copy`, { method: 'POST', headers: { 'X-Master-Password': masterPw } });
+    if (r.status === 401) { location.href = '/dm.html'; return; }
+    const out = await r.json().catch(() => ({}));
+    if (!r.ok) { showStatus(out.error || 'Could not copy the monster.', true); return; }
+    selectedMonsterId = null;
+    switchMonTab('mine');
+    await loadMonsters();
+    if (monsters.some(x => x.id === out.id)) selectMonster(out.id);
+    showStatus(`${out.name} copied to My Monsters. Edit it here; tokens of the official one stay as they are.`);
+  } catch { showStatus('Network error.', true); }
+}
+
+// The Books window: import whole books, or remove one.
+async function openOfficialBooks() {
+  document.getElementById('obooks-modal').style.display = 'flex';
+  document.getElementById('obooks-status').textContent = '';
+  try {
+    const c = await fetch('/api/campaign/current', { headers: { 'X-Master-Password': masterPw } }).then(r => (r.ok ? r.json() : null));
+    if (c && c.name) document.getElementById('obooks-camp').textContent = c.name;
+  } catch {}
+  await loadOfficialSources();
+  if (officialBooks) { renderOfficialBooks(); return; }
+  document.getElementById('obooks-list').innerHTML = '<div class="ob-hint">Loading the list of books…</div>';
+  try {
+    const r = await fetch('/api/monsters/official/books', { headers: { 'X-Master-Password': masterPw } });
+    const out = await r.json().catch(() => ({}));
+    if (!r.ok) { document.getElementById('obooks-list').innerHTML = `<div class="ob-hint">${esc(out.error || 'Could not load the list of books.')}</div>`; return; }
+    officialBooks = out;
+    renderOfficialBooks();
+    loadOfficialSources();   // book names for the filter
+  } catch { document.getElementById('obooks-list').innerHTML = '<div class="ob-hint">Network error.</div>'; }
+}
+
+function closeOfficialBooks() { document.getElementById('obooks-modal').style.display = 'none'; }
+
+function renderOfficialBooks() {
+  if (!officialBooks) return;
+  const ticked = new Set(chosenOfficialBooks());
+  const f = (document.getElementById('obooks-filter').value || '').trim().toLowerCase();
+  const have = Object.fromEntries(officialSources.map(s => [s.source, s.count]));
+  const list = officialBooks.filter(b => !f || b.name.toLowerCase().includes(f) || b.code.toLowerCase().includes(f));
+  document.getElementById('obooks-list').innerHTML = list.map(b => `<label class="ob-book">
+      <input type="checkbox" value="${esc(b.code)}" ${ticked.has(b.code) ? 'checked' : ''} onchange="officialBooksChanged()">
+      <span class="ob-name">${esc(b.name)}</span>
+      <span class="ob-code">${esc(b.code)}</span>
+      ${have[b.code] ? `<span class="ob-have">${have[b.code]} imported</span>
+        <button type="button" class="btn sm danger" onclick="event.preventDefault();removeOfficialBook('${escJs(b.code)}')" title="Remove this book's official monsters">Remove</button>` : ''}
+    </label>`).join('') || '<div class="ob-hint">No books match.</div>';
+  officialBooksChanged();
+}
+
+function chosenOfficialBooks() {
+  return [...document.querySelectorAll('#obooks-list input[type=checkbox]:checked')].map(i => i.value);
+}
+function setAllOfficialBooks(on) {
+  document.querySelectorAll('#obooks-list input[type=checkbox]').forEach(i => { i.checked = on; });
+  officialBooksChanged();
+}
+function officialBooksChanged() {
+  const n = chosenOfficialBooks().length;
+  const btn = document.getElementById('obooks-go');
+  btn.disabled = !n;
+  btn.textContent = n ? `Import ${n} book${n === 1 ? '' : 's'}` : 'Import';
+}
+
+async function runOfficialImport() {
+  const codes = chosenOfficialBooks();
+  if (!codes.length) return;
+  const btn = document.getElementById('obooks-go');
+  const status = document.getElementById('obooks-status');
+  btn.disabled = true;
+  status.textContent = `Downloading and importing ${codes.length} book${codes.length === 1 ? '' : 's'}… (all of them takes a minute or two)`;
+  try {
+    const r = await fetch('/api/monsters/official/import-books', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Master-Password': masterPw },
+      body: JSON.stringify({ books: codes }),
+    });
+    if (r.status === 401) { location.href = '/dm.html'; return; }
+    const out = await r.json().catch(() => ({}));
+    if (!r.ok) { status.textContent = out.error || 'The import failed.'; return; }
+    status.textContent = `${out.imported} new, ${out.updated} updated.`
+      + (out.unresolved && out.unresolved.length ? ` ${out.unresolved.length} could not be built (the monster they copy is in no book): ${out.unresolved.slice(0, 5).join(', ')}${out.unresolved.length > 5 ? '…' : ''}` : '');
+    document.querySelectorAll('#obooks-list input[type=checkbox]').forEach(i => { i.checked = false; });
+    await loadOfficialSources();
+    renderOfficialBooks();
+    if (monTab === 'official') loadOfficial(true);
+  } catch { status.textContent = 'Network error.'; }
+  finally { officialBooksChanged(); }
+}
+
+async function removeOfficialBook(code) {
+  const n = (officialSources.find(s => s.source === code) || {}).count || 0;
+  if (!confirm(`Remove the ${n} official monsters of ${code} from this campaign? Tokens and initiative entries made from them lose their stat blocks until the book is imported again.`)) return;
+  try {
+    const r = await fetch(`/api/monsters/official/books/${encodeURIComponent(code)}`, { method: 'DELETE', headers: { 'X-Master-Password': masterPw } });
+    if (!r.ok) { document.getElementById('obooks-status').textContent = 'Could not remove the book.'; return; }
+    const out = await r.json().catch(() => ({}));
+    document.getElementById('obooks-status').textContent = `Removed ${out.removed || 0} monsters of ${code}.`;
+    for (const id of [...officialFull.keys()]) if (officialFull.get(id).source === code) officialFull.delete(id);
+    await loadOfficialSources();
+    renderOfficialBooks();
+    if (monTab === 'official') loadOfficial(true);
+  } catch { document.getElementById('obooks-status').textContent = 'Network error.'; }
+}
+
 // ── Import modal ──────────────────────────────────────────────────────────────
 function openImportModal() {
   document.getElementById('import-status').textContent = '';
@@ -176,7 +402,7 @@ function closeInfoModal() {
 
 // ── Add to initiative modal ───────────────────────────────────────────────────
 function openInitModal(monsterId) {
-  const m = monsters.find(x => x.id === monsterId);
+  const m = monsters.find(x => x.id === monsterId) || officialFull.get(monsterId);
   if (!m) return;
   pendingInitMonster = m;
   const d = m.data || {};

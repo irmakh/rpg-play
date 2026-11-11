@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Written by Irmak Hakman — 2026-11-11 21:50 -->
+<!-- Written by Irmak Hakman — 2026-11-11 18:21 -->
 <!-- Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) -->
 <html lang="en" class="lamplit">
 <head>
@@ -575,6 +575,7 @@
     <div style="display:flex;gap:0;border-bottom:1px solid var(--rule-hi)">
       <button class="tab-btn active" id="tabBtn-chars" onclick="switchTokenTab('chars')">Characters</button>
       <button class="tab-btn" id="tabBtn-monsters" onclick="switchTokenTab('monsters')">Monsters</button>
+      <button class="tab-btn" id="tabBtn-official" onclick="switchTokenTab('official')" title="Monsters from the books imported on the Monsters page">Official</button>
       <button class="tab-btn" id="tabBtn-custom" onclick="switchTokenTab('custom')">Custom</button>
     </div>
     <div id="tok-monster-search-wrap" style="display:none;padding:calc(6px*var(--fs, 1)) calc(8px*var(--fs, 1)) 0">
@@ -585,6 +586,7 @@
     <div style="max-height:calc(340px*var(--fs, 1));overflow-y:auto;padding:calc(8px*var(--fs, 1))">
       <div id="tok-tab-chars"></div>
       <div id="tok-tab-monsters" style="display:none"><div id="tok-monsters-list"></div></div>
+      <div id="tok-tab-official" style="display:none"><div id="tok-official-list"></div></div>
       <div id="tok-tab-custom" style="display:none">
         <div class="field"><label class="lbl">Name *</label><input type="text" id="custom-tok-name"></div>
         <div class="field"><label class="lbl">Max HP</label><input type="number" id="custom-tok-hp" value="10"></div>
@@ -757,6 +759,7 @@
 <script src="/js/lib/dnd-data.js" defer></script>
 <script src="/js/lib/spell-data.js" defer></script>
 <script src="/js/lib/spell-cast.js" defer></script>
+<script src="/js/lib/official-monsters.js" defer></script>
 <script src="/js/lib/realtime.js" defer></script>
 <script src="/js/lib/notifications.js" defer></script>
 <script src="/js/lib/music-sync.js" defer></script>

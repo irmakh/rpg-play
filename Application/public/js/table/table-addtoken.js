@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-28 17:10
+// Written by Irmak Hakman — 2026-11-11 18:21
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -17,24 +17,32 @@ function closeAddTokenModal() {
 }
 
 function switchTokenTab(tab) {
+  // A pick on one tab never carries over to another (a character id must not
+  // become a monster token, nor one of your monsters an official one).
+  if (tab !== _pendingTokenTab) { _pendingTokenLinkedId = null; _pendingTokenType = null; }
   _pendingTokenTab = tab;
-  ['chars','monsters','custom'].forEach(t => {
+  const monsterTab = tab === 'monsters' || tab === 'official';
+  ['chars','monsters','official','custom'].forEach(t => {
     document.getElementById(`tok-tab-${t}`).style.display = t === tab ? '' : 'none';
     document.getElementById(`tabBtn-${t}`)?.classList.toggle('active', t === tab);
   });
   const idRow = document.getElementById('tok-identifier-row');
   if (idRow) {
-    idRow.style.display = tab === 'monsters' ? 'flex' : 'none';
+    idRow.style.display = monsterTab ? 'flex' : 'none';
     const idIn = document.getElementById('tok-identifier');
-    if (tab !== 'monsters') idIn.value = '';
+    if (!monsterTab) idIn.value = '';
     idIn.disabled = false;
     idIn.placeholder = 'A, B, #1 … (auto if blank)';
   }
   const searchWrap = document.getElementById('tok-monster-search-wrap');
-  if (searchWrap) searchWrap.style.display = tab === 'monsters' ? '' : 'none';
-  if (tab === 'monsters') {
+  if (searchWrap) searchWrap.style.display = monsterTab ? '' : 'none';
+  if (monsterTab) {
     const s = document.getElementById('tok-monster-search');
-    if (s) { s.value = ''; setTimeout(() => s.focus(), 60); }
+    if (s) {
+      s.value = '';
+      s.placeholder = tab === 'official' ? 'Search official monsters…' : 'Search monsters…';
+      setTimeout(() => s.focus(), 60);
+    }
     filterMonsterList('');
   }
 }
@@ -56,13 +64,37 @@ function _monsterRowHtml(m) {
 }
 
 function filterMonsterList(query) {
+  if (_pendingTokenTab === 'official') { filterOfficialList(query); return; }
   const list = document.getElementById('tok-monsters-list');
   if (!list) return;
   const q = (query || '').trim().toLowerCase();
-  const filtered = q ? _monsterList.filter(m => m.name.toLowerCase().includes(q)) : _monsterList;
-  list.innerHTML = filtered.length > 0
+  // The DM's own monsters; official ones (loaded for tokens already on the
+  // table) are found through the server search below instead.
+  const own = _monsterList.filter(m => !m.official);
+  const filtered = q ? own.filter(m => m.name.toLowerCase().includes(q)) : own;
+  list.innerHTML = (filtered.length > 0
     ? filtered.map(_monsterRowHtml).join('')
-    : `<div style="padding:calc(10px*var(--fs, 1));font-size:calc(11px * var(--fs, 1));color:var(--ash)">${q ? 'No monsters match your search.' : 'No monsters found.'}</div>`;
+    : `<div style="padding:calc(10px*var(--fs, 1));font-size:calc(11px * var(--fs, 1));color:var(--ash)">${q ? 'No monsters match your search.' : 'No monsters found.'}</div>`);
+}
+
+// The Official tab: monsters from the imported books, searched on the server.
+function filterOfficialList(query) {
+  const box = document.getElementById('tok-official-list');
+  if (!box || typeof OfficialMonsters === 'undefined') return;
+  OfficialMonsters.searchInto(query, () => authHeaders(), html => {
+    box.innerHTML = html || '<div class="om-note">No official monsters match. Books are imported on the Monsters page.</div>';
+    const row = _pendingTokenLinkedId && box.querySelector(`[data-mid="${CSS.escape(_pendingTokenLinkedId)}"]`);
+    if (row) row.style.background = 'var(--wash)';
+  }, 'pickOfficialTokenMonster', { hint: 'Type 2 or more letters to search the official monsters.' });
+}
+
+// An official monster from the search: loaded in full, then picked like the
+// DM's own (the token links to it by its id).
+async function pickOfficialTokenMonster(id, el) {
+  const mon = await OfficialMonsters.get(id, () => authHeaders());
+  if (!mon) { showToast('Could not load that monster.', true); return; }
+  if (!_monsterList.some(m => m.id === id)) _monsterList.push(mon);
+  selectTokenMonster(id, mon.name, el);
 }
 
 async function populateAddTokenModal(chars) {
@@ -82,7 +114,7 @@ async function populateAddTokenModal(chars) {
   // Monsters tab (load on demand)
   if (isDM()) {
     try {
-      const mRes = await fetch('/api/monsters', { headers: { 'X-Master-Password': masterPw } });
+      const mRes = await fetch('/api/monsters?linked=1', { headers: { 'X-Master-Password': masterPw } });
       if (mRes.ok) {
         _monsterList = await mRes.json();
         filterMonsterList('');
@@ -128,11 +160,12 @@ function selectTokenChar(charId, charName, charType) {
   event.currentTarget.style.background = 'var(--wash)';
 }
 
-function selectTokenMonster(monsterId, monsterName) {
+function selectTokenMonster(monsterId, monsterName, el) {
   _pendingTokenLinkedId = monsterId;
   _pendingTokenType = 'monster';
-  document.querySelectorAll('#tok-tab-monsters .qroll-row').forEach(r => r.style.background = '');
-  event.currentTarget.style.background = 'var(--wash)';
+  document.querySelectorAll('#tok-tab-monsters .qroll-row, #tok-tab-official .qroll-row').forEach(r => r.style.background = '');
+  const row = el || (window.event && window.event.currentTarget);
+  if (row && row.style) row.style.background = 'var(--wash)';
   // A unique monster is called by its name, so there is no identifier to type.
   const unique = !!_monsterList.find(m => m.id === monsterId)?.data?.unique;
   const idIn = document.getElementById('tok-identifier');
@@ -216,7 +249,7 @@ async function submitAddToken() {
       portrait, portraitThumb,
       tokenSize, x: centerX, y: centerY
     };
-  } else if (tab === 'monsters' && _pendingTokenLinkedId) {
+  } else if ((tab === 'monsters' || tab === 'official') && _pendingTokenLinkedId) {
     const mon = _monsterList.find(m => m.id === _pendingTokenLinkedId);
     const baseName = mon?.name || 'Monster';
     const unique = !!mon?.data?.unique;

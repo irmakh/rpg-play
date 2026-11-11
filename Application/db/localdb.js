@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-12 11:30
+// Written by Irmak Hakman — 2026-11-11 18:14
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -299,6 +299,16 @@ db.exec(`
     source TEXT DEFAULT '', level INTEGER DEFAULT 0, school TEXT DEFAULT '',
     dataJson TEXT DEFAULT '{}', addedBy TEXT DEFAULT '',
     createdAt TEXT DEFAULT (datetime('now')), updatedAt TEXT DEFAULT '',
+    UNIQUE(nameKey, source)
+  );
+  -- Official monsters: whole 5etools bestiary books the DM imported into THIS
+  -- campaign. Read-only — tokens and initiative use them as they are; to change
+  -- one, the DM copies it into the monsters table. The id is made from book and
+  -- name, so importing a book again gives every monster the id its tokens hold.
+  CREATE TABLE IF NOT EXISTS official_monsters (
+    id TEXT PRIMARY KEY, name TEXT NOT NULL DEFAULT '', nameKey TEXT NOT NULL DEFAULT '',
+    source TEXT DEFAULT '', cr TEXT DEFAULT '?', type TEXT DEFAULT '',
+    dataJson TEXT DEFAULT '{}', createdAt TEXT DEFAULT (datetime('now')),
     UNIQUE(nameKey, source)
   );
 `);
@@ -814,8 +824,68 @@ function bulkCreateTreasuryItems(rows) {
 function listMonsters() {
   return db.prepare('SELECT * FROM monsters ORDER BY name').all();
 }
+// The DM's own monster, or else an official one (marked official: 1), so a
+// token, an initiative entry or a spell cast finds either by its id.
 function getMonster(id) {
-  return db.prepare('SELECT * FROM monsters WHERE id = ?').get(id) || null;
+  const own = db.prepare('SELECT * FROM monsters WHERE id = ?').get(id);
+  if (own) return own;
+  const off = db.prepare('SELECT id, name, cr, dataJson, createdAt, source FROM official_monsters WHERE id = ?').get(id);
+  return off ? { ...off, official: 1 } : null;
+}
+
+// ── Official monsters (read-only, from the 5etools books) ─────────────────────
+function officialMonsterId(source, name) {
+  const slug = String(name || '').toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80);
+  return `off-${String(source || '').toLowerCase()}-${slug}`;
+}
+/** Search without the stat blocks: { rows: [{ id, name, cr, type, source }], total }. */
+function searchOfficialMonsters({ q = '', source = '', limit = 60, offset = 0 } = {}) {
+  const where = [], args = [];
+  const words = String(q || '').trim().toLowerCase().split(/\s+/).filter(Boolean).slice(0, 6);
+  for (const w of words) { where.push('(nameKey LIKE ? OR lower(type) LIKE ?)'); args.push(`%${w}%`, `%${w}%`); }
+  if (source) { where.push('source = ?'); args.push(String(source)); }
+  const w = where.length ? 'WHERE ' + where.join(' AND ') : '';
+  const total = db.prepare(`SELECT COUNT(*) n FROM official_monsters ${w}`).get(...args).n;
+  // The name itself first, then names starting with it, then the rest.
+  const full = String(q || '').trim().toLowerCase();
+  const rows = db.prepare(`SELECT id, name, cr, type, source FROM official_monsters ${w}
+    ORDER BY CASE WHEN nameKey = ? THEN 0 WHEN nameKey LIKE ? THEN 1 ELSE 2 END, nameKey, source LIMIT ? OFFSET ?`)
+    .all(...args, full, `${full}%`, Math.max(1, Math.min(200, limit | 0 || 60)), Math.max(0, offset | 0));
+  return { rows, total };
+}
+/** [{ source, count }] — the books this campaign holds. */
+function listOfficialBooks() {
+  return db.prepare('SELECT source, COUNT(*) count FROM official_monsters GROUP BY source ORDER BY source').all();
+}
+/** rows: [{ name, source, cr, type, data }]. A monster already there (same book, name) is replaced. */
+function upsertOfficialMonsters(rows) {
+  const has = db.prepare('SELECT 1 FROM official_monsters WHERE id = ?');
+  const put = db.prepare(`INSERT INTO official_monsters (id, name, nameKey, source, cr, type, dataJson, createdAt)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET name = excluded.name, nameKey = excluded.nameKey, cr = excluded.cr,
+      type = excluded.type, dataJson = excluded.dataJson`);
+  const out = { imported: 0, updated: 0 };
+  db.transaction(() => {
+    for (const r of rows || []) {
+      const name = String(r.name || '').trim();
+      if (!name) continue;
+      const id = officialMonsterId(r.source, name);
+      if (has.get(id)) out.updated++; else out.imported++;
+      put.run(id, name, name.toLowerCase(), String(r.source || ''), String(r.cr || '?'), String(r.type || ''),
+              JSON.stringify(r.data || {}), new Date().toISOString());
+    }
+  })();
+  return out;
+}
+function deleteOfficialBook(source) {
+  return db.prepare('DELETE FROM official_monsters WHERE source = ?').run(String(source || '')).changes;
+}
+/** The official monsters a token or initiative entry uses right now (the table loads these with the DM's own). */
+function listLinkedOfficialMonsters() {
+  return db.prepare(`SELECT id, name, cr, dataJson, source FROM official_monsters WHERE id IN
+    (SELECT linkedId FROM table_tokens WHERE linkedId != '' UNION SELECT monsterId FROM initiative_entries WHERE monsterId != '')`).all()
+    .map(r => ({ ...r, official: 1 }));
 }
 function createMonster(id, fields) {
   db.prepare('INSERT INTO monsters (id, name, cr, dataJson, createdAt) VALUES (?, ?, ?, ?, ?)')
@@ -1698,6 +1768,7 @@ function exportAll() {
     updateCalendarEvent, deleteCalendarEvent, listSoundFiles, getSoundFile, createSoundFile, deleteSoundFile,
     updateSoundFile, listPlaylists, getPlaylist, createPlaylist, updatePlaylist, deletePlaylist,
     getSoundsForPlaylist, exportAll, SHOP_MAX_ACTIVE_TAGS, normalizeShopTags, lootRowToTreasury, shopRowToTreasury,
+    officialMonsterId, searchOfficialMonsters, listOfficialBooks, upsertOfficialMonsters, deleteOfficialBook, listLinkedOfficialMonsters,
     listSpells, getSpell, findSpell, findSpellsByName, createSpell, updateSpell, deleteSpells, exportSpells, importSpells,
     listHandouts, getHandout, createHandout, updateHandout, deleteHandout,
     listHandoutRecipients, listHandoutsForChar, getHandoutRecipient, addHandoutRecipient,

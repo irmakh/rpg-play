@@ -1,4 +1,4 @@
-/* Written by Irmak Hakman — 2026-10-22 09:18 */
+/* Written by Irmak Hakman — 2026-11-11 18:07 */
 /* Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) */
 
 /* ============================================================================
@@ -367,3 +367,12 @@ html.lamplit .ct .lt-modal-title{
     transition-duration:.01ms !important;
   }
 }
+
+/* Official monsters in the monster pickers (js/lib/official-monsters.js) */
+.om-hdr{font-size:var(--t-xs,11px);color:var(--arc);text-transform:uppercase;letter-spacing:.06em;padding:calc(8px*var(--fs, 1)) calc(10px*var(--fs, 1)) calc(4px*var(--fs, 1));border-top:1px solid var(--rule-hi)}
+.om-row{display:flex;align-items:center;gap:calc(8px*var(--fs, 1));padding:calc(5px*var(--fs, 1)) calc(10px*var(--fs, 1));border-bottom:1px solid var(--rule);cursor:pointer;font-size:calc(11px * var(--fs, 1))}
+.om-row:hover,.om-row.om-sel{background:var(--wash)}
+.om-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.om-src{font-size:calc(10px * var(--fs, 1));color:var(--ash);font-family:ui-monospace,Consolas,monospace}
+.om-cr{font-size:calc(10px * var(--fs, 1));color:var(--ash);white-space:nowrap}
+.om-note{padding:calc(6px*var(--fs, 1)) calc(10px*var(--fs, 1));font-size:calc(10px * var(--fs, 1));color:var(--ash)}

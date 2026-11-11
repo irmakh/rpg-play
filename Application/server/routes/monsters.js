@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 17:45
+// Written by Irmak Hakman — 2026-11-11 18:06
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -9,14 +9,19 @@ export default function register(app, ctx) {
     processImageSizes, deleteUploadFile, readUploadAsBase64, extToMime,
     broadcast,
   } = ctx;
+  const OFFICIAL_READ_ONLY = 'Official monsters cannot be changed. Copy it to My Monsters to edit it.';
 
   app.get('/api/monsters', async (req, res) => {
     try {
       if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
-      res.json(ldb.listMonsters().map(r => {
+      // ?linked=1 (the table): the official monsters its tokens and initiative
+      // use come too, so a token's stat block is found like any other.
+      const rows = ldb.listMonsters();
+      if (req.query.linked === '1' && ldb.listLinkedOfficialMonsters) rows.push(...ldb.listLinkedOfficialMonsters());
+      res.json(rows.map(r => {
         let data = {};
         try { data = JSON.parse(r.dataJson || '{}'); } catch {}
-        return { id: r.id, name: r.name, cr: r.cr, data };
+        return { id: r.id, name: r.name, cr: r.cr, data, ...(r.official ? { official: true, source: r.source || '' } : {}) };
       }));
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
   });
@@ -34,7 +39,7 @@ export default function register(app, ctx) {
       if (!r) return res.status(404).json({ error: 'Not found' });
       let data = {};
       try { data = JSON.parse(r.dataJson || '{}'); } catch {}
-      res.json({ id: r.id, name: r.name, cr: r.cr, data });
+      res.json({ id: r.id, name: r.name, cr: r.cr, data, ...(r.official ? { official: true, source: r.source || '' } : {}) });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
   });
 
@@ -115,6 +120,7 @@ export default function register(app, ctx) {
       if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
       const existing = ldb.getMonster(req.params.id);
       if (!existing) return res.status(404).json({ error: 'Not found' });
+      if (existing.official) return res.status(403).json({ error: OFFICIAL_READ_ONLY });
       const { name, cr, dataJson } = req.body || {};
       const update = {};
       if (name !== undefined)    update.name = String(name).trim();
@@ -140,6 +146,7 @@ export default function register(app, ctx) {
         return res.status(400).json({ error: 'Image data URL required' });
       const r = ldb.getMonster(req.params.id);
       if (!r) return res.status(404).json({ error: 'Not found' });
+      if (r.official) return res.status(403).json({ error: OFFICIAL_READ_ONLY });
       let data = {};
       try { data = JSON.parse(r.dataJson || '{}'); } catch {}
       if (dataUrl === '') {
@@ -179,6 +186,7 @@ export default function register(app, ctx) {
       if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
       const existing = ldb.getMonster(req.params.id);
       if (!existing) return res.status(404).json({ error: 'Not found' });
+      if (existing.official) return res.status(403).json({ error: OFFICIAL_READ_ONLY });
       ldb.deleteMonster(req.params.id);
       res.json({ ok: true });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
