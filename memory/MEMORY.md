@@ -132,6 +132,7 @@
 - UPLOAD FROM THE LINUX DEV MACHINE: pscp fails there (host key not cached under the IP). Use OpenSSH: scp/ssh -i ~/.ssh/oracle to ubuntu@dnd.kimse.me (that name is in known_hosts; 89.168.88.208 is not), target /home/ubuntu/hdd1/dnd-new/. In zsh pass the options as an array, not an unquoted string. Tests run inside the char_sheet_dev container: docker exec char_sheet_dev npx vitest run (no local node_modules).
 - MEMORY EMBEDDING ON THE LINUX DEV MACHINE: system python lacks fastembed; run tools/memory/embed_memory.py with the project venv (venv/bin/python), which has it.
 - Bump FRONTEND_VERSION whenever frontend files change after the user has loaded a version, even mid-testing: ?v=N assets are immutable-cached, so same-version edits are invisible (cost a wrong diagnosis on 2026-11-01). Write JS containing \n with the Edit tool, not Python heredocs in Git Bash, which turned '\\n' into real newlines.
+- 5ETOOLS DATA NEVER IN THE PROJECT (user, 2026-11-11): nothing from the 5etools repository (5etools-mirror-3/5etools-src) may be committed or stored inside the char_sheet project folder, gitignored or not. scripts/import_spells.mjs caches downloads in ~/.cache/rpg-play/5etools-spells (or --cache / SPELL_CACHE_DIR) and refuses a cache inside the repo (or inside the app folder in Docker/production). The script itself stays in the project.
 
 ## Current Projects
 
@@ -150,7 +151,9 @@
 - NEXT SESSION (as of 2026-10-28 late evening, after v312 - supersedes all earlier NEXT SESSION notes): v310 (Treasury piles), v311 (make item unidentified again, held copies re-hidden) and v312 (Unique monsters: one token, named by the monster) are committed, pushed and uploaded; the user must restart production (screen session in ~/hdd1/dnd-new). None yet tested by the user in a browser. Open question still: hidden MONSTER tokens show their initiative row to players once combat starts.
 - NEXT SESSION (as of 2026-11-01, after v319 - supersedes all earlier NEXT SESSION notes): v310-v312 and v313-v319 (one release, commit 99d896c) are committed, pushed and uploaded; the user must restart production (screen session in ~/hdd1/dnd-new, Ctrl-C then node server.js) because server files changed (notify.js, routes/chat.js, db/localdb.js). User confirmed v319 locally. The old open question (hidden monster initiative rows shown to players) is unrelated and still open. Old leaked notifications stay in players' bells until they press Clear.
 - NEXT SESSION (as of 2026-11-01 close, supersedes all earlier NEXT SESSION notes): production restarted by the user and confirmed serving v319 (commit 99d896c); v310-v312 are live with it. Nothing pending. Still open from before: hidden MONSTER tokens show their initiative row to players once combat starts.
+- SECURITY ROADMAP (2026-11-11, deferred by the user - do not start until asked): the audit report and a staged fix plan are in docs/security/ (SECURITY_AUDIT_2026-11-11.md, SECURITY_ROADMAP.md), gitignored because the repo is public; they exist only on the Windows machine unless copied by hand. Read the roadmap before starting; keep finding detail out of git, CHANGELOG and memory. Until then, every new route must make its own auth check.
+- Official monsters (v331+): per-campaign read-only official_monsters table filled from 5etools bestiary books (Monsters page > Official > Books...); not in backups - re-importing a book relinks tokens since ids are off-<book>-<name-slug>. v333 (monsters.js book names, server.js, sw.js) is committed but NOT uploaded yet - fold into the next upload.
 ---
 
-*Last updated: 2026-11-01*
+*Last updated: 2026-11-11*
 *This file is the source of truth for persistent facts. Edit directly to update.*

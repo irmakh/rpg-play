@@ -7,7 +7,7 @@
 [![JavaScript](https://img.shields.io/badge/Vanilla_JS-no_build_step-F7DF1E?style=flat-square&logo=javascript&logoColor=black)](#tech-stack)
 [![PWA](https://img.shields.io/badge/PWA-installable-5A0FC8?style=flat-square&logo=pwa&logoColor=white)](#mobile-companion-pwa-console)
 [![Android](https://img.shields.io/badge/Android-console_app-3DDC84?style=flat-square&logo=android&logoColor=white)](#android-app-android--two-screen-handhelds-and-phones)
-[![Vitest](https://img.shields.io/badge/Vitest-1705_passing-6E9F18?style=flat-square&logo=vitest&logoColor=white)](#tech-stack)
+[![Vitest](https://img.shields.io/badge/Vitest-1856_passing-6E9F18?style=flat-square&logo=vitest&logoColor=white)](#tech-stack)
 [![Docker](https://img.shields.io/badge/Docker-compose-2496ED?style=flat-square&logo=docker&logoColor=white)](#option-a--docker-recommended-for-local--lan-play)
 
 A self-hosted web app for running D&D 5e sessions. It hosts any number of **campaigns**, each a fully separate world with its own DM password and its own data. Every campaign bundles a full character sheet, a shared virtual battle map, a real-time initiative tracker, a monster library, a treasury for loot and shop items, a synced music player, handouts with blind skill checks, a comic-style story builder with image and video panels, and a mobile companion — all kept live across every connected browser with no external cloud required.
@@ -85,11 +85,13 @@ Uploaded images and audio are split the same way: new uploads land in `public/up
 ![The character sheet — persistent vitals bar with damage/heal, tabbed sections, auto-calculated ability scores and combat block](docs/screenshots/character-sheet.webp)
 
 - Full D&D 5e sheet: ability scores, skills, saving throws, HP, AC, speed, initiative — all auto-calculated
-- Proficiency bonus auto-derived from level; spell slot tracking for spell levels **1–9** with per-level counters and prepared-spell count
+- Proficiency bonus auto-derived from level; **spell slots fill in from the class and level** (multiclass included), with per-level counters
 - **Actions tab** — aggregates weapon attacks, action-flagged spells, and freeform **custom actions** into one combat panel. Custom actions carry a category (action / bonus / reaction / other), description, dice, and limited-use tracking with short/long-rest recharge
 - Weapon attacks table with custom dice rolls; weapon notes shown in the damage chat message
 - Equipment / magic items panel: equipped items feed AC, initiative, and speed auto-calc; spell-bonus items supported
-- Spell table with **clickable column sort** — click any header (Prep / Lvl / Name / Time / Range / Conc / Ritual / School / Dur) to sort with a ▲/▼ indicator; spells carry an action-category and duration field
+- **Spells tab** — add spells from the campaign's [spell library](#spell-library-spellshtml--dm-only) or type your own, or import 5etools spell JSON. Each spell keeps its casting time (action / bonus action / reaction / ritual), components, full description and where it came from (class, race, feat such as *Magic Initiate*, item). Mark spells **prepared**, **always prepared** (a feat, subclass or item grants it) or **can be cast for free** (with its own uses and short/long-rest recharge); Warlocks and Sorcerers have no preparing
+- **Class rules** — Warlock Pact Magic slots and Mystic Arcanum, Sorcerer sorcery points, Font of Magic and Metamagic, all read from the Class field; rituals can be cast without being prepared
+- **Cast a Spell** — one button opens a pop-up of the spells you can cast, with their details; pick the slot level (spent levels are greyed out), Metamagic if you have it, and cast. The slot is spent for you and a spell card goes to chat with attack, save and damage buttons, scaled for the slot
 - Portrait upload plus media attachments (images, video) with a fullscreen lightbox; videos autoplay with controls
 - Inventory, features & traits, background, and notes tabs
 - Dice rolling with full 3D animation, broadcast live to the virtual table; advantage / disadvantage dual-die rolls; per-character roll history
@@ -127,7 +129,9 @@ Uploaded images and audio are split the same way: new uploads land in `public/up
 - **Multi-select (DM)** — shift+click tokens, or drag a box with the **Multi** tool (shift+drag adds to it), to build a selection; the token already selected before the first shift+click is kept in it. Bulk HP, conditions, show/hide, group initiative and group checks/saves act on every selected token
 - **Equipment wear/unwear** in the right panel — toggling items recomputes AC, initiative, speed, and spell DC and syncs to the token
 - **Monster actions panel** — each action has a **Use** button that posts the action text and a damage roll to chat; players' custom actions have the same **Use** button
-- Click a weapon row to roll the attack, then a **Miss / Roll Damage / Crit** prompt; click a spell name to post its full description to chat with a 5e.tools link
+- Click a weapon row to roll the attack, then a **Miss / Roll Damage / Crit** prompt
+- **Cast a Spell** on the Combat tab of the right panel, with the spell slots beside it: the same pop-up as the character sheet, spending the slot and posting the spell card to chat
+- **Monsters cast too (DM)** — a monster whose stat block has spellcasting (as a list, or only as text in a *Spellcasting* action) gets a **Spellcasting** section in its panel: Cast a Spell, what is left of each At will / N per day / slot group, and **Rest** / **Rest all monsters**. Each token keeps its own uses, so two Mages run out separately; players never see a monster's uses
 - **Critical damage** — on a natural 20 the prompt turns red and leads with **Crit**: every damage die is rolled twice, modifiers are added once (5e rules), and typed parts all double (`1d6 piercing, 2d8 fire` → `2d6 piercing, 4d8 fire`). A monster's nat-20 attack carries the crit to its next damage roll; the **Next damage is a crit** switch in the dice settings covers anything else (Champion 19–20, a paralysed target)
 - **3D dice** — animated icosahedron (d20) and pentagonal-trapezohedron (d10), shown for every roll including those broadcast from the character sheet; a switch in the dice settings toggles the animation on/off
 - **Group rolls (DM)** — select multiple tokens and trigger a single ability check or saving throw; each token rolls by its own bonus and the results post as one combined chat message from the DM, headed with the roll count ("DEX Save — 3 rolls"). Results of tokens hidden from players go in a separate DM-only message; group initiative is DM-only, like single-token initiative
@@ -261,13 +265,29 @@ movement is not broadcast to players while parked.
 
 ### Monster Library (`/monsters.html`) — DM only
 
-![The monster library — searchable list by CR, with the full stat block, traits and actions beside it](docs/screenshots/monster-library.webp)
+![The monster library's Official tab — monsters from the imported books, filtered by book, with the selected one's stat block and its Copy to My Monsters button](docs/screenshots/monster-library.webp)
 
+- Two tabs: **My Monsters** (yours to edit) and **Official**
+- **Official monsters** — **Books…** imports whole 5etools bestiary books into the campaign (all 114 books are about 4,700 monsters). The files are downloaded, imported and discarded; adventure monsters built from another book's stat block come in whole. A book can be imported again to update it, or removed. Official monsters cannot be edited, but go into initiative, onto the table (the **Official** tab of Add Token) and onto prepared maps like your own, and cast their spells. **Copy to My Monsters** makes an editable copy
 - Full stat blocks: abilities, skills, saves, senses, CR, HP, AC, speed, traits, actions, legendary actions (multi-line text renders correctly)
 - Portrait upload; per-token portrait override; realtime updates of monster edits
 - Import monsters from XML (D&D Beyond / 5e tools) — bulk, non-destructive merge
 - **Single-monster JSON export** (portrait embedded) and **import** (auto-detected via `type: "monster"`), non-destructive
 - Add any monster straight to initiative; search and filter by name; extra fields for vulnerabilities and initiative
+
+### Spell Library (`/spells.html`) — DM only
+
+![The spell library — every spell of the campaign by level, filtered by level, class and book, with the selected spell's full text and class list](docs/screenshots/spell-library.webp)
+
+- One spell library per campaign, which the character sheets pick spells from and the Cast a Spell pop-up reads descriptions from
+- **Import from books** — tick 5etools books and every spell in them comes in, with its class lists. The files are downloaded, imported and discarded; nothing from 5etools is stored except the spells
+- Add, edit and delete spells by hand, or import 5etools spell JSON
+
+<p align="center">
+  <img src="docs/screenshots/spell-cast.webp" width="560" alt="The Cast a Spell pop-up on the table — the wizard's spells grouped by level, and Lightning Bolt's details, its slot choice with the spent level 3 and 4 slots greyed out, and the damage scaled for a level 5 slot">
+</p>
+
+<p align="center"><em>Cast a Spell on the table: spent slot levels are greyed out, and the damage follows the slot chosen.</em></p>
 
 ### Music & Sound Player (`/playlists.html`) — DM only
 
@@ -337,7 +357,7 @@ four meanings, and the map and the info panel follow one choice.
     the turn controls. A player gets *Roll my initiative*, and *End my turn* on their own turn.
   - **Token** — the selected token: Health (damage, healing, conditions), and for a
     player character the full sheet as **Skills**, **Combat** (attacks, actions, limited
-    uses, short and long rest), **Spells** (slots and prepared spells) and **Items**
+    uses, short and long rest), **Spells** (slots, prepared spells and Cast a Spell) and **Items**
     (wear / take off). For the DM a monster gets **Rolls** and its **Stat block**, and
     every token **Manage** (initiative, hide, assign to a player, delete).
   - **Chat** — the shared chat with private messages and dice.
@@ -478,7 +498,8 @@ after 5 minutes. No third-party service, no external request, no new dependency.
 | Virtual Table | `/table.html` | Players + DM |
 | DM Dashboard | `/dm.html` | DM |
 | DM Calendar | `/events.html` | DM |
-| Monster Library | `/monsters.html` | DM |
+| Monster Library (own + official) | `/monsters.html` | DM |
+| Spell Library | `/spells.html` | DM |
 | Map Prep | `/prepare-map.html` | DM |
 | Waiting Screens | `/waiting-screens.html` | DM |
 | Treasury (loot + shop) | `/treasury.html` | DM |
@@ -708,15 +729,15 @@ desktop client, untick **Send an anonymous install report** in Settings.
 
 ## Tech Stack
 
-- **Backend:** Node.js (ES modules), Express — split into 18 semantic route modules under `server/routes/`, with a lean `server.js` entry point
+- **Backend:** Node.js (ES modules), Express — split into 22 semantic route modules under `server/routes/`, with a lean `server.js` entry point; responses are gzip-compressed (live event streams excepted)
 - **Database:** SQLite (`better-sqlite3`). One cross-tenant registry (`campaigns.db`) plus four SQLite files per campaign under `data/campaigns/<id>/`
 - **Real-time:** WebSocket (`ws`), with a Server-Sent Events endpoint kept alongside it
-- **Frontend:** Vanilla JS, HTML, CSS — no build step, no framework, no bundler. The character sheet is 16 modules under `js/index/`, the table is 19 under `js/table/`, with shared helpers in `js/lib/`
+- **Frontend:** Vanilla JS, HTML, CSS — no build step, no framework, no bundler. The character sheet is 17 modules under `js/index/`, the table is 19 under `js/table/`, with shared helpers in `js/lib/`
 - **Dice:** 3D CSS dice (icosahedron d20, pentagonal-trapezohedron d10) driven by a shared `dice-engine.js`
 - **Image processing:** `sharp` — each upload generates `_thumb.webp` (80×80 crop) and `_medium.webp` (max 500 px); maps excluded
 - **PWA:** Service Worker (`sw.js`) — network-first for HTML, cache-first for versioned static assets
 - **Android app:** Kotlin, plain Android `Activity` + `WebView` (one dependency: `androidx.webkit`), minSdk 30 / target 34; built in Docker with Gradle 8.7, self-updating through Android's `PackageInstaller`
-- **Tests:** 1705 Vitest tests across 64 files (unit + API) covering the sheet, table, dice fairness, login security, per-route login rules, escaping of user text in the page renderers, and routes
+- **Tests:** 1856 Vitest tests across 73 files (unit + API) covering the sheet, table, dice fairness, login security, per-route login rules, escaping of user text in the page renderers, and routes
 - **Security:** in-house, no new dependencies — maths captcha (`lib/captcha.js`, rendered by `sharp`), opaque session tokens stored as SHA-256 (`lib/sessions.js`), failed-login lockout (`lib/login-guard.js`), async scrypt (`lib/passwords.js`), response headers and caller-dependent body limits (`lib/security-middleware.js`)
 - **SSL:** Node.js native `https` with Let's Encrypt certificates
 
@@ -737,13 +758,13 @@ High-level layout — see **[structure.md](structure.md)** for the complete, ann
 char_sheet/
 ├── Application/            # The web app
 │   ├── server.js           #   Express entry point — loads route modules + shared context
-│   ├── server/routes/      #   18 Express route modules
+│   ├── server/routes/      #   22 Express route modules
 │   ├── lib/                #   Campaign scoping, auth, sessions, captcha, lockout, hardening, upload paths, live-event audience
 │   ├── db/                 #   SQLite layers (campaignsdb, campaign-store, localdb, mediadb, storiesdb)
-│   ├── tests/              #   64 Vitest unit + API suites (1705 tests)
+│   ├── tests/              #   73 Vitest unit + API suites (1856 tests)
 │   └── public/             #   Served frontend
 │       ├── *.html          #     Page entry points (campaigns, index, table, dm, treasury, events, …)
-│       ├── js/index/       #     16 character-sheet modules
+│       ├── js/index/       #     17 character-sheet modules
 │       ├── js/table/       #     19 virtual-table modules
 │       ├── js/lib/         #     Shared utilities (dice engine, chat render, calendar, …)
 │       ├── console/        #     Two-screen console: launcher, map screen, info panel

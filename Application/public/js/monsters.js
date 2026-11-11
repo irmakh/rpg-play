@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-11 18:11
+// Written by Irmak Hakman — 2026-11-11 18:45
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -173,8 +173,22 @@ function switchMonTab(tab) {
     b.setAttribute('aria-selected', t === monTab ? 'true' : 'false');
   }
   document.getElementById('official-tools').style.display = monTab === 'official' ? '' : 'none';
-  if (monTab === 'official') { loadOfficialSources(); loadOfficial(true); }
+  if (monTab === 'official') { loadOfficialSources(); loadOfficial(true); loadOfficialBookNames(); }
   else renderTable();
+}
+
+// The books' real names for the filter ("Monster Manual (2025)", not "XMM"),
+// fetched once in the background; the codes show until they arrive.
+let _offNamesAsked = false;
+async function loadOfficialBookNames() {
+  if (officialBooks || _offNamesAsked) return;
+  _offNamesAsked = true;
+  try {
+    const r = await fetch('/api/monsters/official/books', { headers: { 'X-Master-Password': masterPw } });
+    if (!r.ok) { _offNamesAsked = false; return; }
+    officialBooks = await r.json();
+    loadOfficialSources();
+  } catch { _offNamesAsked = false; }
 }
 
 function onMonSearch() {
