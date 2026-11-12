@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-12 14:29
+// Written by Irmak Hakman — 2026-11-12 21:00
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -536,5 +536,45 @@ describe('the DM posting from a sheet', () => {
     const res = await request(made.app).post('/api/chat').set('X-Campaign-Id', AMN).set('X-Character-Password', 'not-a-token')
       .send({ type: 'text', sender: 'X', message: '<b>x</b>', html: true });
     expect(res.status).not.toBe(200);
+  });
+});
+
+// ── Measured areas (draw tool → Area, js/table/table-areas.js) ────────────────
+describe('/api/drawings: measured areas', () => {
+  const area = { id: 'a1', type: 'area', kind: 'cone', sizeFt: 15, widthFt: 5, angle: 450, label: 'Burning Hands',
+                 x1: 100, y1: 50, x2: 100, y2: 50, color: '#ff8800', thickness: 2 };
+  const get = async (app) => (await asPlayer(request(app).get('/api/drawings'), AMN)).body;
+
+  it('keeps an area\'s shape, size, turn and name, and sends them on', async () => {
+    const t = setup();
+    const res = await asDM(request(t.app).post('/api/drawings'), AMN).send(area);
+    expect(res.status).toBe(200);
+    expect((await get(t.app))[0]).toMatchObject({ id: 'a1', type: 'area', kind: 'cone', sizeFt: 15, angle: 90, label: 'Burning Hands', x1: 100, y1: 50 });
+    const sent = t.broadcasts.find(b => b.channel === 'drawing');
+    expect(sent.payload.shape).toMatchObject({ kind: 'cone', sizeFt: 15, angle: 90, label: 'Burning Hands' });
+  });
+
+  it('moving or turning it saves the new place and angle', async () => {
+    const t = setup();
+    await asDM(request(t.app).post('/api/drawings'), AMN).send(area);
+    await asDM(request(t.app).patch('/api/drawings/a1'), AMN).send({ ...area, x1: 300, y1: 250, angle: 225, sizeFt: 30, kind: 'line' });
+    expect((await get(t.app))[0]).toMatchObject({ kind: 'line', sizeFt: 30, angle: 225, x1: 300, y1: 250 });
+  });
+
+  it('cleans what it is given: an unknown shape, a silly size, a long name', async () => {
+    const t = setup();
+    await asDM(request(t.app).post('/api/drawings'), AMN)
+      .send({ ...area, kind: 'hexagon', sizeFt: 99999, widthFt: -3, angle: 'x', label: 'L'.repeat(80) });
+    const d = (await get(t.app))[0];
+    expect(d).toMatchObject({ kind: 'circle', sizeFt: 1000, widthFt: 5, angle: 0 });
+    expect(d.label).toHaveLength(40);
+  });
+
+  it('an ordinary drawing carries none of it', async () => {
+    const t = setup();
+    await asDM(request(t.app).post('/api/drawings'), AMN).send({ id: 'l1', type: 'line', x1: 0, y1: 0, x2: 5, y2: 5, kind: 'cone', sizeFt: 20 });
+    const sent = t.broadcasts.find(b => b.channel === 'drawing');
+    expect(sent.payload.shape.kind).toBeUndefined();
+    expect(sent.payload.shape.sizeFt).toBeUndefined();
   });
 });

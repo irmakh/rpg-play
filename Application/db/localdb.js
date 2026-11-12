@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-12 19:20
+// Written by Irmak Hakman — 2026-11-12 21:00
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -356,6 +356,11 @@ try { db.exec(`ALTER TABLE table_state ADD COLUMN hiddenItems TEXT DEFAULT '[]'`
 // and on prepared maps. A JSON list of { id, x, y, title, text }.
 try { db.exec(`ALTER TABLE table_state ADD COLUMN mapNotes TEXT DEFAULT '[]'`); } catch {}
 try { db.exec(`ALTER TABLE prepared_maps ADD COLUMN mapNotes TEXT DEFAULT '[]'`); } catch {}
+// Measured areas (draw tool → Area, js/table/table-areas.js): a drawing of type
+// 'area' keeps its kind, its size in feet, its turn and an optional name.
+for (const col of [`kind TEXT DEFAULT ''`, `sizeFt REAL DEFAULT 0`, `widthFt REAL DEFAULT 0`, `angle REAL DEFAULT 0`, `label TEXT DEFAULT ''`]) {
+  try { db.exec(`ALTER TABLE map_drawings ADD COLUMN ${col}`); } catch {}
+}
 try { db.exec(`ALTER TABLE table_tokens ADD COLUMN label TEXT DEFAULT ''`); } catch {}
 try { db.exec(`ALTER TABLE table_tokens ADD COLUMN conditions TEXT DEFAULT '[]'`); } catch {}
 try { db.exec(`ALTER TABLE shop_items ADD COLUMN tag TEXT DEFAULT ''`); } catch {}
@@ -1052,12 +1057,15 @@ function listDrawings() {
   return db.prepare('SELECT * FROM map_drawings ORDER BY createdAt ASC').all();
 }
 function addDrawing(id, fields) {
-  db.prepare('INSERT INTO map_drawings (id, type, x1, y1, x2, y2, color, thickness) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
-    .run(id, fields.type || 'line', fields.x1 || 0, fields.y1 || 0, fields.x2 || 0, fields.y2 || 0, fields.color || '#ff4444', fields.thickness || 2);
+  db.prepare(`INSERT INTO map_drawings (id, type, x1, y1, x2, y2, color, thickness, kind, sizeFt, widthFt, angle, label)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+    .run(id, fields.type || 'line', fields.x1 || 0, fields.y1 || 0, fields.x2 || 0, fields.y2 || 0, fields.color || '#ff4444', fields.thickness || 2,
+         fields.kind || '', fields.sizeFt || 0, fields.widthFt || 0, fields.angle || 0, fields.label || '');
 }
 function updateDrawing(id, fields) {
-  db.prepare('UPDATE map_drawings SET type=?, x1=?, y1=?, x2=?, y2=?, color=?, thickness=? WHERE id=?')
-    .run(fields.type || 'line', fields.x1 || 0, fields.y1 || 0, fields.x2 || 0, fields.y2 || 0, fields.color || '#ff4444', fields.thickness || 2, id);
+  db.prepare('UPDATE map_drawings SET type=?, x1=?, y1=?, x2=?, y2=?, color=?, thickness=?, kind=?, sizeFt=?, widthFt=?, angle=?, label=? WHERE id=?')
+    .run(fields.type || 'line', fields.x1 || 0, fields.y1 || 0, fields.x2 || 0, fields.y2 || 0, fields.color || '#ff4444', fields.thickness || 2,
+         fields.kind || '', fields.sizeFt || 0, fields.widthFt || 0, fields.angle || 0, fields.label || '', id);
 }
 function deleteDrawing(id) {
   db.prepare('DELETE FROM map_drawings WHERE id = ?').run(id);

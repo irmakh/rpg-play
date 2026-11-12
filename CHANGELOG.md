@@ -21,6 +21,35 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [353–354] — 2026-11-12 — Measured areas in the draw tool
+
+*(Released.)*
+
+- The draw tool has a new **Area** mode next to Draw and Select, for a spell's or an
+  effect's area drawn to size in feet:
+  - **Square:** side length.
+  - **Circle:** radius.
+  - **Cone:** length; it is as wide at its end as it is long.
+  - **Line:** length × width.
+
+  Set the shape, its size and an optional name (e.g. "Fireball"), then click the map to
+  place it.
+- After placing it the tool switches to Select with the area picked, ready to drag into
+  position.
+  - **Snapping:** it snaps to the grid as areas sit in play. A square's edges sit on
+    grid lines, a circle is centred on a grid corner, and a cone or line starts on a
+    corner, the middle of an edge or a cell's centre.
+  - **Shift:** hold it to move freely.
+  - **Turning:** drag the handle at a cone's or line's tip to aim it, in 15° steps
+    (free with Shift).
+- Each area is labelled with its name and size ("Fireball · 20 ft radius"). Everyone
+  at the table sees it live and on the minimap.
+- Selecting an area shows its fields in the toolbar, so its shape, size, width or name
+  can be changed afterwards. Delete removes it, as with any drawing.
+- Fix: the draw tool's default colour was a CSS variable that the map could not read,
+  so new drawings came out black until a colour was picked. They now start in the
+  intended red.
+
 ## [352] — 2026-11-12 — "Cannot find a suitable monster"
 
 *(Released.)*

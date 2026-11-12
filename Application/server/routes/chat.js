@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-12 14:29
+// Written by Irmak Hakman — 2026-11-12 21:00
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -439,6 +439,26 @@ export default function register(app, ctx) {
     return true;
   };
 
+  // A drawing as stored and sent on. A measured area (type 'area',
+  // js/table/table-areas.js) also keeps its kind, size and width in feet, its
+  // turn in degrees and an optional name; other drawings carry none of these.
+  const AREA_KINDS = new Set(['square', 'circle', 'cone', 'line']);
+  const num = v => (Number.isFinite(+v) ? +v : 0);
+  const ft = v => Math.max(0, Math.min(1000, num(v)));
+  function cleanShape(id, b, defType) {
+    const shape = { id: String(id), type: String(b.type || defType).slice(0, 20),
+      x1: num(b.x1), y1: num(b.y1), x2: num(b.x2), y2: num(b.y2),
+      color: String(b.color || '#ff4444').slice(0, 20), thickness: Math.max(1, Math.min(20, +b.thickness || 2)) };
+    if (shape.type === 'area') {
+      shape.kind = AREA_KINDS.has(b.kind) ? b.kind : 'circle';
+      shape.sizeFt = ft(b.sizeFt) || 5;
+      shape.widthFt = ft(b.widthFt) || 5;
+      shape.angle = ((num(b.angle) % 360) + 360) % 360;
+      shape.label = String(b.label || '').slice(0, 40);
+    }
+    return shape;
+  }
+
   app.get('/api/drawings', (_req, res) => {
     try {
       const drawings = ldb.listDrawings();
@@ -449,9 +469,9 @@ export default function register(app, ctx) {
   app.post('/api/drawings', (req, res) => {
     if (drawingDenied(req, res)) return;
     try {
-      const { id, type, x1, y1, x2, y2, color, thickness } = req.body || {};
-      if (!id || !type) return res.status(400).json({ error: 'id and type required' });
-      const shape = { id: String(id), type: String(type), x1: +x1||0, y1: +y1||0, x2: +x2||0, y2: +y2||0, color: String(color||'#ff4444').slice(0,20), thickness: Math.max(1, Math.min(20, +thickness||2)) };
+      const b = req.body || {};
+      if (!b.id || !b.type) return res.status(400).json({ error: 'id and type required' });
+      const shape = cleanShape(b.id, b, 'line');
       ldb.addDrawing(shape.id, shape);
       broadcast('drawing', { action: 'add', shape });
       res.json({ ok: true });
@@ -479,8 +499,7 @@ export default function register(app, ctx) {
   app.patch('/api/drawings/:id', (req, res) => {
     if (drawingDenied(req, res)) return;
     try {
-      const { type, x1, y1, x2, y2, color, thickness } = req.body || {};
-      const shape = { id: req.params.id, type: String(type||'line'), x1: +x1||0, y1: +y1||0, x2: +x2||0, y2: +y2||0, color: String(color||'#ff4444').slice(0,20), thickness: Math.max(1, Math.min(20, +thickness||2)) };
+      const shape = cleanShape(req.params.id, req.body || {}, 'line');
       ldb.updateDrawing(req.params.id, shape);
       broadcast('drawing', { action: 'update', shape });
       res.json({ ok: true });

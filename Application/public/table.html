@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Written by Irmak Hakman — 2026-11-12 16:55 -->
+<!-- Written by Irmak Hakman — 2026-11-12 21:00 -->
 <!-- Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) -->
 <html lang="en" class="lamplit">
 <head>
@@ -127,11 +127,26 @@
 <div id="draw-toolbar" style="display:none">
   <button class="btn sm draw-mode-btn active" id="draw-submode-draw" onclick="setDrawSubMode('draw')" title="Draw new shapes"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-pencil"></use></svg> Draw</button>
   <button class="btn sm draw-mode-btn" id="draw-submode-select" onclick="setDrawSubMode('select')" title="Select, move and edit shapes"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-cursor"></use></svg> Select</button>
+  <button class="btn sm draw-mode-btn" id="draw-submode-area" onclick="setDrawSubMode('area')" title="A spell's or effect's area to size: a square, circle, cone or line in feet"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-circle"></use></svg> Area</button>
   <span class="draw-tb-sep"></span>
-  <span class="draw-tb-label">Shape:</span>
-  <button class="btn sm draw-shape-btn active" id="draw-shape-circle" onclick="setDrawShape('circle')"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-circle"></use></svg> Circle</button>
-  <button class="btn sm draw-shape-btn" id="draw-shape-rect" onclick="setDrawShape('rect')"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-square"></use></svg> Rect</button>
-  <button class="btn sm draw-shape-btn" id="draw-shape-line" onclick="setDrawShape('line')">╱ Line</button>
+  <span class="draw-tb-label draw-shape-only">Shape:</span>
+  <button class="btn sm draw-shape-btn draw-shape-only active" id="draw-shape-circle" onclick="setDrawShape('circle')"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-circle"></use></svg> Circle</button>
+  <button class="btn sm draw-shape-btn draw-shape-only" id="draw-shape-rect" onclick="setDrawShape('rect')"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-square"></use></svg> Rect</button>
+  <button class="btn sm draw-shape-btn draw-shape-only" id="draw-shape-line" onclick="setDrawShape('line')">╱ Line</button>
+  <!-- Measured areas (js/table/table-areas.js): the next one to place, or the selected one. -->
+  <span id="draw-area-fields" style="display:none">
+    <select id="area-kind" class="area-in" onchange="setAreaField('kind', this.value)" aria-label="Area shape">
+      <option value="square">Square</option><option value="circle">Circle</option><option value="cone">Cone</option><option value="line">Line</option>
+    </select>
+    <label class="draw-tb-label" for="area-size" id="area-size-lbl">Radius</label>
+    <input type="number" id="area-size" class="area-in area-num" min="1" max="1000" step="5" value="20" onchange="setAreaField('sizeFt', this.value)">
+    <span class="draw-tb-label">ft</span>
+    <span id="area-width-wrap" style="display:none"><label class="draw-tb-label" for="area-width">Width</label>
+      <input type="number" id="area-width" class="area-in area-num" min="1" max="1000" step="5" value="5" onchange="setAreaField('widthFt', this.value)">
+      <span class="draw-tb-label">ft</span></span>
+    <input type="text" id="area-label" class="area-in area-name" maxlength="40" placeholder="Name (optional)" aria-label="Area name" onchange="setAreaField('label', this.value)">
+    <span class="draw-tb-label" id="area-hint"></span>
+  </span>
   <span class="draw-tb-label" style="margin-left:calc(10px*var(--fs, 1))">Color:</span>
   <input type="color" id="draw-color" value="var(--blood)" oninput="setDrawColor(this.value)" title="Stroke color">
   <span class="draw-tb-label" style="margin-left:calc(10px*var(--fs, 1))">Size:</span>
@@ -779,6 +794,7 @@
 <script src="/js/table/table-auth.js" defer></script>
 <script src="/js/lib/map-item-text.js" defer></script>
 <script src="/js/table/table-map.js" defer></script>
+<script src="/js/table/table-areas.js" defer></script>
 <script src="/js/lib/confirm-dialog.js" defer></script>
 <script src="/js/table/table-notes.js" defer></script>
 <script src="/js/table/table-realtime.js" defer></script>

@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-12 16:42
+// Written by Irmak Hakman — 2026-11-12 21:00
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -136,6 +136,7 @@ function applyZoom(pct) {
   const lbl = document.getElementById('zoom-val');
   if (lbl) lbl.textContent = zoomPct + '%';
   renderItems();   // item and note text keeps a readable size on screen at any zoom
+  if (drawings.some(s => s.type === 'area')) renderDrawings();   // so does an area's size label
 }
 
 // A map smaller than the map area sits in its middle, not stuck to the top-left
@@ -837,7 +838,7 @@ function setDrawSubMode(mode) {
   document.querySelectorAll('.draw-mode-btn').forEach(b => b.classList.remove('active'));
   const btn = document.getElementById('draw-submode-' + mode);
   if (btn) btn.classList.add('active');
-  if (mode === 'draw') {
+  if (mode === 'draw' || mode === 'area') {
     overlayCanvas.style.cursor = 'crosshair';
     selectedShapeId = null;
     shapeEditState = null;
@@ -855,11 +856,12 @@ function updateDrawSelectionUI() {
   if (deleteBtn) deleteBtn.style.display = (s && drawSubMode === 'select') ? '' : 'none';
   if (s) {
     const colorIn = document.getElementById('draw-color');
-    if (colorIn) colorIn.value = s.color || '#E4666B';
+    if (colorIn) colorIn.value = areaColor(s.color);
     document.querySelectorAll('.draw-thick-btn').forEach(b => b.classList.remove('active'));
     const thickBtn = document.getElementById('draw-thick-' + s.thickness);
     if (thickBtn) thickBtn.classList.add('active');
   }
+  if (typeof syncAreaToolbar === 'function') syncAreaToolbar();   // table-areas.js
 }
 
 // ── Hit testing ───────────────────────────────────────────────────────────────
@@ -872,6 +874,7 @@ function _ptSegDist(px, py, x1, y1, x2, y2) {
 }
 
 function hitTestShape(s, px, py) {
+  if (s.type === 'area') return areaHit(s, px, py, tableState.cellSize || 50);   // table-areas.js
   const margin = Math.max(s.thickness || 2, 10);
   if (s.type === 'line') {
     return _ptSegDist(px, py, s.x1, s.y1, s.x2, s.y2) <= margin;
@@ -895,6 +898,7 @@ function getShapeAtPoint(px, py) {
 }
 
 function getHandleAtPoint(s, px, py) {
+  if (s.type === 'area') return areaHandleAt(s, px, py);   // only a cone's or line's tip
   const HANDLE_R = 10;
   if (Math.hypot(px - s.x1, py - s.y1) <= HANDLE_R) return 'h1';
   if (Math.hypot(px - s.x2, py - s.y2) <= HANDLE_R) return 'h2';
@@ -907,6 +911,7 @@ function renderShapeSelection() {
   if (!selectedShapeId || drawSubMode !== 'select') return;
   const s = drawings.find(sh => sh.id === selectedShapeId);
   if (!s) return;
+  if (s.type === 'area') { renderAreaSelection(oCtx, s); return; }
   oCtx.save();
   oCtx.strokeStyle = '#00e5ff';
   oCtx.lineWidth = 1.5;
@@ -958,9 +963,10 @@ async function deleteSelectedShape() {
 }
 
 function renderShape(ctx, s, alpha = 1) {
+  if (s.type === 'area') { renderAreaShape(ctx, s, alpha); return; }   // table-areas.js
   ctx.save();
   ctx.globalAlpha = alpha;
-  ctx.strokeStyle = s.color || '#E4666B';
+  ctx.strokeStyle = areaColor(s.color);   // a CSS variable drew black
   ctx.lineWidth = s.thickness || 2;
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
@@ -973,7 +979,7 @@ function renderShape(ctx, s, alpha = 1) {
     const r = Math.sqrt((s.x2 - s.x1) ** 2 + (s.y2 - s.y1) ** 2);
     ctx.beginPath();
     ctx.arc(s.x1, s.y1, r, 0, Math.PI * 2);
-    ctx.fillStyle = s.color || '#E4666B';
+    ctx.fillStyle = areaColor(s.color);
     ctx.globalAlpha = alpha * 0.18;
     ctx.fill();
     ctx.globalAlpha = alpha;
@@ -981,7 +987,7 @@ function renderShape(ctx, s, alpha = 1) {
   } else if (s.type === 'rect') {
     const x = Math.min(s.x1, s.x2), y = Math.min(s.y1, s.y2);
     const w = Math.abs(s.x2 - s.x1), h = Math.abs(s.y2 - s.y1);
-    ctx.fillStyle = s.color || '#E4666B';
+    ctx.fillStyle = areaColor(s.color);
     ctx.globalAlpha = alpha * 0.18;
     ctx.fillRect(x, y, w, h);
     ctx.globalAlpha = alpha;
@@ -1125,6 +1131,8 @@ overlayCanvas.addEventListener('mousedown', e => {
         oCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
         updateDrawSelectionUI();
       }
+    } else if (drawSubMode === 'area') {
+      placeAreaAt(pos, e.shiftKey);   // table-areas.js
     } else {
       drawingState = { x1: pos.x, y1: pos.y };
     }
@@ -1171,7 +1179,11 @@ overlayCanvas.addEventListener('mousemove', e => {
         const dx = pos.x - shapeEditState.startX, dy = pos.y - shapeEditState.startY;
         const os = shapeEditState.origShape;
         const s = drawings.find(sh => sh.id === selectedShapeId);
-        if (s) {
+        if (s && s.type === 'area') {
+          dragArea(s, os, shapeEditState.mode, pos, dx, dy, e.shiftKey);   // table-areas.js
+          renderDrawings();
+          renderShapeSelection();
+        } else if (s) {
           if (shapeEditState.mode === 'move') {
             s.x1 = os.x1 + dx; s.y1 = os.y1 + dy;
             s.x2 = os.x2 + dx; s.y2 = os.y2 + dy;
@@ -1191,6 +1203,8 @@ overlayCanvas.addEventListener('mousemove', e => {
           overlayCanvas.style.cursor = getShapeAtPoint(pos.x, pos.y) ? 'move' : 'default';
         }
       }
+    } else if (drawSubMode === 'area') {
+      previewAreaAt(pos, e.shiftKey);   // table-areas.js: the outline follows the pointer
     } else if (drawingState) {
       const preview = { ...drawMode, x1: drawingState.x1, y1: drawingState.y1, x2: pos.x, y2: pos.y };
       renderDrawPreview(preview);

@@ -1,4 +1,4 @@
-/* Written by Irmak Hakman — 2026-11-12 19:45 */
+/* Written by Irmak Hakman — 2026-11-12 21:00 */
 /* Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) */
 
 *{box-sizing:border-box;margin:0;padding:0}
@@ -12,6 +12,12 @@ body{display:flex;flex-direction:column}
 #draw-color{width:calc(30px*var(--fs, 1));height:calc(22px*var(--fs, 1));border:1px solid var(--rule-hi);border-radius:calc(3px*var(--fs, 1));background:none;cursor:pointer;padding:1px calc(2px*var(--fs, 1))}
 .draw-shape-btn.active,.draw-thick-btn.active,.draw-mode-btn.active{background:var(--arc);color:var(--ink);border-color:var(--arc)}
 .draw-tb-sep{width:1px;height:calc(18px*var(--fs, 1));background:var(--rule-hi);margin:0 calc(2px*var(--fs, 1));flex-shrink:0}
+/* The Area fields sit in the toolbar's row; the page-wide input rule (width:100%) would put each on a line of its own. */
+#draw-toolbar .area-in{display:inline-block;width:auto;flex:0 0 auto;margin:0;background:var(--sunken);color:var(--bone);border:1px solid var(--rule-hi);border-radius:calc(4px*var(--fs, 1));padding:calc(3px*var(--fs, 1)) calc(6px*var(--fs, 1));font:inherit;font-size:calc(12px * var(--fs, 1));min-height:calc(26px*var(--fs, 1));box-sizing:border-box}
+#draw-toolbar .area-num{width:calc(64px*var(--fs, 1))}
+#draw-toolbar .area-name{width:calc(140px*var(--fs, 1))}
+#draw-area-fields label,#area-width-wrap{display:inline-flex;align-items:center;gap:calc(6px*var(--fs, 1));margin:0}
+#area-hint{font-style:italic}
 #table-wrap{display:flex;flex:1;overflow:hidden;position:relative}
 #canvas-area{flex:1;overflow:auto;position:relative;background:var(--sunken);cursor:crosshair}
 
