@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-11 18:45
+// Written by Irmak Hakman — 2026-11-12 12:52
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -234,8 +234,8 @@ function renderOfficialList() {
   if (!official.rows.length) {
     const none = !officialSources.length && !(document.getElementById('search-input').value || '').trim();
     wrap.innerHTML = none
-      ? `<div class="app-empty"><div>No official monsters in this campaign yet.<br><br><button class="btn primary" onclick="openOfficialBooks()">Import books…</button></div></div>`
-      : '<div class="app-empty">No official monsters match your search.</div>';
+      ? `<div class="app-empty"><div>No 3rd Party monsters in this campaign yet.<br><br><button class="btn primary" onclick="openOfficialBooks()">Import books…</button></div></div>`
+      : '<div class="app-empty">No 3rd Party monsters match your search.</div>';
     return;
   }
   wrap.innerHTML = official.rows.map(m => `
@@ -272,7 +272,7 @@ async function selectOfficial(id) {
     <div class="detail-hdr">
       <div>
         <h2 class="detail-title">${esc(m.name)}</h2>
-        <div class="detail-sub"><span class="cr-badge" title="Official monsters cannot be edited">Official</span> ${esc(book)} &middot; ${esc(getTypeStr(d))} &middot; CR ${esc(m.cr || '?')} &middot; AC ${esc(getAcStr(d))} &middot; HP ${esc(getHpStr(d))} &middot; ${esc(getSpeedStr(d))}</div>
+        <div class="detail-sub"><span class="cr-badge" title="3rd Party monsters cannot be edited">3rd Party</span> ${esc(book)} &middot; ${esc(getTypeStr(d))} &middot; CR ${esc(m.cr || '?')} &middot; AC ${esc(getAcStr(d))} &middot; HP ${esc(getHpStr(d))} &middot; ${esc(getSpeedStr(d))}</div>
       </div>
       <div class="detail-actions">
         <button class="btn success" onclick="openInitModal('${escJs(m.id)}')" title="Add to the initiative tracker">+ Initiative</button>
@@ -294,7 +294,7 @@ async function copyOfficial(id) {
     switchMonTab('mine');
     await loadMonsters();
     if (monsters.some(x => x.id === out.id)) selectMonster(out.id);
-    showStatus(`${out.name} copied to My Monsters. Edit it here; tokens of the official one stay as they are.`);
+    showStatus(`${out.name} copied to My Monsters. Edit it here; tokens of the 3rd Party one stay as they are.`);
   } catch { showStatus('Network error.', true); }
 }
 
@@ -332,7 +332,7 @@ function renderOfficialBooks() {
       <span class="ob-name">${esc(b.name)}</span>
       <span class="ob-code">${esc(b.code)}</span>
       ${have[b.code] ? `<span class="ob-have">${have[b.code]} imported</span>
-        <button type="button" class="btn sm danger" onclick="event.preventDefault();removeOfficialBook('${escJs(b.code)}')" title="Remove this book's official monsters">Remove</button>` : ''}
+        <button type="button" class="btn sm danger" onclick="event.preventDefault();removeOfficialBook('${escJs(b.code)}')" title="Remove this book's 3rd Party monsters">Remove</button>` : ''}
     </label>`).join('') || '<div class="ob-hint">No books match.</div>';
   officialBooksChanged();
 }
@@ -378,13 +378,18 @@ async function runOfficialImport() {
 
 async function removeOfficialBook(code) {
   const n = (officialSources.find(s => s.source === code) || {}).count || 0;
-  if (!confirm(`Remove the ${n} official monsters of ${code} from this campaign? Tokens and initiative entries made from them lose their stat blocks until the book is imported again.`)) return;
+  if (!await confirmDialog({
+    title: `Remove ${code}?`,
+    message: `Remove the ${n} 3rd Party monsters of ${code} from this campaign?\n\nMonsters a token, initiative entry or prepared map uses stay, so nothing loses its stat block. You can import the book again at any time.`,
+    confirmText: 'Remove book', danger: true,
+  })) return;
   try {
     const r = await fetch(`/api/monsters/official/books/${encodeURIComponent(code)}`, { method: 'DELETE', headers: { 'X-Master-Password': masterPw } });
     if (!r.ok) { document.getElementById('obooks-status').textContent = 'Could not remove the book.'; return; }
     const out = await r.json().catch(() => ({}));
-    document.getElementById('obooks-status').textContent = `Removed ${out.removed || 0} monsters of ${code}.`;
-    for (const id of [...officialFull.keys()]) if (officialFull.get(id).source === code) officialFull.delete(id);
+    document.getElementById('obooks-status').textContent = `Removed ${out.removed || 0} monsters of ${code}.` +
+      (out.kept ? ` Kept ${out.kept} that tokens, initiative or prepared maps use.` : '');
+    if (!out.kept) for (const id of [...officialFull.keys()]) if (officialFull.get(id).source === code) officialFull.delete(id);
     await loadOfficialSources();
     renderOfficialBooks();
     if (monTab === 'official') loadOfficial(true);

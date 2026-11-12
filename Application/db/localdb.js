@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-11 18:14
+// Written by Irmak Hakman — 2026-11-12 12:49
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -878,8 +878,32 @@ function upsertOfficialMonsters(rows) {
   })();
   return out;
 }
+/**
+ * Every official monster id something in this campaign still points at: table
+ * tokens, initiative entries and the tokens placed on prepared maps.
+ */
+function _officialMonsterIdsInUse() {
+  const ids = new Set(db.prepare(`SELECT linkedId id FROM table_tokens WHERE linkedId LIKE 'off-%'
+    UNION SELECT monsterId FROM initiative_entries WHERE monsterId LIKE 'off-%'`).all().map(r => r.id));
+  for (const m of db.prepare('SELECT preparedTokens FROM prepared_maps').all()) {
+    let toks = [];
+    try { toks = JSON.parse(m.preparedTokens || '[]'); } catch {}
+    if (Array.isArray(toks)) for (const t of toks) if (t && typeof t.linkedId === 'string' && t.linkedId.startsWith('off-')) ids.add(t.linkedId);
+  }
+  return ids;
+}
+/**
+ * Removes a book's official monsters, except those a token, initiative entry or
+ * prepared map still uses — those stay so nothing loses its stat block.
+ * -> { removed, kept }
+ */
 function deleteOfficialBook(source) {
-  return db.prepare('DELETE FROM official_monsters WHERE source = ?').run(String(source || '')).changes;
+  const inUse = _officialMonsterIdsInUse();
+  const ids = db.prepare('SELECT id FROM official_monsters WHERE source = ?').all(String(source || '')).map(r => r.id);
+  const del = db.prepare('DELETE FROM official_monsters WHERE id = ?');
+  let removed = 0;
+  db.transaction(() => { for (const id of ids) if (!inUse.has(id)) removed += del.run(id).changes; })();
+  return { removed, kept: ids.length - removed };
 }
 /** The official monsters a token or initiative entry uses right now (the table loads these with the DM's own). */
 function listLinkedOfficialMonsters() {
@@ -1277,6 +1301,21 @@ function deleteSpells(ids) {
   let n = 0;
   db.transaction(() => { for (const id of ids) n += del.run(String(id)).changes; })();
   return n;
+}
+/**
+ * Removes a book's spells from the library, except those a character sheet took
+ * (a sheet spell keeps the library id as `libId`). -> { removed, kept }
+ */
+function deleteSpellBook(source) {
+  const inUse = new Set();
+  for (const c of db.prepare('SELECT dataJson FROM characters').all()) {
+    for (const m of String(c.dataJson || '').matchAll(/"libId"\s*:\s*"([^"]+)"/g)) inUse.add(m[1]);
+  }
+  const ids = db.prepare('SELECT id FROM spells WHERE source = ?').all(String(source || '')).map(r => r.id);
+  const del = db.prepare('DELETE FROM spells WHERE id = ?');
+  let removed = 0;
+  db.transaction(() => { for (const id of ids) if (!inUse.has(id)) removed += del.run(id).changes; })();
+  return { removed, kept: ids.length - removed };
 }
 function exportSpells() { return _selectAll('spells'); }
 // Rows a library already has (same name and book) are kept as they are.
@@ -1769,7 +1808,7 @@ function exportAll() {
     updateSoundFile, listPlaylists, getPlaylist, createPlaylist, updatePlaylist, deletePlaylist,
     getSoundsForPlaylist, exportAll, SHOP_MAX_ACTIVE_TAGS, normalizeShopTags, lootRowToTreasury, shopRowToTreasury,
     officialMonsterId, searchOfficialMonsters, listOfficialBooks, upsertOfficialMonsters, deleteOfficialBook, listLinkedOfficialMonsters,
-    listSpells, getSpell, findSpell, findSpellsByName, createSpell, updateSpell, deleteSpells, exportSpells, importSpells,
+    listSpells, getSpell, findSpell, findSpellsByName, createSpell, updateSpell, deleteSpells, deleteSpellBook, exportSpells, importSpells,
     listHandouts, getHandout, createHandout, updateHandout, deleteHandout,
     listHandoutRecipients, listHandoutsForChar, getHandoutRecipient, addHandoutRecipient,
     updateHandoutRecipient, removeHandoutRecipient, clearHandoutRecipients,

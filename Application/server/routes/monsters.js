@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-11 18:06
+// Written by Irmak Hakman — 2026-11-12 12:52
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -9,7 +9,7 @@ export default function register(app, ctx) {
     processImageSizes, deleteUploadFile, readUploadAsBase64, extToMime,
     broadcast,
   } = ctx;
-  const OFFICIAL_READ_ONLY = 'Official monsters cannot be changed. Copy it to My Monsters to edit it.';
+  const OFFICIAL_READ_ONLY = '3rd Party monsters cannot be changed. Copy it to My Monsters to edit it.';
 
   app.get('/api/monsters', async (req, res) => {
     try {

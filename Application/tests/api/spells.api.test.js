@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-11 19:45
+// Written by Irmak Hakman — 2026-11-12 12:49
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -202,6 +202,45 @@ describe('whole books from 5etools (DM)', () => {
     const r = await request(a).post('/api/spells/import-books').set('X-Test-Role', 'dm').send({ books: ['XPHB'] });
     expect(r.body).toMatchObject({ imported: 0, updated: 2 });
     expect(ldb.listSpells()).toHaveLength(2);
+  });
+
+  it('re-importing a book replaces each spell in place: same id, new text, nothing dropped', async () => {
+    let edition = 1;
+    const changing = {
+      listBooks: async () => BOOKS,
+      fetchBooks: async () => ({
+        spells: edition === 1
+          ? [MM, SHIELD]
+          : [{ ...MM, entries: ['Revised text.'] }, { name: 'Brand New', source: 'XPHB', level: 1, entries: ['New.'] }],
+        books: [{ code: 'XPHB', name: 'XPHB', count: 2 }],
+      }),
+    };
+    const a = bookApp(changing);
+    await request(a).post('/api/spells/import-books').set('X-Test-Role', 'dm').send({ books: ['XPHB'] });
+    const before = Object.fromEntries(ldb.listSpells().map(s => [s.name, s.id]));
+    edition = 2;
+    const r = await request(a).post('/api/spells/import-books').set('X-Test-Role', 'dm').send({ books: ['XPHB'] });
+    expect(r.body).toMatchObject({ imported: 1, updated: 1 });
+    const after = ldb.listSpells();
+    const mm = after.find(s => s.name === 'Magic Missile');
+    expect(mm.id).toBe(before['Magic Missile']);                       // sheets that point at it still do
+    expect(JSON.stringify(ldb.getSpell(mm.id))).toContain('Revised text.');
+    expect(after.find(s => s.name === 'Shield').id).toBe(before.Shield); // not in the new edition, kept anyway
+    expect(after.map(s => s.name).sort()).toEqual(['Brand New', 'Magic Missile', 'Shield']);
+  });
+
+  it('removing a book keeps the spells a character took', async () => {
+    const a = bookApp(fake);
+    await request(a).post('/api/spells/import-books').set('X-Test-Role', 'dm').send({ books: ['XPHB', 'XGE'] });
+    const mm = ldb.listSpells().find(s => s.name === 'Magic Missile');
+    ldb.createCharacter('c1', { name: 'Wiz', dataJson: JSON.stringify({ spells: [{ id: 's1', libId: mm.id, name: 'Magic Missile' }] }) });
+
+    expect((await request(a).delete('/api/spells/books/XPHB').set('X-Test-Role', 'player')).status).toBe(401);
+    const r = await request(a).delete('/api/spells/books/XPHB').set('X-Test-Role', 'dm');
+    expect(r.body).toEqual({ ok: true, removed: 1, kept: 1 });
+    expect(ldb.listSpells().map(s => s.name)).toEqual(['Magic Missile', 'Tidal Wave']);   // other books untouched
+    expect(ldb.getSpell(mm.id)).toBeTruthy();
+    expect(broadcasts.some(b => b.event === 'spells')).toBe(true);
   });
 
   it('refuses no books, an unknown book, and says when the download fails', async () => {

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Written by Irmak Hakman — 2026-11-11 18:10 -->
+<!-- Written by Irmak Hakman — 2026-11-12 12:52 -->
 <!-- Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) -->
 <html lang="en" class="lamplit app-page">
 <head>
@@ -61,14 +61,14 @@
     <aside class="app-side" style="--side-w:320px">
       <div class="mon-seg" role="tablist" aria-label="Which monsters">
         <button type="button" role="tab" id="seg-mine" class="mon-seg-btn active" aria-selected="true" onclick="switchMonTab('mine')">My Monsters</button>
-        <button type="button" role="tab" id="seg-official" class="mon-seg-btn" aria-selected="false" onclick="switchMonTab('official')">Official</button>
+        <button type="button" role="tab" id="seg-official" class="mon-seg-btn" aria-selected="false" onclick="switchMonTab('official')">3rd Party</button>
       </div>
       <div class="app-side-top">
         <input type="text" id="search-input" placeholder="Search by name or type" oninput="onMonSearch()" aria-label="Search monsters">
       </div>
       <div class="app-side-top" id="official-tools" style="display:none">
         <select id="official-book" onchange="loadOfficial(true)" aria-label="Book"><option value="">All books</option></select>
-        <button class="btn sm" onclick="openOfficialBooks()" title="Import or remove whole books of official monsters">Books…</button>
+        <button class="btn sm" onclick="openOfficialBooks()" title="Import or remove whole books of 3rd Party monsters">Books…</button>
       </div>
       <div class="app-list" id="monster-table-wrap">
         <div class="app-empty">Loading</div>
@@ -107,9 +107,9 @@
 <!-- Official monsters: import or remove whole 5etools bestiary books -->
 <div class="modal-overlay" id="obooks-modal" style="display:none">
   <div class="modal-box" style="max-width:calc(620px*var(--fs, 1));width:96%">
-    <div class="ct">Official monsters: books</div>
+    <div class="ct">3rd Party monsters: books</div>
     <div class="modal-body">
-      <p class="ob-hint">Every monster in the books you tick becomes an official monster of <strong id="obooks-camp">this campaign</strong>. The files are downloaded from the 5etools data, imported and discarded. Official monsters cannot be edited; copy one to My Monsters to change it. Importing a book again updates its monsters, and tokens already placed keep working.</p>
+      <p class="ob-hint">Every monster in the books you tick becomes a 3rd Party monster of <strong id="obooks-camp">this campaign</strong>. The files are downloaded from the 5etools data, imported and discarded. 3rd Party monsters cannot be edited; copy one to My Monsters to change it. Importing a book again updates its monsters, and tokens already placed keep working.</p>
       <div class="ob-tools">
         <input type="text" id="obooks-filter" placeholder="Filter books" oninput="renderOfficialBooks()" aria-label="Filter books">
         <button type="button" class="btn sm" onclick="setAllOfficialBooks(true)">All shown</button>
@@ -258,6 +258,7 @@
 
 <script src="/js/monster-stat-block.js" defer></script>
 <script src="/js/lib/official-monsters.js" defer></script>
+<script src="/js/lib/confirm-dialog.js" defer></script>
 <script src="/js/lib/realtime.js" defer></script>
 <script src="/js/lib/notifications.js" defer></script>
 <script src="/js/lib/modal-guard.js" defer></script>

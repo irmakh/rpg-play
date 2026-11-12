@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-11 18:14
+// Written by Irmak Hakman — 2026-11-12 12:49
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -79,9 +79,10 @@ export default function register(app, ctx) {
   app.delete('/api/monsters/official/books/:code', (req, res) => {
     if (deny(req, res)) return;
     try {
-      const removed = ldb.deleteOfficialBook(req.params.code);
+      // Monsters a token, initiative entry or prepared map uses are kept.
+      const { removed, kept } = ldb.deleteOfficialBook(req.params.code);
       if (removed) broadcast('monsters', { action: 'official-updated' });
-      res.json({ ok: true, removed });
+      res.json({ ok: true, removed, kept });
     } catch (err) { console.error('DELETE /api/monsters/official/books:', err); res.status(500).json({ error: 'Server error' }); }
   });
 

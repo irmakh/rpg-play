@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-11 18:21
+// Written by Irmak Hakman — 2026-11-12 12:52
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -40,7 +40,7 @@ function switchTokenTab(tab) {
     const s = document.getElementById('tok-monster-search');
     if (s) {
       s.value = '';
-      s.placeholder = tab === 'official' ? 'Search official monsters…' : 'Search monsters…';
+      s.placeholder = tab === 'official' ? 'Search 3rd Party monsters…' : 'Search monsters…';
       setTimeout(() => s.focus(), 60);
     }
     filterMonsterList('');
@@ -82,10 +82,10 @@ function filterOfficialList(query) {
   const box = document.getElementById('tok-official-list');
   if (!box || typeof OfficialMonsters === 'undefined') return;
   OfficialMonsters.searchInto(query, () => authHeaders(), html => {
-    box.innerHTML = html || '<div class="om-note">No official monsters match. Books are imported on the Monsters page.</div>';
+    box.innerHTML = html || '<div class="om-note">No 3rd Party monsters match. Books are imported on the Monsters page.</div>';
     const row = _pendingTokenLinkedId && box.querySelector(`[data-mid="${CSS.escape(_pendingTokenLinkedId)}"]`);
     if (row) row.style.background = 'var(--wash)';
-  }, 'pickOfficialTokenMonster', { hint: 'Type 2 or more letters to search the official monsters.' });
+  }, 'pickOfficialTokenMonster', { hint: 'Type 2 or more letters to search the 3rd Party monsters.' });
 }
 
 // An official monster from the search: loaded in full, then picked like the

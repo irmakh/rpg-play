@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-11 19:25
+// Written by Irmak Hakman — 2026-11-12 12:49
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -149,6 +149,17 @@ export default function register(app, ctx) {
     } finally {
       booksRunning = false;
     }
+  });
+
+  // DELETE /api/spells/books/:code -> { removed, kept }. Spells a character sheet
+  // took stay in the library, so the sheet's link back to them keeps working.
+  app.delete('/api/spells/books/:code', (req, res) => {
+    if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
+    try {
+      const out = ldb.deleteSpellBook(String(req.params.code).slice(0, 24));
+      if (out.removed) broadcast('spells', { action: 'updated' });
+      res.json({ ok: true, ...out });
+    } catch (err) { console.error('DELETE /api/spells/books/:code:', err); res.status(500).json({ error: 'Server error' }); }
   });
 
   app.get('/api/spells/:id', (req, res) => {

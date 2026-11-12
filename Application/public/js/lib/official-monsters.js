@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-11 18:21
+// Written by Irmak Hakman — 2026-11-12 12:52
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -35,7 +35,7 @@ const OfficialMonsters = (() => {
     const rows = res.rows || [];
     if (!rows.length) return '';
     const more = res.total > rows.length ? `<div class="om-note">${res.total - rows.length} more — type more of the name.</div>` : '';
-    return `<div class="om-hdr">Official monsters</div>`
+    return `<div class="om-hdr">3rd Party monsters</div>`
       + rows.map(m => `<div class="qroll-row om-row" role="button" tabindex="0" data-mid="${h(m.id)}"
           onclick="${pickFn}('${j(m.id)}', this)" onkeydown="if(event.key==='Enter'){event.preventDefault();${pickFn}('${j(m.id)}', this)}">
           <span class="om-name">${h(m.name)}</span>
@@ -49,7 +49,7 @@ const OfficialMonsters = (() => {
     clearTimeout(timer);
     const query = String(q || '').trim();
     const mine = ++seq;
-    if (query.length < MIN_CHARS) { render(note((opts && opts.hint) || 'Type 2 or more letters to search the official monsters too.')); return; }
+    if (query.length < MIN_CHARS) { render(note((opts && opts.hint) || 'Type 2 or more letters to search the 3rd Party monsters too.')); return; }
     timer = setTimeout(async () => {
       try {
         const res = await search(query, typeof headers === 'function' ? headers() : headers);

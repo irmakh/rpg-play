@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Written by Irmak Hakman — 2026-11-11 19:50 -->
+<!-- Written by Irmak Hakman — 2026-11-12 12:52 -->
 <!-- Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) -->
 <html lang="en" class="lamplit app-page">
 <head>
@@ -110,7 +110,7 @@
   <div class="modal-box" style="max-width:calc(560px*var(--fs, 1));width:96%">
     <div class="ct">Import from books</div>
     <div class="modal-body">
-      <p class="sl-hint" style="margin-top:0">Every spell in the books you tick goes into the spell library of <strong id="books-camp">this campaign</strong>. The files are downloaded from the 5etools data, imported, and discarded &mdash; nothing is kept on the server. A spell already in the library (same name and book) is replaced.</p>
+      <p class="sl-hint" style="margin-top:0">Every spell in the books you tick goes into the spell library of <strong id="books-camp">this campaign</strong>. The files are downloaded from the 5etools data, imported, and discarded &mdash; nothing is kept on the server. A spell already in the library (same name and book) is replaced in place. <em>Remove</em> takes a book's spells out of the library, except those a character has taken.</p>
       <div class="sl-books-tools">
         <button type="button" class="btn sm" onclick="setAllBooks(true)">All</button>
         <button type="button" class="btn sm" onclick="setAllBooks(false)">None</button>
@@ -126,6 +126,7 @@
 </div>
 
 <script src="/js/lib/esc.js" defer></script>
+<script src="/js/lib/confirm-dialog.js" defer></script>
 <script src="/js/lib/spell-data.js" defer></script>
 <script src="/js/lib/realtime.js" defer></script>
 <script src="/js/lib/notifications.js" defer></script>

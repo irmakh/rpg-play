@@ -21,6 +21,25 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [334] — 2026-11-12 — Remove a spell book; book removal keeps what is in use; "3rd Party" monsters
+
+*(Released.)*
+
+- "Official monsters" are now called **3rd Party** monsters wherever they appear: the
+  Monsters page tab, badge and Books… dialog, the table's Add Token tab, and the
+  monster pickers.
+- Removing a book (spells or monsters) asks first, in the page's own dialog, saying how
+  many entries it will remove and what stays.
+
+- The Spells page's **Import from books** list has a **Remove** button next to every book
+  the library holds. It takes that book's spells out of the library, except the ones a
+  character has taken, so those sheets keep their link to the library spell.
+- Removing an official monster book now keeps the monsters a table token, an initiative
+  entry or a prepared map uses, so nothing loses its stat block. Both say how many were
+  removed and how many were kept.
+- Re-importing a book still replaces each spell or monster in place: same id, new text,
+  nothing deleted first. Tests now pin this down.
+
 ## [333] — 2026-11-11 — Book names in the Official monsters filter
 
 *(Released.)*

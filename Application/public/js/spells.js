@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-11 19:50
+// Written by Irmak Hakman — 2026-11-12 12:52
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -319,9 +319,33 @@ function renderBooks() {
       <input type="checkbox" value="${esc(b.code)}" onchange="booksChanged()">
       <span class="sl-book-name">${esc(b.name)}</span>
       <span class="sl-book-code">${esc(b.code)}</span>
-      ${have[b.code] ? `<span class="sl-book-have">${have[b.code]} in library</span>` : ''}
+      ${have[b.code] ? `<span class="sl-book-have">${have[b.code]} in library</span>
+        <button type="button" class="btn sm danger" onclick="event.preventDefault();removeSpellBook('${escJs(b.code)}')" title="Remove this book's spells from the library">Remove</button>` : ''}
     </label>`).join('');
   booksChanged();
+}
+
+// Spells a character sheet took stay in the library; the server says how many.
+async function removeSpellBook(code) {
+  const n = library.filter(r => r.source === code).length;
+  if (!await confirmDialog({
+    title: `Remove ${code}?`,
+    message: `Remove the ${n} spells of ${code} from this campaign's library?\n\nSpells a character has taken stay, so their sheets keep working. You can import the book again at any time.`,
+    confirmText: 'Remove book', danger: true,
+  })) return;
+  const status = $('books-status');
+  try {
+    const res = await api(`/api/spells/books/${encodeURIComponent(code)}`, { method: 'DELETE' });
+    if (res.status === 401) { handleUnauth(); return; }
+    const r = await res.json().catch(() => ({}));
+    if (!res.ok) { status.textContent = r.error || 'Could not remove the book.'; return; }
+    status.textContent = `Removed ${r.removed || 0} spells of ${code}.` +
+      (r.kept ? ` Kept ${r.kept} that characters have taken.` : '');
+    await loadSpells();
+    renderBooks();
+  } catch {
+    status.textContent = 'Network error.';
+  }
 }
 
 function chosenBooks() {

@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-11 18:14
+// Written by Irmak Hakman — 2026-11-12 12:49
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -90,8 +90,26 @@ describe('importing books', () => {
   it('removes a book', async () => {
     await importMM();
     const r = await dm(request(app).delete('/api/monsters/official/books/MM'));
-    expect(r.body).toEqual({ ok: true, removed: 2 });
+    expect(r.body).toEqual({ ok: true, removed: 2, kept: 0 });
     expect((await dm(request(app).get('/api/monsters/official'))).body.total).toBe(0);
+  });
+
+  it('removing a book keeps the monsters a token or a prepared map uses', async () => {
+    await importMM();
+    const ids = (await dm(request(app).get('/api/monsters/official'))).body.rows.map(m => m.id);
+    expect(ids).toHaveLength(2);
+    ldb.createTableToken('t1', { name: 'Mage A1', type: 'monster', linkedId: 'off-mm-mage', visible: true });
+    const r = await dm(request(app).delete('/api/monsters/official/books/MM'));
+    expect(r.body).toEqual({ ok: true, removed: 1, kept: 1 });
+    expect(ldb.getMonster('off-mm-mage').name).toBe('Mage');
+
+    // A prepared map's token counts too.
+    await importMM();
+    const other = ids.find(id => id !== 'off-mm-mage');
+    ldb.createPreparedMap('pm1', { name: 'Cave' });
+    ldb.updatePreparedMap('pm1', { preparedTokens: JSON.stringify([{ id: 'x', type: 'monster', linkedId: other }]) });
+    const r2 = await dm(request(app).delete('/api/monsters/official/books/MM'));
+    expect(r2.body).toEqual({ ok: true, removed: 0, kept: 2 });
   });
 });
 
