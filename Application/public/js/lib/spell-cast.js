@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-12 12:00
+// Written by Irmak Hakman — 2026-11-12 20:35
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -289,11 +289,128 @@ async function _spcCast() {
       return;
     }
     const done = _spc.opts.onDone;
+    const sumOpts = _spc.opts;
     closeSpellCast();
     if (typeof done === 'function') done(out);
+    if (out.summon) _spcSummon(out.summon, sumOpts);
   } catch {
     if (err) err.textContent = 'Network error.';
     if (btn) btn.disabled = false;
     if (_spc) _spc.busy = false;
+  }
+}
+
+// ── Summon spells (lib/summon.js on the server) ───────────────────────────────
+// A summon spell's cast comes back with `summon`: the creature it added to the
+// companions, the campaign monsters to pick from, or none that fit. A pick
+// goes to POST /api/characters/:id/summon, and its result reaches the page
+// through the same onDone as the cast, so the sheet takes the new companion.
+let _spcSum = null;   // { summon, opts, busy }
+
+function _spcSumEl() {
+  let ov = document.getElementById('spc-sum-overlay');
+  if (ov) return ov;
+  ov = document.createElement('div');
+  ov.id = 'spc-sum-overlay';
+  ov.className = 'spc-overlay';
+  ov.style.display = 'none';
+  ov.innerHTML = `<div class="spc-box spc-sum-box" role="dialog" aria-modal="true" aria-labelledby="spc-sum-title">
+    <div class="spc-hdr"><span id="spc-sum-title">Summon</span>
+      <button type="button" class="spc-x" onclick="closeSpellSummon()" aria-label="Close">&times;</button></div>
+    <div class="spc-sum-body" id="spc-sum-body"></div>
+  </div>`;
+  ov.addEventListener('mousedown', e => { if (e.target === ov) closeSpellSummon(); });
+  document.body.appendChild(ov);
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && ov.style.display !== 'none') closeSpellSummon();
+  });
+  return ov;
+}
+
+function closeSpellSummon() {
+  const ov = document.getElementById('spc-sum-overlay');
+  if (ov) ov.style.display = 'none';
+  _spcSum = null;
+}
+
+function _spcSummon(summon, opts) {
+  _spcSum = { summon, opts, busy: false, query: '' };
+  const ov = _spcSumEl();
+  document.getElementById('spc-sum-title').textContent = summon.spell || 'Summon';
+  _spcSumRender();
+  ov.style.display = 'flex';
+  setTimeout(() => (ov.querySelector('.spc-sum-q') || ov.querySelector('.spc-go'))?.focus(), 30);
+}
+
+function _spcSumRender() {
+  const box = document.getElementById('spc-sum-body');
+  if (!box || !_spcSum) return;
+  const s = _spcSum.summon;
+  if (s.added) {
+    box.innerHTML = `<p class="spc-sum-msg"><b>${_spEsc(s.added.name)}</b> ${s.added.updated ? 'was updated in' : 'was added to'} the companions.</p>`
+      + `<p class="spc-sum-hint">Put it on the map from the Companions tab on the table.</p>`
+      + `<button type="button" class="spc-go" onclick="closeSpellSummon()">OK</button>`;
+    return;
+  }
+  if (s.none || !(s.candidates || []).length) {
+    box.innerHTML = `<p class="spc-sum-msg">Cannot find a suitable monster.</p>`
+      + `<button type="button" class="spc-go" onclick="closeSpellSummon()">OK</button>`;
+    return;
+  }
+  const q = _spcSum.query.trim().toLowerCase();
+  const list = s.candidates.map((c, i) => ({ c, i })).filter(({ c }) => !q || c.name.toLowerCase().includes(q));
+  const stat = c => [c.cr !== '' ? 'CR ' + c.cr : '', c.type, c.hp ? 'HP ' + c.hp : '', c.ac ? 'AC ' + c.ac : '', c.speed ? c.speed + ' ft' : '', c.source]
+    .filter(Boolean).map(_spEsc).join(' · ');
+  const search = s.candidates.length > 8
+    ? `<input type="search" class="spc-q spc-sum-q" placeholder="Find a creature…" aria-label="Find a creature" value="${_spEsc(_spcSum.query)}" oninput="_spcSumQuery(this.value)">` : '';
+  box.innerHTML = `<p class="spc-sum-msg">Which creature does ${_spEsc(s.spell)} summon?</p>${search}`
+    + `<div class="spc-sum-list" id="spc-sum-list">`
+    + (list.length ? list.map(({ c, i }) => `<button type="button" class="spc-sum-row" onclick="_spcSumPick(${i})" ${_spcSum.busy ? 'disabled' : ''}>`
+        + (c.portraitThumb ? `<img src="${_spEsc(c.portraitThumb)}" alt="" loading="lazy">` : '<span class="spc-sum-ph" aria-hidden="true">🐾</span>')
+        + `<span class="spc-sum-txt"><span class="spc-sum-name">${_spEsc(c.name)}</span><span class="spc-sum-stat">${stat(c)}</span></span></button>`).join('')
+      : '<div class="spc-empty">No creature by that name.</div>')
+    + `</div><div class="spc-err" id="spc-sum-err" role="alert"></div>`;
+}
+
+function _spcSumQuery(v) {
+  if (!_spcSum) return;
+  _spcSum.query = v;
+  _spcSumRender();
+  const q = document.querySelector('.spc-sum-q');
+  if (q) { q.focus(); q.setSelectionRange(v.length, v.length); }
+}
+
+async function _spcSumPick(i) {
+  if (!_spcSum || _spcSum.busy) return;
+  const s = _spcSum.summon, c = s.candidates[i], opts = _spcSum.opts;
+  if (!c) return;
+  _spcSum.busy = true;
+  document.querySelectorAll('.spc-sum-row').forEach(b => { b.disabled = true; });
+  const err = document.getElementById('spc-sum-err');
+  try {
+    const res = await fetch(`/api/characters/${encodeURIComponent(opts.charId)}/summon`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...((opts.headers && opts.headers()) || {}) },
+      body: JSON.stringify({ spellId: s.spellId, castLevel: s.castLevel, monsterId: c.id }),
+    });
+    const out = await res.json().catch(() => ({}));
+    if (!_spcSum) return;
+    if (!res.ok) {
+      _spcSum.busy = false;
+      _spcSumRender();
+      const e2 = document.getElementById('spc-sum-err');
+      if (e2) e2.textContent = out.error || 'The creature could not be added.';
+      return;
+    }
+    if (typeof opts.onDone === 'function') opts.onDone(out);
+    _spcSum.summon = out.summon || { spell: s.spell, added: { name: c.name } };
+    _spcSum.busy = false;
+    _spcSumRender();
+  } catch {
+    if (!_spcSum) return;
+    _spcSum.busy = false;
+    _spcSumRender();
+    const e2 = document.getElementById('spc-sum-err');
+    if (e2) e2.textContent = 'Network error.';
   }
 }

@@ -21,6 +21,53 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [352] — 2026-11-12 — "Cannot find a suitable monster"
+
+*(Released.)*
+
+- When a summon spell finds no fitting monster among the imported 3rd Party books, the
+  pop-up now says "Cannot find a suitable monster." Nothing is fetched from anywhere
+  else.
+
+## [350–351] — 2026-11-12 — Summoned companions carry their full stat block
+
+*(Released.)*
+
+- A companion made by a summon spell keeps the monster's whole stat block. The values
+  for the slot used are filled in: HP, AC, damage, and the caster's spell attack.
+- On the table, its panel reads like a monster's: size, type, CR and every speed;
+  rollable ability checks, saving throws and skills; its attacks; its other actions,
+  bonus actions and reactions; traits; and defenses, senses and languages. The rolls go
+  to chat as the companion ("Owl (Arwil)").
+- On the character sheet, such a companion has a **Stats** button that opens the full
+  stat block. Editing the companion by hand keeps the stat block.
+- Companions built by hand look as before.
+- *(no frontend bump)* Summon spells search only the 3rd Party books imported into the
+  campaign; nothing is fetched from anywhere else. When a creature is in more than one
+  imported book, the 2024 version is preferred over the 2014 one (XPHB before TCE).
+
+## [348–349] — 2026-11-12 — Summon spells add their creature to the companions
+
+*(Released.)*
+
+- Casting a summon spell finds the monster it calls up among the campaign's
+  3rd Party monsters (the imported books, not the DM's custom monsters) and adds it
+  to the caster's companions. If that creature is already there, it is updated, not
+  added twice. A creature found in several books is offered once: from the book the
+  spell names, otherwise from the newest core book.
+- How the creature is found: the stat block the spell names (Summon Beast → Bestial
+  Spirit; Find Familiar → Bat, Cat, Owl…), a monster marked as summoned by that spell,
+  or the spell's rules: creature type and highest CR, which can grow with the slot
+  (Conjure Animals: beasts up to CR 2; Conjure Elemental: an elemental up to the
+  slot level).
+- With exactly one match the creature is added straight away. With several, the player
+  picks one, and only monsters the spell allows are shown. With none, the player is
+  told so.
+- Scaled stat blocks (the Summon spirits, the Otherworldly Steed) get their HP, AC and damage for the slot used,
+  and their attack bonus from the caster's spell attack.
+- Known summon spells work on their own. Any other spell can be ticked "Summons a
+  creature" in the sheet's spell editor.
+
 ## [346–347] — 2026-11-12 — Minimap moves to the top right; Details header stays in view
 
 *(Released.)*

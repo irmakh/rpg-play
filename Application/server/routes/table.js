@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-12 16:29
+// Written by Irmak Hakman — 2026-11-12 19:45
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -913,6 +913,13 @@ export default function register(app, ctx) {
         notes: String(c.notes || '').slice(0, 2000),
         portrait, portraitThumb,
       };
+      // The monster stat block a summon spell gave it (lib/summon.js), shown in
+      // full in the panel. It is the player's own sheet data, so only a plain
+      // object of a bounded size is carried; the panel escapes what it shows.
+      if (c.statBlock && typeof c.statBlock === 'object' && !Array.isArray(c.statBlock)) {
+        const sb = JSON.stringify(c.statBlock);
+        if (sb.length <= 24000) companion.statBlock = JSON.parse(sb);
+      }
       const newId = genId();
       const token = {
         name, type: 'companion', linkedId: '', assignedCharId: String(charId),

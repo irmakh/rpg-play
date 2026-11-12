@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-12 01:20
+// Written by Irmak Hakman — 2026-11-12 20:25
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -233,5 +233,124 @@ describe('a sheet still holding pre-v320 spell rows', () => {
     const list = JSON.parse(stored()._spells);
     expect(list[0]).toMatchObject({ name: 'Fireball', level: 3, prepared: true });
     expect(Array.isArray(list[0])).toBe(false);
+  });
+});
+
+// ── Summon spells (lib/summon.js) ─────────────────────────────────────────────
+describe('summon spells', () => {
+  const FAMILIAR = { id: 'sp-ff', name: 'Find Familiar', level: 1, ritual: true, prepared: true };
+  const SBEAST = { id: 'sp-sb', name: 'Summon Beast', level: 2, prepared: true,
+    entries: ['uses the {@creature Bestial Spirit|XPHB} stat block.'] };
+  // Summons come from the 3rd Party monsters (imported books); `ids` maps a
+  // test's short name to the id the book import gives the monster.
+  const ids = {};
+  const addMonster = (key, name, data, source = 'XMM') => {
+    ldb.upsertOfficialMonsters([{ name, source, cr: data.cr, type: data.type, data: { name, source, ...data } }]);
+    ids[key] = ldb.officialMonsterId(source, name);
+  };
+  const companions = () => JSON.parse(stored()._companions || '[]');
+  beforeEach(() => {
+    seed({ 'slot-2-total': '2', 'slot-2-used': '0', 'slot-1-used': '0',
+           _spells: JSON.stringify([FIREBALL, FAMILIAR, SBEAST]) });
+    addMonster('m-owl', 'Owl', { type: 'beast', cr: '0', size: ['T'], ac: [11], hp: { average: 1 }, speed: { walk: 5, fly: 60 } });
+    addMonster('m-cat', 'Cat', { type: 'beast', cr: '0', size: ['T'], ac: [12], hp: { average: 2 }, speed: { walk: 40 } });
+    addMonster('m-lich', 'Lich', { type: 'undead', cr: '21' });
+  });
+
+  it('a spell that summons nothing says nothing about it', async () => {
+    const r = await cast({ spellId: 'sp-fb', mode: 'slot', slotLevel: 3 });
+    expect(r.body.summon).toBeUndefined();
+  });
+
+  it('one candidate goes straight into the companions', async () => {
+    addMonster('m-bs', 'Bestial Spirit', { type: 'beast', cr: '', size: ['S'], hp: { special: '30 + 5 for each spell level above 2' }, ac: [{ special: '11 + the spell\'s level' }] });
+    const r = await cast({ spellId: 'sp-sb', mode: 'slot', slotLevel: 3 });
+    expect(r.status).toBe(200);
+    expect(r.body.summon).toMatchObject({ spell: 'Summon Beast', added: { name: 'Bestial Spirit', updated: false } });
+    expect(r.body.keys).toContain('_companions');
+    expect(JSON.parse(r.body.data._companions)).toHaveLength(1);
+    expect(companions()[0]).toMatchObject({ name: 'Bestial Spirit', monsterId: ids['m-bs'], hpMax: 35, ac: 14, size: 1 });
+    expect(broadcasts.some(b => b.event === 'characters' && b.payload.keys.includes('_companions'))).toBe(true);
+  });
+
+  it('several candidates come back to pick from, and nothing is added yet', async () => {
+    const r = await cast({ spellId: 'sp-ff', mode: 'ritual' });
+    expect(r.status).toBe(200);
+    expect(r.body.summon.candidates.map(c => c.name)).toEqual(['Cat', 'Owl']);
+    expect(r.body.summon).toMatchObject({ spellId: 'sp-ff', castLevel: 1 });
+    expect(companions()).toEqual([]);
+  });
+
+  it('none that fit says so', async () => {
+    const r = await cast({ spellId: 'sp-sb', mode: 'slot', slotLevel: 2 });
+    expect(r.body.summon).toMatchObject({ spell: 'Summon Beast', none: true });
+  });
+
+  const pick = (body, who = 'player', asChar = 'wiz') => {
+    let q = request(app).post('/api/characters/wiz/summon').send(body);
+    if (who) q = q.set('X-Test-Role', who);
+    if (who === 'player') q = q.set('X-Test-Char', asChar);
+    return q;
+  };
+
+  it('the pick adds that creature, and picking it again updates it instead of adding a second', async () => {
+    const r = await pick({ spellId: 'sp-ff', castLevel: 1, monsterId: ids['m-owl'] });
+    expect(r.status).toBe(200);
+    expect(r.body.summon.added).toEqual({ name: 'Owl', updated: false });
+    expect(JSON.parse(r.body.data._companions)[0]).toMatchObject({ name: 'Owl', monsterId: ids['m-owl'] });
+    const again = await pick({ spellId: 'sp-ff', castLevel: 1, monsterId: ids['m-owl'] });
+    expect(again.body.summon.added.updated).toBe(true);
+    expect(companions()).toHaveLength(1);
+  });
+
+  it('refuses a monster the spell may not summon', async () => {
+    const r = await pick({ spellId: 'sp-ff', castLevel: 1, monsterId: ids['m-lich'] });
+    expect(r.status).toBe(400);
+    expect(companions()).toEqual([]);
+  });
+
+  it('refuses a spell that is not a summon spell, and someone else\'s character', async () => {
+    expect((await pick({ spellId: 'sp-fb', castLevel: 3, monsterId: ids['m-owl'] })).status).toBe(404);
+    expect((await pick({ spellId: 'sp-ff', castLevel: 1, monsterId: ids['m-owl'] }, 'player', 'other')).status).toBe(401);
+    expect((await pick({ spellId: 'sp-ff', castLevel: 1, monsterId: ids['m-owl'] }, null)).status).toBe(401);
+  });
+
+  it('a spell ticked "Summons a creature" works like a known one', async () => {
+    const HOUNDS = { id: 'sp-h', name: 'Call the Hounds', level: 1, prepared: true, summon: true,
+      entries: ['A spectral {@creature Cat} answers.'] };
+    ldb.updateCharacter('wiz', { dataJson: JSON.stringify({ ...stored(), _spells: JSON.stringify([HOUNDS]) }) });
+    const r = await cast({ spellId: 'sp-h', mode: 'slot', slotLevel: 1 });
+    expect(r.body.summon.added).toMatchObject({ name: 'Cat' });
+  });
+
+  it("only 3rd Party monsters are offered, not the DM's custom ones", async () => {
+    ldb.createMonster('own-cat', { name: 'Shadow Cat', cr: '0', dataJson: JSON.stringify({ name: 'Shadow Cat', type: 'beast', cr: '0' }) });
+    const r = await cast({ spellId: 'sp-ff', mode: 'ritual' });
+    expect(r.body.summon.candidates.map(c => c.name)).toEqual(['Cat', 'Owl']);
+  });
+
+  it('a creature in several books is offered once, from the newest core book', async () => {
+    addMonster('m-owl-mm', 'Owl', { type: 'beast', cr: '0', size: ['T'], ac: [11], hp: { average: 1 } }, 'MM');
+    addMonster('m-owl-hb', 'Owl', { type: 'beast', cr: '0', size: ['T'], ac: [13], hp: { average: 3 } }, 'HOMEBREW');
+    const r = await cast({ spellId: 'sp-ff', mode: 'ritual' });
+    const owls = r.body.summon.candidates.filter(c => c.name === 'Owl');
+    expect(owls).toHaveLength(1);
+    expect(owls[0]).toMatchObject({ id: ids['m-owl'], source: 'XMM' });
+  });
+});
+
+describe('summon spells search only what is imported', () => {
+  it('never fetches anything: a creature in no imported book is not found', async () => {
+    seed({ 'slot-2-total': '2', 'slot-2-used': '0',
+           _spells: JSON.stringify([{ id: 'sp-sb', name: 'Summon Beast', level: 2, prepared: true }]) });
+    const realFetch = globalThis.fetch;
+    let fetched = 0;
+    globalThis.fetch = async () => { fetched++; throw new Error('no network'); };
+    try {
+      const r = await cast({ spellId: 'sp-sb', mode: 'slot', slotLevel: 2 });
+      expect(r.status).toBe(200);
+      expect(r.body.summon).toMatchObject({ spell: 'Summon Beast', none: true });
+      expect(fetched).toBe(0);
+    } finally { globalThis.fetch = realFetch; }
   });
 });

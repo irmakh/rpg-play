@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-28 14:25
+// Written by Irmak Hakman — 2026-11-12 19:45
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -57,8 +57,101 @@ function renderCompanionPanel(tok) {
     : `<div class="rp-tab-empty">No attacks. Add them on the character sheet.</div>`;
 
   const notes = c.notes ? `<div class="rp-flat-hdr">Notes</div><div class="cmp-notes">${esc(c.notes)}</div>` : '';
+  const sb = c.statBlock && typeof c.statBlock === 'object' ? c.statBlock : null;
+  if (sb) {
+    return stats + _cmpBlockTop(sb, tok) + `<div class="rp-flat-hdr">Attacks</div>${atkHtml}` + _cmpBlockRest(sb) + notes
+      + `<button class="btn sm danger cmp-dismiss" onclick="dismissCompanion('${id}')">Dismiss ${esc(tok.name)}</button>`;
+  }
   return stats + `<div class="rp-flat-hdr">Attacks</div>${atkHtml}${notes}`
     + `<button class="btn sm danger cmp-dismiss" onclick="dismissCompanion('${id}')">Dismiss ${esc(tok.name)}</button>`;
+}
+
+// ── A companion made from a monster: its full stat block ──────────────────────
+// A summon spell keeps the monster's stat block on the companion (statBlock,
+// lib/summon.js), so its panel reads like a monster's: what it is, abilities
+// and saves to roll, skills, then its attacks, its other actions, traits and
+// senses. Everything shown is escaped: the block is the player's sheet data.
+const _CMP_ABIL = [['str', 'STR'], ['dex', 'DEX'], ['con', 'CON'], ['int', 'INT'], ['wis', 'WIS'], ['cha', 'CHA']];
+
+function _cmpMod(score) {
+  const m = Math.floor(((parseInt(score) || 10) - 10) / 2);
+  return (m >= 0 ? '+' : '') + m;
+}
+function _cmpText(entries) {
+  return [].concat(entries || []).map(e => {
+    if (typeof e === 'string') return `<p>${parseEntry(e)}</p>`;
+    if (e && Array.isArray(e.items)) return '<ul>' + e.items.map(i => `<li>${parseEntry(typeof i === 'string' ? i : (i && (i.name || i.entry)) || '')}</li>`).join('') + '</ul>';
+    if (e && Array.isArray(e.entries)) return _cmpText(e.entries);
+    return '';
+  }).join('');
+}
+function _cmpList(v, key) {
+  return [].concat(v || []).map(i => (typeof i === 'string' ? i : [].concat((i && i[key]) || []).join('/'))).filter(Boolean).join(', ');
+}
+
+function _cmpBlockTop(sb, tok) {
+  const id = escJs(tok.id);
+  const SZ = { T: 'Tiny', S: 'Small', M: 'Medium', L: 'Large', H: 'Huge', G: 'Gargantuan' };
+  const type = typeof sb.type === 'string' ? sb.type : (sb.type && typeof sb.type.type === 'string' ? sb.type.type : '');
+  const cr = sb.cr && typeof sb.cr === 'object' ? sb.cr.cr : sb.cr;
+  const sp = sb.speed && typeof sb.speed === 'object' ? sb.speed : {};
+  const ft = v => (typeof v === 'number' ? v : v && typeof v.number === 'number' ? v.number : 0);
+  const speed = [ft(sp.walk) ? ft(sp.walk) + ' ft.' : '', ...['fly', 'swim', 'climb', 'burrow'].map(k => (ft(sp[k]) ? `${k} ${ft(sp[k])} ft.` : ''))]
+    .filter(Boolean).join(', ');
+  const what = [[].concat(sb.size || []).map(x => SZ[x] || x).join('/'), type].filter(Boolean).join(' ');
+  const line = [what, cr != null && cr !== '' ? 'CR ' + cr : '', speed].filter(Boolean).map(x => esc(String(x))).join(' · ');
+
+  const abil = `<div class="rp-ability-grid">` + _CMP_ABIL.map(([k, n]) => {
+    const ms = _cmpMod(sb[k]);
+    return `<div class="rp-ability-block rp-ability-clickable" onclick="companionCheck('${id}','${n} Check','${ms}')" title="${n} Check (d20${ms})">`
+      + `<div class="rp-ability-name">${n}</div><div class="rp-ability-mod">${esc(ms)}</div>`
+      + `<div class="rp-ability-score">${esc(String(parseInt(sb[k]) || 10))}</div></div>`;
+  }).join('') + `</div>`;
+
+  const saves = `<div class="rp-save-grid">` + _CMP_ABIL.map(([k, n]) => {
+    const own = sb.save && sb.save[k];
+    const v = own ? String(own) : _cmpMod(sb[k]);
+    return `<div class="rp-save-cell${own ? ' rp-save-prof' : ''}" onclick="companionCheck('${id}','${n} Save','${escJs(v)}')" title="${n} Saving Throw${own ? ' (proficient)' : ''}">`
+      + `<div class="rp-save-val">${esc(v)}</div><div class="rp-save-name">${n}</div></div>`;
+  }).join('') + `</div>`;
+
+  const skills = sb.skill && typeof sb.skill === 'object' && Object.keys(sb.skill).length
+    ? `<div class="rp-flat-hdr">Skills</div><div class="rp-skill-grid">` + Object.entries(sb.skill).map(([k, v]) => {
+        const lbl = k.charAt(0).toUpperCase() + k.slice(1);
+        return `<div class="qroll-row" onclick="companionCheck('${id}','${escJs(lbl)}','${escJs(String(v))}')"><span>${esc(lbl)}</span><span class="qroll-val">${esc(String(v))}</span></div>`;
+      }).join('') + `</div>` : '';
+
+  return (line ? `<div class="cmp-block-line">${line}</div>` : '')
+    + `<div class="rp-flat-hdr rp-abil-hdr">Abilities</div>${abil}`
+    + `<div class="rp-flat-hdr">Saving Throws</div>${saves}${skills}`;
+}
+
+function _cmpBlockRest(sb) {
+  const isAttack = a => /\{@(?:hit|atk|atkr)\b/i.test(JSON.stringify((a && a.entries) || ''));
+  const group = (items, title) => {
+    const list = [].concat(items || []).filter(x => x && typeof x === 'object');
+    if (!list.length) return '';
+    return `<div class="rp-flat-hdr">${title}</div>` + list.map(t =>
+      `<div class="rp-mon-trait"><div class="rp-mon-trait-name">${parseEntry(t.name || '')}</div>`
+      + `<div class="rp-mon-trait-body">${_cmpText(t.entries)}</div></div>`).join('');
+  };
+  const defs = [
+    ['Immune', _cmpList(sb.immune, 'immune')], ['Resist', _cmpList(sb.resist, 'resist')],
+    ['Vulnerable', _cmpList(sb.vulnerable, 'vulnerable')], ['Cond. Immune', _cmpList(sb.conditionImmune, 'conditionImmune')],
+    ['Senses', [[].concat(sb.senses || []).join(', '), sb.passive ? 'Passive Perception ' + sb.passive : ''].filter(Boolean).join(', ')],
+    ['Languages', [].concat(sb.languages || []).join(', ')],
+  ].filter(([, v]) => v);
+  return group([].concat(sb.action || []).filter(a => !isAttack(a)), 'Actions')
+    + group(sb.bonus, 'Bonus Actions') + group(sb.reaction, 'Reactions') + group(sb.trait, 'Traits')
+    + (defs.length ? `<div class="rp-flat-hdr">Defenses &amp; Senses</div><div class="rp-mon-defense">`
+        + defs.map(([l, v]) => `<div><span class="rp-mon-defense-lbl">${esc(l)}</span> ${esc(String(v))}</div>`).join('') + `</div>` : '');
+}
+
+/** An ability check, save or skill from a companion's stat block. */
+function companionCheck(tokId, label, mod) {
+  const tok = tokens.find(t => t.id === tokId);
+  if (!tok || !isMyToken(tok)) return;
+  _cmpRoll({ label, modifier: parseInt(String(mod).replace(/[^0-9+-]/g, '')) || 0, sender: companionSender(tok) });
 }
 
 function _cmpRoll(pending) {

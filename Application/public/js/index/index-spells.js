@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-12 02:10
+// Written by Irmak Hakman — 2026-11-12 18:50
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -336,7 +336,11 @@ function _sheetCastDone(out) {
   _applyingData = true;
   for (const k of keys) {
     if (k === '_spells') spells = parseSpellList(d._spells);
-    else { const el = document.querySelector(`[data-key="${k}"]`); if (el) el.value = d[k]; }
+    else if (k === '_companions') {
+      // A summon spell's creature (lib/summon.js), added or updated by the server.
+      try { companions = JSON.parse(d._companions || '[]'); } catch {}
+      if (typeof renderCompanions === 'function') renderCompanions();
+    } else { const el = document.querySelector(`[data-key="${k}"]`); if (el) el.value = d[k]; }
   }
   _applyingData = false;
   renderSpells();
@@ -379,6 +383,7 @@ function openSpellModal(id) {
   chk('spm-prepared', sp.prepared);
   chk('spm-noslot', sp.noSlot);
   chk('spm-always', sp.alwaysPrepared);
+  chk('spm-summon', sp.summon);
   set('spm-uses', sp.uses ? String(sp.uses) : '');
   set('spm-recharge', sp.uses ? sp.recharge : 'long');
   set('spm-notes', sp.notes);
@@ -444,6 +449,7 @@ function saveSpellModal() {
     source: { kind: val('spm-src-kind'), detail: val('spm-src-detail').trim() },
     prepared: on('spm-prepared'),
     alwaysPrepared: on('spm-always'),
+    summon: on('spm-summon'),
     noSlot, uses,
     used: old && old.uses === uses ? old.used : 0,
     recharge: uses ? val('spm-recharge') : '',

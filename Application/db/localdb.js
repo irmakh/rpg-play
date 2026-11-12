@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-12 16:29
+// Written by Irmak Hakman — 2026-11-12 19:20
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -982,6 +982,10 @@ function deleteOfficialBook(source) {
   db.transaction(() => { for (const id of ids) if (!inUse.has(id)) removed += del.run(id).changes; })();
   return { removed, kept: ids.length - removed };
 }
+/** Every 3rd Party monster in this campaign, for the summon spells (lib/summon.js). */
+function listOfficialMonsters() {
+  return db.prepare('SELECT id, name, cr, source, dataJson FROM official_monsters ORDER BY name').all();
+}
 /** The official monsters a token or initiative entry uses right now (the table loads these with the DM's own). */
 function listLinkedOfficialMonsters() {
   return db.prepare(`SELECT id, name, cr, dataJson, source FROM official_monsters WHERE id IN
@@ -1888,7 +1892,7 @@ function exportAll() {
     updateCalendarEvent, deleteCalendarEvent, listSoundFiles, getSoundFile, createSoundFile, deleteSoundFile,
     updateSoundFile, listPlaylists, getPlaylist, createPlaylist, updatePlaylist, deletePlaylist,
     getSoundsForPlaylist, exportAll, SHOP_MAX_ACTIVE_TAGS, normalizeShopTags, lootRowToTreasury, shopRowToTreasury,
-    officialMonsterId, searchOfficialMonsters, listOfficialBooks, upsertOfficialMonsters, deleteOfficialBook, listLinkedOfficialMonsters,
+    officialMonsterId, searchOfficialMonsters, listOfficialBooks, upsertOfficialMonsters, deleteOfficialBook, listLinkedOfficialMonsters, listOfficialMonsters,
     bookItemId, searchBookItems, getBookItem, listBookItemBooks, upsertBookItems, deleteBookItemBook,
     listSpells, getSpell, findSpell, findSpellsByName, createSpell, updateSpell, deleteSpells, deleteSpellBook, exportSpells, importSpells,
     listHandouts, getHandout, createHandout, updateHandout, deleteHandout,

@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-28 14:25
+// Written by Irmak Hakman — 2026-11-12 19:45
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -45,6 +45,7 @@ function renderCompanions() {
         <span class="item-meta">${stats}</span>
         ${atks ? `<div class="cmp-atks">${atks}</div>` : ''}
       </div>
+      ${c.statBlock ? `<button class="char-btn" style="padding:calc(2px*var(--fs, 1)) calc(8px*var(--fs, 1));font-size:calc(11px * var(--fs, 1))" onclick="openCompanionStatBlock(${idLit})" title="The full stat block of the monster it was summoned as">Stats</button>` : ''}
       <button class="char-btn" style="padding:calc(2px*var(--fs, 1)) calc(8px*var(--fs, 1));font-size:calc(11px * var(--fs, 1))" onclick="openCompanionModal(${idLit})">Edit</button>
       <button class="del-btn" onclick="deleteCompanion(${idLit})" title="Delete companion"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg></button>
     </div>`;
@@ -76,6 +77,33 @@ function openCompanionModal(id) {
   _cmpShowPortrait();
   document.getElementById('companion-modal').style.display = 'flex';
   setTimeout(() => document.getElementById('cmp-name')?.focus(), 30);
+}
+
+// The full stat block of a companion a summon spell made from a monster
+// (statBlock, lib/summon.js), drawn by the shared js/monster-stat-block.js.
+function openCompanionStatBlock(id) {
+  const c = companions.find(x => x.id === id);
+  if (!c || !c.statBlock || typeof renderMonsterStatBlock !== 'function') return;
+  let ov = document.getElementById('cmp-block-modal');
+  if (!ov) {
+    ov = document.createElement('div');
+    ov.id = 'cmp-block-modal';
+    ov.className = 'modal-overlay';
+    ov.innerHTML = `<div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="cmp-block-title" style="max-width:calc(520px*var(--fs, 1));width:92%">
+      <div class="ct" id="cmp-block-title">Stat block</div>
+      <div class="modal-body" id="cmp-block-body" style="max-height:72vh;overflow-y:auto"></div>
+      <div class="modal-btns"><button class="char-btn" onclick="closeCompanionStatBlock()">Close</button></div></div>`;
+    ov.addEventListener('mousedown', e => { if (e.target === ov) closeCompanionStatBlock(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && ov.style.display !== 'none') closeCompanionStatBlock(); });
+    document.body.appendChild(ov);
+  }
+  document.getElementById('cmp-block-title').textContent = c.name || 'Stat block';
+  document.getElementById('cmp-block-body').innerHTML = renderMonsterStatBlock({ ...c.statBlock, name: c.name || c.statBlock.name });
+  ov.style.display = 'flex';
+}
+function closeCompanionStatBlock() {
+  const ov = document.getElementById('cmp-block-modal');
+  if (ov) ov.style.display = 'none';
 }
 
 function closeCompanionModal() {
@@ -153,8 +181,13 @@ function saveCompanionModal() {
     toHit:  r.querySelector('.cmp-atk-hit').value.trim().replace(/^\+/, ''),
     damage: r.querySelector('.cmp-atk-dmg').value.trim(),
   })).filter(a => a.name || a.damage);
+  const prev = _cmpEditId ? companions.find(x => x.id === _cmpEditId) : null;
   const c = {
     id: _cmpEditId || _cmpNewId(),
+    // The campaign monster a summon spell made it from (lib/summon.js): kept so
+    // the next cast updates this companion instead of adding another.
+    ...(prev && prev.monsterId ? { monsterId: prev.monsterId } : {}),
+    ...(prev && prev.statBlock ? { statBlock: prev.statBlock } : {}),
     name,
     portrait: _cmpPortrait ? _cmpPortrait.portrait : '',
     portraitThumb: _cmpPortrait ? _cmpPortrait.portraitThumb : '',

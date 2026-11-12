@@ -1,4 +1,4 @@
-/* Written by Irmak Hakman — 2026-11-11 22:55 */
+/* Written by Irmak Hakman — 2026-11-12 18:50 */
 /* Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) */
 
 /* The Cast a Spell pop-up (js/lib/spell-cast.js) on the sheet and the table,
@@ -58,6 +58,22 @@
   .spc-body{flex-direction:column}
   .spc-list{border-right:none;border-bottom:1px solid var(--rule);max-height:45%}
 }
+
+/* ── After a summon spell: the creature it adds to the companions ── */
+.spc-sum-box{width:min(calc(440px*var(--fs, 1)),100%)}
+.spc-sum-body{display:flex;flex-direction:column;gap:var(--s2);padding:var(--s3);overflow:auto;min-height:0}
+.spc-sum-msg{margin:0;font-size:var(--t-base)}
+.spc-sum-hint{margin:0;font-size:var(--t-sm);color:var(--ash)}
+.spc-sum-list{display:flex;flex-direction:column;gap:var(--s1);overflow:auto;min-height:0}
+.spc-sum-row{display:flex;align-items:center;gap:var(--s2);width:100%;text-align:left;background:var(--sunken);color:var(--bone);border:1px solid var(--rule);border-radius:var(--r-sm);padding:var(--s1) var(--s2);cursor:pointer;font:inherit;min-height:calc(44px*var(--fs, 1))}
+.spc-sum-row:hover:not(:disabled){border-color:var(--arc)}
+.spc-sum-row:focus-visible{outline:2px solid var(--arc);outline-offset:1px}
+.spc-sum-row:disabled{opacity:.5;cursor:wait}
+.spc-sum-row img,.spc-sum-ph{width:calc(36px*var(--fs, 1));height:calc(36px*var(--fs, 1));border-radius:50%;object-fit:cover;flex-shrink:0;display:grid;place-items:center;background:var(--slate)}
+.spc-sum-txt{display:flex;flex-direction:column;min-width:0}
+.spc-sum-name{font-weight:700}
+.spc-sum-stat{font-size:var(--t-sm);color:var(--ash)}
+@media (max-width:640px){ .spc-sum-box{height:auto;max-height:100%;margin:auto 0} }
 
 /* A "Cast a Spell" button, wherever a page puts one. */
 .spc-open{display:inline-flex;align-items:center;gap:var(--s1);background:var(--arc);color:var(--ink);border:none;border-radius:var(--r-sm);padding:var(--s1) var(--s3);font-weight:700;font-size:var(--t-sm);cursor:pointer;min-height:calc(32px*var(--fs, 1))}

@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-12 00:20
+// Written by Irmak Hakman — 2026-11-12 20:25
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -25,12 +25,86 @@
  * first save stores them; this is that save.
  */
 import { SpellData as SD } from '../../lib/spell-data-node.js';
+import { isSummonSpell, summonCandidates, candidateSummary, upsertCompanion } from '../../lib/summon.js';
 
 const MODES = new Set(['slot', 'pact', 'free', 'ritual', 'cantrip']);
 const MAX_DESC = 8000;
 
 export default function register(app, ctx) {
   const { ldb, genId, masterAuth, sessionAuth, charAuth, getCharacter, broadcast } = ctx;
+
+  // ── Summon spells (lib/summon.js) ─────────────────────────────────────────
+  // The monsters summon spells search: only the 3rd Party books imported into
+  // this campaign. Nothing is fetched from anywhere else, and the DM's own
+  // custom monsters are not offered.
+  function campaignMonsters() {
+    return ldb.listOfficialMonsters().map(r => {
+      let data = {};
+      try { data = JSON.parse(r.dataJson || '{}'); } catch {}
+      return { id: r.id, name: r.name, cr: r.cr, source: r.source || data.source || '', data };
+    });
+  }
+
+  /**
+   * Add (or update) the companion made from monster `m`, save and tell the
+   * other screens. The sheet is read again here, in the same synchronous step
+   * as the write, so nothing saved since it was first read is written over.
+   */
+  function addSummoned(charId, data, m, sp, castLevel) {
+    let fresh = data;
+    try { fresh = JSON.parse((ldb.getCharacter(charId) || {}).dataJson || '{}'); } catch {}
+    let list = [];
+    try { list = JSON.parse(fresh._companions || '[]'); } catch {}
+    const out = upsertCompanion(list, m, { castLevel, spellName: sp.name, spellAtk: fresh['sp-atk'] },
+      'cmp-' + genId().replace(/-/g, '').slice(0, 12));
+    fresh._companions = JSON.stringify(out.list);
+    data._companions = fresh._companions;
+    ldb.updateCharacter(charId, { dataJson: JSON.stringify(fresh) });
+    broadcast('characters', { action: 'updated', id: charId, keys: ['_companions'] });
+    return { name: out.companion.name, updated: out.updated };
+  }
+
+  /**
+   * After a summon spell is cast: one candidate goes straight into the
+   * companions; several come back for the player to pick; none says so.
+   */
+  function summonAfterCast(charId, data, sp, lib, castLevel) {
+    if (!isSummonSpell(sp)) return null;
+    const cands = summonCandidates(sp, lib ? lib.data : null, castLevel, campaignMonsters());
+    const base = { spell: sp.name, spellId: sp.id, castLevel };
+    if (!cands.length) return { ...base, none: true };
+    if (cands.length === 1) return { ...base, added: addSummoned(charId, data, cands[0], sp, castLevel) };
+    return { ...base, candidates: cands.slice(0, 60).map(candidateSummary) };
+  }
+
+  // POST /api/characters/:id/summon { spellId, castLevel, monsterId } — the
+  // player's pick among a summon spell's candidates. Checked against the same
+  // rules again, so only a monster that spell may call can be taken.
+  app.post('/api/characters/:id/summon', async (req, res) => {
+    try {
+      const charId = String(req.params.id);
+      if (!masterAuth(req)) {
+        if (!sessionAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
+        const st = await charAuth(charId, req);
+        if (st !== 200) return res.status(st).json({ error: st === 404 ? 'Not found' : 'Unauthorized' });
+      }
+      const b = req.body || {};
+      const char = await getCharacter(charId);
+      if (!char) return res.status(404).json({ error: 'Not found' });
+      let data = {};
+      try { data = JSON.parse(char.dataJson || '{}'); } catch {}
+      const sp = SD.parseSpellList(data._spells).find(s => s.id === String(b.spellId || ''));
+      if (!sp || !isSummonSpell(sp)) return res.status(404).json({ error: 'That summon spell is not on this sheet.' });
+      const castLevel = Math.max(sp.level, Math.min(9, parseInt(b.castLevel, 10) || sp.level));
+      const lib = sp.libId ? ldb.getSpell(sp.libId) : null;
+      const m = summonCandidates(sp, lib ? lib.data : null, castLevel, campaignMonsters())
+        .find(x => x.id === String(b.monsterId || ''));
+      if (!m) return res.status(400).json({ error: `${sp.name} cannot summon that creature.` });
+      const added = addSummoned(charId, data, m, sp, castLevel);
+      res.json({ ok: true, keys: ['_companions'], data: { _companions: data._companions },
+                 summon: { spell: sp.name, spellId: sp.id, castLevel, added } });
+    } catch (err) { console.error('POST /api/characters/:id/summon:', err); res.status(500).json({ error: 'Server error' }); }
+  });
 
   app.post('/api/characters/:id/cast', async (req, res) => {
     try {
@@ -157,9 +231,12 @@ export default function register(app, ctx) {
         data: { href: '/table.html' },
       });
 
+      const summon = summonAfterCast(charId, data, sp, lib, castLevel);
+      if (summon && summon.added) keys.push('_companions');
+
       const changed = {};
       for (const k of keys) changed[k] = data[k];
-      res.json({ ok: true, keys, data: changed, entry });
+      res.json({ ok: true, keys, data: changed, entry, ...(summon ? { summon } : {}) });
     } catch (err) { console.error('POST /api/characters/:id/cast:', err); res.status(500).json({ error: 'Server error' }); }
   });
 }

@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-11 17:45
+// Written by Irmak Hakman — 2026-11-12 18:50
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -116,6 +116,10 @@ function normalizeSpell(x) {
     // Always prepared (a feat, subclass feature or item grants it): ready without
     // preparing and not counted among prepared spells; it still uses slots.
     alwaysPrepared: _spTruthy(o.alwaysPrepared),
+    // Summons a creature: casting it finds the campaign monster it calls up and
+    // adds it to the companions (lib/summon.js). Known summon spells (Find
+    // Familiar, Summon Beast…) need no tick; this is for any other.
+    summon: _spTruthy(o.summon),
     uses,
     // A spell with no use count (a Mystic Arcanum) still records one use.
     used: Math.min(_spInt(o.used, 0, 99, 0), uses || 1),

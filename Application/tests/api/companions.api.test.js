@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-28 14:25
+// Written by Irmak Hakman — 2026-11-12 19:45
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -19,12 +19,16 @@ const OWL = {
   initBonus: 3, initMode: 'own',
   attacks: [{ name: 'Talons', toHit: '3', damage: '1 slashing' }], notes: 'Flyby',
 };
-const WOLF = { id: 'cmp-wolf', name: 'Wolf', hpMax: 11, ac: 13, speed: 40, size: 1, initMode: 'shared', attacks: [] };
+const WOLF = { id: 'cmp-wolf', name: 'Wolf', hpMax: 11, ac: 13, speed: 40, size: 1, initMode: 'shared', attacks: [],
+  // The stat block a summon spell keeps (lib/summon.js).
+  statBlock: { name: 'Wolf', type: 'beast', str: 14, dex: 15, skill: { perception: '+5' },
+               trait: [{ name: 'Pack Tactics', entries: ['Advantage when an ally is near.'] }] } };
+const BIG = { id: 'cmp-big', name: 'Chatterbox', hpMax: 1, statBlock: { trait: [{ name: 'Lore', entries: ['x'.repeat(30000)] }] } };
 
 function setup() {
   const { app, ldb, hashPassword } = makeApp();
   ldb.createCharacter('char-a', { name: 'Alice', passwordHash: hashPassword(PW_A),
-    dataJson: JSON.stringify({ _companions: JSON.stringify([OWL, WOLF]) }) });
+    dataJson: JSON.stringify({ _companions: JSON.stringify([OWL, WOLF, BIG]) }) });
   ldb.createCharacter('char-b', { name: 'Bob', passwordHash: hashPassword(PW_B) });
   return { app, ldb };
 }
@@ -79,6 +83,19 @@ describe('POST /api/table/companions/summon', () => {
     const { app } = setup();
     const res = await asDM(request(app).post('/api/table/companions/summon')).send({ charId: 'char-a', companionId: 'cmp-wolf' });
     expect(res.status).toBe(200);
+  });
+
+  it('carries the stat block a summon spell gave it onto the token', async () => {
+    const { app, ldb } = setup();
+    const c = JSON.parse(ldb.getTableToken(await summon(app, 'cmp-wolf')).companion);
+    expect(c.statBlock).toMatchObject({ name: 'Wolf', dex: 15, skill: { perception: '+5' } });
+    expect(c.statBlock.trait[0].name).toBe('Pack Tactics');
+    expect(JSON.parse(ldb.getTableToken(await summon(app)).companion).statBlock).toBeUndefined();
+  });
+
+  it('leaves out a stat block too large to carry', async () => {
+    const { app, ldb } = setup();
+    expect(JSON.parse(ldb.getTableToken(await summon(app, 'cmp-big')).companion).statBlock).toBeUndefined();
   });
 
   it('404s a companion the sheet does not have', async () => {
@@ -204,6 +221,6 @@ describe('GET /api/characters/:id/qroll', () => {
   it('carries the companions, for the table\'s Summon buttons', async () => {
     const { app } = setup();
     const res = await asA(request(app).get('/api/characters/char-a/qroll'));
-    expect(JSON.parse(res.body.data._companions).map(c => c.id)).toEqual(['cmp-owl', 'cmp-wolf']);
+    expect(JSON.parse(res.body.data._companions).map(c => c.id)).toEqual(['cmp-owl', 'cmp-wolf', 'cmp-big']);
   });
 });
