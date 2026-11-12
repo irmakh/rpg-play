@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-28 17:06
+// Written by Irmak Hakman — 2026-11-12 14:15
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -244,6 +244,8 @@ function grantItems(charData, item, qty) {
       acBonus: hidden ? 0 : (item.acBonus ?? 0),
       initBonus: hidden ? 0 : (item.initBonus ?? 0),
       speedBonus: hidden ? 0 : (item.speedBonus ?? 0),
+      spellAtkBonus: hidden ? 0 : (item.spellAtkBonus ?? 0),
+      spellDcBonus: hidden ? 0 : (item.spellDcBonus ?? 0),
       img: item.imageUrl || '',
       imgThumb: item.imageThumb || '',
       // Charges are a property like any other: unknown until identified.
@@ -261,10 +263,13 @@ function grantItems(charData, item, qty) {
       });
     } else if (item.itemType === 'weapon') {
       const notesStr = weaponNotes(item, desc);
-      weapons.push(weaponRowFor(charData, item, notesStr));
+      // The attack row carries the item's id (5th entry), as the sheet's own
+      // weapons do, so editing or deleting the item updates that row.
+      weapons.push([...weaponRowFor(charData, item, notesStr), base.id]);
+      // A plain number, as the sheet's item editor keeps it ("2", not "+2").
       const magicBonus = parseInt(item.weaponAtk) || 0;
-      const rawAtk = magicBonus !== 0 ? (magicBonus > 0 ? '+' : '') + magicBonus : '';
-      items.push({ ...base, itemType: 'weapon', weaponAtk: rawAtk, weaponDmg: item.weaponDmg || '', armorType: 'light', acBase: 10, notes: notesStr });
+      items.push({ ...base, itemType: 'weapon', weaponAtk: magicBonus ? String(magicBonus) : '', weaponDmg: item.weaponDmg || '',
+                   weaponProperties: itemProps(item), armorType: 'light', acBase: 10, notes: notesStr });
     } else {
       items.push({ ...base, itemType: item.itemType || 'other', armorType: item.armorType || 'light', acBase: item.acBase ?? 10, notes: desc });
     }
@@ -301,6 +306,8 @@ function identifyHeldCopies(characters, item) {
       held.acBonus = item.acBonus ?? 0;
       held.initBonus = item.initBonus ?? 0;
       held.speedBonus = item.speedBonus ?? 0;
+      held.spellAtkBonus = item.spellAtkBonus ?? 0;
+      held.spellDcBonus = item.spellDcBonus ?? 0;
       held.requiresAttunement = !!item.requiresAttunement;
       held.charges = parseInt(item.charges) || 0;
       held.chargesUsed = 0;
@@ -309,9 +316,10 @@ function identifyHeldCopies(characters, item) {
         const notesStr = weaponNotes(item, item.description || '');
         held.notes = notesStr;
         const magicBonus = parseInt(item.weaponAtk) || 0;
-        held.weaponAtk = magicBonus !== 0 ? (magicBonus > 0 ? '+' : '') + magicBonus : '';
+        held.weaponAtk = magicBonus ? String(magicBonus) : '';
         held.weaponDmg = item.weaponDmg || '';
-        weapons.push(weaponRowFor(data, item, notesStr));
+        held.weaponProperties = itemProps(item);
+        weapons.push([...weaponRowFor(data, item, notesStr), held.id]);
       } else {
         held.notes = item.description || '';
       }
@@ -384,8 +392,8 @@ function unidentifyHeldCopies(characters, item) {
         name: item.unidName || unidentifiedItemName(item.name),
         unidentified: true,
         equipped: false, attuned: false, requiresAttunement: false,
-        acBase: 10, acBonus: 0, initBonus: 0, speedBonus: 0,
-        weaponAtk: '', weaponDmg: '', notes: '',
+        acBase: 10, acBonus: 0, initBonus: 0, speedBonus: 0, spellAtkBonus: 0, spellDcBonus: 0,
+        weaponAtk: '', weaponDmg: '', weaponProperties: [], notes: '',
         charges: 0, chargesUsed: 0, chargesRecharge: '',
       });
     }

@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-01 18:40
+// Written by Irmak Hakman — 2026-11-12 14:29
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -114,6 +114,9 @@ export default function register(app, ctx) {
    */
   function whoIs(req) {
     if (masterAuth(req)) return 'dm';
+    // The DM looking at a character's sheet sends the DM session in the
+    // character header (the sheet's sheetAuthHeaders): still the DM.
+    if (auth.callerFor && auth.callerFor(req, '').isDm) return 'dm';
     const s = auth.sessionFromReq(req);
     return s && s.role === 'character' && s.charId ? String(s.charId) : null;
   }

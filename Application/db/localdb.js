@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-12 12:49
+// Written by Irmak Hakman — 2026-11-12 13:55
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -311,6 +311,16 @@ db.exec(`
     dataJson TEXT DEFAULT '{}', createdAt TEXT DEFAULT (datetime('now')),
     UNIQUE(nameKey, source)
   );
+  -- 3rd Party items: magic items from 5etools books or an uploaded homebrew
+  -- file, imported into THIS campaign. Read-only; the DM adds a copy to a
+  -- treasury pile, and the copy is an ordinary treasury item from then on.
+  -- The id is made from book and name, so importing a book again updates it.
+  CREATE TABLE IF NOT EXISTS book_items (
+    id TEXT PRIMARY KEY, name TEXT NOT NULL DEFAULT '', nameKey TEXT NOT NULL DEFAULT '',
+    source TEXT DEFAULT '', bookName TEXT DEFAULT '', rarity TEXT DEFAULT '', kind TEXT DEFAULT 'other',
+    origin TEXT DEFAULT '5etools', dataJson TEXT DEFAULT '{}', createdAt TEXT DEFAULT (datetime('now'))
+  );
+  CREATE INDEX IF NOT EXISTS idx_book_items_source ON book_items(source);
 `);
 
 // Indexes (idempotent — safe on every startup)
@@ -857,6 +867,69 @@ function searchOfficialMonsters({ q = '', source = '', limit = 60, offset = 0 } 
 /** [{ source, count }] — the books this campaign holds. */
 function listOfficialBooks() {
   return db.prepare('SELECT source, COUNT(*) count FROM official_monsters GROUP BY source ORDER BY source').all();
+}
+
+// ── 3rd Party items (book_items) ──────────────────────────────────────────────
+function bookItemId(source, name) {
+  const slug = String(name || '').toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '')
+    .replace(/\+/g, 'plus').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80);
+  return `itm-${String(source || '').toLowerCase().replace(/[^a-z0-9-]+/g, '')}-${slug}`;
+}
+/** Search without the item data: { rows: [{ id, name, source, bookName, rarity, kind }], total }. */
+function searchBookItems({ q = '', source = '', rarity = '', kind = '', limit = 60, offset = 0 } = {}) {
+  const where = [], args = [];
+  const words = String(q || '').trim().toLowerCase().split(/\s+/).filter(Boolean).slice(0, 6);
+  for (const w of words) { where.push('nameKey LIKE ?'); args.push(`%${w}%`); }
+  if (source) { where.push('source = ?'); args.push(String(source)); }
+  if (rarity) { where.push('rarity = ?'); args.push(String(rarity)); }
+  if (kind) { where.push('kind = ?'); args.push(String(kind)); }
+  const w = where.length ? 'WHERE ' + where.join(' AND ') : '';
+  const total = db.prepare(`SELECT COUNT(*) n FROM book_items ${w}`).get(...args).n;
+  const full = String(q || '').trim().toLowerCase();
+  const rows = db.prepare(`SELECT id, name, source, bookName, rarity, kind FROM book_items ${w}
+    ORDER BY CASE WHEN nameKey = ? THEN 0 WHEN nameKey LIKE ? THEN 1 ELSE 2 END, nameKey, source LIMIT ? OFFSET ?`)
+    .all(...args, full, `${full}%`, Math.max(1, Math.min(200, limit | 0 || 60)), Math.max(0, offset | 0));
+  return { rows, total };
+}
+function getBookItem(id) {
+  const r = db.prepare('SELECT * FROM book_items WHERE id = ?').get(String(id || ''));
+  if (!r) return null;
+  let data = {};
+  try { data = JSON.parse(r.dataJson || '{}'); } catch {}
+  const { dataJson, ...rest } = r;
+  return { ...rest, data };
+}
+/** [{ source, bookName, origin, count }] — the books this campaign holds. */
+function listBookItemBooks() {
+  return db.prepare(`SELECT source, MAX(bookName) bookName, MAX(origin) origin, COUNT(*) count
+    FROM book_items GROUP BY source ORDER BY MAX(bookName), source`).all();
+}
+/** rows: [{ name, source, bookName, rarity, kind, data }]. Same book and name: replaced in place. */
+function upsertBookItems(rows, origin = '5etools') {
+  const has = db.prepare('SELECT 1 FROM book_items WHERE id = ?');
+  const put = db.prepare(`INSERT INTO book_items (id, name, nameKey, source, bookName, rarity, kind, origin, dataJson, createdAt)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET name = excluded.name, nameKey = excluded.nameKey, bookName = excluded.bookName,
+      rarity = excluded.rarity, kind = excluded.kind, origin = excluded.origin, dataJson = excluded.dataJson`);
+  const out = { imported: 0, updated: 0 };
+  const seen = new Set();
+  db.transaction(() => {
+    for (const r of rows || []) {
+      const name = String(r.name || '').trim().slice(0, 120);
+      if (!name) continue;
+      const id = bookItemId(r.source, name);
+      if (seen.has(id)) continue;
+      seen.add(id);
+      if (has.get(id)) out.updated++; else out.imported++;
+      put.run(id, name, name.toLowerCase(), String(r.source || '').slice(0, 40), String(r.bookName || r.source || '').slice(0, 200),
+              String(r.rarity || '').slice(0, 40), String(r.kind || 'other'), origin, JSON.stringify(r.data || {}), new Date().toISOString());
+    }
+  })();
+  return out;
+}
+/** Copies already in treasury piles are separate items, so nothing else is touched. */
+function deleteBookItemBook(source) {
+  return db.prepare('DELETE FROM book_items WHERE source = ?').run(String(source || '')).changes;
 }
 /** rows: [{ name, source, cr, type, data }]. A monster already there (same book, name) is replaced. */
 function upsertOfficialMonsters(rows) {
@@ -1808,6 +1881,7 @@ function exportAll() {
     updateSoundFile, listPlaylists, getPlaylist, createPlaylist, updatePlaylist, deletePlaylist,
     getSoundsForPlaylist, exportAll, SHOP_MAX_ACTIVE_TAGS, normalizeShopTags, lootRowToTreasury, shopRowToTreasury,
     officialMonsterId, searchOfficialMonsters, listOfficialBooks, upsertOfficialMonsters, deleteOfficialBook, listLinkedOfficialMonsters,
+    bookItemId, searchBookItems, getBookItem, listBookItemBooks, upsertBookItems, deleteBookItemBook,
     listSpells, getSpell, findSpell, findSpellsByName, createSpell, updateSpell, deleteSpells, deleteSpellBook, exportSpells, importSpells,
     listHandouts, getHandout, createHandout, updateHandout, deleteHandout,
     listHandoutRecipients, listHandoutsForChar, getHandoutRecipient, addHandoutRecipient,

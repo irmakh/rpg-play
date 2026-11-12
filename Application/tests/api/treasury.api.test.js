@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-28 17:05
+// Written by Irmak Hakman — 2026-11-12 14:15
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -381,6 +381,18 @@ describe('free loot — request then DM approval', () => {
     expect(weapons[0][2]).toBe('1d8+4 slashing');
   });
 
+  it('gives the sheet what its item editor reads: a plain magic bonus, properties, spell bonuses, a linked attack row', async () => {
+    const { app, ldb } = setup();
+    const id = seed(ldb, {
+      name: 'Staff of Power', mode: 'loot', itemType: 'weapon', weaponAtk: '2', weaponDmg: '1d6 bludgeoning',
+      weaponPropertiesJson: '["Versatile"]', spellAtkBonus: 2, spellDcBonus: 1, charges: 20,
+    });
+    await claimAndApprove(app, ldb, id);
+    const it = charItems(ldb)[0];
+    expect(it).toMatchObject({ weaponAtk: '2', weaponProperties: ['Versatile'], spellAtkBonus: 2, spellDcBonus: 1, charges: 20 });
+    expect(JSON.parse(charData(ldb)._weapons)[0][4]).toBe(it.id);
+  });
+
   it('grants an unidentified item redacted, so acquiring it reveals nothing', async () => {
     const { app, ldb } = setup();
     const id = seed(ldb, {
@@ -426,7 +438,9 @@ describe('free loot — request then DM approval', () => {
     expect(it.notes).toContain('It burns.');
     // STR 16 (+3), level 5 (prof +3), +2 magic → +8 to hit, 2d6+5 fire
     const weapons = JSON.parse(charData(ldb)._weapons);
-    expect(weapons[0]).toEqual(['Flame Tongue', '+8', '2d6+5 fire', expect.stringContaining('It burns.')]);
+    // The 5th entry links the attack row to the inventory item, as the sheet's own rows are.
+    expect(weapons[0]).toEqual(['Flame Tongue', '+8', '2d6+5 fire', expect.stringContaining('It burns.'), it.id]);
+    expect(it.weaponAtk).toBe('2');
   });
 
   it('leaves an already-identified held item alone on an unrelated edit', async () => {

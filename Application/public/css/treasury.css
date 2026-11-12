@@ -1,4 +1,4 @@
-/* Written by Irmak Hakman — 2026-10-28 16:10 */
+/* Written by Irmak Hakman — 2026-11-12 13:53 */
 /* Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) */
 
 /* Treasury — the DM's catalogue. Every pile as a card; one pile open as a
@@ -257,4 +257,53 @@ table.mini th.c-num{text-align:right}
   .g3{grid-template-columns:1fr 1fr}
   .g3 > .field:first-child{grid-column:1/-1}
   .hdr-right .btn{padding-left:calc(8px*var(--fs, 1));padding-right:calc(8px*var(--fs, 1))}
+}
+
+/* ── 3rd Party items: Books… and From book… (js/treasury-books.js) ─────────── */
+.tb-hint{color:var(--ash);font-size:calc(12px * var(--fs, 1));padding:calc(10px*var(--fs, 1))}
+.tb-lead{padding:0;margin:0 0 calc(10px*var(--fs, 1))}
+.tb-status{min-height:1.2em;margin-top:calc(8px*var(--fs, 1));font-size:calc(12px * var(--fs, 1));color:var(--bone)}
+.tb-upload{display:flex;align-items:center;gap:calc(8px*var(--fs, 1));flex-wrap:wrap;padding:calc(8px*var(--fs, 1)) calc(10px*var(--fs, 1));
+  border:1px dashed var(--rule-hi);border-radius:6px;margin-bottom:calc(10px*var(--fs, 1));font-size:calc(12px * var(--fs, 1));color:var(--ash)}
+.tb-upload span{flex:1;min-width:calc(180px*var(--fs, 1))}
+.tb-books-tools{display:flex;gap:calc(6px*var(--fs, 1));margin-bottom:calc(8px*var(--fs, 1))}
+.tb-books-tools input{flex:1;min-width:0}
+.tb-books{max-height:46vh;overflow-y:auto;border:1px solid var(--rule-hi);border-radius:6px}
+.tb-book{display:flex;align-items:center;gap:calc(8px*var(--fs, 1));padding:calc(7px*var(--fs, 1)) calc(10px*var(--fs, 1));border-bottom:1px solid var(--rule);cursor:pointer}
+.tb-book:last-child{border-bottom:none}
+.tb-book:hover{background:var(--wash)}
+.tb-book input{accent-color:var(--arc)}
+.tb-book-name{flex:1;min-width:0}
+.tb-book-code{color:var(--ash);font-size:calc(11px * var(--fs, 1));font-family:ui-monospace,Consolas,monospace}
+.tb-book-count{color:var(--ash);font-size:calc(11px * var(--fs, 1))}
+.tb-book-have{color:var(--verdigris);font-size:calc(11px * var(--fs, 1))}
+
+.tb-pick-box{max-width:calc(980px*var(--fs, 1));width:96%}
+.tb-pick-to{font-family:var(--ui);font-size:calc(13px * var(--fs, 1));color:var(--ash);font-weight:normal}
+.tb-pick-tools{display:flex;gap:calc(6px*var(--fs, 1));flex-wrap:wrap;align-items:center;margin-bottom:calc(8px*var(--fs, 1))}
+.tb-pick-tools input{flex:1 1 calc(200px*var(--fs, 1));min-width:0}
+.tb-pick-tools select{flex:0 1 auto;max-width:calc(220px*var(--fs, 1))}
+.tb-count{color:var(--ash);font-size:calc(11px * var(--fs, 1));margin-left:auto}
+.tb-pick-body{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,3fr);gap:calc(10px*var(--fs, 1));height:56vh}
+.tb-pick-list,.tb-pick-prev{overflow-y:auto;border:1px solid var(--rule-hi);border-radius:6px;min-height:0}
+.tb-row{display:flex;flex-direction:column;gap:2px;padding:calc(7px*var(--fs, 1)) calc(10px*var(--fs, 1));border-bottom:1px solid var(--rule);cursor:pointer}
+.tb-row:hover{background:var(--wash)}
+.tb-row.on{background:var(--arc-fill);box-shadow:inset 3px 0 0 var(--arc)}
+.tb-row-name{color:var(--bone)}
+.tb-row-meta{color:var(--ash);font-size:calc(11px * var(--fs, 1))}
+.tb-rar{text-transform:capitalize}
+.tb-rar.r-uncommon{color:var(--verdigris)}
+.tb-rar.r-rare{color:var(--arc)}
+.tb-rar.r-very-rare{color:var(--cast)}
+.tb-rar.r-legendary,.tb-rar.r-artifact{color:var(--loot)}
+.tb-more{padding:calc(8px*var(--fs, 1));text-align:center}
+.tb-pick-prev{padding:calc(12px*var(--fs, 1)) calc(14px*var(--fs, 1))}
+.tb-prev-name{font-family:var(--display);font-size:calc(20px * var(--fs, 1));color:var(--bone)}
+.tb-prev-book{color:var(--ash);font-size:calc(11px * var(--fs, 1));margin-bottom:calc(8px*var(--fs, 1))}
+.tb-prev-stats{color:var(--arc);font-size:calc(12px * var(--fs, 1));margin-bottom:calc(8px*var(--fs, 1))}
+.tb-prev-desc{white-space:pre-wrap;font-size:calc(13px * var(--fs, 1));line-height:1.5;color:var(--bone)}
+@media (max-width:700px){
+  .tb-pick-body{grid-template-columns:1fr;height:auto}
+  .tb-pick-list{max-height:32vh}
+  .tb-pick-prev{max-height:36vh}
 }

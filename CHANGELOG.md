@@ -21,6 +21,39 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [335–338] — 2026-11-12 — 3rd Party magic items in the treasury
+
+*(Released.)*
+
+- **Treasury → Books…** imports the magic items of whole 5etools books (the 2024 and 2014
+  DMGs, Xanathar's, Tasha's and 70 more; about 2,100 items) into the campaign's
+  **3rd Party item catalogue**. Generic items such as "+1 Weapon" or "Flame Tongue" come in
+  as one generic item each. The files are downloaded, imported and discarded.
+- **Homebrew upload:** a 5etools homebrew JSON file of your own goes into the same catalogue.
+  Its base items and copies are resolved against the core data. Items without a rarity are
+  skipped and counted.
+- **From book…** in a pile searches the catalogue by name, book, rarity and kind, shows the
+  item, and adds a hidden copy to the pile. The copy is an ordinary treasury item. Kind,
+  armour AC, shield bonus, weapon bonus, damage and properties, spell attack/DC bonus,
+  charges, attunement, price and description are filled in from the book.
+- Importing a book again updates its items in place. Removing one asks first; copies
+  already in piles are not touched. Catalogue items are not part of backups.
+- **Fix: magic weapons given or bought from the treasury.** The sheet's item editor showed
+  the magic bonus as blank (it arrived as "+2"), so saving the item set it to 0. The bonus
+  now arrives as a plain number, and the editor also reads the old "+2" form on copies
+  already given. Spell attack and save DC bonuses and weapon properties now reach the sheet
+  too. The attack row is linked to its item, so editing the item no longer adds a second
+  attack row. The sheet's item details now show a weapon's magic bonus, damage and properties.
+- **An item's Use button posts what the item does.** On the sheet and on the table, the chat
+  card now carries the item's description under "uses a charge · N left", as a spell's card
+  does (long texts are cut to fit the chat).
+- **Fix: the DM using an item on a character's sheet.** The card arrived as raw markup in the
+  chat. The chat now recognises the DM's login when the sheet sends it, so the card is formatted.
+- **Fix: pages opened by IP were not live** (chat, rolls and turns arrived only on refresh).
+  A `WS_URL` naming localhost was handed to every page, so a phone on the LAN dialled its own
+  localhost. Such a page now uses the address it was loaded from. A real `WS_URL` (production's)
+  is used as before.
+
 ## [334] — 2026-11-12 — Remove a spell book; book removal keeps what is in use; "3rd Party" monsters
 
 *(Released.)*

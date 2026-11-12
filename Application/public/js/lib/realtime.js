@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 19:28
+// Written by Irmak Hakman — 2026-11-12 14:39
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -286,6 +286,12 @@ function _rtSubscribe(event) {
  * page served over https must use wss://, never ws://.
  */
 function _wsBase(wsUrl) {
+  // A WS_URL naming localhost only works on the server's own machine. A page
+  // opened by IP or name (a phone on the LAN: 192.168.x.x:3000) would dial its
+  // own localhost and never be live, so it uses the address it was loaded from.
+  const local = /^(wss?|https?):\/\/(localhost|127\.0\.0\.1|\[::1\])(:|\/|$)/i;
+  const pageIsLocal = /^(localhost|127\.0\.0\.1|\[::1\])$/i.test(location.hostname);
+  if (wsUrl && local.test(String(wsUrl)) && !pageIsLocal) wsUrl = null;
   if (wsUrl) return String(wsUrl).replace(/^http(s?):\/\//i, 'ws$1://');
   return `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`;
 }

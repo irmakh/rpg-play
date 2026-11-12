@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-11 18:08
+// Written by Irmak Hakman — 2026-11-12 14:29
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -387,7 +387,11 @@ async function clickUseItem(itemId) {
       body: JSON.stringify({ itemId, used: it.chargesUsed }),
     });
     if (!res.ok) throw new Error('refused');
-    postChatInfoCard({ name: it.name || 'Item', meta: ['Uses a charge', `${max - it.chargesUsed} of ${max} left`] });
+    // What the item does goes with it, as a spell's card carries its text;
+    // cut to fit the chat's 4000 characters for a formatted message.
+    const notes = String(it.notes || '').trim();
+    const text = notes.length > 2400 ? notes.slice(0, 2400).replace(/\s+\S*$/, '') + ' …' : notes;
+    postChatInfoCard({ name: it.name || 'Item', meta: ['Uses a charge', `${max - it.chargesUsed} of ${max} left`], text });
   } catch {
     showToast('Could not use that item.', true);
     if (_sideCharId === charId) { _sideQrollTokenId = null; loadSideQroll(); }   // show what is really saved

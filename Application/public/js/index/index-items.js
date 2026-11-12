@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-22 09:18
+// Written by Irmak Hakman — 2026-11-12 14:29
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -49,7 +49,8 @@ function openItemModal(id) {
     document.getElementById('im-speed-bonus').value = item.speedBonus || 0;
     document.getElementById('im-sp-atk-bonus').value = item.spellAtkBonus || 0;
     document.getElementById('im-sp-dc-bonus').value = item.spellDcBonus || 0;
-    document.getElementById('im-weapon-atk').value = item.weaponAtk || '0';
+    // Treasury copies given before v335 hold the bonus as "+2", which a number field shows as blank.
+    document.getElementById('im-weapon-atk').value = parseInt(item.weaponAtk) || 0;
     document.getElementById('im-weapon-dmg').value = item.weaponDmg || '';
     initItemPropsGrid(); setSelectedItemProps(item.weaponProperties || []);
     setItemBonusRows(item.bonuses || []);
@@ -293,7 +294,14 @@ function itemChargesLeft(item) {
   return Math.max(0, max - Math.min(max, parseInt(item && item.chargesUsed) || 0));
 }
 
-// Spend one charge and tell the table.
+// An item's text for a chat card: what it does, cut to fit the chat's 4000
+// characters for a formatted message (escaping and <br> make it longer).
+function itemChatText(item) {
+  const t = String((item && item.notes) || '').trim();
+  return t.length > 2400 ? t.slice(0, 2400).replace(/\s+\S*$/, '') + ' …' : t;
+}
+
+// Spend one charge and tell the table, with what the item does — as a spell's card does.
 function useItemCharge(id) {
   const item = items.find(i => i.id === id);
   if (!item || itemChargesLeft(item) <= 0) return;
@@ -304,7 +312,8 @@ function useItemCharge(id) {
   postToChat({
     sender: who, type: 'text', html: true,
     message: `<strong>${esc(item.name)}</strong><div style="font-size:calc(10px * var(--fs, 1));opacity:.7;margin-top:1px">`
-      + `${esc(who)} uses a charge · ${itemChargesLeft(item)} of ${itemChargesMax(item)} left</div>`,
+      + `${esc(who)} uses a charge · ${itemChargesLeft(item)} of ${itemChargesMax(item)} left</div>`
+      + (itemChatText(item) ? `<div style="margin-top:calc(4px*var(--fs, 1))">${esc(itemChatText(item)).replace(/\n/g, '<br>')}</div>` : ''),
   });
 }
 
@@ -357,6 +366,12 @@ function openItemDetail(id) {
   const rows = [['Type', typeLabel]];
   if (item.value) rows.push(['Value', item.value]);
   if (item.itemType === 'armor') rows.push(['Base AC', item.acBase]);
+  if (item.itemType === 'weapon') {
+    const magic = parseInt(item.weaponAtk) || 0;
+    if (magic) rows.push(['Magic Bonus', (magic > 0 ? '+' : '') + magic]);
+    if (item.weaponDmg) rows.push(['Damage', item.weaponDmg]);
+    if ((item.weaponProperties || []).length) rows.push(['Properties', item.weaponProperties.join(', ')]);
+  }
   if (item.acBonus)    rows.push(['AC Bonus',         (item.acBonus   > 0 ? '+' : '') + item.acBonus]);
   if (item.initBonus)  rows.push(['Initiative Bonus', (item.initBonus > 0 ? '+' : '') + item.initBonus]);
   if (item.speedBonus) rows.push(['Speed Bonus',      (item.speedBonus > 0 ? '+' : '') + item.speedBonus + ' ft']);

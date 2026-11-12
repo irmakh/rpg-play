@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-28 17:06
+// Written by Irmak Hakman — 2026-11-12 13:55
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -1326,10 +1326,11 @@ async function runImport() {
 // Esc steps back one level: menu, dialog, editor, pile. / finds, N adds.
 document.addEventListener('keydown', e => {
   if (!masterPw) return;
-  const modalOpen = ['import-modal', 'ledger-modal', 'pile-modal', 'give-modal'].find(id => $(id).style.display !== 'none');
+  const modalOpen = ['import-modal', 'ledger-modal', 'pile-modal', 'give-modal', 'tb-books-modal', 'tb-pick-modal'].find(id => $(id).style.display !== 'none');
   if (e.key === 'Escape') {
     if (!$('menu').hidden) return closeMenu();
-    if (modalOpen) return { 'import-modal': closeImportModal, 'ledger-modal': closeLedger, 'pile-modal': closePileModal, 'give-modal': closeGiveModal }[modalOpen]();
+    if (modalOpen) return { 'import-modal': closeImportModal, 'ledger-modal': closeLedger, 'pile-modal': closePileModal, 'give-modal': closeGiveModal,
+      'tb-books-modal': closeBookItemBooks, 'tb-pick-modal': closeBookItemPicker }[modalOpen]();
     if (document.activeElement && document.activeElement !== document.body && document.activeElement.closest('#drawer, .tools, #pile')) return document.activeElement.blur();
     if (drawerOpen) return closeDrawer();
     if (curPile !== null) return openPile(null);
@@ -1372,4 +1373,5 @@ connectRealtime({
     }
   },
   characters: () => { if (masterPw) loadChars(); },
+  bookItems: () => { if (masterPw) tbOnUpdated(); },
 });

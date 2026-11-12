@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Written by Irmak Hakman — 2026-10-28 17:06 -->
+<!-- Written by Irmak Hakman — 2026-11-12 13:55 -->
 <!-- Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) -->
 <html lang="en" class="lamplit app-page">
 <head>
@@ -52,6 +52,7 @@
       <button class="btn" id="btn-undo" style="display:none" onclick="undoLast()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-undo"></use></svg> Undo</button>
       <button class="btn" data-notif-bell title="Notifications"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-bell"></use></svg> </button>
       <button class="btn" onclick="openLedger()" title="Everything given and bought"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-clipboard"></use></svg> Ledger</button>
+      <button class="btn" onclick="openBookItemBooks()" title="3rd Party items: import magic items from books or a homebrew file"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-book"></use></svg> Books…</button>
       <button class="btn" onclick="openImportModal()" title="Add many items from pasted text"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-arrow-down"></use></svg> Import</button>
       <button class="btn" onclick="refreshAll()" title="Refresh"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-refresh"></use></svg> </button>
     </div>
@@ -86,6 +87,7 @@
           <span class="sp"></span>
           <span id="p-state" class="seg" role="group" aria-label="Where this pile is"></span>
           <button type="button" class="btn" onclick="openGiveModal()" title="Hand out the whole pile"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-users"></use></svg> Give pile…</button>
+          <button type="button" class="btn" onclick="openBookItemPicker()" title="Add a copy of a 3rd Party item from the imported books"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-book"></use></svg> From book…</button>
           <button type="button" class="btn primary" onclick="createItem()" title="Add an item to this pile (N)"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-plus"></use></svg> Add item</button>
           <button type="button" class="btn" id="p-more" onclick="openPileMenu(this)" title="More" aria-label="More pile actions"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-more"></use></svg></button>
         </div>
@@ -315,6 +317,61 @@
   </div>
 </div>
 
+<!-- 3rd Party items: books (public/js/treasury-books.js) -->
+<div class="modal-overlay" id="tb-books-modal" style="display:none">
+  <div class="modal-box" style="max-width:calc(640px*var(--fs, 1));width:96%">
+    <div class="ct">3rd Party items: books</div>
+    <div class="modal-body">
+      <p class="tb-hint tb-lead">Every magic item in the books you tick goes into this campaign's 3rd Party item catalogue. The files are downloaded from the 5etools data, imported and discarded. Catalogue items cannot be edited: in a pile, <strong>From book…</strong> adds a copy you can change. Importing a book again updates its items in place.</p>
+      <div class="tb-upload">
+        <span>Homebrew: a 5etools homebrew JSON file of your own.</span>
+        <input type="file" id="tb-upload-file" accept=".json,application/json" hidden onchange="uploadBookItemFile(this)">
+        <button type="button" class="btn sm" onclick="$('tb-upload-file').click()">Upload file…</button>
+      </div>
+      <div class="tb-books-tools">
+        <input type="text" id="tb-books-filter" placeholder="Filter books" oninput="tbRenderBooks()" aria-label="Filter books">
+        <button type="button" class="btn sm" onclick="tbSetAllBooks(true)">All shown</button>
+        <button type="button" class="btn sm" onclick="tbSetAllBooks(false)">None</button>
+      </div>
+      <div id="tb-books-list" class="tb-books"></div>
+      <div id="tb-books-status" class="tb-status" role="status"></div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn" onclick="closeBookItemBooks()">Close</button>
+      <button class="btn primary" id="tb-books-go" onclick="runBookItemImport()" disabled>Import</button>
+    </div>
+  </div>
+</div>
+
+<!-- 3rd Party items: add a copy to the open pile -->
+<div class="modal-overlay" id="tb-pick-modal" style="display:none">
+  <div class="modal-box tb-pick-box">
+    <div class="ct">Add from 3rd Party items <span class="tb-pick-to">to <strong id="tb-pick-pile"></strong></span></div>
+    <div class="modal-body">
+      <div class="tb-pick-tools">
+        <input type="search" id="tb-pick-q" placeholder="Search by name…" aria-label="Search 3rd Party items" oninput="tbSearchSoon()">
+        <select id="tb-pick-book" aria-label="Book" onchange="tbSearch(true)"><option value="">All books</option></select>
+        <select id="tb-pick-rarity" aria-label="Rarity" onchange="tbSearch(true)">
+          <option value="">Any rarity</option><option>common</option><option>uncommon</option><option>rare</option><option>very rare</option><option>legendary</option><option>artifact</option><option>varies</option><option value="unknown (magic)">unknown</option>
+        </select>
+        <select id="tb-pick-kind" aria-label="Kind" onchange="tbSearch(true)">
+          <option value="">Any kind</option><option value="weapon">Weapon</option><option value="armor">Armour</option><option value="shield">Shield</option><option value="potion">Potion</option><option value="wondrous">Wondrous</option><option value="other">Other</option>
+        </select>
+        <span id="tb-pick-count" class="tb-count"></span>
+      </div>
+      <div class="tb-pick-body">
+        <div id="tb-pick-list" class="tb-pick-list"></div>
+        <div id="tb-pick-prev" class="tb-pick-prev"></div>
+      </div>
+      <div id="tb-pick-status" class="tb-status" role="status"></div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn" onclick="closeBookItemPicker()">Close</button>
+      <button class="btn primary" id="tb-pick-go" onclick="addBookItemToPile()" disabled>Add to pile</button>
+    </div>
+  </div>
+</div>
+
 <!-- Ledger: everything given and bought -->
 <div class="modal-overlay" id="ledger-modal" style="display:none" onclick="if(event.target===this)closeLedger()">
   <div class="modal-box wide">
@@ -331,6 +388,8 @@
 
 <script src="/js/lib/realtime.js" defer></script>
 <script src="/js/lib/notifications.js" defer></script>
+<script src="/js/lib/confirm-dialog.js" defer></script>
 <script src="/js/treasury.js" defer></script>
+<script src="/js/treasury-books.js" defer></script>
 </body>
 </html>

@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-01 18:40
+// Written by Irmak Hakman — 2026-11-12 14:29
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -513,5 +513,28 @@ describe('table writes need a login to this campaign', () => {
   it('still lets anyone read the drawings', async () => {
     const t = await table();
     expect((await t.to(request(t.app).get('/api/drawings'), null)).status).toBe(200);
+  });
+});
+
+// ── The DM posting from a character's sheet ──────────────────────────────────
+// The sheet sends whatever session it holds in X-Character-Password. When the
+// DM opens a sheet that is the DM's session, and an item's Use card (html)
+// must still arrive formatted, not as escaped markup.
+describe('the DM posting from a sheet', () => {
+  it('keeps html from a DM session sent in the character header', async () => {
+    const made = setup();
+    const { token } = made.sessions.create({ campaignId: AMN, role: 'dm' });
+    const res = await request(made.app).post('/api/chat').set('X-Campaign-Id', AMN).set('X-Character-Password', token)
+      .send({ type: 'text', sender: 'Gaston', message: '<strong>Staff of the Magi</strong>', html: true });
+    expect(res.status).toBe(200);
+    const log = await readAsDM(made.app, AMN);
+    expect(log.body.at(-1)).toMatchObject({ message: '<strong>Staff of the Magi</strong>', html: true });
+  });
+
+  it('refuses a post whose credential is not a live session', async () => {
+    const made = setup();
+    const res = await request(made.app).post('/api/chat').set('X-Campaign-Id', AMN).set('X-Character-Password', 'not-a-token')
+      .send({ type: 'text', sender: 'X', message: '<b>x</b>', html: true });
+    expect(res.status).not.toBe(200);
   });
 });
