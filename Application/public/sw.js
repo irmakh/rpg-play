@@ -1,8 +1,8 @@
-// Written by Irmak Hakman — 2026-11-12 14:39
+// Written by Irmak Hakman — 2026-11-12 16:58
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
-const CACHE = 'rpg-v338';
+const CACHE = 'rpg-v345';
 
 const STATIC = [
   // Core pages
@@ -39,6 +39,7 @@ const STATIC = [
   '/img/icon-512.png',
   // CSS
   '/css/table.css',
+  '/css/minimap.css',
   '/css/table-theme-modern.css',
   '/css/table-ux.css',
   '/css/range.css',
@@ -87,7 +88,11 @@ const STATIC = [
   '/js/table/table-state.js',
   '/js/table/table-utils.js',
   '/js/table/table-auth.js',
+  '/js/lib/map-item-text.js',
   '/js/table/table-map.js',
+  '/js/table/table-notes.js',
+  '/js/lib/minimap.js',
+  '/js/table/table-minimap.js',
   '/js/table/table-realtime.js',
   '/js/table/table-initiative.js',
   '/js/table/table-chat.js',

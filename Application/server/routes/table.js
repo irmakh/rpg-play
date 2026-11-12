@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-12 11:45
+// Written by Irmak Hakman — 2026-11-12 16:29
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -309,8 +309,9 @@ export default function register(app, ctx) {
       const raw = ldb.getTableState();
       raw.fogRegions = (() => { try { return JSON.parse(raw.fogRegions || '[]'); } catch { return []; } })();
       raw.hiddenItems = (() => { try { return JSON.parse(raw.hiddenItems || '[]'); } catch { return []; } })();
+      raw.mapNotes = parseNotes(raw.mapNotes);
       return raw;
-    } catch { return { id: TABLE_STATE_ID, cellSize: 50, offsetX: 0, offsetY: 0, mapWidth: 0, mapHeight: 0, hasMap: false, fogRegions: [], hiddenItems: [] }; }
+    } catch { return { id: TABLE_STATE_ID, cellSize: 50, offsetX: 0, offsetY: 0, mapWidth: 0, mapHeight: 0, hasMap: false, fogRegions: [], hiddenItems: [], mapNotes: [] }; }
   }
 
   async function getTableTokens() {
@@ -339,6 +340,30 @@ export default function register(app, ctx) {
     return id ? `${TABLE_MAP_MEDIA_ID}-${id}` : TABLE_MAP_MEDIA_ID;
   }
 
+  // ── DM map notes ──────────────────────────────────────────────────────────────
+  // Pins the DM drops on the map with a title and some text ("Trap: DC 15",
+  // "The mayor hides the key here"). Unlike hidden items they are never
+  // revealed: no player response or broadcast carries them at all.
+  // x, y are in grid cells and may be fractional, so a pin sits exactly where
+  // it was dropped and follows the map when the cell size changes.
+  const NOTE_TITLE_MAX = 80, NOTE_TEXT_MAX = 4000, NOTES_MAX = 300;
+  const noteCoord = (v) => { const n = Number(v); return Number.isFinite(n) ? Math.max(0, Math.min(10000, Math.round(n * 100) / 100)) : 0; };
+  function cleanNote(n, id) {
+    if (!n || typeof n !== 'object') return null;
+    return {
+      id: String(id || n.id || genId()).slice(0, 64),
+      x: noteCoord(n.x), y: noteCoord(n.y),
+      title: String(n.title ?? '').trim().slice(0, NOTE_TITLE_MAX),
+      text: String(n.text ?? '').slice(0, NOTE_TEXT_MAX),
+    };
+  }
+  const cleanNotes = (list) => (Array.isArray(list) ? list : []).map(n => cleanNote(n)).filter(Boolean).slice(0, NOTES_MAX);
+  const parseNotes = (json) => { try { return cleanNotes(typeof json === 'string' ? JSON.parse(json || '[]') : json); } catch { return []; } };
+  // DM only, with no substitute for anyone else.
+  const broadcastNotes = (notes) => broadcast('table', { action: 'notes-updated', mapNotes: notes }, undefined, { dmOnly: true });
+  // The table state a player may have: everything but the DM's notes.
+  const withoutNotes = (state) => { const { mapNotes, ...rest } = state || {}; return rest; };
+
   // ── Table state ───────────────────────────────────────────────────────────────
   /**
    * The table as this caller is allowed to see it.
@@ -365,7 +390,7 @@ export default function register(app, ctx) {
         // even with no login, and the page merely skipped drawing them.
         const cid = String(req.headers['x-character-id'] || '');
         const me = cid && (await charAuth(cid, req)) === 200 ? cid : '';
-        return res.json({ state: { ...state, hiddenItems: itemsForPlayer(state.hiddenItems) },
+        return res.json({ state: { ...withoutNotes(state), hiddenItems: itemsForPlayer(state.hiddenItems) },
                           tokens: tokensForPlayer(tokens, me) });
       }
 
@@ -377,7 +402,7 @@ export default function register(app, ctx) {
                               || (!t.assignedCharId && t.linkedId && t.linkedId === charId));
       }
       res.json({
-        state: { ...state, hasMap: false, mapWidth: 0, mapHeight: 0, fogRegions: [], hiddenItems: [] },
+        state: { ...withoutNotes(state), hasMap: false, mapWidth: 0, mapHeight: 0, fogRegions: [], hiddenItems: [] },
         tokens: mine,
       });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
@@ -470,6 +495,55 @@ export default function register(app, ctx) {
       const stateUpdate = { hasMap: false, mapWidth: 0, mapHeight: 0 };
       ldb.updateTableState(stateUpdate);
       broadcast('table', { action: 'map-updated' });
+      res.json({ ok: true });
+    } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
+  });
+
+  // ── DM map notes ──────────────────────────────────────────────────────────────
+  // Every route is the DM's. Notes stay when the map image changes or the
+  // table is cleared; loading a prepared map brings that map's notes instead.
+  app.get('/api/table/notes', (req, res) => {
+    if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
+    res.json(parseNotes(ldb.getTableState().mapNotes));
+  });
+
+  app.post('/api/table/notes', (req, res) => {
+    try {
+      if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
+      const notes = parseNotes(ldb.getTableState().mapNotes);
+      if (notes.length >= NOTES_MAX) return res.status(400).json({ error: 'A map can hold ' + NOTES_MAX + ' notes.' });
+      const note = cleanNote(req.body || {}, genId());
+      notes.push(note);
+      ldb.updateTableState({ mapNotes: JSON.stringify(notes) });
+      broadcastNotes(notes);
+      res.json({ ok: true, note });
+    } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
+  });
+
+  app.put('/api/table/notes/:id', (req, res) => {
+    try {
+      if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
+      const notes = parseNotes(ldb.getTableState().mapNotes);
+      const i = notes.findIndex(n => n.id === req.params.id);
+      if (i === -1) return res.status(404).json({ error: 'Note not found' });
+      const body = req.body || {};
+      const merged = { ...notes[i] };
+      for (const k of ['x', 'y', 'title', 'text']) if (body[k] !== undefined) merged[k] = body[k];
+      notes[i] = cleanNote(merged, notes[i].id);
+      ldb.updateTableState({ mapNotes: JSON.stringify(notes) });
+      broadcastNotes(notes);
+      res.json({ ok: true, note: notes[i] });
+    } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
+  });
+
+  app.delete('/api/table/notes/:id', (req, res) => {
+    try {
+      if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
+      const notes = parseNotes(ldb.getTableState().mapNotes);
+      const kept = notes.filter(n => n.id !== req.params.id);
+      if (kept.length === notes.length) return res.status(404).json({ error: 'Note not found' });
+      ldb.updateTableState({ mapNotes: JSON.stringify(kept) });
+      broadcastNotes(kept);
       res.json({ ok: true });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
   });
@@ -980,6 +1054,7 @@ export default function register(app, ctx) {
         fogRegions: (() => { try { return JSON.parse(m.fogRegions || '[]'); } catch { return []; } })(),
         hiddenItems: (() => { try { return JSON.parse(m.hiddenItems || '[]'); } catch { return []; } })(),
         preparedTokens: (() => { try { return JSON.parse(m.preparedTokens || '[]'); } catch { return []; } })(),
+        mapNotes: parseNotes(m.mapNotes),
         hasImage: !!mediaDb.prepare('SELECT id FROM shared_media WHERE id = ?').get('prep-map-' + m.id),
       }));
       res.json(maps);
@@ -1011,6 +1086,7 @@ export default function register(app, ctx) {
       if (body.fogRegions !== undefined) fields.fogRegions = JSON.stringify(Array.isArray(body.fogRegions) ? body.fogRegions : []);
       if (body.hiddenItems !== undefined) fields.hiddenItems = JSON.stringify(Array.isArray(body.hiddenItems) ? body.hiddenItems : []);
       if (body.preparedTokens !== undefined) fields.preparedTokens = JSON.stringify(Array.isArray(body.preparedTokens) ? body.preparedTokens : []);
+      if (body.mapNotes !== undefined) fields.mapNotes = JSON.stringify(cleanNotes(body.mapNotes));
       if (Object.keys(fields).length === 0) return res.json({ ok: true });
       ldb.updatePreparedMap(req.params.id, fields);
       res.json({ ok: true });
@@ -1107,10 +1183,14 @@ export default function register(app, ctx) {
         fogRegions: JSON.stringify(fogRegions),
         hiddenItems: JSON.stringify(hiddenItems),
       };
+      // The map's notes replace the table's, like its fog and items do.
+      const mapNotes = parseNotes(map.mapNotes);
+      stateUpdate.mapNotes = JSON.stringify(mapNotes);
       ldb.updateTableState(stateUpdate);
       broadcast('table', { action: 'map-updated' });
       broadcast('table', { action: 'fog-updated', fogRegions });
       broadcastItems(hiddenItems);
+      broadcastNotes(mapNotes);
 
       // Clear all existing tokens and initiative before placing prepared tokens
       ldb.clearTableTokens();

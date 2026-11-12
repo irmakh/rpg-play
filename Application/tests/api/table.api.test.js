@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-28 17:15
+// Written by Irmak Hakman — 2026-11-12 16:29
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -638,5 +638,95 @@ describe('unique monsters on the table', () => {
     expect(res.body.tokensPlaced).toBe(2);
     const labels = ldb.listTableTokens().map(t => t.label).sort();
     expect(labels).toEqual(['C3', 'Strahd von Zarovich']);
+  });
+});
+
+// ── DM map notes ──────────────────────────────────────────────────────────────
+describe('DM map notes', () => {
+  function withPlayer() {
+    const made = makeApp();
+    made.ldb.createCharacter('c1', { name: 'Gerion', charType: 'pc', passwordHash: made.hashPassword('pw1') });
+    return made;
+  }
+  const addNote = (app, body) => dm(request(app).post('/api/table/notes')).send(body);
+
+  it('only the DM can add, read, edit or delete a note', async () => {
+    const { app } = withPlayer();
+    expect((await request(app).post('/api/table/notes').send({ title: 'x' })).status).toBe(401);
+    expect((await request(app).post('/api/table/notes').set('X-Character-Password', 'pw1').send({ title: 'x' })).status).toBe(401);
+    const id = (await addNote(app, { x: 1, y: 2, title: 'Trap' })).body.note.id;
+    expect((await request(app).get('/api/table/notes').set('X-Character-Password', 'pw1')).status).toBe(401);
+    expect((await request(app).put('/api/table/notes/' + id).set('X-Character-Password', 'pw1').send({ title: 'y' })).status).toBe(401);
+    expect((await request(app).delete('/api/table/notes/' + id).set('X-Character-Password', 'pw1')).status).toBe(401);
+  });
+
+  it('adds, edits and deletes a note, keeping its fields tidy', async () => {
+    const { app } = makeApp();
+    const add = await addNote(app, { x: 3.456, y: -2, title: '  Pit trap  ', text: 'DC 15 Perception', extra: 'dropped' });
+    expect(add.status).toBe(200);
+    const n = add.body.note;
+    expect(n).toEqual({ id: n.id, x: 3.46, y: 0, title: 'Pit trap', text: 'DC 15 Perception' });
+
+    const put = await dm(request(app).put('/api/table/notes/' + n.id)).send({ text: 'DC 12', x: 4 });
+    expect(put.body.note).toMatchObject({ id: n.id, x: 4, y: 0, title: 'Pit trap', text: 'DC 12' });
+    expect((await dm(request(app).get('/api/table/notes'))).body).toHaveLength(1);
+
+    expect((await dm(request(app).delete('/api/table/notes/' + n.id))).status).toBe(200);
+    expect((await dm(request(app).get('/api/table/notes'))).body).toEqual([]);
+    expect((await dm(request(app).delete('/api/table/notes/' + n.id))).status).toBe(404);
+  });
+
+  it('GET /api/table gives the DM the notes and nobody else', async () => {
+    const { app } = withPlayer();
+    await addNote(app, { x: 1, y: 1, title: 'Secret door', text: 'behind the tapestry' });
+    const asDm = await dm(request(app).get('/api/table'));
+    expect(asDm.body.state.mapNotes.map(n => n.title)).toEqual(['Secret door']);
+
+    const stranger = await request(app).get('/api/table');
+    expect(stranger.body.state).not.toHaveProperty('mapNotes');
+    const player = await request(app).get('/api/table').set('X-Character-Id', 'c1').set('X-Character-Password', 'pw1');
+    expect(player.body.state).not.toHaveProperty('mapNotes');
+    expect(JSON.stringify(player.body)).not.toContain('tapestry');
+  });
+
+  it('keeps notes out of a player response while the table is parked', async () => {
+    const { app, ldb } = withPlayer();
+    await addNote(app, { title: 'Ambush', text: 'six goblins' });
+    ldb.updateTableState({ waitingScreenId: 'w1' });
+    const player = await request(app).get('/api/table').set('X-Character-Id', 'c1').set('X-Character-Password', 'pw1');
+    expect(JSON.stringify(player.body)).not.toContain('goblins');
+  });
+
+  it('every change goes to the DM only, with nothing for anyone else', async () => {
+    const { app, broadcasts } = makeApp();
+    await addNote(app, { title: 'A' });
+    const ev = broadcasts.filter(b => b.payload?.action === 'notes-updated').pop();
+    expect(ev.dmOnly).toBe(true);
+    expect(ev.opts.forOthers).toBeUndefined();
+    expect(ev.payload.mapNotes.map(n => n.title)).toEqual(['A']);
+  });
+
+  it('keeps notes when the table is cleared', async () => {
+    const { app } = makeApp();
+    await addNote(app, { title: 'Stays' });
+    await dm(request(app).post('/api/table/clear')).expect(200);
+    expect((await dm(request(app).get('/api/table/notes'))).body.map(n => n.title)).toEqual(['Stays']);
+  });
+
+  it('a prepared map saves its notes, and loading it brings them to the table', async () => {
+    const { app, broadcasts } = makeApp();
+    await addNote(app, { title: 'Old note' });
+    const created = await dm(request(app).post('/api/prepared-maps')).send({ name: 'Crypt' });
+    const id = created.body.id;
+    await dm(request(app).put('/api/prepared-maps/' + id))
+      .send({ mapNotes: [{ id: 'n1', x: 2, y: 3, title: 'Sarcophagus', text: 'mimic' }, 'junk'] }).expect(200);
+    const list = await dm(request(app).get('/api/prepared-maps'));
+    expect(list.body[0].mapNotes).toEqual([{ id: 'n1', x: 2, y: 3, title: 'Sarcophagus', text: 'mimic' }]);
+
+    await dm(request(app).post('/api/prepared-maps/' + id + '/load-to-table')).expect(200);
+    expect((await dm(request(app).get('/api/table/notes'))).body.map(n => n.title)).toEqual(['Sarcophagus']);
+    const ev = broadcasts.filter(b => b.payload?.action === 'notes-updated').pop();
+    expect(ev.dmOnly).toBe(true);
+    expect(ev.payload.mapNotes.map(n => n.id)).toEqual(['n1']);
   });
 });

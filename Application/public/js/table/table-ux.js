@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-28 15:19
+// Written by Irmak Hakman — 2026-11-12 16:29
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -65,11 +65,13 @@ function uxHpAfter(tok, mode, amount) {
   return { hpCurrent: Math.max(0, cur - through), hpTemp: Math.max(0, temp - amount) };
 }
 
-// One key per map tool. Multi-select is the DM's tool, so M does nothing for a player.
-const UX_TOOL_KEYS = { v: 'move', h: 'pan', r: 'ruler', p: 'ping', d: 'draw', m: 'multi' };
+// One key per map tool. Multi-select and notes are the DM's tools, so M and T
+// do nothing for a player.
+const UX_TOOL_KEYS = { v: 'move', h: 'pan', r: 'ruler', p: 'ping', d: 'draw', m: 'multi', t: 'note' };
+const UX_DM_TOOLS = new Set(['multi', 'note']);
 function uxToolForKey(key, dm) {
   const tool = UX_TOOL_KEYS[String(key || '').toLowerCase()];
-  if (!tool || (tool === 'multi' && !dm)) return null;
+  if (!tool || (UX_DM_TOOLS.has(tool) && !dm)) return null;
   return tool;
 }
 function uxKeyForTool(tool) {
@@ -95,6 +97,9 @@ function uxHintText(tool, o) {
   if (tool === 'ping')  return touch ? 'Ping — tap to show everyone a spot' : 'Ping — click to show everyone a spot';
   if (tool === 'draw')  return 'Draw — drag to draw a shape · Esc to finish';
   if (tool === 'multi') return 'Multi-select — drag a box around tokens · Shift adds to the selection';
+  if (tool === 'note')  return touch
+    ? 'Notes — tap the map to add a note only you see · tap a note to edit it'
+    : 'Notes — click the map to add a note only you see · click a note to edit · drag to move';
   return '';
 }
 
@@ -514,6 +519,7 @@ const UX_SHORTCUTS = [
   ['P', 'Ping'],
   ['D', 'Draw'],
   ['M', 'Multi-select', true],
+  ['T', 'DM notes: pins only you see', true],
   ['Tokens', null],
   ['Arrow keys', 'Move the selected token one square'],
   ['Ctrl + Z', 'Undo the last token move'],

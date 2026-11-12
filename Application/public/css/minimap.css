@@ -1,0 +1,31 @@
+/* Written by Irmak Hakman — 2026-11-12 16:56 */
+/* Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) */
+
+/* minimap.css - the minimap (js/lib/minimap.js) on the table and Map Prep.
+   Each page places the host (#minimap, #pm-minimap); this is how it looks. */
+
+.mm{position:absolute;z-index:45;pointer-events:none}
+.mm[hidden]{display:none}
+.mm-box{
+  position:relative;pointer-events:auto;line-height:0;
+  border:1px solid var(--rule-hi);border-radius:8px;overflow:hidden;
+  background:#0b0f19;box-shadow:0 6px 20px rgba(0,0,0,.5);
+}
+.mm-box canvas{display:block}
+.mm-view{position:absolute;inset:0;cursor:pointer;touch-action:none}
+.mm-fold{
+  position:absolute;top:3px;right:3px;width:22px;height:22px;padding:0;
+  display:grid;place-items:center;border-radius:50%;cursor:pointer;
+  background:rgba(10,14,24,.75);border:1px solid var(--rule-hi);color:var(--bone);
+  opacity:0;transition:opacity .15s;
+}
+.mm-box:hover .mm-fold,.mm-fold:focus-visible{opacity:1}
+@media (hover:none){.mm-fold{opacity:.85}}
+.mm-open{
+  display:none;pointer-events:auto;width:36px;height:36px;padding:0;place-items:center;
+  border-radius:50%;cursor:pointer;background:var(--slate);border:1px solid var(--rule-hi);color:var(--bone);
+  box-shadow:0 4px 12px rgba(0,0,0,.4);
+}
+.mm-folded .mm-box{display:none}
+.mm-folded .mm-open{display:grid}
+.mm-fold:focus-visible,.mm-open:focus-visible{outline:2px solid var(--arc, var(--bone));outline-offset:1px}

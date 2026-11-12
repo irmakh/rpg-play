@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-01 15:10
+// Written by Irmak Hakman — 2026-11-12 16:29
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -46,6 +46,7 @@ let _initCharData = {}; // entry id → { hpCurrent, hpMax, ac } fetched fresh f
 let chatUnread = 0;
 let fogRegions = [];   // [{ id, label, x, y, w, h, visible }]
 let hiddenItems = [];  // [{ id, label, type, x, y, description, visible }]
+let mapNotes = [];     // DM only: [{ id, x, y, title, text }] — see table-notes.js
 let zoomPct = 100;     // client-local zoom, not synced to server
 let chatOpen = true;
 let initPanelOpen = true;

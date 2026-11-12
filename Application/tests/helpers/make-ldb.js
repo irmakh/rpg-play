@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-01 17:55
+// Written by Irmak Hakman — 2026-11-12 16:29
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -46,7 +46,7 @@ export function makeLdb() {
       id TEXT PRIMARY KEY, cellSize INTEGER DEFAULT 50, offsetX INTEGER DEFAULT 0,
       offsetY INTEGER DEFAULT 0, mapWidth INTEGER DEFAULT 0, mapHeight INTEGER DEFAULT 0,
       hasMap INTEGER DEFAULT 0, fogRegions TEXT DEFAULT '[]', hiddenItems TEXT DEFAULT '[]',
-      waitingScreenId TEXT DEFAULT ''
+      waitingScreenId TEXT DEFAULT '', mapNotes TEXT DEFAULT '[]'
     );
     CREATE TABLE IF NOT EXISTS waiting_screens (
       id TEXT PRIMARY KEY, name TEXT DEFAULT '', caption TEXT DEFAULT '',
@@ -577,6 +577,7 @@ export function makeLdb() {
   function listPreparedMaps() { return _preparedMaps.slice(); }
   function createPreparedMap(id, fields) { _preparedMaps.push({ id, ...fields }); }
   function getPreparedMap(id) { return _preparedMaps.find(m => m.id === id) || null; }
+  function updatePreparedMap(id, fields) { const m = getPreparedMap(id); if (m) Object.assign(m, fields); }
 
   // ── Notifications (mirror db/localdb.js) ────────────────────────────────────
   function createNotification(id, f) {
@@ -774,7 +775,7 @@ export function makeLdb() {
     // chat + drawings
     listChatLog, appendChatLog, deleteChatMessage, clearChatLog,
     listDrawings, addDrawing, updateDrawing, deleteDrawing, clearDrawings,
-    listPreparedMaps, getPreparedMap, createPreparedMap,
+    listPreparedMaps, getPreparedMap, createPreparedMap, updatePreparedMap,
     // notifications
     createNotification, addNotificationRecipient, listNotificationsFor, unreadNotificationCount,
     markNotificationSeen, markAllNotificationsSeen, clearNotificationsFor, pruneNotifications,

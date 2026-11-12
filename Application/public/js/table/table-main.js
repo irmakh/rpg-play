@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 15:04
+// Written by Irmak Hakman — 2026-11-12 16:29
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -227,6 +227,7 @@ window.addEventListener('load', async () => {
 
   applyFogRegions(tableState.fogRegions || []);
   applyHiddenItems(tableState.hiddenItems || []);
+  applyMapNotes(tableState.mapNotes || []);
   renderGrid();
   renderFog();
   renderItems();

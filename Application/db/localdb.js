@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-12 13:55
+// Written by Irmak Hakman — 2026-11-12 16:29
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -352,6 +352,10 @@ try { db.exec(`ALTER TABLE table_tokens ADD COLUMN tokenSize INTEGER DEFAULT 1`)
 try { db.exec(`ALTER TABLE table_tokens ADD COLUMN portrait TEXT`); } catch {}
 try { db.exec(`ALTER TABLE prepared_maps ADD COLUMN hiddenItems TEXT DEFAULT '[]'`); } catch {}
 try { db.exec(`ALTER TABLE table_state ADD COLUMN hiddenItems TEXT DEFAULT '[]'`); } catch {}
+// DM map notes: pins only the DM sees (never sent to players), on the live map
+// and on prepared maps. A JSON list of { id, x, y, title, text }.
+try { db.exec(`ALTER TABLE table_state ADD COLUMN mapNotes TEXT DEFAULT '[]'`); } catch {}
+try { db.exec(`ALTER TABLE prepared_maps ADD COLUMN mapNotes TEXT DEFAULT '[]'`); } catch {}
 try { db.exec(`ALTER TABLE table_tokens ADD COLUMN label TEXT DEFAULT ''`); } catch {}
 try { db.exec(`ALTER TABLE table_tokens ADD COLUMN conditions TEXT DEFAULT '[]'`); } catch {}
 try { db.exec(`ALTER TABLE shop_items ADD COLUMN tag TEXT DEFAULT ''`); } catch {}
@@ -1206,8 +1210,9 @@ function importAll(data) {
       const ts = data.tableState[0];
       const fr = Array.isArray(ts.fogRegions) ? JSON.stringify(ts.fogRegions) : (ts.fogRegions || '[]');
       const hi = Array.isArray(ts.hiddenItems) ? JSON.stringify(ts.hiddenItems) : (ts.hiddenItems || '[]');
-      db.prepare('UPDATE table_state SET cellSize=?, offsetX=?, offsetY=?, mapWidth=?, mapHeight=?, hasMap=?, fogRegions=?, hiddenItems=? WHERE id=?')
-        .run(ts.cellSize || 50, ts.offsetX || 0, ts.offsetY || 0, ts.mapWidth || 0, ts.mapHeight || 0, ts.hasMap ? 1 : 0, fr, hi, TABLE_STATE_ID);
+      const mn = Array.isArray(ts.mapNotes) ? JSON.stringify(ts.mapNotes) : (ts.mapNotes || '[]');
+      db.prepare('UPDATE table_state SET cellSize=?, offsetX=?, offsetY=?, mapWidth=?, mapHeight=?, hasMap=?, fogRegions=?, hiddenItems=?, mapNotes=? WHERE id=?')
+        .run(ts.cellSize || 50, ts.offsetX || 0, ts.offsetY || 0, ts.mapWidth || 0, ts.mapHeight || 0, ts.hasMap ? 1 : 0, fr, hi, mn, TABLE_STATE_ID);
     }
 
     const insChat = db.prepare('INSERT OR REPLACE INTO chat_log (id, entryJson, timestamp) VALUES (?, ?, ?)');
@@ -1216,11 +1221,14 @@ function importAll(data) {
     }
 
     db.prepare('DELETE FROM prepared_maps').run();
-    const insPrep = db.prepare('INSERT OR REPLACE INTO prepared_maps (id, name, cellSize, offsetX, offsetY, mapWidth, mapHeight, fogRegions, hiddenItems, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+    // preparedTokens and mapNotes travel with a prepared map like its fog does.
+    const insPrep = db.prepare('INSERT OR REPLACE INTO prepared_maps (id, name, cellSize, offsetX, offsetY, mapWidth, mapHeight, fogRegions, hiddenItems, preparedTokens, mapNotes, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
     for (const r of (data.preparedMaps || [])) {
       const fr = Array.isArray(r.fogRegions) ? JSON.stringify(r.fogRegions) : (r.fogRegions || '[]');
       const hi = Array.isArray(r.hiddenItems) ? JSON.stringify(r.hiddenItems) : (r.hiddenItems || '[]');
-      insPrep.run(r.id, r.name || '', r.cellSize || 50, r.offsetX || 0, r.offsetY || 0, r.mapWidth || 0, r.mapHeight || 0, fr, hi, r.createdAt || new Date().toISOString());
+      const pt = Array.isArray(r.preparedTokens) ? JSON.stringify(r.preparedTokens) : (r.preparedTokens || '[]');
+      const mn = Array.isArray(r.mapNotes) ? JSON.stringify(r.mapNotes) : (r.mapNotes || '[]');
+      insPrep.run(r.id, r.name || '', r.cellSize || 50, r.offsetX || 0, r.offsetY || 0, r.mapWidth || 0, r.mapHeight || 0, fr, hi, pt, mn, r.createdAt || new Date().toISOString());
     }
   })();
   foldShopSaleTags();
@@ -1295,7 +1303,7 @@ function importMaps(preparedMaps) {
   const rekeyMap = db.prepare('UPDATE prepared_maps SET id = ?, name = ? WHERE id = ?');
   // preparedTokens is part of a prepared map just as fog is. It was missing from
   // this INSERT, so restoring a maps backup silently dropped every placed token.
-  const ins     = db.prepare('INSERT OR IGNORE INTO prepared_maps (id, name, cellSize, offsetX, offsetY, mapWidth, mapHeight, fogRegions, hiddenItems, preparedTokens, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+  const ins     = db.prepare('INSERT OR IGNORE INTO prepared_maps (id, name, cellSize, offsetX, offsetY, mapWidth, mapHeight, fogRegions, hiddenItems, preparedTokens, mapNotes, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
   const asJson = (v, empty) => Array.isArray(v) ? JSON.stringify(v) : (v || empty);
   db.transaction(() => {
     for (const r of (preparedMaps || [])) {
@@ -1304,7 +1312,7 @@ function importMaps(preparedMaps) {
       ins.run(r.id, r.name || '', r.cellSize || 50, r.offsetX || 0, r.offsetY || 0,
         r.mapWidth || 0, r.mapHeight || 0,
         asJson(r.fogRegions, '[]'), asJson(r.hiddenItems, '[]'), asJson(r.preparedTokens, '[]'),
-        r.createdAt || new Date().toISOString());
+        asJson(r.mapNotes, '[]'), r.createdAt || new Date().toISOString());
     }
   })();
 }

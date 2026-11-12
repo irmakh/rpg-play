@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Written by Irmak Hakman — 2026-11-11 18:08 -->
+<!-- Written by Irmak Hakman — 2026-11-12 16:56 -->
 <!-- Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) -->
 <html lang="en" class="lamplit app-page">
 <head>
@@ -70,7 +70,21 @@
   /* Hidden items section fills remaining sidebar height */
   #sb-items-section{flex:1;display:flex;flex-direction:column;min-height:0}
   #sb-sec-items{flex:1;display:flex;flex-direction:column;min-height:0;overflow:hidden}
-  #item-list{flex:1;overflow-y:auto;min-height:0}</style>
+  #item-list{flex:1;overflow-y:auto;min-height:0}
+
+  /* DM notes */
+  #note-list{max-height:calc(260px*var(--fs, 1));overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--rule-hi) transparent}
+  .pm-note-row{border:1px solid var(--rule-hi);border-radius:calc(4px*var(--fs, 1));margin-bottom:calc(4px*var(--fs, 1));padding:calc(4px*var(--fs, 1)) calc(5px*var(--fs, 1))}
+  .pm-note-row.open{border-color:var(--arc, var(--bone))}
+  .pm-note-head{display:flex;align-items:center;gap:calc(4px*var(--fs, 1))}
+  .pm-note-head input{flex:1;min-width:0;padding:calc(2px*var(--fs, 1)) calc(5px*var(--fs, 1));font-size:calc(11px * var(--fs, 1));background:var(--slate-hi);border:1px solid var(--rule-hi);color:var(--bone);border-radius:calc(3px*var(--fs, 1))}
+  .pm-note-head .btn{flex-shrink:0;padding:1px calc(6px*var(--fs, 1))}
+  .pm-note-pin{flex-shrink:0;width:calc(18px*var(--fs, 1));height:calc(18px*var(--fs, 1));border-radius:50%;background:#f0dea0;color:#46300a;border:1.5px solid #46300a;display:inline-flex;align-items:center;justify-content:center;font-size:calc(10px * var(--fs, 1));font-weight:bold}
+  .pm-note-row textarea{display:block;width:100%;box-sizing:border-box;margin-top:calc(4px*var(--fs, 1));font:inherit;font-size:calc(11px * var(--fs, 1));background:var(--slate-hi);border:1px solid var(--rule-hi);color:var(--bone);border-radius:calc(3px*var(--fs, 1));padding:calc(4px*var(--fs, 1)) calc(6px*var(--fs, 1));resize:vertical;line-height:1.4}
+  .pm-note-peek{margin-top:calc(3px*var(--fs, 1));font-size:calc(10px * var(--fs, 1));color:var(--ash);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}</style>
+<!-- After the page styles: the phone layout overrides them -->
+<link rel="stylesheet" href="/css/minimap.css">
+<link rel="stylesheet" href="/css/prepare-map.css">
 <script src="/js/lib/icons.js"></script>
 </head>
 <body>
@@ -103,8 +117,8 @@
     <div class="hdr-right">
       <button class="btn" data-notif-bell="connect" title="Notifications"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-bell"></use></svg> </button>
       <span id="status-msg" style="font-size:calc(11px * var(--fs, 1))"></span>
-      <button class="btn" id="btn-controls-toggle" onclick="togglePmControls()" title="Toggle grid controls">Grid <svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-up"></use></svg> </button>
-      <button class="btn" id="btn-sidebar-toggle" onclick="togglePmSidebar()" title="Toggle panel"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-left"></use></svg> Panel</button>
+      <button class="btn pm-d-only" id="btn-controls-toggle" onclick="togglePmControls()" title="Toggle grid controls">Grid <svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-up"></use></svg> </button>
+      <button class="btn pm-d-only" id="btn-sidebar-toggle" onclick="togglePmSidebar()" title="Toggle panel"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-left"></use></svg> Panel</button>
     </div>
   </div>
 
@@ -112,7 +126,14 @@
   <div id="pm-body" class="app-body">
 
     <!-- Sidebar -->
-    <div id="pm-sidebar">
+    <div id="pm-sidebar" role="region" aria-label="Map tools">
+
+      <!-- Phone only: the sidebar is a bottom sheet with its own title bar -->
+      <div id="pm-sheet-hdr" class="pm-m-only">
+        <span id="pm-sheet-grip" aria-hidden="true"></span>
+        <span id="pm-sheet-title">Maps</span>
+        <button class="btn sm" onclick="pmCloseSheet()" aria-label="Close panel"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg></button>
+      </div>
 
       <!-- New map button -->
       <div id="pm-sidebar-hdr">
@@ -122,7 +143,7 @@
       </div>
 
       <!-- Maps section -->
-      <div class="sb-section">
+      <div class="sb-section" id="sb-maps-section">
         <div class="sb-section-hdr" onclick="toggleSbSection('maps')">
           <span>Maps</span><span id="sb-sec-maps-arrow"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-down"></use></svg> </span>
         </div>
@@ -170,6 +191,22 @@
         </div>
       </div>
 
+      <!-- DM Notes section: pins only the DM sees, on this map and on the table -->
+      <div class="sb-section" id="sb-notes-section" style="display:none">
+        <div class="sb-section-hdr" onclick="toggleSbSection('notes')">
+          <span>DM Notes <span id="pm-note-count" style="font-size:calc(9px * var(--fs, 1));color:var(--ash);font-weight:normal"></span></span>
+          <span id="sb-sec-notes-arrow"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-down"></use></svg> </span>
+        </div>
+        <div id="sb-sec-notes" class="sb-section-body">
+          <div style="display:flex;align-items:center;gap:calc(6px*var(--fs, 1));margin-bottom:calc(6px*var(--fs, 1));flex-wrap:wrap">
+            <button class="btn" id="btn-add-note" onclick="togglePlaceNoteMode()" title="Click, then click the map where the note belongs" style="font-size:calc(11px * var(--fs, 1));padding:calc(2px*var(--fs, 1)) calc(10px*var(--fs, 1))"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-document"></use></svg> Add Note</button>
+            <span id="note-hint" style="font-size:calc(10px * var(--fs, 1));color:var(--ash);display:none">click the map to place</span>
+          </div>
+          <div style="font-size:calc(10px * var(--fs, 1));color:var(--ash);margin-bottom:calc(5px*var(--fs, 1))">Only you see notes, here and on the table. They come along when the map is loaded.</div>
+          <div id="note-list"></div>
+        </div>
+      </div>
+
       <!-- Hidden Items section -->
       <div class="sb-section" id="sb-items-section" style="flex:1;display:none;flex-direction:column;min-height:0">
         <div class="sb-section-hdr" onclick="toggleSbSection('items')">
@@ -191,6 +228,20 @@
         </div>
       </div>
 
+      <!-- Phone only: what the desktop toolbar and grid bar hold -->
+      <div class="sb-section pm-m-only" id="sb-more-section">
+        <div class="sb-section-body">
+          <div class="pm-more-grid">
+            <button class="btn" onclick="document.getElementById('map-img-input').click()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-camera"></use></svg> Map image</button>
+            <button class="btn" onclick="exportMap()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-arrow-down"></use></svg> Export</button>
+            <button class="btn" onclick="loadToTable()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-folder"></use></svg> Load to Table</button>
+            <button class="btn danger" onclick="deleteMap()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-trash"></use></svg> Delete map</button>
+          </div>
+          <div class="pm-more-lbl">Grid</div>
+          <div id="pm-more-controls"></div>
+        </div>
+      </div>
+
     </div><!-- /pm-sidebar -->
 
     <!-- Editor area -->
@@ -200,19 +251,32 @@
       <div id="pm-toolbar" style="display:none">
         <input type="text" id="map-name" placeholder="Map name…" oninput="debounceSave()"
           style="width:calc(180px*var(--fs, 1));padding:calc(3px*var(--fs, 1)) calc(7px*var(--fs, 1));font-size:calc(12px * var(--fs, 1));background:var(--slate-hi);border:1px solid var(--rule-hi);color:var(--bone);border-radius:calc(3px*var(--fs, 1))">
-        <button class="btn" onclick="exportMap()" title="Export this map to a file"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-arrow-down"></use></svg> Export</button>
-        <button class="btn" id="pm-img-btn" onclick="document.getElementById('map-img-input').click()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-camera"></use></svg> Image</button>
+        <button class="btn pm-d-only" onclick="exportMap()" title="Export this map to a file"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-arrow-down"></use></svg> Export</button>
+        <button class="btn pm-d-only" id="pm-img-btn" onclick="document.getElementById('map-img-input').click()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-camera"></use></svg> Image</button>
         <input type="file" id="map-img-input" accept="image/*" style="display:none" onchange="handleImageUpload(this)">
         <span id="img-status" style="font-size:calc(11px * var(--fs, 1));color:var(--ash)"></span>
-        <button class="btn" id="btn-move" onclick="toggleMoveMode()" title="Move mode — when on, drag any token, hidden item or fog region on the map to reposition it"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-hand"></use></svg> Move</button>
-        <span id="move-hint" style="font-size:calc(10px * var(--fs, 1));color:var(--ash);display:none">drag tokens · items · fog</span>
+        <button class="btn" id="btn-move" onclick="toggleMoveMode()" title="Move mode — when on, drag any token, note, hidden item or fog region on the map to reposition it"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-hand"></use></svg> Move</button>
+        <span id="move-hint" class="pm-d-only" style="font-size:calc(10px * var(--fs, 1));color:var(--ash);display:none">drag tokens · notes · items · fog</span>
         <div style="flex:1"></div>
         <button class="btn primary" onclick="saveMap()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-save"></use></svg> Save</button>
-        <button class="btn" onclick="loadToTable()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-folder"></use></svg> Load to Table</button>
-        <button class="btn danger" onclick="deleteMap()" title="Delete this map"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-trash"></use></svg> </button>
+        <button class="btn pm-d-only" onclick="loadToTable()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-folder"></use></svg> Load to Table</button>
+        <button class="btn danger pm-d-only" onclick="deleteMap()" title="Delete this map"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-trash"></use></svg> </button>
       </div>
 
-      <!-- Canvas area -->
+      <!-- Canvas area. The shell holds what floats over the map on a phone
+           (the mode bar and the zoom buttons) so they do not scroll with it. -->
+      <div id="pm-canvas-shell">
+      <div id="pm-mode-bar" class="pm-m-only" hidden role="status">
+        <span id="pm-mode-text"></span>
+        <button class="btn primary sm" onclick="pmExitModes()">Done</button>
+      </div>
+      <!-- The whole map: click or drag to move there (prepare-map-view.js) -->
+      <div id="pm-minimap"></div>
+      <div id="pm-zoom" role="group" aria-label="Zoom">
+        <button class="btn" onclick="pmSetZoom(pmZoom * 1.5)" aria-label="Zoom in" title="Zoom in (or the mouse wheel)" id="pm-zoom-in">+</button>
+        <button class="btn" onclick="pmSetZoom(pmZoom / 1.5)" aria-label="Zoom out" title="Zoom out">−</button>
+        <button class="btn" onclick="pmSetZoom(1)" aria-label="Fit the map" title="Fit the whole map" id="pm-zoom-fit">Fit</button>
+      </div>
       <div id="pm-canvas-area">
         <div id="pm-upload-overlay" style="display:none;position:absolute;inset:0;background:rgba(0,0,0,.65);z-index:10;align-items:center;justify-content:center;flex-direction:column;gap:calc(12px*var(--fs, 1));pointer-events:all">
           <div style="color:var(--bone);font-size:calc(14px * var(--fs, 1));font-weight:bold">Uploading map image…</div>
@@ -226,6 +290,8 @@
           <canvas id="prep-draw-canvas" style="z-index:3;pointer-events:none"></canvas>
         </div>
       </div>
+
+      </div><!-- /pm-canvas-shell -->
 
       <!-- Bottom grid controls -->
       <div id="pm-controls" style="display:none">
@@ -252,6 +318,16 @@
     </div><!-- /pm-editor -->
 
   </div><!-- /pm-body -->
+
+  <!-- Phone only: one tab per sidebar section; a tab opens it as a bottom sheet -->
+  <nav id="pm-tabbar" class="pm-m-only" aria-label="Map prep sections">
+    <button data-pm-tab="maps" onclick="pmToggleTab('maps')"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-map"></use></svg><span>Maps</span></button>
+    <button data-pm-tab="fog" onclick="pmToggleTab('fog')"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-eye"></use></svg><span>Fog</span></button>
+    <button data-pm-tab="tokens" onclick="pmToggleTab('tokens')"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-users"></use></svg><span>Tokens</span></button>
+    <button data-pm-tab="notes" onclick="pmToggleTab('notes')"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-document"></use></svg><span>Notes</span></button>
+    <button data-pm-tab="items" onclick="pmToggleTab('items')"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-pin"></use></svg><span>Items</span></button>
+    <button data-pm-tab="more" onclick="pmToggleTab('more')"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-more"></use></svg><span>More</span></button>
+  </nav>
 </div><!-- /main-content -->
 
 <!-- Token config modal -->
@@ -374,7 +450,11 @@
 <script src="/js/lib/official-monsters.js" defer></script>
 <script src="/js/lib/realtime.js" defer></script>
 <script src="/js/lib/notifications.js" defer></script>
+<script src="/js/lib/map-item-text.js" defer></script>
 <script src="/js/prepare-map.js" defer></script>
+<script src="/js/lib/minimap.js" defer></script>
+<script src="/js/prepare-map-view.js" defer></script>
+<script src="/js/prepare-map-mobile.js" defer></script>
 <!-- Presence: register this client so it shows on the maintenance page -->
 <script>window.addEventListener('DOMContentLoaded',function(){if(window.connectRealtime)connectRealtime({});});</script>
 </body>

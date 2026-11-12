@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-11 18:12
+// Written by Irmak Hakman — 2026-11-12 16:29
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -64,6 +64,8 @@ function startSSE() {
           applyFogRegions(d.fogRegions); break;
         case 'items-updated':
           applyHiddenItems(d.hiddenItems); break;
+        case 'notes-updated':   // sent to the DM alone
+          applyMapNotes(d.mapNotes); break;
         case 'ping':
           renderPing(d.x, d.y, d.color); break;
         case 'image-reveal':
@@ -278,6 +280,7 @@ async function fetchAll() {
     }
     applyFogRegions(state.fogRegions || []);
     applyHiddenItems(state.hiddenItems || []);
+    applyMapNotes(state.mapNotes || []);
     renderGrid();
     renderFog();
     renderItems();

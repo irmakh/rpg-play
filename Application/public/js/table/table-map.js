@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-01 15:10
+// Written by Irmak Hakman — 2026-11-12 16:42
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -135,6 +135,7 @@ function applyZoom(pct) {
   if (slider) slider.value = zoomPct;
   const lbl = document.getElementById('zoom-val');
   if (lbl) lbl.textContent = zoomPct + '%';
+  renderItems();   // item and note text keeps a readable size on screen at any zoom
 }
 
 // A map smaller than the map area sits in its middle, not stuck to the top-left
@@ -244,19 +245,16 @@ function renderItems() {
     iCtx.setLineDash([4, 3]);
     iCtx.strokeRect(px, py, iw, ih);
     iCtx.setLineDash([]);
-    iCtx.fillStyle = item.visible ? 'rgba(255,255,255,0.95)' : 'rgba(255,180,180,0.95)';
-    iCtx.font = `bold ${Math.round(Math.min(cs * 0.28, 12))}px sans-serif`;
-    iCtx.textAlign = 'center';
-    iCtx.textBaseline = 'middle';
-    iCtx.fillText(ITEM_ICONS[item.type] || '?', px + iw * 0.5, py + ih * 0.5);
-    iCtx.textAlign = 'start';
-    iCtx.textBaseline = 'alphabetic';
-    if (isDM() && item.label) {
-      iCtx.fillStyle = 'rgba(255,200,100,0.9)';
-      iCtx.font = `${Math.round(Math.min(cs * 0.18, 9))}px sans-serif`;
-      iCtx.fillText(item.label, px + 2, py + ih - 3);
-    }
+    // Icon and label sized to the cell and the zoom (js/lib/map-item-text.js).
+    drawMapItemText(iCtx, {
+      x: px, y: py, iw, ih, w: item.w, h: item.h, cellPx: cs, zoom: zoomPct / 100,
+      icon: ITEM_ICONS[item.type] || '?',
+      iconColour: item.visible ? 'rgba(255,255,255,0.95)' : 'rgba(255,190,190,0.98)',
+      label: isDM() ? item.label : '',
+      labelColour: 'rgba(255,210,120,0.98)',
+    });
   }
+  if (typeof drawMapNotes === 'function') drawMapNotes(iCtx);
 }
 
 function applyHiddenItems(items) {
@@ -347,8 +345,9 @@ function _mctxItemBody(item) {
  * canvas (z-index 7 vs 5), and within each, later entries are drawn over
  * earlier ones - so both lists are walked back to front.
  */
-function _mapLayersAt(gx, gy) {
-  const layers = [];
+function _mapLayersAt(gx, gy, px, py) {
+  // DM notes are drawn above everything else on the items canvas.
+  const layers = (px === undefined || typeof noteLayersAt !== 'function') ? [] : noteLayersAt(px, py);
   for (let i = hiddenItems.length - 1; i >= 0; i--) {
     const it = hiddenItems[i];
     const iw = it.w || 1, ih = it.h || 1;
@@ -371,7 +370,7 @@ canvasArea.addEventListener('click', e => {
   const pos = getCanvasPos(e);
   const grid = canvasToGrid(pos.x, pos.y);
 
-  const layers = _mapLayersAt(grid.x, grid.y);
+  const layers = _mapLayersAt(grid.x, grid.y, pos.x, pos.y);
   if (!layers.length) { _dismissMapCtxMenu(); return; }
 
   // One layer keeps the plain single-subject menu it has always had; only a
@@ -774,7 +773,7 @@ function setTool(name) {
   document.querySelectorAll('[data-mstrip-tool]').forEach(b => {
     b.classList.toggle('active', b.dataset.mstripTool === name);
   });
-  overlayCanvas.style.cursor = (name === 'ruler' || name === 'multi') ? 'crosshair' : name === 'draw' ? (drawSubMode === 'select' ? 'default' : 'crosshair') : name === 'ping' ? 'cell' : name === 'pan' ? 'grab' : 'default';
+  overlayCanvas.style.cursor = (name === 'ruler' || name === 'multi') ? 'crosshair' : name === 'draw' ? (drawSubMode === 'select' ? 'default' : 'crosshair') : name === 'ping' ? 'cell' : name === 'pan' ? 'grab' : name === 'note' ? 'copy' : 'default';
   // Move mode (also selects): overlay transparent so token divs receive pointer events
   overlayCanvas.style.pointerEvents = (name === 'move') ? 'none' : 'all';
   if (name !== 'ruler') { rulerState = null; oCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height); }
@@ -1131,6 +1130,8 @@ overlayCanvas.addEventListener('mousedown', e => {
     }
   } else if (currentTool === 'multi') {
     multiSelectState = { x1: pos.x, y1: pos.y };
+  } else if (currentTool === 'note') {
+    onNoteToolDown(e, pos);
   }
 });
 

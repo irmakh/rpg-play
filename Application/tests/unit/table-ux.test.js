@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-28 15:19
+// Written by Irmak Hakman — 2026-11-12 16:29
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -152,6 +152,14 @@ describe('tool keys', () => {
   it('keeps multi-select for the DM', () => {
     expect(ux.uxToolForKey('m', true)).toBe('multi');
     expect(ux.uxToolForKey('m', false)).toBeNull();
+  });
+
+  it('keeps the notes tool for the DM', () => {
+    expect(ux.uxToolForKey('t', true)).toBe('note');
+    expect(ux.uxToolForKey('T', true)).toBe('note');
+    expect(ux.uxToolForKey('t', false)).toBeNull();
+    expect(ux.uxKeyForTool('note')).toBe('T');
+    expect(ux.uxHintText('note', {})).toContain('only you see');
   });
 
   it('ignores every other key', () => {

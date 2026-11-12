@@ -1,4 +1,4 @@
-/* Written by Irmak Hakman — 2026-11-12 12:15 */
+/* Written by Irmak Hakman — 2026-11-12 16:29 */
 /* Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) */
 
 *{box-sizing:border-box;margin:0;padding:0}
@@ -771,6 +771,21 @@ html.lamplit .qroll-val{color:var(--arc);font-weight:700}
 .mctx-stack{max-height:min(calc(420px*var(--fs, 1)),60vh);overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--rule-hi) transparent}
 .mctx-layer{padding-bottom:calc(9px*var(--fs, 1));margin-bottom:calc(9px*var(--fs, 1));border-bottom:1px solid var(--rule)}
 .mctx-layer:last-child{padding-bottom:0;margin-bottom:0;border-bottom:none}
+
+/* DM map notes (table-notes.js): the note in the map menu, and its editor. */
+.mctx-note-text{max-height:calc(160px*var(--fs, 1));color:var(--bone)}
+.mctx-note-acts{display:flex;gap:calc(6px*var(--fs, 1))}
+.mctx-note-acts .mctx-go{flex:1;width:auto}
+.map-note-box{width:calc(440px*var(--fs, 1));display:flex;flex-direction:column}
+.map-note-body{display:flex;flex-direction:column;gap:calc(5px*var(--fs, 1));padding:calc(10px*var(--fs, 1)) calc(12px*var(--fs, 1))}
+.map-note-body input,.map-note-body textarea{
+  width:100%;box-sizing:border-box;background:var(--slate-hi);border:1px solid var(--rule-hi);color:var(--bone);
+  border-radius:var(--r-sm, 4px);padding:calc(6px*var(--fs, 1)) calc(8px*var(--fs, 1));font:inherit;font-size:calc(13px * var(--fs, 1));
+}
+.map-note-body textarea{resize:vertical;min-height:calc(110px*var(--fs, 1));line-height:1.45}
+.map-note-body .lbl{margin-top:calc(4px*var(--fs, 1))}
+.map-note-private{font-size:calc(11px * var(--fs, 1));color:var(--ash)}
+.map-note-foot{display:flex;align-items:center;gap:calc(8px*var(--fs, 1));padding:calc(8px*var(--fs, 1)) calc(12px*var(--fs, 1));border-top:1px solid var(--rule-hi)}
 
 /* Grouped multi-type damage: one column per damage part, each captioned with its
    type and its own subtotal. Type names stay in --ash — gold is reserved for the

@@ -1,0 +1,160 @@
+/* Written by Irmak Hakman — 2026-11-12 16:58 */
+/* Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) */
+
+/* prepare-map.css - Map Prep on a phone.
+
+   The desktop layout lives in the page's own <style> and is untouched: outside
+   the breakpoint this file only adds a neutral wrapper (#pm-canvas-shell) and
+   hides the phone-only parts.
+
+   On a phone (860px and under, the same breakpoint as app-shell.css):
+   - the map fills the screen and can be zoomed and scrolled;
+   - a tab bar along the bottom picks a sidebar section, which opens as a
+     bottom sheet over the map (prepare-map-mobile.js);
+   - the toolbar keeps only the map name, Move and Save; Export, Image,
+     Load to Table, Delete and the grid settings move to the "More" tab;
+   - while a tool waits for the map (draw fog, place an item / token / note,
+     move), the sheet steps aside and a bar says what to do, with Done. */
+
+#pm-canvas-shell{flex:1;display:flex;flex-direction:column;min-height:0;position:relative}
+
+/* Zoom, pan and the minimap, on every screen (prepare-map-view.js). A fitted
+   map is sized never to overflow, so the scrollbars only appear once zoomed in. */
+#pm-canvas-area{overflow:auto;scrollbar-width:thin;scrollbar-color:var(--rule-hi) transparent}
+#editor-wrap{flex-shrink:0}   /* a flex child: without this a zoomed map's box shrank to the view */
+body:not(.pm-has-map) #pm-zoom,
+body:not(.pm-has-map) #pm-minimap{display:none}
+#pm-minimap{left:12px;bottom:14px}
+#pm-zoom{position:absolute;right:14px;bottom:14px;z-index:20;display:flex;flex-direction:column;gap:5px}
+#pm-zoom .btn{width:34px;height:34px;padding:0;justify-content:center;font-size:17px;border-radius:50%;box-shadow:0 4px 12px rgba(0,0,0,.4)}
+#pm-zoom #pm-zoom-fit{font-size:10px}
+#pm-zoom .btn:disabled{opacity:.45}
+
+@media (min-width:861px){
+  .pm-m-only{display:none !important}
+}
+
+@media (max-width:860px){
+  :root{--pm-tab-h:calc(58px + env(safe-area-inset-bottom, 0px))}
+
+  .pm-d-only{display:none !important}
+
+  /* Keep the full-screen editor: app-shell.css turns a narrow page into a
+     scrolling column, which squeezed the map into a sliver beside the panel. */
+  html.app-page, html.app-page body{overflow:hidden}
+  html.app-page .app-shell{height:100dvh;min-height:0}
+  #pm-body.app-body{flex-direction:column;overflow:hidden;padding-bottom:var(--pm-tab-h)}
+  #pm-editor{flex:1;min-height:0}
+
+  /* Header: title as an icon, room for the buttons */
+  .hdr h1{font-size:0}
+  .hdr h1 .lt-icon{font-size:calc(20px * var(--fs, 1))}
+
+  /* Toolbar: name, Move, Save on one row */
+  #pm-toolbar{flex-wrap:nowrap;gap:calc(6px*var(--fs, 1));padding:calc(6px*var(--fs, 1)) calc(8px*var(--fs, 1))}
+  #pm-toolbar > div[style*="flex:1"]{display:none}
+  #map-name{flex:1;min-width:0;width:auto !important;min-height:40px}
+  #pm-toolbar .btn{min-height:40px;flex-shrink:0}
+
+  /* The map scrolls when zoomed in */
+  #pm-canvas-area{overflow:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+  #editor-wrap{margin:auto;flex-shrink:0}   /* centred; still scrolls from the edge when zoomed in */
+  #pm-controls{display:none !important}
+
+  /* ── Bottom sheet (the desktop sidebar) ── */
+  #pm-sidebar{
+    display:flex !important;
+    position:fixed;left:0;right:0;bottom:var(--pm-tab-h);
+    width:auto;height:auto;max-height:min(64dvh, 600px);
+    z-index:50;border-right:0;border-top:1px solid var(--rule-hi);
+    border-radius:14px 14px 0 0;
+    box-shadow:0 -12px 32px rgba(0,0,0,.5);
+    transform:translateY(calc(100% + var(--pm-tab-h) + 20px));
+    visibility:hidden;
+    transition:transform .22s ease, visibility 0s linear .22s;
+    overscroll-behavior:contain;
+  }
+  body.pm-sheet-open #pm-sidebar{transform:none;visibility:visible;transition:transform .22s ease}
+
+  #pm-sheet-hdr{
+    display:flex;align-items:center;gap:calc(8px*var(--fs, 1));
+    position:sticky;top:0;z-index:2;flex-shrink:0;
+    padding:calc(14px*var(--fs, 1)) calc(12px*var(--fs, 1)) calc(8px*var(--fs, 1));
+    background:var(--slate);border-bottom:1px solid var(--rule-hi);
+  }
+  #pm-sheet-grip{position:absolute;top:6px;left:50%;width:36px;height:4px;margin-left:-18px;border-radius:2px;background:var(--rule-hi)}
+  #pm-sheet-title{flex:1;font-weight:bold;font-size:calc(15px * var(--fs, 1))}
+  #pm-sheet-hdr .btn{min-width:40px;min-height:40px;justify-content:center}
+
+  /* One section at a time: the one the tab picked */
+  #pm-sidebar .sb-section,
+  #pm-sidebar-hdr,
+  #pm-no-map-msg{display:none !important}
+  body[data-pm-tab="maps"] #pm-sidebar-hdr{display:flex !important}
+  body[data-pm-tab="maps"] #sb-maps-section,
+  body[data-pm-tab="fog"] #sb-fog-section,
+  body[data-pm-tab="tokens"] #sb-tokens-section,
+  body[data-pm-tab="notes"] #sb-notes-section,
+  body[data-pm-tab="items"] #sb-items-section,
+  body[data-pm-tab="more"] #sb-more-section{display:block !important;border-bottom:0}
+  #pm-sidebar .sb-section-hdr{display:none}
+  #pm-sidebar .sb-section-body{display:block !important;padding:calc(10px*var(--fs, 1)) calc(12px*var(--fs, 1))}
+  #sb-sec-items{overflow:visible}
+  #fog-region-list,#note-list,#item-list{max-height:none !important;overflow:visible !important}
+  #pm-sidebar-hdr{padding:calc(10px*var(--fs, 1)) calc(12px*var(--fs, 1)) 0;border-bottom:0}
+
+  /* Touch-sized controls; 16px text so iOS does not zoom into a field */
+  #pm-sidebar .btn{min-height:40px}
+  #pm-sidebar .btn.sm{min-height:36px;min-width:36px;justify-content:center}
+  #pm-sidebar input[type=text],#pm-sidebar input[type=number],#pm-sidebar select,#pm-sidebar textarea,#map-name{font-size:16px !important}
+  #pm-sidebar input[type=text],#pm-sidebar select{min-height:38px}
+  #pm-sidebar input[type=checkbox]{width:20px;height:20px}
+  .fog-row{gap:calc(8px*var(--fs, 1));padding:calc(4px*var(--fs, 1)) 0}
+  .pm-note-row{padding:calc(6px*var(--fs, 1)) calc(8px*var(--fs, 1))}
+  .pm-note-pin{width:24px;height:24px}
+
+  /* More */
+  .pm-more-grid{display:grid;grid-template-columns:1fr 1fr;gap:calc(8px*var(--fs, 1))}
+  .pm-more-grid .btn{justify-content:center}
+  .pm-more-lbl{margin:calc(16px*var(--fs, 1)) 0 calc(6px*var(--fs, 1));font-size:calc(11px * var(--fs, 1));font-weight:bold;color:var(--ash);text-transform:uppercase;letter-spacing:1px}
+  #pm-more-controls #pm-controls{display:flex !important;flex-direction:column;gap:calc(12px*var(--fs, 1));padding:0;background:none;border:0}
+  #pm-more-controls .ctrl-group{min-width:0 !important}
+  #pm-more-controls input[type=range]{width:100% !important;min-height:32px}
+  #pm-more-controls input[type=number]{width:100% !important;min-height:38px;box-sizing:border-box}
+  #pm-more-controls .ctrl-group label.lbl{font-size:calc(11px * var(--fs, 1))}
+
+  /* ── Tab bar ── */
+  #pm-tabbar{
+    display:flex;position:fixed;left:0;right:0;bottom:0;z-index:60;
+    height:var(--pm-tab-h);padding-bottom:env(safe-area-inset-bottom, 0px);box-sizing:border-box;
+    background:var(--slate);border-top:1px solid var(--rule-hi);
+  }
+  #pm-tabbar button{
+    flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+    background:none;border:0;color:var(--ash);font:inherit;font-size:calc(10px * var(--fs, 1));cursor:pointer;
+    -webkit-tap-highlight-color:transparent;
+  }
+  #pm-tabbar button .lt-icon{font-size:calc(19px * var(--fs, 1))}
+  #pm-tabbar button.active{color:var(--bone);box-shadow:inset 0 2px 0 var(--arc, var(--bone));background:var(--wash)}
+  #pm-tabbar button:disabled{opacity:.4}
+
+  /* ── Over the map ── */
+  #pm-mode-bar{
+    display:flex;align-items:center;gap:calc(10px*var(--fs, 1));
+    position:absolute;top:8px;left:8px;right:8px;z-index:20;
+    padding:calc(8px*var(--fs, 1)) calc(8px*var(--fs, 1)) calc(8px*var(--fs, 1)) calc(12px*var(--fs, 1));
+    background:var(--slate);border:1px solid var(--arc, var(--rule-hi));border-radius:12px;
+    box-shadow:0 6px 20px rgba(0,0,0,.45);font-size:calc(13px * var(--fs, 1));
+  }
+  #pm-mode-bar[hidden]{display:none}
+  #pm-mode-text{flex:1;min-width:0}
+  #pm-mode-bar .btn{min-height:36px;flex-shrink:0}
+
+  body:not(.pm-has-map) #pm-zoom{display:none}
+  #pm-zoom{display:flex;flex-direction:column;gap:6px;position:absolute;right:10px;bottom:10px;z-index:20}
+  #pm-zoom .btn{width:44px;height:44px;padding:0;justify-content:center;font-size:20px;border-radius:50%;box-shadow:0 4px 12px rgba(0,0,0,.4)}
+  #pm-zoom #pm-zoom-fit{font-size:11px}
+
+  /* Modals fit the screen */
+  #pm-tok-modal > div,#load-confirm-modal > div{width:calc(100vw - 24px) !important;max-height:88dvh}
+}

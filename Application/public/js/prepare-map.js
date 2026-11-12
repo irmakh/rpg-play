@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-11 18:09
+// Written by Irmak Hakman — 2026-11-12 16:56
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -7,8 +7,10 @@
 let masterPw = '';
 let currentMapId = null;
 let maps = [];
-let prepState = { name: '', cellSize: 50, offsetX: 0, offsetY: 0, mapWidth: 0, mapHeight: 0, fogRegions: [], hiddenItems: [], preparedTokens: [] };
+let prepState = { name: '', cellSize: 50, offsetX: 0, offsetY: 0, mapWidth: 0, mapHeight: 0, fogRegions: [], hiddenItems: [], preparedTokens: [], mapNotes: [] };
 let drawMode = false;
+let placeNoteMode = false;     // "Add note": the next click on the map drops a DM note there
+let _expandedNoteId = null;    // id of the DM note open for editing in the sidebar
 let drawState = null;
 let placeItemMode = false;
 let _pendingClone = null;
@@ -22,6 +24,7 @@ let _editTokenIndex = null;
 let pmPortraitDataUrl = null;
 let saveTimer = null;
 let viewScale = 1;
+let pmZoom = 1;         // phone zoom on top of fit-to-screen (prepare-map-mobile.js); always 1 on a desktop
 let moveMode = false;   // explicit "Move" tool toggle (mutually exclusive with draw/place/token)
 let moveState = null;   // active drag-to-move of an existing token / item / fog region
 let _lastDeleted = null;  // {type:'fog'|'token'|'item', obj, index} — single-level undo for deletes
@@ -171,14 +174,16 @@ function renderMapMeta() {
   const regionCount = Array.isArray(m.fogRegions) ? m.fogRegions.length : 0;
   const itemCount = Array.isArray(m.hiddenItems) ? m.hiddenItems.length : 0;
   const tokCount = Array.isArray(m.preparedTokens) ? m.preparedTokens.length : 0;
-  el.textContent = `${m.hasImage ? '🖼 · ' : ''}${regionCount} fog · ${itemCount} item${itemCount !== 1 ? 's' : ''} · ${tokCount} token${tokCount !== 1 ? 's' : ''}`;
+  const noteCount = Array.isArray(m.mapNotes) ? m.mapNotes.length : 0;
+  el.textContent = `${m.hasImage ? '🖼 · ' : ''}${regionCount} fog · ${itemCount} item${itemCount !== 1 ? 's' : ''} · ${tokCount} token${tokCount !== 1 ? 's' : ''}`
+    + (noteCount ? ` · ${noteCount} note${noteCount !== 1 ? 's' : ''}` : '');
 }
 
 // Show the fog/tokens/items sections only when a map is selected; otherwise
 // show a prompt telling the user to pick a map.
 function updateSidebarSections() {
   const has = !!currentMapId;
-  ['sb-fog-section', 'sb-tokens-section', 'sb-items-section'].forEach(id => {
+  ['sb-fog-section', 'sb-tokens-section', 'sb-notes-section', 'sb-items-section'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = has ? '' : 'none';
   });
@@ -203,7 +208,10 @@ function selectMap(id) {
     fogRegions: Array.isArray(m.fogRegions) ? JSON.parse(JSON.stringify(m.fogRegions)) : [],
     hiddenItems: Array.isArray(m.hiddenItems) ? JSON.parse(JSON.stringify(m.hiddenItems)) : [],
     preparedTokens: Array.isArray(m.preparedTokens) ? JSON.parse(JSON.stringify(m.preparedTokens)) : [],
+    mapNotes: Array.isArray(m.mapNotes) ? JSON.parse(JSON.stringify(m.mapNotes)) : [],
   };
+  prepState.mapNotes.forEach(n => { if (!n.id) n.id = genId(); });
+  _expandedNoteId = null;
   prepState.hiddenItems.forEach(it => { if (!it.id) it.id = genId(); });  // older items may lack ids
   prepState.preparedTokens.forEach(t => { if (!t.id) t.id = genId(); });
   _lastDeleted = null;       // undo does not cross map boundaries
@@ -245,6 +253,7 @@ function renderEditor() {
   drawMode = false;
   drawState = null;
   placeItemMode = false;
+  _cancelNoteMode();
   _resetMoveMode();
   drawCvs.style.cursor = 'default';
   _syncDrawInteractive();
@@ -260,6 +269,7 @@ function renderEditor() {
   renderFogList();
   renderItemList();
   renderTokenList();
+  renderNoteList();
 }
 
 /**
@@ -292,9 +302,13 @@ function refreshCanvases() {
   const naturalH = prepState.mapHeight || 500;
   const areaW = canvasArea.clientWidth || 800;
   const areaH = canvasArea.clientHeight || 600;
-  viewScale = Math.min(areaW / naturalW, areaH / naturalH);
-  const W = Math.round(naturalW * viewScale);
-  const H = Math.round(naturalH * viewScale);
+  // Fitted to the area, times the zoom (prepare-map-view.js) — but never a
+  // canvas past 8192px, which browsers refuse to draw.
+  const fit = Math.min(areaW / naturalW, areaH / naturalH);
+  viewScale = Math.min(fit * (pmZoom || 1), Math.max(fit, 8192 / Math.max(naturalW, naturalH)));
+  // Rounded down, so a fitted map never shows a scrollbar.
+  const W = Math.floor(naturalW * viewScale);
+  const H = Math.floor(naturalH * viewScale);
 
   prepImg.style.width = W + 'px';
   prepImg.style.height = H + 'px';
@@ -374,18 +388,15 @@ function renderPrepFog() {
     fCtx.setLineDash([4, 3]);
     fCtx.strokeRect(px, py, iw, ih);
     fCtx.setLineDash([]);
-    fCtx.fillStyle = 'rgba(255,255,255,0.95)';
-    fCtx.font = `bold ${Math.round(Math.min(cs * 0.28, 11))}px sans-serif`;
-    fCtx.textAlign = 'center';
-    fCtx.textBaseline = 'middle';
-    fCtx.fillText(ITEM_TYPE_ICONS[item.type] || '?', px + iw * 0.5, py + ih * 0.5);
-    fCtx.textAlign = 'start';
-    fCtx.textBaseline = 'alphabetic';
-    if (item.label) {
-      fCtx.fillStyle = 'rgba(255,200,100,0.9)';
-      fCtx.font = `${Math.round(Math.min(cs * 0.2, 9))}px sans-serif`;
-      fCtx.fillText(item.label, px + 2, py + ih - 3);
-    }
+    // Same sizes as on the table (js/lib/map-item-text.js). cs is already in
+    // screen pixels here, so the zoom is 1.
+    drawMapItemText(fCtx, {
+      x: px, y: py, iw, ih, w: item.w, h: item.h, cellPx: cs, zoom: 1,
+      icon: ITEM_TYPE_ICONS[item.type] || '?',
+      iconColour: item.visible ? 'rgba(255,255,255,0.95)' : 'rgba(255,190,190,0.98)',
+      label: item.label,
+      labelColour: 'rgba(255,210,120,0.98)',
+    });
   }
   // Render prepared tokens
   for (const tok of (prepState.preparedTokens || [])) {
@@ -449,6 +460,159 @@ function renderPrepFog() {
     fCtx.font = `${Math.max(7, Math.round(cs * 0.15))}px sans-serif`;
     fCtx.fillText(tok.name.slice(0, 14), ox + tok.x * cs + 2, oy + (tok.y + ts) * cs - 3);
   }
+  _drawPrepNotes(cs, ox, oy);
+}
+
+// ── DM notes ──
+// Pins only the DM sees: drawn here and on the DM's table, never sent to a
+// player. x, y are grid cells and may be fractional (the exact drop point).
+function _noteRadius(cs) { return Math.max(8, Math.min(cs * 0.28, 14)); }
+
+function _drawPrepNotes(cs, ox, oy) {
+  const r = _noteRadius(prepState.cellSize || 50) * viewScale;
+  fCtx.save();
+  for (const n of (prepState.mapNotes || [])) {
+    const px = ox + n.x * cs, py = oy + n.y * cs;
+    const open = n.id === _expandedNoteId;
+    fCtx.beginPath();
+    fCtx.arc(px, py, r, 0, Math.PI * 2);
+    fCtx.fillStyle = 'rgba(240,222,160,0.96)';
+    fCtx.fill();
+    fCtx.lineWidth = open ? 3 : 2;
+    fCtx.strokeStyle = open ? 'rgba(120,200,255,0.95)' : 'rgba(70,45,10,0.9)';
+    fCtx.stroke();
+    fCtx.fillStyle = 'rgba(70,45,10,0.95)';
+    fCtx.font = `bold ${Math.round(r * 1.1)}px sans-serif`;
+    fCtx.textAlign = 'center';
+    fCtx.textBaseline = 'middle';
+    fCtx.fillText('✎', px, py + 1);
+    const title = String(n.title || '').trim();
+    if (title) {
+      const fpx = mapItemTextPx(cs, 1, 1, 1).label;
+      fCtx.font = `bold ${fpx}px Segoe UI, sans-serif`;
+      const label = fitMapText(fCtx, title, cs * 5);
+      strokeMapText(fCtx, label, px + r + 4, py, fpx, 'rgba(255,226,150,0.98)', 'left', 'middle');
+    }
+  }
+  fCtx.restore();
+}
+
+/** The topmost note under a fractional grid point, as { type:'note', index }. */
+function _hitTestNote(fx, fy) {
+  const cs = prepState.cellSize || 50;
+  const hitR = (_noteRadius(cs) + 3) / cs;
+  const notes = prepState.mapNotes || [];
+  for (let i = notes.length - 1; i >= 0; i--) {
+    if (Math.hypot(fx - notes[i].x, fy - notes[i].y) <= hitR) return { type: 'note', index: i };
+  }
+  return null;
+}
+
+function _cancelNoteMode() {
+  const was = placeNoteMode;
+  placeNoteMode = false;
+  const btn = document.getElementById('btn-add-note');
+  if (btn) { btn.style.background = ''; btn.style.color = ''; }
+  const hint = document.getElementById('note-hint');
+  if (hint) hint.style.display = 'none';
+  if (was) _syncDrawInteractive();
+}
+
+function togglePlaceNoteMode() {
+  if (!currentMapId) { showStatus('Select a map first', true); return; }
+  if (placeNoteMode) { _cancelNoteMode(); drawCvs.style.cursor = 'default'; return; }
+  if (drawMode) toggleDrawMode();
+  if (placeItemMode) togglePlaceItemMode();
+  if (tokenPlacementMode) cancelTokenPlacement();
+  _resetMoveMode();
+  placeNoteMode = true;
+  const btn = document.getElementById('btn-add-note');
+  if (btn) { btn.style.background = 'var(--bone)'; btn.style.color = 'var(--ink)'; }
+  const hint = document.getElementById('note-hint');
+  if (hint) hint.style.display = '';
+  drawCvs.style.cursor = 'copy';
+  _syncDrawInteractive();
+}
+
+function _placeNote(fx, fy) {
+  const note = { id: genId(), x: fx, y: fy, title: 'Note ' + ((prepState.mapNotes || []).length + 1), text: '' };
+  prepState.mapNotes.push(note);
+  _cancelNoteMode();
+  drawCvs.style.cursor = 'default';
+  _openNoteInList(note.id, true);
+  debounceSave();
+}
+
+/** Expand a note in the sidebar list, scroll to it, and optionally focus its title. */
+function _openNoteInList(id, focusTitle) {
+  _expandedNoteId = id;
+  if (typeof pmIsMobile === 'function' && pmIsMobile()) pmOpenTab('notes');
+  const sec = document.getElementById('sb-sec-notes');
+  if (sec && sec.style.display === 'none') toggleSbSection('notes');
+  renderNoteList();
+  renderPrepFog();
+  const row = document.querySelector(`[data-note-id="${CSS.escape(id)}"]`);
+  if (row) {
+    row.scrollIntoView({ block: 'nearest' });
+    const input = row.querySelector(focusTitle ? 'input' : 'textarea');
+    if (input) { input.focus(); if (focusTitle) input.select(); }
+  }
+}
+
+function toggleNoteExpand(id) {
+  _expandedNoteId = (_expandedNoteId === id) ? null : id;
+  renderNoteList();
+  renderPrepFog();
+}
+
+function renderNoteList() {
+  const el = document.getElementById('note-list');
+  if (!el) return;
+  const cnt = document.getElementById('pm-note-count');
+  const notes = prepState.mapNotes || [];
+  if (cnt) cnt.textContent = notes.length ? `(${notes.length})` : '';
+  const rows = notes.map((n, i) => {
+    const expanded = _expandedNoteId === n.id;
+    return `
+    <div class="pm-note-row${expanded ? ' open' : ''}" data-note-id="${esc(n.id)}">
+      <div class="pm-note-head">
+        <span class="pm-note-pin" aria-hidden="true">✎</span>
+        <input type="text" value="${esc(n.title)}" maxlength="80" placeholder="Title" aria-label="Note title" onchange="updateNoteTitle(${i}, this.value)">
+        <button class="btn sm" onclick="toggleNoteExpand('${escJs(n.id)}')" title="${expanded ? 'Collapse' : 'Edit the note'}">${expanded ? '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-up"></use></svg>' : '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-down"></use></svg>'}</button>
+        <button class="btn danger sm" onclick="deleteNote(${i})" title="Delete note"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg></button>
+      </div>
+      ${expanded ? `<textarea rows="5" maxlength="4000" placeholder="What you want to remember here… (players never see notes)" aria-label="Note text" oninput="updateNoteText(${i}, this.value)">${esc(n.text || '')}</textarea>` : (n.text ? `<div class="pm-note-peek">${esc(n.text)}</div>` : '')}
+    </div>`;
+  });
+  if (_lastDeleted && _lastDeleted.type === 'note') {
+    rows.splice(Math.min(_lastDeleted.index, rows.length), 0, _undoRowHTML(_lastDeleted.obj.title || 'note'));
+  }
+  el.innerHTML = rows.length
+    ? rows.join('')
+    : '<div style="font-size:calc(11px * var(--fs, 1));color:var(--ash);padding:calc(4px*var(--fs, 1)) 0">No notes yet. Click "Add Note", then click the map.</div>';
+}
+
+function updateNoteTitle(i, val) {
+  if (!prepState.mapNotes[i]) return;
+  prepState.mapNotes[i].title = String(val).trim().slice(0, 80);
+  renderPrepFog();
+  debounceSave();
+}
+
+function updateNoteText(i, val) {
+  if (!prepState.mapNotes[i]) return;
+  prepState.mapNotes[i].text = String(val).slice(0, 4000);
+  debounceSave();
+}
+
+function deleteNote(i) {
+  const obj = prepState.mapNotes[i];
+  if (!obj) return;
+  if (_expandedNoteId === obj.id) _expandedNoteId = null;
+  prepState.mapNotes.splice(i, 1);
+  renderPrepFog();
+  _recordDelete('note', obj, i);
+  debounceSave();
 }
 
 // Undo affordance shown in place of a just-deleted row (fog / token / item).
@@ -463,6 +627,7 @@ function _renderListFor(type) {
   if (type === 'fog') renderFogList();
   else if (type === 'token') renderTokenList();
   else if (type === 'item') renderItemList();
+  else if (type === 'note') renderNoteList();
 }
 
 // Record a deletion as the single pending undo, replacing any previous one.
@@ -480,6 +645,7 @@ function undoDelete() {
   if (type === 'fog') prepState.fogRegions.splice(Math.min(index, prepState.fogRegions.length), 0, obj);
   else if (type === 'token') prepState.preparedTokens.splice(Math.min(index, prepState.preparedTokens.length), 0, obj);
   else if (type === 'item') prepState.hiddenItems.splice(Math.min(index, prepState.hiddenItems.length), 0, obj);
+  else if (type === 'note') prepState.mapNotes.splice(Math.min(index, prepState.mapNotes.length), 0, obj);
   _renderListFor(type);
   renderPrepFog();
   debounceSave();
@@ -598,6 +764,7 @@ function toggleMoveMode() {
   const btn = document.getElementById('btn-move');
   const hint = document.getElementById('move-hint');
   if (moveMode) {
+    _cancelNoteMode();
     if (drawMode) toggleDrawMode();
     if (placeItemMode) togglePlaceItemMode();
     if (tokenPlacementMode) cancelTokenPlacement();
@@ -618,7 +785,7 @@ function toggleDrawMode() {
   drawMode = !drawMode;
   const btn = document.getElementById('btn-draw-fog');
   const hint = document.getElementById('draw-hint');
-  if (drawMode) _resetMoveMode();
+  if (drawMode) { _resetMoveMode(); _cancelNoteMode(); }
   if (drawMode && tokenPlacementMode) cancelTokenPlacement();
   if (drawMode && placeItemMode) {
     placeItemMode = false;
@@ -647,7 +814,7 @@ function togglePlaceItemMode() {
   placeItemMode = !placeItemMode;
   const btn = document.getElementById('btn-place-item');
   const hint = document.getElementById('place-hint');
-  if (placeItemMode) _resetMoveMode();
+  if (placeItemMode) { _resetMoveMode(); _cancelNoteMode(); }
   if (placeItemMode && tokenPlacementMode) cancelTokenPlacement();
   if (placeItemMode && drawMode) {
     drawMode = false;
@@ -681,9 +848,13 @@ function pixelToGrid(e) {
   const py = (e.clientY - rect.top) / viewScale;
   const cs = prepState.cellSize || 50;
   const ox = prepState.offsetX || 0, oy = prepState.offsetY || 0;
+  const r2 = v => Math.max(0, Math.round(v * 100) / 100);
   return {
     gx: Math.max(0, Math.floor((px - ox) / cs)),
-    gy: Math.max(0, Math.floor((py - oy) / cs))
+    gy: Math.max(0, Math.floor((py - oy) / cs)),
+    // the exact point, for DM notes
+    fx: r2((px - ox) / cs),
+    fy: r2((py - oy) / cs),
   };
 }
 
@@ -691,6 +862,11 @@ function pixelToGrid(e) {
 // placement AND the default drag-to-move tool all work.
 function _syncDrawInteractive() {
   drawCvs.style.pointerEvents = currentMapId ? 'all' : 'none';
+  // On a touch screen a drag scrolls the map, except while a tool is waiting
+  // for the map: then it draws, places or moves.
+  const tool = drawMode || placeItemMode || tokenPlacementMode || placeNoteMode || moveMode;
+  drawCvs.style.touchAction = tool ? 'none' : '';
+  if (typeof pmSyncMode === 'function') pmSyncMode();
 }
 
 // Hit-test grid cell (gx,gy) against placed objects, top-most first.
@@ -714,6 +890,7 @@ function _hitTestObject(gx, gy) {
 }
 
 function _objForHit(hit) {
+  if (hit.type === 'note') return prepState.mapNotes[hit.index];
   if (hit.type === 'token') return prepState.preparedTokens[hit.index];
   if (hit.type === 'item') return prepState.hiddenItems[hit.index];
   return prepState.fogRegions[hit.index];
@@ -725,6 +902,17 @@ function _drawMoveHighlight(obj, type) {
   const ox = (prepState.offsetX || 0) * viewScale;
   const oy = (prepState.offsetY || 0) * viewScale;
   let w, h;
+  if (type === 'note') {
+    dCtx.clearRect(0, 0, drawCvs.width, drawCvs.height);
+    dCtx.beginPath();
+    dCtx.arc(ox + obj.x * cs, oy + obj.y * cs, (_noteRadius(prepState.cellSize || 50) + 4) * viewScale, 0, Math.PI * 2);
+    dCtx.setLineDash([5, 4]);
+    dCtx.strokeStyle = 'rgba(120,200,255,0.95)';
+    dCtx.lineWidth = 2;
+    dCtx.stroke();
+    dCtx.setLineDash([]);
+    return;
+  }
   if (type === 'token') { const ts = Math.max(1, obj.tokenSize || 1); w = ts; h = ts; }
   else { w = obj.w || 1; h = obj.h || 1; }
   dCtx.clearRect(0, 0, drawCvs.width, drawCvs.height);
@@ -757,16 +945,31 @@ drawCvs.addEventListener('pointerdown', e => {
     // Move tool: drag an existing token / item / fog region to reposition it.
     if (!currentMapId) return;
     const g = pixelToGrid(e);
-    const hit = _hitTestObject(g.gx, g.gy);
+    const hit = _hitTestNote(g.fx, g.fy) || _hitTestObject(g.gx, g.gy);
     if (!hit) return;
     e.preventDefault();
     drawCvs.setPointerCapture(e.pointerId);
     const obj = _objForHit(hit);
-    moveState = { type: hit.type, index: hit.index, startGX: g.gx, startGY: g.gy, origX: obj.x, origY: obj.y, moved: false };
+    moveState = { type: hit.type, index: hit.index, startGX: g.gx, startGY: g.gy, startFX: g.fx, startFY: g.fy, origX: obj.x, origY: obj.y, moved: false };
     drawCvs.style.cursor = 'grabbing';
     return;
   }
-  if (!drawMode && !placeItemMode && !tokenPlacementMode) return;
+  if (placeNoteMode) {
+    e.preventDefault();
+    const g = pixelToGrid(e);
+    _placeNote(g.fx, g.fy);
+    return;
+  }
+  if (!drawMode && !placeItemMode && !tokenPlacementMode) {
+    // No tool on: a click on a note opens it in the sidebar; a mouse drag
+    // anywhere else pans a zoomed-in map (prepare-map-view.js).
+    if (!currentMapId) return;
+    const g = pixelToGrid(e);
+    const hit = _hitTestNote(g.fx, g.fy);
+    if (hit) { e.preventDefault(); _openNoteInList(prepState.mapNotes[hit.index].id, false); return; }
+    if (e.pointerType === 'mouse' && e.button === 0 && typeof pmStartPan === 'function' && pmStartPan(e)) e.preventDefault();
+    return;
+  }
   e.preventDefault();
   drawCvs.setPointerCapture(e.pointerId);
   const { gx, gy } = pixelToGrid(e);
@@ -774,6 +977,19 @@ drawCvs.addEventListener('pointerdown', e => {
 });
 
 drawCvs.addEventListener('pointermove', e => {
+  if (moveState && moveState.type === 'note') {
+    const g = pixelToGrid(e);
+    const dx = g.fx - moveState.startFX, dy = g.fy - moveState.startFY;
+    if (Math.abs(dx) > 0.02 || Math.abs(dy) > 0.02) moveState.moved = true;
+    const obj = _objForHit(moveState);
+    if (obj && moveState.moved) {
+      obj.x = Math.max(0, Math.round((moveState.origX + dx) * 100) / 100);
+      obj.y = Math.max(0, Math.round((moveState.origY + dy) * 100) / 100);
+      renderPrepFog();
+      _drawMoveHighlight(obj, 'note');
+    }
+    return;
+  }
   if (moveState) {
     const { gx, gy } = pixelToGrid(e);
     const dx = gx - moveState.startGX, dy = gy - moveState.startGY;
@@ -790,7 +1006,13 @@ drawCvs.addEventListener('pointermove', e => {
   if (moveMode) {
     // Hover feedback: grab cursor over a draggable object.
     const g = pixelToGrid(e);
-    drawCvs.style.cursor = _hitTestObject(g.gx, g.gy) ? 'grab' : 'default';
+    drawCvs.style.cursor = (_hitTestNote(g.fx, g.fy) || _hitTestObject(g.gx, g.gy)) ? 'grab' : 'default';
+    return;
+  }
+  if (!drawMode && !placeItemMode && !tokenPlacementMode && !placeNoteMode && currentMapId) {
+    const g = pixelToGrid(e);
+    drawCvs.style.cursor = _hitTestNote(g.fx, g.fy) ? 'pointer'
+      : (typeof pmCanPan === 'function' && pmCanPan()) ? (_pmPan ? 'grabbing' : 'grab') : 'default';
     return;
   }
   if (tokenPlacementMode) return; // no drag preview for token placement
@@ -819,7 +1041,7 @@ drawCvs.addEventListener('pointerup', e => {
     moveState = null;
     dCtx.clearRect(0, 0, drawCvs.width, drawCvs.height);
     drawCvs.style.cursor = 'grab';
-    if (moved) { renderPrepFog(); renderFogList(); renderItemList(); renderTokenList(); debounceSave(); }
+    if (moved) { renderPrepFog(); renderFogList(); renderItemList(); renderTokenList(); renderNoteList(); debounceSave(); }
     return;
   }
   if (tokenPlacementMode && drawState) {
@@ -879,6 +1101,7 @@ document.addEventListener('keydown', e => {
       return;
     }
     if (tokenPlacementMode) { cancelTokenPlacement(); }
+    if (placeNoteMode) { _cancelNoteMode(); drawCvs.style.cursor = 'default'; }
     if (placeItemMode && _pendingClone) { _pendingClone = null; togglePlaceItemMode(); }
   }
 });
@@ -912,6 +1135,7 @@ async function saveMap() {
     fogRegions: prepState.fogRegions,
     hiddenItems: prepState.hiddenItems,
     preparedTokens: prepState.preparedTokens,
+    mapNotes: prepState.mapNotes || [],
   };
   try {
     const res = await fetch(`/api/prepared-maps/${currentMapId}`, {
@@ -927,6 +1151,7 @@ async function saveMap() {
       maps[idx].fogRegions = prepState.fogRegions;
       maps[idx].hiddenItems = prepState.hiddenItems;
       maps[idx].preparedTokens = prepState.preparedTokens;
+      maps[idx].mapNotes = prepState.mapNotes || [];
       renderMapList();
     }
   } catch { showStatus('Save error', true); }
@@ -957,7 +1182,7 @@ async function deleteMap() {
     currentMapId = null;
     // preparedTokens must be present: code paths iterate it without guarding, so
     // a reset without the key leaves the next map edit throwing on undefined.
-    prepState = { name: '', cellSize: 50, offsetX: 0, offsetY: 0, mapWidth: 0, mapHeight: 0, fogRegions: [], hiddenItems: [], preparedTokens: [] };
+    prepState = { name: '', cellSize: 50, offsetX: 0, offsetY: 0, mapWidth: 0, mapHeight: 0, fogRegions: [], hiddenItems: [], preparedTokens: [], mapNotes: [] };
     await loadMaps();
     document.getElementById('editor-placeholder').style.display = '';
     document.getElementById('pm-toolbar').style.display = 'none';
@@ -1024,6 +1249,7 @@ async function exportMap() {
     // Placed tokens are part of a prepared map just as much as fog is; leaving
     // them out meant exporting and re-importing a map silently dropped every one.
     preparedTokens: prepState.preparedTokens || [],
+    mapNotes: prepState.mapNotes || [],
     image: imageDataUrl
   };
   const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
@@ -1081,7 +1307,8 @@ async function handleImportFile(input) {
         hiddenItems: data.hiddenItems || [],
         // Absent from files exported before tokens were included — an older
         // .map.json simply imports with none, exactly as it does today.
-        preparedTokens: data.preparedTokens || []
+        preparedTokens: data.preparedTokens || [],
+        mapNotes: data.mapNotes || []
       })
     });
 
@@ -1446,6 +1673,7 @@ function pmConfirmToken() {
 }
 
 function enterTokenPlacementMode(config) {
+  _cancelNoteMode();
   if (drawMode) toggleDrawMode();
   if (placeItemMode) togglePlaceItemMode();
   _resetMoveMode();
@@ -1458,6 +1686,7 @@ function enterTokenPlacementMode(config) {
   const cancelBtn = document.getElementById('pm-cancel-place-btn');
   if (cancelBtn) cancelBtn.style.display = '';
   showStatus(`Click on map to place ${config.name}`, false);
+  _syncDrawInteractive();
 }
 
 function cancelTokenPlacement() {

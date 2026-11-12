@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-12 14:29
+// Written by Irmak Hakman — 2026-11-12 16:29
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -1181,6 +1181,10 @@ document.addEventListener('keydown', e => {
     }
     drawingState = null; selectedShapeId = null; shapeEditState = null;
     oCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height); setTool('move'); return;
+  }
+  if (e.key === 'Escape' && currentTool === 'note') {
+    if (typeof cancelNoteDrag === 'function' && cancelNoteDrag()) return;
+    setTool('move'); return;
   }
   if (e.key === 'Escape' && currentTool === 'multi') { multiSelectState = null; oCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height); return; }
   if (document.getElementById('dice-roller-modal').style.display === 'flex') {

@@ -21,6 +21,44 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [339–345] — 2026-11-12 — DM notes on maps; readable hidden-item labels; Map Prep on phones; minimap
+
+*(Released.)*
+
+- **Notes tool on the table** (DM only, key **T**): click the map to drop a note pin with a
+  title and text; click a pin to edit or delete it; drag a pin to move it. With the Move
+  tool, clicking a pin shows the note in the map menu with the fog and items under it.
+- **DM Notes on the Prepare Map page:** *Add Note*, then click the map. Notes are listed in
+  the sidebar to edit, delete (with undo) and drag in Move mode. They are saved with the
+  map, included in map export/import, and come to the table when the map is loaded
+  (replacing the table's notes, like fog and items).
+- Notes never reach players: they are left out of every player response and are
+  broadcast to the DM alone. They stay when the map image changes or the table is cleared.
+- **Hidden-item text is a readable size**, on the table and on Prepare Map. The icon and
+  label used to be capped at 12px and 9px whatever the grid size. Now they grow with the
+  cell, never get smaller than 11px on screen when you zoom out, and are outlined so they
+  read over any map. On an item too short for both, the label goes just below it; a
+  long label is cut with "…". Note titles use the same size.
+- **Map Prep redesigned for phones** (desktop unchanged). The map fills the screen, with
+  a tab bar along the bottom: Maps, Fog, Tokens, Notes, Items and More. A tab opens that
+  section as a sheet over the map; tap it again to close. The toolbar keeps the map name,
+  Move and Save; Image, Export, Load to Table, Delete and the grid settings are under
+  **More**. Drawing fog, placing an item, token or note, or moving things puts the sheet
+  away and shows "Tap the map…" with **Done**; the sheet comes back when the tool ends.
+  **+ / − / Fit** zoom the map, which scrolls when zoomed in. Controls are touch-sized and
+  fields use 16px text, so iPhone does not zoom in while you type. Before this, the
+  sidebar took the whole screen and the map was a sliver beside it.
+- **Minimap** on the table (for everyone) and on Map Prep: the whole map in the
+  bottom-left corner with a frame for the part on screen; click or drag on it to move
+  there. It is drawn from what that viewer already sees, so a player's minimap shows
+  their fog as solid and no hidden tokens. It can be folded away to a button, which each
+  browser remembers.
+- **Map Prep zoom and pan on desktop too:** the mouse wheel zooms at the pointer (up to
+  6×), + / − / Fit buttons, scrollbars when zoomed in, and dragging an empty spot pans
+  the map when no tool is on. A map opens fitted to the screen, as before.
+- Full campaign restores now keep a prepared map's notes and its placed tokens *(the
+  tokens were dropped before)*.
+
 ## [335–338] — 2026-11-12 — 3rd Party magic items in the treasury
 
 *(Released.)*
