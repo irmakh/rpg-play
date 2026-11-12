@@ -1,4 +1,4 @@
-/* Written by Irmak Hakman — 2026-11-12 16:29 */
+/* Written by Irmak Hakman — 2026-11-12 18:35 */
 /* Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) */
 
 *{box-sizing:border-box;margin:0;padding:0}
@@ -934,7 +934,7 @@ body.lp-collapsed #left-panel.lp-open + #left-strip:hover{background:var(--slate
    The same as the left panel: its Details header folds it to a strip down the
    map's right edge, and the strip opens it. Selecting a token opens it and
    deselecting folds it (it used to vanish), via rightPanelFold in table-chat.js. */
-#rp-hdr{cursor:pointer}
+#rp-hdr{cursor:pointer;position:sticky;top:0;z-index:6;flex-shrink:0}   /* stays in view while the panel scrolls, so it can always be folded */
 #rp-hdr:hover{background:var(--slate)}
 #rp-hdr:focus-visible, #right-strip:focus-visible{outline:2px solid var(--arc);outline-offset:-2px}
 #right-strip{display:none}

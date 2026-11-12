@@ -21,6 +21,15 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [346–347] — 2026-11-12 — Minimap moves to the top right; Details header stays in view
+
+*(Released.)*
+
+- The minimap now sits in the top-right corner of the map on the table and on Map Prep
+  (it was bottom left). On a phone's Map Prep it drops below the tool bar while a tool is on.
+- Table: the right panel's "Details" header stays pinned at the top while the panel
+  scrolls, so it can be folded away without scrolling back up.
+
 ## [339–345] — 2026-11-12 — DM notes on maps; readable hidden-item labels; Map Prep on phones; minimap
 
 *(Released.)*

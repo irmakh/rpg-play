@@ -1,9 +1,9 @@
-// Written by Irmak Hakman — 2026-11-12 16:56
+// Written by Irmak Hakman — 2026-11-12 18:20
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
 // ── Table minimap ─────────────────────────────────────────────────────────────
-// The whole map in the bottom-left corner of the map area, for the DM and the
+// The whole map in the top-right corner of the map area, for the DM and the
 // players alike. Click or drag on it to move the view there (js/lib/minimap.js).
 //
 // It is painted from this viewer's own layers: the map picture, the fog as
@@ -69,13 +69,13 @@
   }
   if (mapImg) mapImg.addEventListener('load', () => mm.invalidate());
 
-  // Pinned to the map area's bottom-left corner from outside the scrolling
+  // Pinned to the map area's top-right corner from outside the scrolling
   // element, like the zoom control (table-main.js), so panels opening or the
   // chat growing never push it about.
   function place() {
     const w = wrap.getBoundingClientRect(), a = area.getBoundingClientRect();
-    host.style.left = Math.max(GAP, a.left + area.clientLeft - w.left + GAP) + 'px';
-    host.style.bottom = Math.max(GAP, w.bottom - (a.top + area.clientTop + area.clientHeight) + GAP) + 'px';
+    host.style.right = Math.max(GAP, w.right - (a.left + area.clientLeft + area.clientWidth) + GAP) + 'px';
+    host.style.top = Math.max(GAP, a.top + area.clientTop - w.top + GAP) + 'px';
   }
   if (typeof ResizeObserver === 'function') {
     const ro = new ResizeObserver(place);

@@ -1,4 +1,4 @@
-/* Written by Irmak Hakman — 2026-11-12 16:58 */
+/* Written by Irmak Hakman — 2026-11-12 18:20 */
 /* Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) */
 
 /* prepare-map.css - Map Prep on a phone.
@@ -24,7 +24,8 @@
 #editor-wrap{flex-shrink:0}   /* a flex child: without this a zoomed map's box shrank to the view */
 body:not(.pm-has-map) #pm-zoom,
 body:not(.pm-has-map) #pm-minimap{display:none}
-#pm-minimap{left:12px;bottom:14px}
+#pm-minimap{right:14px;top:12px}
+#pm-mode-bar:not([hidden]) ~ #pm-minimap{top:72px}   /* below the phone's tool bar */
 #pm-zoom{position:absolute;right:14px;bottom:14px;z-index:20;display:flex;flex-direction:column;gap:5px}
 #pm-zoom .btn{width:34px;height:34px;padding:0;justify-content:center;font-size:17px;border-radius:50%;box-shadow:0 4px 12px rgba(0,0,0,.4)}
 #pm-zoom #pm-zoom-fit{font-size:10px}
