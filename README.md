@@ -25,7 +25,7 @@ Vanilla JS, no build step, no framework. Runs on SQLite by default; nothing to p
 - [Pages at a Glance](#pages-at-a-glance)
 - [Storage](#storage)
 - [Deployment](#deployment)
-  <br>[Docker](#option-a--docker-recommended-for-local--lan-play) · [PM2 on a server](#option-b--pm2-production--https-server) · [HTTPS / SSL](#https--ssl-lets-encrypt)
+  <br>[Option A](#option-a--docker-recommended-for-local--lan-play) · [Option B](#option-b--pm2-production--https-server) · [HTTPS / SSL](#https--ssl-lets-encrypt)
 - [Desktop Client](#desktop-client-windows)
 - [Android App](#android-app)
 - [Environment Variables](#environment-variables)
@@ -284,10 +284,10 @@ movement is not broadcast to players while parked.
 
 ### Monster Library (`/monsters.html`) — DM only
 
-![The monster library's Official tab — monsters from the imported books, filtered by book, with the selected one's stat block and its Copy to My Monsters button](docs/screenshots/monster-library.webp)
+![The monster library's 3rd Party tab — monsters from the imported books, filtered by book, with the selected one's stat block and its Copy to My Monsters button](docs/screenshots/monster-library.webp)
 
-- Two tabs: **My Monsters** (yours to edit) and **Official**
-- **Official monsters** — **Books…** imports whole 5etools bestiary books into the campaign (all 114 books are about 4,700 monsters). The files are downloaded, imported and discarded; adventure monsters built from another book's stat block come in whole. A book can be imported again to update it, or removed. Official monsters cannot be edited, but go into initiative, onto the table (the **Official** tab of Add Token) and onto prepared maps like your own, and cast their spells. **Copy to My Monsters** makes an editable copy
+- Two tabs: **My Monsters** (yours to edit) and **3rd Party**
+- **3rd Party monsters** — **Books…** imports whole 5etools bestiary books into the campaign (all 114 books are about 4,700 monsters). The files are downloaded, imported and discarded; adventure monsters built from another book's stat block come in whole. A book can be imported again to update it in place, or removed after a confirmation; monsters a token, initiative entry or prepared map still uses are kept. 3rd Party monsters cannot be edited, but go into initiative, onto the table (the **3rd Party** tab of Add Token) and onto prepared maps like your own, and cast their spells. **Copy to My Monsters** makes an editable copy
 - Full stat blocks: abilities, skills, saves, senses, CR, HP, AC, speed, traits, actions, legendary actions (multi-line text renders correctly)
 - Portrait upload; per-token portrait override; realtime updates of monster edits
 - Import monsters from XML (D&D Beyond / 5e tools) — bulk, non-destructive merge
@@ -299,7 +299,7 @@ movement is not broadcast to players while parked.
 ![The spell library — every spell of the campaign by level, filtered by level, class and book, with the selected spell's full text and class list](docs/screenshots/spell-library.webp)
 
 - One spell library per campaign, which the character sheets pick spells from and the Cast a Spell pop-up reads descriptions from
-- **Import from books** — tick 5etools books and every spell in them comes in, with its class lists. The files are downloaded, imported and discarded; nothing from 5etools is stored except the spells
+- **Import from books** — tick 5etools books and every spell in them comes in, with its class lists. The files are downloaded, imported and discarded; nothing from 5etools is stored except the spells. Importing a book again replaces each spell in place, and **Remove** (after a confirmation) takes a book out of the library but keeps the spells a character has taken
 - Add, edit and delete spells by hand, or import 5etools spell JSON
 
 <p align="center">
@@ -517,7 +517,7 @@ after 5 minutes. No third-party service, no external request, no new dependency.
 | Virtual Table | `/table.html` | Players + DM |
 | DM Dashboard | `/dm.html` | DM |
 | DM Calendar | `/events.html` | DM |
-| Monster Library (own + official) | `/monsters.html` | DM |
+| Monster Library (own + 3rd Party) | `/monsters.html` | DM |
 | Spell Library | `/spells.html` | DM |
 | Map Prep | `/prepare-map.html` | DM |
 | Waiting Screens | `/waiting-screens.html` | DM |
