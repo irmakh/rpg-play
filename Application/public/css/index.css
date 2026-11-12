@@ -1,4 +1,4 @@
-/* Written by Irmak Hakman — 2026-11-12 02:20 */
+/* Written by Irmak Hakman — 2026-11-12 21:30 */
 /* Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) */
 
 *{box-sizing:border-box;margin:0;padding:0}
@@ -847,13 +847,32 @@ html.lamplit input.big[readonly]{color:var(--arc)}
 .spl-tools input{flex:1;min-width:calc(140px*var(--fs, 1))}
 .spl-tools select{width:auto}
 .spl-list{max-height:55vh;overflow-y:auto;border:1px solid var(--rule);border-radius:var(--r-sm)}
-.spl-row{display:flex;align-items:center;gap:var(--s2);padding:var(--s1) var(--s2);border-bottom:1px solid var(--rule);cursor:pointer}
+.spl-item{border-bottom:1px solid var(--rule)}
+.spl-row{display:flex;align-items:stretch;gap:0}
 .spl-row:hover{background:var(--wash)}
-.spl-row.on{opacity:.6;cursor:default}
-.spl-row input{accent-color:var(--arc)}
+.spl-row.on .spl-name,.spl-row.on .spl-meta{opacity:.6}
+/* The checkbox picks the spell; the rest of the row opens its details. */
+.spl-pick{display:flex;align-items:center;padding:var(--s1) var(--s2);cursor:pointer;flex-shrink:0;margin:0}
+.spl-row.on .spl-pick{cursor:default}
+.spl-pick input{accent-color:var(--arc);width:calc(18px*var(--fs, 1));height:calc(18px*var(--fs, 1));margin:0}
+.spl-open{flex:1;min-width:0;display:flex;align-items:center;flex-wrap:wrap;gap:0 var(--s2);padding:var(--s1) var(--s2) var(--s1) 0;background:none;border:0;color:inherit;font:inherit;text-align:left;cursor:pointer;min-height:calc(36px*var(--fs, 1))}
+.spl-open:focus-visible{outline:2px solid var(--arc);outline-offset:-2px}
 .spl-name{font-weight:600;font-size:var(--t-sm)}
 .spl-meta{color:var(--ash);font-size:var(--t-xs)}
 .spl-on{margin-left:auto;color:var(--verdigris);font-size:var(--t-xs)}
+.spl-chev{margin-left:auto;color:var(--ash);transition:transform .15s;flex-shrink:0}
+.spl-on + .spl-chev{margin-left:var(--s2)}
+.spl-item.open .spl-chev{transform:rotate(180deg)}
+.spl-detail{padding:var(--s1) var(--s3) var(--s3) calc(var(--s2) + 18px*var(--fs, 1) + var(--s2));font-size:var(--t-sm);background:var(--sunken)}
+.spl-tags{display:flex;gap:var(--s1);margin:var(--s1) 0}
+.spl-tags span{font-size:var(--t-xs);padding:1px var(--s2);border-radius:var(--r-sm);border:1px solid var(--rule-hi);color:var(--ash)}
+.spl-facts{display:grid;grid-template-columns:auto 1fr;gap:2px var(--s3);margin:var(--s1) 0 var(--s2)}
+.spl-facts dt{color:var(--ash);font-size:var(--t-xs);text-transform:uppercase;letter-spacing:.04em;align-self:baseline}
+.spl-facts dd{margin:0}
+.spl-desc p{margin:0 0 var(--s2)}
+.spl-desc ul{margin:0 0 var(--s2);padding-left:calc(18px*var(--fs, 1))}
+.spl-desc table{border-collapse:collapse;margin:0 0 var(--s2);font-size:var(--t-xs)}
+.spl-desc th,.spl-desc td{border:1px solid var(--rule);padding:2px var(--s2);text-align:left}
 .spl-count{margin-right:auto;color:var(--ash);font-size:var(--t-xs)}
 /* JSON import */
 .spi-hint{color:var(--ash);font-size:var(--t-sm);margin:0 0 var(--s2)}

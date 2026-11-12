@@ -21,6 +21,15 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [355] — 2026-11-12 — Spell details in "From library"
+
+*(Released.)*
+
+- On the character sheet, **From library** shows a spell's details before you add it.
+  Tap or click a spell's name, or the arrow beside it, to open its casting time, range,
+  components, duration, classes and full description, including higher-level casting.
+  The checkbox still picks the spell, and opening the details does not pick it.
+
 ## [353–354] — 2026-11-12 — Measured areas in the draw tool
 
 *(Released.)*

@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-12 18:50
+// Written by Irmak Hakman — 2026-11-12 21:30
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -18,6 +18,7 @@ const _spellOpen = new Set();        // ids whose details are shown
 let _spmEditId = null;               // id in the edit modal, null = new
 let _spellLib = null;                // library rows, loaded when the picker opens
 const _splChosen = new Set();        // library ids ticked in the picker
+const _splOpen = new Set();          // library ids whose details are shown in the picker
 
 const SPELL_ADD_TO_SHEET_MAX = 25;   // an import bigger than this goes to the library only
 
@@ -477,6 +478,7 @@ function _spOnSheet(row) {
 
 async function openSpellLibrary() {
   _splChosen.clear();
+  _splOpen.clear();
   document.getElementById('spell-lib-modal').style.display = 'flex';
   const list = document.getElementById('spl-list');
   list.innerHTML = '<div class="sp-empty">Loading…</div>';
@@ -520,18 +522,63 @@ function renderSpellLibrary() {
     && (lvl === '' || String(r.level) === lvl)
     && (!cls || spellClasses(r.data).includes(cls)));
   const LIMIT = 300;
+  // The checkbox picks a spell; the rest of the row opens its details (the
+  // same text the Cast a Spell pop-up shows), so a player can read it first.
   list.innerHTML = rows.slice(0, LIMIT).map(r => {
     const on = _spOnSheet(r);
+    const open = _splOpen.has(r.id);
     const lv = r.level === 0 ? 'Cantrip' : 'Level ' + r.level;
-    return `<label class="spl-row${on ? ' on' : ''}">
-      <input type="checkbox" ${on ? 'checked disabled' : (_splChosen.has(r.id) ? 'checked' : '')} onchange="toggleLibrarySpell(${_spId(r.id)}, this.checked)">
-      <span class="spl-name">${esc(r.name)}</span>
-      <span class="spl-meta">${esc(lv)}${r.school ? ' · ' + esc(spellSchoolName(spellSchoolCode(r.school))) : ''}${r.source ? ' · ' + esc(r.source) : ''}</span>
-      ${on ? '<span class="spl-on">on sheet</span>' : ''}
-    </label>`;
+    const idLit = _spId(r.id);
+    return `<div class="spl-item${open ? ' open' : ''}" data-lib-id="${esc(r.id)}">
+      <div class="spl-row${on ? ' on' : ''}">
+        <label class="spl-pick" title="${on ? 'Already on the sheet' : 'Add this spell'}">
+          <input type="checkbox" aria-label="Add ${esc(r.name)}" ${on ? 'checked disabled' : (_splChosen.has(r.id) ? 'checked' : '')} onchange="toggleLibrarySpell(${idLit}, this.checked)">
+        </label>
+        <button type="button" class="spl-open" aria-expanded="${open}" onclick="toggleLibraryDetails(${idLit})" title="${open ? 'Hide' : 'Show'} the spell's details">
+          <span class="spl-name">${esc(r.name)}</span>
+          <span class="spl-meta">${esc(lv)}${r.school ? ' · ' + esc(spellSchoolName(spellSchoolCode(r.school))) : ''}${r.source ? ' · ' + esc(r.source) : ''}</span>
+          ${on ? '<span class="spl-on">on sheet</span>' : ''}
+          <svg class="lt-icon spl-chev" aria-hidden="true" focusable="false"><use href="#i-chevron-down"></use></svg>
+        </button>
+      </div>
+      ${open ? _splDetailHTML(r) : ''}
+    </div>`;
   }).join('') + (rows.length > LIMIT ? `<div class="sp-empty">${rows.length - LIMIT} more — narrow the search.</div>` : '')
     + (rows.length ? '' : '<div class="sp-empty">No spells match.</div>');
   _splCount();
+}
+
+/** A library spell's details: how it is cast, then its full text. */
+function _splDetailHTML(row) {
+  const s = spellFrom5e(row.data || {}, row.id);
+  const facts = [
+    ['Casting time', s.castText || spellCastLabel(s)],
+    ['Range', s.range],
+    ['Components', spellComponentsLabel(s)],
+    ['Duration', (s.conc ? 'Concentration, ' : '') + (s.duration || '')],
+    ['Classes', spellClasses(row.data || {}).join(', ')],
+  ].filter(([, v]) => v);
+  const tags = [s.ritual ? 'Ritual' : '', s.conc ? 'Concentration' : ''].filter(Boolean);
+  const desc = spellDescHTML(s);
+  return `<div class="spl-detail">`
+    + (tags.length ? `<div class="spl-tags">${tags.map(t => `<span>${esc(t)}</span>`).join('')}</div>` : '')
+    + `<dl class="spl-facts">${facts.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl>`
+    + (desc ? `<div class="spl-desc">${desc}</div>` : '<div class="spl-desc sp-empty">No description in the library.</div>')
+    + `</div>`;
+}
+
+/** Shows or hides one spell's details in place, without redrawing the list. */
+function toggleLibraryDetails(id) {
+  const open = !_splOpen.has(id);
+  if (open) _splOpen.add(id); else _splOpen.delete(id);
+  const item = [...document.querySelectorAll('#spl-list .spl-item')].find(el => el.dataset.libId === String(id));
+  const row = _spellLib && _spellLib.find(r => r.id === id);
+  if (!item || !row) { renderSpellLibrary(); return; }
+  item.classList.toggle('open', open);
+  const btn = item.querySelector('.spl-open');
+  if (btn) { btn.setAttribute('aria-expanded', String(open)); btn.title = `${open ? 'Hide' : 'Show'} the spell's details`; }
+  item.querySelector('.spl-detail')?.remove();
+  if (open) item.insertAdjacentHTML('beforeend', _splDetailHTML(row));
 }
 
 function toggleLibrarySpell(id, on) {
