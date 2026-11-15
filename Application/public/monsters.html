@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Written by Irmak Hakman — 2026-11-12 12:52 -->
+<!-- Written by Irmak Hakman — 2026-11-15 16:00 -->
 <!-- Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) -->
 <html lang="en" class="lamplit app-page">
 <head>
@@ -234,6 +234,27 @@
 </div>
 
 <!-- Add to initiative confirm modal -->
+<div class="modal-overlay" id="cmpgive-modal" style="display:none">
+  <div class="modal-box">
+    <div class="ct" id="cmpgive-title">Give as Companion</div>
+    <div class="modal-body">
+      <div style="margin-bottom:calc(10px*var(--fs, 1));font-size:calc(12px * var(--fs, 1));color:var(--ash)">
+        It goes into that character's Companions tab with its full stat block. The player
+        summons it onto the map from the table, as they do a familiar.
+      </div>
+      <div class="field">
+        <label class="lbl" for="cmpgive-char">Character</label>
+        <select id="cmpgive-char"></select>
+      </div>
+      <div id="cmpgive-err" style="color:var(--blood);font-size:calc(11px * var(--fs, 1));min-height:calc(14px*var(--fs, 1))"></div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn" onclick="closeGiveCompanion()">Cancel</button>
+      <button class="btn primary" id="cmpgive-ok" onclick="submitGiveCompanion()">Give</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="init-modal" style="display:none">
   <div class="modal-box">
     <div class="ct" id="init-modal-title">Add to Initiative</div>

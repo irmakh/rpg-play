@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-12 20:25
+// Written by Irmak Hakman — 2026-11-15 16:00
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -51,18 +51,55 @@ export default function register(app, ctx) {
    * as the write, so nothing saved since it was first read is written over.
    */
   function addSummoned(charId, data, m, sp, castLevel) {
-    let fresh = data;
+    const out = writeCompanion(charId, m, fresh => ({ castLevel, spellName: sp.name, spellAtk: fresh['sp-atk'] }));
+    data._companions = out.companions;
+    return { name: out.name, updated: out.updated };
+  }
+
+  /**
+   * The one place a monster becomes a sheet companion — a summon spell's or
+   * the DM's gift. `optsFor(fresh)` gives monsterToCompanion() its options from
+   * the sheet as it is now. Returns { name, updated, companions }.
+   */
+  function writeCompanion(charId, m, optsFor) {
+    let fresh = {};
     try { fresh = JSON.parse((ldb.getCharacter(charId) || {}).dataJson || '{}'); } catch {}
     let list = [];
     try { list = JSON.parse(fresh._companions || '[]'); } catch {}
-    const out = upsertCompanion(list, m, { castLevel, spellName: sp.name, spellAtk: fresh['sp-atk'] },
-      'cmp-' + genId().replace(/-/g, '').slice(0, 12));
+    const out = upsertCompanion(list, m, optsFor(fresh), 'cmp-' + genId().replace(/-/g, '').slice(0, 12));
     fresh._companions = JSON.stringify(out.list);
-    data._companions = fresh._companions;
     ldb.updateCharacter(charId, { dataJson: JSON.stringify(fresh) });
     broadcast('characters', { action: 'updated', id: charId, keys: ['_companions'] });
-    return { name: out.companion.name, updated: out.updated };
+    return { name: out.companion.name, updated: out.updated, companions: fresh._companions };
   }
+
+  // POST /api/characters/:id/companions/give { monsterId } — the DM gives a
+  // monster to a character as a companion (a familiar, a tamed beast, a
+  // hireling's mount): one of the DM's own monsters or an imported 3rd Party
+  // one. It lands in the Companions tab with its full stat block, exactly as
+  // a summoned one does, and the player puts it on the map from the table.
+  // Giving the same monster again updates that companion rather than adding
+  // a second.
+  app.post('/api/characters/:id/companions/give', async (req, res) => {
+    try {
+      if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
+      const charId = String(req.params.id);
+      const char = await getCharacter(charId);
+      if (!char) return res.status(404).json({ error: 'Character not found' });
+      const row = ldb.getMonster(String((req.body || {}).monsterId || ''));
+      if (!row) return res.status(404).json({ error: 'Monster not found' });
+      let mdata = {};
+      try { mdata = JSON.parse(row.dataJson || '{}'); } catch {}
+      const out = writeCompanion(charId, { id: row.id, name: row.name, cr: row.cr, data: mdata }, () => ({}));
+      ctx.notify?.({
+        to: charId, kind: 'companion', priority: 'alert',
+        title: `The DM gave you a companion: ${out.name}`,
+        body: 'It is in your Companions tab. Summon it onto the map from the table.',
+        data: { href: '/index.html' },
+      });
+      res.json({ ok: true, name: out.name, updated: out.updated, to: char.name || '' });
+    } catch (err) { console.error('POST /api/characters/:id/companions/give:', err); res.status(500).json({ error: 'Server error' }); }
+  });
 
   /**
    * After a summon spell is cast: one candidate goes straight into the

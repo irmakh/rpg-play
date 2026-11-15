@@ -360,3 +360,54 @@ describe('summon spells search only what is imported', () => {
     } finally { globalThis.fetch = realFetch; }
   });
 });
+
+describe('the DM gives a monster as a companion', () => {
+  const WOLF = { name: 'Ash Wolf', size: ['M'], type: 'beast', ac: [13], hp: { average: 11 }, speed: { walk: 40 }, dex: 15,
+    action: [{ name: 'Bite', entries: ['{@atk mw} {@hit 4} to hit, reach 5 ft. {@h}7 ({@damage 2d4 + 2}) piercing damage.'] }] };
+  const give = (charId, monsterId, who = 'dm') => request(app).post(`/api/characters/${charId}/companions/give`)
+    .set('X-Test-Role', who).set('X-Test-Char', charId).send({ monsterId });
+  const companionsOf = id => JSON.parse(JSON.parse(ldb.getCharacter(id).dataJson)._companions || '[]');
+  beforeEach(() => {
+    seed();
+    ldb.createMonster('mon-wolf', { name: 'Ash Wolf', cr: '1/4', dataJson: JSON.stringify(WOLF) });
+  });
+
+  it('puts one of the DM\'s own monsters in the Companions tab, stat block and all, and tells the player', async () => {
+    const r = await give('wiz', 'mon-wolf');
+    expect(r.status).toBe(200);
+    expect(r.body).toMatchObject({ ok: true, name: 'Ash Wolf', updated: false, to: 'Aliyr' });
+    const [c] = companionsOf('wiz');
+    expect(c).toMatchObject({ monsterId: 'mon-wolf', name: 'Ash Wolf', hpMax: 11, ac: 13, speed: 40, initBonus: 2, size: 1 });
+    expect(c.id).toMatch(/^cmp-/);
+    expect(c.attacks).toEqual([{ name: 'Bite', toHit: '4', damage: '2d4+2 piercing' }]);
+    expect(c.statBlock).toMatchObject({ name: 'Ash Wolf' });
+    expect(companionsOf('other')).toEqual([]);
+    expect(notes).toEqual([expect.objectContaining({ to: 'wiz', kind: 'companion', priority: 'alert' })]);
+    expect(broadcasts.some(b => b.event === 'characters' && b.payload.id === 'wiz')).toBe(true);
+  });
+
+  it('giving the same monster again updates that companion instead of adding another', async () => {
+    await give('wiz', 'mon-wolf');
+    const first = companionsOf('wiz')[0];
+    const r = await give('wiz', 'mon-wolf');
+    expect(r.body.updated).toBe(true);
+    const list = companionsOf('wiz');
+    expect(list).toHaveLength(1);
+    expect(list[0].id).toBe(first.id);
+  });
+
+  it('works for an imported 3rd Party monster too', async () => {
+    ldb.upsertOfficialMonsters([{ name: 'Owl', source: 'XMM', cr: '0', type: 'beast',
+      data: { name: 'Owl', source: 'XMM', size: ['T'], ac: [11], hp: { average: 1 }, speed: { walk: 5, fly: 60 } } }]);
+    const r = await give('other', ldb.officialMonsterId('XMM', 'Owl'));
+    expect(r.status).toBe(200);
+    expect(companionsOf('other')[0]).toMatchObject({ name: 'Owl', hpMax: 1, ac: 11 });
+  });
+
+  it('only the DM may give one, and only a monster and character that exist', async () => {
+    expect((await give('wiz', 'mon-wolf', 'player')).status).toBe(401);
+    expect(companionsOf('wiz')).toEqual([]);
+    expect((await give('wiz', 'no-such-monster')).status).toBe(404);
+    expect((await give('nobody', 'mon-wolf')).status).toBe(404);
+  });
+});

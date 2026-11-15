@@ -21,6 +21,18 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [358] — 2026-11-15 — Give a monster to a player as a companion
+
+*(Released.)*
+
+- On the Monsters page, a monster has a **Give as companion…** button, on both the
+  My Monsters and the 3rd Party tabs. Choose a character and the monster goes into
+  their Companions tab with its full stat block, attacks and portrait. It's the same
+  companion a summon spell makes: the player summons it onto the map from the
+  table's Companions tab. Use it for a familiar, a tamed beast or a mount.
+- The player gets a notification. Giving the same monster again updates that
+  companion instead of adding a second one.
+
 ## [357] — 2026-11-15 — SRD-only repository, setting content per server
 
 *(Released.)* The public repository now holds only SRD game content. A

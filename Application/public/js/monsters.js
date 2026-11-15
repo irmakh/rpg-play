@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-12 12:52
+// Written by Irmak Hakman — 2026-11-15 16:00
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -143,6 +143,7 @@ function selectMonster(monsterId) {
       </div>
       <div class="detail-actions">
         <button class="btn success" onclick="openInitModal('${escJs(m.id)}')" title="Add to the initiative tracker">+ Initiative</button>
+        <button class="btn" onclick="openGiveCompanion('${escJs(m.id)}')" title="Give this monster to a character as a companion">Give as companion…</button>
         <button class="btn" onclick="openEditMonsterModal('${escJs(m.id)}')" title="Edit this monster's JSON">Edit</button>
         <button class="btn" onclick="exportMonster('${escJs(m.id)}','${escJs(m.name)}')" title="Export to a file">Export</button>
         <button class="btn danger" onclick="deleteMonster('${escJs(m.id)}')" title="Remove this monster">Delete</button>
@@ -276,10 +277,72 @@ async function selectOfficial(id) {
       </div>
       <div class="detail-actions">
         <button class="btn success" onclick="openInitModal('${escJs(m.id)}')" title="Add to the initiative tracker">+ Initiative</button>
+        <button class="btn" onclick="openGiveCompanion('${escJs(m.id)}')" title="Give this monster to a character as a companion">Give as companion…</button>
         <button class="btn" onclick="copyOfficial('${escJs(m.id)}')" title="Make an editable copy in My Monsters">Copy to My Monsters</button>
       </div>
     </div>
     <div class="detail-body">${renderMonsterStatBlock(d)}</div>`;
+}
+
+// ── Give a monster to a character as a companion ──────────────────────────────
+// POST /api/characters/:id/companions/give — the same companion a summon spell
+// makes, put on the sheet by the DM.
+let _cmpGiveId = null;
+
+function _monsterById(id) {
+  return monsters.find(x => x.id === id) || (typeof officialFull !== 'undefined' && officialFull.get(id)) || null;
+}
+
+async function openGiveCompanion(id) {
+  const m = _monsterById(id);
+  if (!m) return;
+  _cmpGiveId = id;
+  document.getElementById('cmpgive-title').textContent = 'Give as Companion: ' + m.name;
+  document.getElementById('cmpgive-err').textContent = '';
+  const sel = document.getElementById('cmpgive-char');
+  sel.innerHTML = '<option value="">Loading…</option>';
+  document.getElementById('cmpgive-modal').style.display = 'flex';
+  try {
+    const r = await fetch('/api/characters', { headers: { 'X-Master-Password': masterPw } });
+    const list = r.ok ? await r.json() : [];
+    // Player characters first, then NPCs; each by name (the server sorts by name).
+    list.sort((a, b) => (a.char_type === 'npc') - (b.char_type === 'npc'));
+    sel.innerHTML = list.length
+      ? list.map(c => `<option value="${esc(c.id)}">${esc(c.name)}${c.char_type === 'npc' ? ' (NPC)' : ''}</option>`).join('')
+      : '<option value="">No characters in this campaign</option>';
+    document.getElementById('cmpgive-ok').disabled = !list.length;
+    sel.focus();
+  } catch {
+    sel.innerHTML = '<option value="">Could not load the characters</option>';
+    document.getElementById('cmpgive-ok').disabled = true;
+  }
+}
+
+function closeGiveCompanion() {
+  document.getElementById('cmpgive-modal').style.display = 'none';
+  _cmpGiveId = null;
+}
+
+async function submitGiveCompanion() {
+  const charId = document.getElementById('cmpgive-char').value;
+  const err = document.getElementById('cmpgive-err');
+  if (!_cmpGiveId || !charId) { err.textContent = 'Choose a character.'; return; }
+  const btn = document.getElementById('cmpgive-ok');
+  btn.disabled = true;
+  try {
+    const r = await fetch(`/api/characters/${encodeURIComponent(charId)}/companions/give`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Master-Password': masterPw },
+      body: JSON.stringify({ monsterId: _cmpGiveId }),
+    });
+    if (r.status === 401) { location.href = '/dm.html'; return; }
+    const out = await r.json().catch(() => ({}));
+    if (!r.ok) { err.textContent = out.error || 'Could not give the companion.'; btn.disabled = false; return; }
+    closeGiveCompanion();
+    showStatus(out.updated
+      ? `${out.to} already had ${out.name}; it is updated to this stat block.`
+      : `${out.name} is now ${out.to}'s companion.`);
+  } catch { err.textContent = 'Network error.'; btn.disabled = false; }
 }
 
 async function copyOfficial(id) {
