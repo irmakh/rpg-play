@@ -2,7 +2,7 @@
   "id": "/console/d20-companion",
   "name": "d20-companion",
   "short_name": "d20-companion",
-  "description": "D&D 5e virtual tabletop — info panel",
+  "description": "Fifth-edition virtual tabletop — info panel",
   "start_url": "/console/table-secondary.html",
   "scope": "/console/table-secondary.html",
   "display": "fullscreen",

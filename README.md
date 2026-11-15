@@ -1,4 +1,4 @@
-# RPG Play — D&D 5e Virtual Tabletop
+# RPG Play — Virtual Tabletop for Fifth-Edition Games
 
 [![Node.js](https://img.shields.io/badge/Node.js-20-5FA04E?style=flat-square&logo=nodedotjs&logoColor=white)](https://nodejs.org)
 [![Express](https://img.shields.io/badge/Express-4-000000?style=flat-square&logo=express&logoColor=white)](https://expressjs.com)
@@ -10,7 +10,7 @@
 [![Vitest](https://img.shields.io/badge/Vitest-1856_passing-6E9F18?style=flat-square&logo=vitest&logoColor=white)](#tech-stack)
 [![Docker](https://img.shields.io/badge/Docker-compose-2496ED?style=flat-square&logo=docker&logoColor=white)](#option-a--docker-recommended-for-local--lan-play)
 
-A self-hosted web app for running D&D 5e sessions. It hosts any number of **campaigns**, each a fully separate world with its own DM password and its own data. Every campaign bundles a full character sheet, a shared virtual battle map, a real-time initiative tracker, a monster library, a treasury for loot and shop items, a synced music player, handouts with blind skill checks, a comic-style story builder with image and video panels, and a mobile companion — all kept live across every connected browser with no external cloud required.
+A self-hosted web app for running fifth-edition (5e) tabletop sessions. It hosts any number of **campaigns**, each a fully separate world with its own DM password and its own data. Every campaign bundles a full character sheet, a shared virtual battle map, a real-time initiative tracker, a monster library, a treasury for loot and shop items, a synced music player, handouts with blind skill checks, a comic-style story builder with image and video panels, and a mobile companion — all kept live across every connected browser with no external cloud required.
 
 Vanilla JS, no build step, no framework. Runs on SQLite by default; nothing to provision.
 
@@ -72,6 +72,8 @@ client itself.
 
 ### Campaigns (`/`) — the front door
 
+![The campaign picker with the demo campaign selected — its cover, description, counts and the login panel](docs/screenshots/campaigns.webp)
+
 The server hosts any number of **campaigns**, and each one is a fully separate tenant: its own characters, table, initiative, monsters, treasury, calendar, weather, maps, sounds, chat and stories — and its own DM password.
 
 - `/` opens the **campaign picker**: a list of every campaign on the left, the selected campaign's cover, description and stats on the right
@@ -100,9 +102,7 @@ Uploaded images and audio are split the same way: new uploads land in `public/up
 
 ### Character Sheet (`/index.html`)
 
-![The character sheet — persistent vitals bar with damage/heal, tabbed sections, auto-calculated ability scores and combat block](docs/screenshots/character-sheet.webp)
-
-- Full D&D 5e sheet: ability scores, skills, saving throws, HP, AC, speed, initiative — all auto-calculated
+- Full 5e sheet: ability scores, skills, saving throws, HP, AC, speed, initiative — all auto-calculated
 - Proficiency bonus auto-derived from level; **spell slots fill in from the class and level** (multiclass included), with per-level counters
 - **Actions tab** — aggregates weapon attacks, action-flagged spells, and freeform **custom actions** into one combat panel. Custom actions carry a category (action / bonus / reaction / other), description, dice, and limited-use tracking with short/long-rest recharge
 - Weapon attacks table with custom dice rolls; weapon notes shown in the damage chat message
@@ -120,12 +120,6 @@ Uploaded images and audio are split the same way: new uploads land in `public/up
 - Real-time chat: free text or `/r NdS+M [label]` dice rolls (e.g. `/r 2d6+3`, `/r d20 Stealth`), typed damage with `/dmg 1d6 piercing, 2d8 fire`, and critical damage with `/crit 1d8+3 slashing`
 - **Private messages** — every chat box (sheet, table, DM panel, both console screens) has a recipient picker. *Everyone* is the default; pick the DM or a character and only the sender, the recipient and the DM can read it. The picker returns to *Everyone* after each private message
 - **Display templates and UI size** (every page): the default navy-and-gold look plus 20 colour templates, and a UI size from 50% to 135% that scales text and layout together - both from the palette button in the page header. The choice lasts for the browser tab (on the console screens, for the device); quick-nav buttons to the Table and Stories
-
-<p align="center">
-  <img src="docs/screenshots/mobile-sheet.webp" width="280" alt="The character sheet at phone width — the same vitals bar, with the tab strip scrolled horizontally">
-</p>
-
-<p align="center"><em>The character sheet at phone width.</em></p>
 
 ### Virtual Table (`/table.html`)
 
@@ -211,7 +205,7 @@ Uploaded images and audio are split the same way: new uploads land in `public/up
 ### Treasury (`/treasury.html`) — DM only
 
 ![The treasury — players' loot requests along the top, piles on the left, the pile's items with their prices in the middle, and the selected item's picture, kind, where it is, description and weapon properties on the right](docs/screenshots/treasury.webp)
-One catalogue for everything you hand out, replacing the separate Merchant and Loot managers. Every item carries the full D&D data set — type, price (PP/GP/EP/SP/CP), stock, AC / initiative / speed / spell bonuses, attunement, weapon damage and properties, description — plus a **distribution mode** you flip in place:
+One catalogue for everything you hand out, replacing the separate Merchant and Loot managers. Every item carries the full 5e data set — type, price (PP/GP/EP/SP/CP), stock, AC / initiative / speed / spell bonuses, attunement, weapon damage and properties, description — plus a **distribution mode** you flip in place:
 
 | Mode | Players see it | Cost |
 |---|---|---|
@@ -282,7 +276,7 @@ movement is not broadcast to players while parked.
 - **3rd Party monsters** — **Books…** imports whole 5etools bestiary books into the campaign (all 114 books are about 4,700 monsters). The files are downloaded, imported and discarded; adventure monsters built from another book's stat block come in whole. A book can be imported again to update it in place, or removed after a confirmation; monsters a token, initiative entry or prepared map still uses are kept. 3rd Party monsters cannot be edited, but go into initiative, onto the table (the **3rd Party** tab of Add Token) and onto prepared maps like your own, and cast their spells. **Copy to My Monsters** makes an editable copy
 - Full stat blocks: abilities, skills, saves, senses, CR, HP, AC, speed, traits, actions, legendary actions (multi-line text renders correctly)
 - Portrait upload; per-token portrait override; realtime updates of monster edits
-- Import monsters from XML (D&D Beyond / 5e tools) — bulk, non-destructive merge
+- Import monsters from XML (D&D Beyond–compatible) — bulk, non-destructive merge
 - **Single-monster JSON export** (portrait embedded) and **import** (auto-detected via `type: "monster"`), non-destructive
 - Add any monster straight to initiative; search and filter by name; extra fields for vulnerabilities and initiative
 
@@ -813,6 +807,16 @@ char_sheet/
 RPG Play is licensed under the Business Source License 1.1 — see [LICENSE](LICENSE). The
 fonts, the 3D CSS dice and the npm packages are the work of others and keep their own
 licenses; they are listed in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
+
+This work includes material from the System Reference Document 5.1 ("SRD 5.1") and the
+System Reference Document 5.2 ("SRD 5.2") by Wizards of the Coast LLC, available at
+https://www.dndbeyond.com/srd. The SRD 5.1 and SRD 5.2 are licensed under the Creative
+Commons Attribution 4.0 International License, available at
+https://creativecommons.org/licenses/by/4.0/legalcode.
+
+RPG Play is not affiliated with, endorsed, sponsored or approved by Wizards of the Coast.
+Dungeons & Dragons, D&D and D&D Beyond are trademarks of Wizards of the Coast LLC, named
+here only to describe compatibility.
 
 ## Troubleshooting
 

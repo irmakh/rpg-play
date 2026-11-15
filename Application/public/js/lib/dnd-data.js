@@ -1,8 +1,8 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-11-15 16:30
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
-// ── D&D 5e game data constants ────────────────────────────────────────────────
+// ── Fifth-edition (SRD) game data constants ────────────────────────────────────────────────
 
 // Skill list (index matches data-key sk-N)
 const SKILL_NAMES = [
@@ -21,7 +21,7 @@ const AB_NAMES = { str:'Strength', dex:'Dexterity', con:'Constitution', int:'Int
 const SAVE_NAMES = ['STR','DEX','CON','INT','WIS','CHA'];
 const SAVE_KEYS  = ['str','dex','con','int','wis','cha'];
 
-// D&D 5e conditions
+// The SRD conditions (plus Fly, which the table tracks as one)
 const CONDITIONS = [
   'Blinded','Charmed','Deafened','Exhaustion','Fly','Frightened','Grappled',
   'Incapacitated','Invisible','Paralyzed','Petrified','Poisoned',

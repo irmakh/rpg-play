@@ -2,7 +2,7 @@
   "id": "/console/d20",
   "name": "d20",
   "short_name": "d20",
-  "description": "D&D 5e virtual tabletop — map screen",
+  "description": "Fifth-edition virtual tabletop — map screen",
   "start_url": "/console/table-console.html",
   "scope": "/console/table-console.html",
   "display": "fullscreen",

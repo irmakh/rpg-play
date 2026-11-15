@@ -1,8 +1,8 @@
-/* Written by Irmak Hakman — 2026-10-28 14:25 */
+/* Written by Irmak Hakman — 2026-11-15 16:30 */
 /* Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) */
 
 /* ════════════════════════════════════════════════════════════
-   MODERN HUD THEME — inspired by Owlbear Rodeo & D&D Beyond
+   MODERN HUD THEME — clean, high-contrast panels for play at the table
    All layout rules are scoped to body[data-theme="modern"]
 ════════════════════════════════════════════════════════════ */
 
@@ -230,7 +230,7 @@ body[data-theme="modern"] .init-roll-input {
   text-align: right;
 }
 
-/* ── HP panel — D&D Beyond style large stat numbers ── */
+/* ── HP panel — large stat numbers ── */
 body[data-theme="modern"] #hp-cur-display { font-size: calc(30px * var(--fs, 1)) !important; line-height: 1 }
 body[data-theme="modern"] #hp-max-display { font-size: calc(18px * var(--fs, 1)) !important }
 body[data-theme="modern"] #hp-ac-display  { font-size: calc(22px * var(--fs, 1)) !important; font-weight: 700 }

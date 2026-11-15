@@ -21,6 +21,29 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [359] — 2026-11-15 — Fifth-edition wording, SRD attribution, licence clean-up
+
+*(In the repository; production stays on 358 until the next upload.)* About how the project presents itself; no change to how the app
+works.
+
+- **Fifth-edition wording.** "D&D 5e" is gone from the character sheet's page title,
+  the login tagline, the app and console install descriptions and the README and
+  FEATURES titles. They now say "fifth-edition" or "5e". The server package is
+  renamed from `dnd-sheet` to `rpg-play`.
+- **SRD attribution and notice.** The README and THIRD-PARTY-NOTICES.md now carry the
+  attribution the SRD 5.1 / 5.2 Creative Commons licence asks for. They also say the
+  project is not affiliated with Wizards of the Coast, and name the D&D trademarks
+  only to describe compatibility.
+- The character sheet's look-up links beside Class, Background, Species and Feats
+  are removed.
+- **Licence clean-up.** LICENSE names the work RPG Play (including the RPG Table apps)
+  and excludes the third-party parts listed in THIRD-PARTY-NOTICES.md. The server and
+  desktop packages now point at LICENSE instead of saying nothing or "UNLICENSED".
+- The campaign-picker screenshot is back in the README, taken on the demo campaign.
+- The two character-sheet screenshots are removed from the README (they showed a non-SRD
+  background name), to be retaken later.
+- The two old parchment background images, which nothing uses any more, are removed.
+
 ## [358] — 2026-11-15 — Give a monster to a player as a companion
 
 *(Released.)*

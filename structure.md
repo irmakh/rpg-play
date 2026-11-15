@@ -118,7 +118,7 @@ char_sheet/
 │   │   │   │   ├── chat-render.js      #       Render chat messages; sanitises HTML message bodies
 │   │   │   │   ├── desktop-link.js     #       Offers the Windows desktop client to browser users
 │   │   │   │   ├── dice-engine.js      #       3D dice engine (d20 icosahedron, d10 trapezohedron)
-│   │   │   │   ├── dnd-data.js         #       D&D 5e constants (skills, abilities)
+│   │   │   │   ├── dnd-data.js         #       5e SRD constants (skills, abilities)
 │   │   │   │   ├── esc.js              #       esc() / escJs() — escaping for markup and inline handlers
 │   │   │   │   ├── fr_calendar.js      #       Calendar of Harptos logic
 │   │   │   │   ├── header-fit.js       #       One-row page headers; what does not fit goes into a ☰ menu

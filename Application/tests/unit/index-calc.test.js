@@ -1,9 +1,9 @@
-// Written by Irmak Hakman — 2026-11-11 17:00
+// Written by Irmak Hakman — 2026-11-15 16:30
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
 /**
- * Unit tests for D&D 5e calculation formulas in index-calc.js.
+ * Unit tests for the fifth-edition calculation formulas in index-calc.js.
  *
  * index-calc.js is a browser global script that reads/writes a live DOM and
  * references SKILL_AB from dnd-data.js plus items/fmt/getMod globals.

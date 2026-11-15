@@ -163,10 +163,17 @@ replaceable, as the LGPL requires.
 
 ## Game rules
 
-The rules terms the app works with (abilities, skills, conditions, spell levels and the
-like) are those of the fifth-edition System Reference Document (CC-BY-4.0). A campaign's
-spells, monsters and items are not part of this repository: they come from data its DM
-imports.
+The rules terms the app works with (abilities, skills, conditions, spell levels, the
+names of SRD spells and creatures) are those of the fifth-edition System Reference
+Document. A campaign's spells, monsters and items are not part of this repository: they
+come from data its DM imports.
+
+This work includes material from the System Reference Document 5.1 ("SRD 5.1") and the
+System Reference Document 5.2 ("SRD 5.2") by Wizards of the Coast LLC, available at
+https://www.dndbeyond.com/srd. The SRD 5.1 and SRD 5.2 are licensed under the Creative
+Commons Attribution 4.0 International License, available at
+https://creativecommons.org/licenses/by/4.0/legalcode.
 
 This project is not affiliated with, endorsed, sponsored or approved by Wizards of the
-Coast.
+Coast. Dungeons & Dragons, D&D and D&D Beyond are trademarks of Wizards of the Coast LLC,
+named here only to describe compatibility.

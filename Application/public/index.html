@@ -1,10 +1,10 @@
-<!-- Written by Irmak Hakman — 2026-11-15 14:30 -->
+<!-- Written by Irmak Hakman — 2026-11-15 16:30 -->
 <!-- Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) -->
 <html lang="en" class="lamplit">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>D&D 5e Character Sheet</title>
+<title>Character Sheet</title>
 <script>(function(){try{var s=JSON.parse(sessionStorage.getItem('rpgSession')||'null');if(!s||!s.role){var next=encodeURIComponent(location.pathname+location.search);location.replace('/login.html?next='+next);}}catch(e){location.replace('/login.html');}})();</script>
 <link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#080C15">
@@ -135,11 +135,11 @@
     <div class="card"><div class="ct">Character Info</div><div class="cb">
       <div class="char-info-grid" style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr 1fr;gap:calc(8px*var(--fs, 1));margin-bottom:calc(8px*var(--fs, 1))">
         <div class="field char-info-name"><label class="lbl">Name</label><input type="text" data-key="name"></div>
-        <div class="field"><label class="lbl">Class <a href="#" class="tools-link" onclick="open5e('class','classes');return false" title="Open in 5e.tools"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-external"></use></svg> </a></label><input type="text" data-key="class"></div>
+        <div class="field"><label class="lbl">Class</label><input type="text" data-key="class"></div>
         <div class="field"><label class="lbl">Subclass</label><input type="text" data-key="subclass"></div>
         <div class="field"><label class="lbl">Level</label><input type="number" data-key="level"></div>
-        <div class="field"><label class="lbl">Background <a href="#" class="tools-link" onclick="open5e('background','backgrounds');return false" title="Open in 5e.tools"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-external"></use></svg> </a></label><input type="text" data-key="background"></div>
-        <div class="field"><label class="lbl">Species <a href="#" class="tools-link" onclick="open5e('species','races');return false" title="Open in 5e.tools"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-external"></use></svg> </a></label><input type="text" data-key="species"></div>
+        <div class="field"><label class="lbl">Background</label><input type="text" data-key="background"></div>
+        <div class="field"><label class="lbl">Species</label><input type="text" data-key="species"></div>
       </div>
       <div class="g4">
         <div class="field"><label class="lbl">XP</label><input type="number" data-key="xp"></div>
@@ -236,7 +236,7 @@
           <textarea data-key="features" style="min-height:calc(110px*var(--fs, 1))"></textarea>
         </div></div>
 
-        <div class="card"><div class="ct">Feats <a href="#" class="tools-link" onclick="openFeats5e();return false" title="Open all feats in 5e.tools" style="font-size:calc(11px * var(--fs, 1));opacity:0.75"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-external"></use></svg> </a></div><div class="cb">
+        <div class="card"><div class="ct">Feats</div><div class="cb">
           <textarea data-key="feats" style="min-height:calc(60px*var(--fs, 1))"></textarea>
         </div></div>
 

@@ -1,5 +1,6 @@
 {
-  "name": "dnd-sheet",
+  "name": "rpg-play",
+  "license": "SEE LICENSE IN ../LICENSE",
   "version": "1.0.0",
   "type": "module",
   "main": "server.js",

@@ -3,8 +3,11 @@ Business Source License 1.1
 Parameters
 
 Licensor:             Irmak Hakman
-Licensed Work:        RPG Table (char_sheet) and all source code in this
-                      repository. The Licensed Work is (c) 2026 Irmak Hakman.
+Licensed Work:        RPG Play (char_sheet, including the RPG Table desktop and
+                      console apps) and all source code in this repository,
+                      except the third-party components listed in
+                      THIRD-PARTY-NOTICES.md, which keep their own licenses.
+                      The Licensed Work is (c) 2026 Irmak Hakman.
 
 Additional Use Grant: You may make use of the Licensed Work for any
                       non-commercial purpose, including personal use,

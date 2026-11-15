@@ -1,4 +1,4 @@
-# D&D Character Sheet - Features
+# RPG Play — Character Sheet Features
 
 > **Historical note (September 2026).** This page describes the original
 > single-file backup, written when the app ran on InstantDB. Backup is now

@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-15 14:30
+// Written by Irmak Hakman — 2026-11-15 16:30
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -1214,21 +1214,6 @@ function xmlToCharacterData(xmlText) {
   d._actionIdCounter = actIdCtr || (parsedActions.length ? String(Math.max(...parsedActions.map(a => a.id || 0))) : '0');
 
   return d;
-}
-
-// ── 5e.tools links (classes, feats…; spells no longer link out) ───────────────
-
-function open5e(dataKey, page) {
-  const val = document.querySelector(`[data-key="${dataKey}"]`)?.value?.trim();
-  if (!val) return;
-  window.open('https://5e.tools/' + page + '.html#' + val.toLowerCase() + '_xphb', '_blank');
-}
-
-function openFeats5e() {
-  const val = document.querySelector('[data-key="feats"]')?.value || '';
-  val.split('\n').map(s => s.trim()).filter(s => s).forEach(feat => {
-    window.open('https://5e.tools/feats.html#' + feat.toLowerCase() + '_xphb', '_blank');
-  });
 }
 
 // ── AI DM (retired v236) ──────────────────────────────────────────────────────
