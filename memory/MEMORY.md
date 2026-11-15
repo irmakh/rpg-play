@@ -153,7 +153,8 @@
 - NEXT SESSION (as of 2026-11-01 close, supersedes all earlier NEXT SESSION notes): production restarted by the user and confirmed serving v319 (commit 99d896c); v310-v312 are live with it. Nothing pending. Still open from before: hidden MONSTER tokens show their initiative row to players once combat starts.
 - SECURITY ROADMAP (2026-11-11, deferred by the user - do not start until asked): the audit report and a staged fix plan are in docs/security/ (SECURITY_AUDIT_2026-11-11.md, SECURITY_ROADMAP.md), gitignored because the repo is public; they exist only on the Windows machine unless copied by hand. Read the roadmap before starting; keep finding detail out of git, CHANGELOG and memory. Until then, every new route must make its own auth check.
 - Official monsters (v331+): per-campaign read-only official_monsters table filled from 5etools bestiary books (Monsters page > Official > Books...); not in backups - re-importing a book relinks tokens since ids are off-<book>-<name-slug>. v333 released 2026-11-11 (production is at v333).
+- Production is at v356 (released + restarted 2026-11-15). Server restarts stay the user's job unless they approve one in that session; the screen session name changes, so find it first (screen -ls) every time.
 ---
 
-*Last updated: 2026-11-11*
+*Last updated: 2026-11-15*
 *This file is the source of truth for persistent facts. Edit directly to update.*
