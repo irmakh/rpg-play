@@ -155,8 +155,9 @@ Built 2026-11-11: `Application/scripts/import_spells.mjs` (see tools/manifest.md
 button **Import from books** on `spells.html` that imports chosen books into the campaign on
 screen. Both download through `lib/spell-source.js` into memory only (user: delete the
 downloaded files) — nothing is cached or kept anywhere. 5e.tools blocks
-automated downloads, so the user approved the GitHub copy of the same data
-(`5etools-mirror-3/5etools-src`), plus `--from <folder>`. Decisions taken:
+automated downloads, so the user approved a GitHub copy of the same data, plus
+`--from <folder>`. (Since v357 the source is not in the code at all: each server sets
+`BOOK_DATA_URL` in its own `.env`.) Decisions taken:
 
 - **Data**: downloaded from the GitHub copy of the 5etools data (5e.tools itself refuses automated
   downloads), the raw JSON files, not HTML scraping. Downloaded data is never

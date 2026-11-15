@@ -127,7 +127,7 @@ export function nameKey(name) {
 export function compactKey(name) {
   return nameKey(name).replace(/[^a-z0-9]/g, '');
 }
-/** "Tasha's Hideous Laughter" also answers to "Hideous Laughter", and back. */
+/** "Zorvan's Grim Chuckle" also answers to "Grim Chuckle", and back. */
 function withoutOwner(key) {
   return key.replace(/^[a-z]+'s /, '');
 }

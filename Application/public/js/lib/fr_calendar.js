@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-15 14:30
+// Written by Irmak Hakman — 2026-11-15 15:40
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -67,7 +67,7 @@ function frYearName(y) {
   return n ? `${frYearLabel(y)} — ${n}` : frYearLabel(y);
 }
 
-/** "Mirtul — The Melting", or just the name when the month has no epithet. */
+/** "Bloomrise — The Blooming", or just the name when the month has no epithet. */
 function frMonthTitle(num) {
   const m = FR_MONTHS.find(x => x.num === num);
   if (!m) return '?';
