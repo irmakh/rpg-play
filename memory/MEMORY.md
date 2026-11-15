@@ -154,6 +154,7 @@
 - SECURITY ROADMAP (2026-11-11, deferred by the user - do not start until asked): the audit report and a staged fix plan are in docs/security/ (SECURITY_AUDIT_2026-11-11.md, SECURITY_ROADMAP.md), gitignored because the repo is public; they exist only on the Windows machine unless copied by hand. Read the roadmap before starting; keep finding detail out of git, CHANGELOG and memory. Until then, every new route must make its own auth check.
 - Official monsters (v331+): per-campaign read-only official_monsters table filled from 5etools bestiary books (Monsters page > Official > Books...); not in backups - re-importing a book relinks tokens since ids are off-<book>-<name-slug>. v333 released 2026-11-11 (production is at v333).
 - Production is at v356 (released + restarted 2026-11-15). Server restarts stay the user's job unless they approve one in that session; the screen session name changes, so find it first (screen -ls) every time.
+- Production runs v358 (2026-11-15). v359 is committed but not uploaded; the next upload must include v359's frontend files. Copyright work is about the public repo only; screenshots still to be retaken by the user; git history rewrite undecided.
 ---
 
 *Last updated: 2026-11-15*
