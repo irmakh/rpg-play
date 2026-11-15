@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-11 18:40
+// Written by Irmak Hakman — 2026-11-15 14:30
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -109,7 +109,7 @@ describe('calGroupByDay', () => {
     ]));
     expect(groups.map(g => g.key)).toEqual(['1492-5-3', '1492-F-greengrass', '1492-6-1'].sort((x, y) =>
       groups.find(g => g.key === x).ordinal - groups.find(g => g.key === y).ordinal));
-    expect(groups[0].key).toBe('1492-F-greengrass');   // Greengrass falls before Mirtul
+    expect(groups[0].key).toBe('1492-F-greengrass');   // the spring festival falls before month 5
     expect(groups.find(g => g.key === '1492-5-3').events.map(e => e.id)).toEqual(['a', 'b']);
   });
 });
@@ -121,8 +121,9 @@ describe('pickers and headings', () => {
     expect(Array.from(C.calAuthorsIn(events)).map(a => a.name)).toEqual(['Oren']);
   });
   it('says what is on show', () => {
-    expect(C.calScopeHeading({ scope: 'month', view })).toBe('Events in Mirtul 1492 DR');
-    expect(C.calScopeHeading({ scope: 'day', today })).toBe('Events on 10 Mirtul, 1492 DR');
+    // The built-in calendar: generic names, no era after the year.
+    expect(C.calScopeHeading({ scope: 'month', view })).toBe('Events in Month 5 1492');
+    expect(C.calScopeHeading({ scope: 'day', today })).toBe('Events on 10 Month 5, 1492');
     expect(C.calScopeHeading({ scope: 'all' })).toBe('All events');
   });
 });
@@ -149,5 +150,42 @@ describe('rows', () => {
     const html = C.calGroupsHTML(Array.from(C.calGroupByDay([ev('a'), ev('b'), ev('c', { frDay: 11 })])), o);
     expect(html.match(/cal-day-hdr-today/g)).toHaveLength(1);
     expect(html).toContain('<span class="cal-day-hdr-count">2</span>');
+  });
+});
+
+// A server's local-content calendar reaches the page as window.RPG_LOCAL
+// (lib/local-content.js); fr_calendar.js must take its names in place of the
+// built-in ones, keep the festival keys saved dates use, and ignore the rest.
+describe('a campaign calendar from local content', () => {
+  const months = ['Frostmoon', 'Icemelt', 'Seedfall', 'Rainwake', 'Bloomrise', 'Highsun', 'Emberday', 'Goldfield', 'Leafturn', 'Mistfall', 'Darkwane', 'Yearsend']
+    .map((name, i) => ({ name, epithet: i === 4 ? 'The Blooming' : '' }));
+  const k = createContext({ console, window: { RPG_LOCAL: { calendar: {
+    eraSuffix: 'AR', weekName: 'Span', defaultYear: 700,
+    months,
+    festivals: [{ key: 'greengrass', name: 'Bloomtide', afterMonth: 4 }, { key: 'not-a-festival', name: 'Nope', afterMonth: 2 }],
+    yearNames: { 700: 'Year of the Quiet Bell' },
+  } } } });
+  runInContext(read('js/lib/esc.js'), k);
+  runInContext(read('js/lib/fr_calendar.js') + ';globalThis.__k = { frYearName, frFormatDate, frMonthTitle, frWeekLabels, frYearPages, CAL_DEFAULT_YEAR };', k);
+  const K = k.__k;
+
+  it('names months, years and festivals the campaign way', () => {
+    expect(K.frFormatDate({ frYear: 700, frMonth: 5, frDay: 3 })).toBe('3 Bloomrise, 700 AR');
+    expect(K.frYearName(700)).toBe('700 AR — Year of the Quiet Bell');
+    expect(K.frYearName(701)).toBe('701 AR');
+    expect(K.frMonthTitle(5)).toBe('Bloomrise — The Blooming');
+    expect(K.frMonthTitle(6)).toBe('Highsun');
+    expect(K.frFormatDate({ frYear: 700, frFestival: 'greengrass' })).toBe('Bloomtide, 700 AR');
+    expect(Array.from(K.frWeekLabels())).toEqual(['1st. Span', '2nd. Span', '3rd. Span']);
+    expect(K.CAL_DEFAULT_YEAR).toBe(700);
+  });
+  it('keeps only the festival keys saved dates can refer to', () => {
+    const fest = Array.from(K.frYearPages(700)).filter(p => p.type === 'festival').map(p => p.festival);
+    expect(fest).toEqual(['greengrass']);
+  });
+  it('falls back to the built-in names for a calendar that is not 12 months long', () => {
+    const b = createContext({ console, window: { RPG_LOCAL: { calendar: { months: [{ name: 'Only' }] } } } });
+    runInContext(read('js/lib/fr_calendar.js') + ';globalThis.__b = { frMonthTitle };', b);
+    expect(b.__b.frMonthTitle(1)).toBe('Month 1');
   });
 });

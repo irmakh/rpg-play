@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-12 12:49
+// Written by Irmak Hakman — 2026-11-15 14:30
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -14,6 +14,7 @@ import crypto from 'crypto';
 
 import { openCampaignDb } from '../../db/localdb.js';
 import registerSpells, { unwrapImport, checkSpell } from '../../server/routes/spells.js';
+import { BookSourceUnset } from '../../lib/book-data.js';
 
 const MM = { name: 'Magic Missile', source: 'XPHB', page: 295, level: 1, school: 'V', entries: ['Three darts.'] };
 const SHIELD = { name: 'Shield', source: 'XPHB', level: 1, school: 'A', entries: ['+5 AC.'] };
@@ -159,15 +160,15 @@ describe('whole books from 5etools (DM)', () => {
     });
     return a;
   }
-  const BOOKS = [{ code: 'XPHB', name: "Player's Handbook (2024)", file: 'spells-xphb.json' },
-                 { code: 'XGE', name: "Xanathar's Guide to Everything", file: 'spells-xge.json' }];
+  const BOOKS = [{ code: 'XPHB', name: "Core Rules (2024)", file: 'spells-xphb.json' },
+                 { code: 'HBK', name: "The Homebrew Grimoire", file: 'spells-hbk.json' }];
   const fake = {
     listBooks: async () => BOOKS,
     fetchBooks: async (codes) => {
       for (const c of codes) if (!BOOKS.some(b => b.code === c)) throw new Error(`Unknown book: ${c}`);
       const spells = [];
       if (codes.includes('XPHB')) spells.push(MM, SHIELD);
-      if (codes.includes('XGE')) spells.push({ name: 'Tidal Wave', source: 'XGE', level: 3, entries: ['Water.'] });
+      if (codes.includes('HBK')) spells.push({ name: 'Brine Surge', source: 'HBK', level: 3, entries: ['Water.'] });
       return { spells, books: codes.map(c => ({ code: c, name: c, count: c === 'XPHB' ? 2 : 1 })) };
     },
   };
@@ -182,16 +183,16 @@ describe('whole books from 5etools (DM)', () => {
   it('lists the books (and is not mistaken for a spell id)', async () => {
     const r = await request(bookApp(fake)).get('/api/spells/books').set('X-Test-Role', 'dm');
     expect(r.status).toBe(200);
-    expect(r.body.map(b => b.code)).toEqual(['XPHB', 'XGE']);
+    expect(r.body.map(b => b.code)).toEqual(['XPHB', 'HBK']);
   });
 
   it('imports the chosen books into this campaign and reports per book', async () => {
-    const r = await request(bookApp(fake)).post('/api/spells/import-books').set('X-Test-Role', 'dm').send({ books: ['XPHB', 'XGE'] });
+    const r = await request(bookApp(fake)).post('/api/spells/import-books').set('X-Test-Role', 'dm').send({ books: ['XPHB', 'HBK'] });
     expect(r.status).toBe(200);
     expect(r.body).toMatchObject({ imported: 3, updated: 0 });
     expect(r.body.books.map(b => b.count)).toEqual([2, 1]);
     expect(r.body.spells).toBeUndefined();       // the downloaded data is not sent back
-    expect(ldb.listSpells().map(s => s.name)).toEqual(['Magic Missile', 'Shield', 'Tidal Wave']);
+    expect(ldb.listSpells().map(s => s.name)).toEqual(['Magic Missile', 'Shield', 'Brine Surge']);
     expect(ldb.listSpells()[0].addedBy).toBe('DM (from books)');
     expect(broadcasts.some(b => b.event === 'spells')).toBe(true);
   });
@@ -231,14 +232,14 @@ describe('whole books from 5etools (DM)', () => {
 
   it('removing a book keeps the spells a character took', async () => {
     const a = bookApp(fake);
-    await request(a).post('/api/spells/import-books').set('X-Test-Role', 'dm').send({ books: ['XPHB', 'XGE'] });
+    await request(a).post('/api/spells/import-books').set('X-Test-Role', 'dm').send({ books: ['XPHB', 'HBK'] });
     const mm = ldb.listSpells().find(s => s.name === 'Magic Missile');
     ldb.createCharacter('c1', { name: 'Wiz', dataJson: JSON.stringify({ spells: [{ id: 's1', libId: mm.id, name: 'Magic Missile' }] }) });
 
     expect((await request(a).delete('/api/spells/books/XPHB').set('X-Test-Role', 'player')).status).toBe(401);
     const r = await request(a).delete('/api/spells/books/XPHB').set('X-Test-Role', 'dm');
     expect(r.body).toEqual({ ok: true, removed: 1, kept: 1 });
-    expect(ldb.listSpells().map(s => s.name)).toEqual(['Magic Missile', 'Tidal Wave']);   // other books untouched
+    expect(ldb.listSpells().map(s => s.name)).toEqual(['Magic Missile', 'Brine Surge']);   // other books untouched
     expect(ldb.getSpell(mm.id)).toBeTruthy();
     expect(broadcasts.some(b => b.event === 'spells')).toBe(true);
   });
@@ -259,27 +260,32 @@ describe('whole books from 5etools (DM)', () => {
 describe('lib/spell-source.js (no network)', () => {
   it('offers only plain book files, core books first', async () => {
     const { listBooks } = await import('../../lib/spell-source.js');
-    const fakeFetch = async () => ({ ok: true, text: async () => JSON.stringify({
-      XGE: 'spells-xge.json', PHB: 'spells-phb.json', XPHB: 'spells-xphb.json', EVIL: '../../etc/passwd', ODD: 'spells-x.json?y=1' }) });
+    process.env.BOOK_DATA_URL = 'https://books.test/data';
+    // Book names come from the source's own books.json, not from this project.
+    const fakeFetch = async url => ({ ok: true, text: async () => JSON.stringify(url.endsWith('/books.json')
+      ? { book: [{ id: 'XPHB', name: 'Core Rules (2024)' }] }
+      : { HBK: 'spells-hbk.json', PHB: 'spells-phb.json', XPHB: 'spells-xphb.json', EVIL: '../../etc/passwd', ODD: 'spells-x.json?y=1' }) });
     const books = await listBooks(fakeFetch);
-    expect(books.map(b => b.code)).toEqual(['XPHB', 'PHB', 'XGE']);
-    expect(books[0].name).toBe("Player's Handbook (2024)");
+    expect(books.map(b => b.code)).toEqual(['XPHB', 'PHB', 'HBK']);
+    expect(books[0].name).toBe("Core Rules (2024)");
   });
   it('downloads only the chosen books, with class lists, and keeps nothing', async () => {
     const { fetchBooks } = await import('../../lib/spell-source.js');
     const asked = [];
     const files = {
-      'index.json': { XPHB: 'spells-xphb.json', XGE: 'spells-xge.json' },
+      'index.json': { XPHB: 'spells-xphb.json', HBK: 'spells-hbk.json' },
+      'books.json': { book: [{ id: 'XPHB', name: 'Core Rules (2024)' }] },
       'sources.json': { XPHB: { 'Magic Missile': { class: [{ name: 'Wizard' }] } } },
       'spells-xphb.json': { spell: [MM] },
-      'spells-xge.json': { spell: [LIGHT] },
+      'spells-hbk.json': { spell: [LIGHT] },
     };
     const fakeFetch = async url => { const f = url.split('/').pop(); asked.push(f); return { ok: true, text: async () => JSON.stringify(files[f]) }; };
     const got = await fetchBooks(['XPHB'], fakeFetch);
-    expect(asked).not.toContain('spells-xge.json');
+    expect(asked).not.toContain('spells-hbk.json');
+    expect(asked).not.toContain('adventures.json/x');
     expect(got.spells.map(s => s.name)).toEqual(['Magic Missile']);
     expect(got.spells[0].classes.fromClassList[0].name).toBe('Wizard');
-    expect(got.books).toEqual([{ code: 'XPHB', name: "Player's Handbook (2024)", count: 1 }]);
+    expect(got.books).toEqual([{ code: 'XPHB', name: "Core Rules (2024)", count: 1 }]);
     await expect(fetchBooks(['ZZZ'], fakeFetch)).rejects.toThrow(/Unknown book/);
   });
 });
@@ -312,5 +318,36 @@ describe('backup', () => {
     expect(other.importSpells(rows)).toBe(2);
     expect(other.importSpells(rows)).toBe(2);   // attempted again: the unique key keeps one each
     expect(other.listSpells().map(s => s.name)).toEqual(['Magic Missile', 'Shield']);
+  });
+});
+
+// A server with no BOOK_DATA_URL has no book import: the library says so, and
+// the routes answer 503 with that message rather than "try again later".
+describe('no book source on this server', () => {
+  it('the source refuses, with a code the routes recognise', async () => {
+    const saved = process.env.BOOK_DATA_URL;
+    delete process.env.BOOK_DATA_URL;
+    try {
+      const { listBooks, fetchBooks } = await import('../../lib/spell-source.js');
+      await expect(listBooks(async () => { throw new Error('must not fetch'); })).rejects.toMatchObject({ code: 'BOOK_SOURCE_UNSET' });
+      await expect(fetchBooks(['XPHB'], async () => { throw new Error('must not fetch'); })).rejects.toMatchObject({ code: 'BOOK_SOURCE_UNSET' });
+    } finally { if (saved !== undefined) process.env.BOOK_DATA_URL = saved; }
+  });
+  it('the routes answer 503 and say what to set', async () => {
+    const db = openCampaignDb(':memory:');
+    const a = express();
+    a.use(express.json());
+    const unset = async () => { throw new BookSourceUnset(); };
+    registerSpells(a, {
+      ldb: db, genId: () => crypto.randomUUID(), broadcast: () => {},
+      masterAuth: () => true, sessionAuth: () => true, auth: { sessionFromReq: () => null },
+      spellSource: { listBooks: unset, fetchBooks: unset },
+    });
+    const list = await request(a).get('/api/spells/books');
+    expect(list.status).toBe(503);
+    expect(list.body).toMatchObject({ code: 'BOOK_SOURCE_UNSET' });
+    expect(list.body.error).toMatch(/BOOK_DATA_URL/);
+    const imp = await request(a).post('/api/spells/import-books').send({ books: ['XPHB'] });
+    expect(imp.status).toBe(503);
   });
 });

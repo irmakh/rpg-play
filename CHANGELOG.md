@@ -21,6 +21,41 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [357] — 2026-11-15 — SRD-only repository, setting content per server
+
+*(Released.)* The public repository now holds only SRD game content. A
+server's own setting comes from a folder outside the repository, so a game set up
+with that folder looks and works exactly as before.
+
+- **Local content.** The server reads a folder named by `LOCAL_CONTENT_DIR` at
+  start-up (`Application/local-content/`, never committed). It holds three files:
+  - `calendar.json`: month, festival and year names, the week name and the era
+  - `summons.json`: summon spells beyond the SRD
+  - `classes.json`: extra classes for XML character import
+
+  See *Local content* in the README.
+- **Calendar.** The built-in calendar has generic names (Month 1–12, Spring Festival,
+  Leap Day…) and no era after the year. The Calendar of Harptos (month names,
+  festivals, Roll of Years, "Tenday", "DR") is now `calendar.json`. Saved dates are
+  unchanged: festivals keep their keys. The DM calendar's month and festival pickers
+  are filled from the calendar instead of being written into the page.
+- **Summon spells.** Built in: the SRD's (Find Familiar, Find Steed, the Conjure
+  spells, Animate Dead, Create Undead, Giant Insect, Summon Dragon). The others
+  (Summon Beast, Fey, Undead and the rest, Find Greater Steed, Tiny Servant…) are
+  in `summons.json`.
+- **Character import.** The Artificer moved to `classes.json`.
+- **Import from books** reads its data from `BOOK_DATA_URL` in the server's `.env`.
+  The repository no longer names a source or lists book titles; names come from the
+  source's own `books.json`. Without it, the three import screens say that book
+  import is not set up. Spells, monsters and items already imported are untouched.
+- **Repository clean-up** *(no effect on a running game)*:
+  - The retired AI DM is removed.
+  - Ten screenshots showing book content, a real campaign or music titles are removed.
+  - Test fixtures use invented names in place of book spells, places and characters.
+  - Story images are no longer tracked.
+  - New `THIRD-PARTY-NOTICES.md`: font licenses, the CodePen dice credit and the
+    libvips note.
+
 ## [356] — 2026-11-15 — Giving items and coins, Send to chat, Cast-only spells
 
 *(Released.)*

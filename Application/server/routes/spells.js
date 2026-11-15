@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-12 12:49
+// Written by Irmak Hakman — 2026-11-15 14:30
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -119,7 +119,9 @@ export default function register(app, ctx) {
       res.json(await source.listBooks());
     } catch (err) {
       console.error('GET /api/spells/books:', err.message);
-      res.status(502).json({ error: 'Could not reach the 5etools data. Try again later.' });
+      // No BOOK_DATA_URL on this server: say so (lib/book-data.js), rather than "try again".
+      if (err.code === 'BOOK_SOURCE_UNSET') return res.status(503).json({ error: err.message, code: err.code });
+      res.status(502).json({ error: 'Could not reach the book data. Try again later.' });
     }
   });
 
@@ -137,7 +139,7 @@ export default function register(app, ctx) {
       try { got = await source.fetchBooks(codes); }
       catch (err) {
         console.error('POST /api/spells/import-books (download):', err.message);
-        return res.status(/^Unknown book/.test(err.message) ? 400 : 502).json({ error: err.message });
+        return res.status(err.code === 'BOOK_SOURCE_UNSET' ? 503 : /^Unknown book/.test(err.message) ? 400 : 502).json({ error: err.message, ...(err.code ? { code: err.code } : {}) });
       }
       const out = importList(got.spells, true, 'DM (from books)');
       if (out.imported || out.updated) broadcast('spells', { action: 'updated' });

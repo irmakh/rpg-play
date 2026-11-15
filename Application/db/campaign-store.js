@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-09-26 16:38
+// Written by Irmak Hakman — 2026-11-15 13:54
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -137,7 +137,7 @@ export function bootstrapCampaigns({ legacyName, defaultDmPassword, log = consol
 
   const campaign = cdb.createCampaign({
     id: LEGACY_CAMPAIGN_ID,
-    name: legacyName || 'For the Glory of Amn',
+    name: legacyName || 'My First Campaign',
     description: 'The original campaign — all data from before campaigns existed.',
     dmPassword: defaultDmPassword,
   });

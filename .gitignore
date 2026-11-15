@@ -57,6 +57,12 @@ memory/logs/
 # Uploaded media files (stored on disk, not committed)
 # Subdirectories are created automatically by the server on first upload
 Application/public/uploads/
+# Story panels are campaign content (players' characters), not part of the app.
+Application/public/story-images/
+
+# A campaign's own setting content (calendar names, extra summons, classes, book names)
+# and the importer source: kept on the server only, never in the public repository.
+Application/local-content/
 
 # Node modules (if using any JS tools)
 node_modules/

@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-12 18:50
+// Written by Irmak Hakman — 2026-11-15 14:30
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -118,7 +118,7 @@ function normalizeSpell(x) {
     alwaysPrepared: _spTruthy(o.alwaysPrepared),
     // Summons a creature: casting it finds the campaign monster it calls up and
     // adds it to the companions (lib/summon.js). Known summon spells (Find
-    // Familiar, Summon Beast…) need no tick; this is for any other.
+    // Familiar, Find Steed…) need no tick; this is for any other.
     summon: _spTruthy(o.summon),
     uses,
     // A spell with no use count (a Mystic Arcanum) still records one use.

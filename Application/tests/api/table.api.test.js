@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-12 16:29
+// Written by Irmak Hakman — 2026-11-15 13:54
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -588,7 +588,7 @@ describe('hidden items stay with the DM', () => {
 describe('unique monsters on the table', () => {
   function withMonsters() {
     const made = makeApp();
-    made.ldb.createMonster('strahd', { name: 'Strahd von Zarovich', dataJson: JSON.stringify({ name: 'Strahd von Zarovich', unique: true }) });
+    made.ldb.createMonster('varnok', { name: 'Count Varnok', dataJson: JSON.stringify({ name: 'Count Varnok', unique: true }) });
     made.ldb.createMonster('goblin', { name: 'Goblin', dataJson: JSON.stringify({ name: 'Goblin' }) });
     return made;
   }
@@ -596,24 +596,24 @@ describe('unique monsters on the table', () => {
 
   it('places a unique monster under its own name, whatever the client sent', async () => {
     const { app, ldb } = withMonsters();
-    const id = await createToken(app, monster('strahd', { name: 'Strahd von Zarovich K7', label: 'K7' }));
-    expect(ldb.getTableToken(id)).toMatchObject({ name: 'Strahd von Zarovich', label: 'Strahd von Zarovich' });
+    const id = await createToken(app, monster('varnok', { name: 'Count Varnok K7', label: 'K7' }));
+    expect(ldb.getTableToken(id)).toMatchObject({ name: 'Count Varnok', label: 'Count Varnok' });
   });
 
   it('refuses a second token of a unique monster, with a reason', async () => {
     const { app, ldb } = withMonsters();
-    await createToken(app, monster('strahd'));
-    const res = await dm(request(app).post('/api/table/tokens')).send(monster('strahd'));
+    await createToken(app, monster('varnok'));
+    const res = await dm(request(app).post('/api/table/tokens')).send(monster('varnok'));
     expect(res.status).toBe(409);
-    expect(res.body.error).toBe('Strahd von Zarovich is unique and is already on the table.');
+    expect(res.body.error).toBe('Count Varnok is unique and is already on the table.');
     expect(ldb.listTableTokens()).toHaveLength(1);
   });
 
   it('allows it again once the first token is gone', async () => {
     const { app } = withMonsters();
-    const first = await createToken(app, monster('strahd'));
+    const first = await createToken(app, monster('varnok'));
     await dm(request(app).delete(`/api/table/tokens/${first}`));
-    expect((await dm(request(app).post('/api/table/tokens')).send(monster('strahd'))).status).toBe(200);
+    expect((await dm(request(app).post('/api/table/tokens')).send(monster('varnok'))).status).toBe(200);
   });
 
   it('leaves ordinary monsters as many as you like, with their identifiers', async () => {
@@ -628,8 +628,8 @@ describe('unique monsters on the table', () => {
     ldb.createPreparedMap('m1', {
       name: 'Castle', createdAt: new Date().toISOString(),
       preparedTokens: JSON.stringify([
-        { id: 'p1', name: 'Strahd von Zarovich A1', label: 'A1', type: 'monster', linkedId: 'strahd', x: 1, y: 1 },
-        { id: 'p2', name: 'Strahd von Zarovich B2', label: 'B2', type: 'monster', linkedId: 'strahd', x: 2, y: 2 },
+        { id: 'p1', name: 'Count Varnok A1', label: 'A1', type: 'monster', linkedId: 'varnok', x: 1, y: 1 },
+        { id: 'p2', name: 'Count Varnok B2', label: 'B2', type: 'monster', linkedId: 'varnok', x: 2, y: 2 },
         { id: 'p3', name: 'Goblin C3', label: 'C3', type: 'monster', linkedId: 'goblin', x: 3, y: 3 },
       ]),
     });
@@ -637,7 +637,7 @@ describe('unique monsters on the table', () => {
     expect(res.status).toBe(200);
     expect(res.body.tokensPlaced).toBe(2);
     const labels = ldb.listTableTokens().map(t => t.label).sort();
-    expect(labels).toEqual(['C3', 'Strahd von Zarovich']);
+    expect(labels).toEqual(['C3', 'Count Varnok']);
   });
 });
 

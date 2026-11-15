@@ -1,10 +1,10 @@
-// Written by Irmak Hakman — 2026-10-11 18:25
+// Written by Irmak Hakman — 2026-11-15 14:30
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
 // ── Player Calendar ───────────────────────────────────────────────────────────
-let pcalView        = { type: 'month', month: 1, year: 1492 };
-let pcalCurrentDate = { frYear: 1492, frMonth: 1, frDay: 1, frFestival: '' };
+let pcalView        = { type: 'month', month: 1, year: CAL_DEFAULT_YEAR };
+let pcalCurrentDate = { frYear: CAL_DEFAULT_YEAR, frMonth: 1, frDay: 1, frFestival: '' };
 let pcalEvents      = [];
 let pcalWeather     = {};   // date-key → weather entry (read-only on the player calendar)
 let pcalLoaded      = false;
@@ -119,8 +119,7 @@ function pcalRenderNavTitle() {
     title    = '✦ ' + frFestivalName(pcalView.festival);
     subtitle = frYearName(pcalView.year);
   } else {
-    const m  = FR_MONTHS.find(mo => mo.num === pcalView.month);
-    title    = m ? `${m.name} — ${m.epithet}` : '?';
+    title    = frMonthTitle(pcalView.month);
     subtitle = frYearName(pcalView.year);
   }
   const tEl = document.getElementById('pcal-page-title');
@@ -160,7 +159,7 @@ function pcalRenderGrid() {
     evByDay[e.frDay].push(e);
   }
 
-  const TENDAY_LABELS = ['1st. Tenday', '2nd. Tenday', '3rd. Tenday'];
+  const TENDAY_LABELS = frWeekLabels();
   let rows = '';
   for (let td = 0; td < 3; td++) {
     let cells = `<td class="cal-tenday-lbl">${TENDAY_LABELS[td]}</td>`;
@@ -315,7 +314,7 @@ function pcalSetJournalDate(d, editableDay) {
   } else {
     if (dayRow) dayRow.style.display = editableDay ? '' : 'none';
     if (dayInput) dayInput.value = d.frDay || 1;
-    if (lbl) lbl.textContent = `${frMonthName(d.frMonth)}, ${d.frYear} DR`;
+    if (lbl) lbl.textContent = `${frMonthName(d.frMonth)}, ${frYearLabel(d.frYear)}`;
   }
 }
 

@@ -1,24 +1,24 @@
-// Written by Irmak Hakman — 2026-11-11 18:14
+// Written by Irmak Hakman — 2026-11-15 14:30
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
 /**
- * The 5etools bestiary books, fetched for an import and then thrown away.
+ * The bestiary books, fetched for an import and then thrown away.
  *
- * Source: the 5etools data files in the public GitHub repository
- * 5etools-mirror-3/5etools-src, as for spells (lib/spell-source.js). Used by
- * the DM's "Import from books" on the Monsters page (server/routes/
- * official-monsters.js). Everything is held in memory for one import; nothing
- * is written to disk and nothing from that repository lands in this project.
+ * Source: the data folder in BOOK_DATA_URL (lib/book-data.js), in the 5etools
+ * layout, as for spells (lib/spell-source.js). Used by the DM's "Import from
+ * books" on the Monsters page (server/routes/official-monsters.js). Everything
+ * is held in memory for one import; nothing is written to disk and nothing
+ * from the source lands in this project.
  *
  * Adventure books mostly describe their monsters as a copy of another book's
- * ("Anastrasya Karelova" is the Monster Manual's Vampire Spawn with her name
- * in the text). Those `_copy` entries are resolved here — the other book is
+ * (a named villain is the core book's Vampire Spawn with her name put into
+ * the text). Those `_copy` entries are resolved here — the other book is
  * fetched too when needed, used, and dropped — so every imported monster is a
  * whole stat block.
  */
 
-export const MIRROR = 'https://raw.githubusercontent.com/5etools-mirror-3/5etools-src/main/data';
+import { bookDataBase, sourceBookNames } from './book-data.js';
 const TIMEOUT_MS = 60 * 1000;
 const MAX_FILE_BYTES = 16 * 1024 * 1024;      // the largest bestiary file is about 2 MB
 const BOOK_FILE = /^bestiary-[a-z0-9-]+\.json$/;
@@ -33,21 +33,12 @@ async function getJson(url, fetchImpl) {
   try { return JSON.parse(text); } catch { throw new Error(`${url.split('/').pop()} is not valid JSON`); }
 }
 
-/** Book code -> readable name, from 5etools' own book and adventure lists. */
-async function bookNames(fetchImpl) {
-  const names = {};
-  for (const [file, key] of [['books.json', 'book'], ['adventures.json', 'adventure']]) {
-    try {
-      const d = await getJson(`${MIRROR}/${file}`, fetchImpl);
-      for (const b of (d && Array.isArray(d[key]) ? d[key] : [])) if (b && b.id && b.name) names[b.id] = String(b.name);
-    } catch { /* names are a nicety: the code still shows */ }
-  }
-  return names;
-}
+/** Book code -> readable name, from the source's own book and adventure lists. */
+const bookNames = fetchImpl => sourceBookNames(getJson, fetchImpl);
 
 /** The books on offer: [{ code, name, file }], core books first. */
 export async function listBestiaryBooks(fetchImpl = fetch) {
-  const [index, names] = await Promise.all([getJson(`${MIRROR}/bestiary/index.json`, fetchImpl), bookNames(fetchImpl)]);
+  const [index, names] = await Promise.all([getJson(`${bookDataBase()}/bestiary/index.json`, fetchImpl), bookNames(fetchImpl)]);
   const books = [];
   for (const [code, file] of Object.entries(index || {})) {
     if (typeof file !== 'string' || !BOOK_FILE.test(file)) continue;
@@ -74,7 +65,7 @@ export async function fetchBestiaryBooks(codes, fetchImpl = fetch) {
   const loaded = new Map();   // code -> monster list
   const load = async b => {
     if (loaded.has(b.code)) return loaded.get(b.code);
-    const d = await getJson(`${MIRROR}/bestiary/${b.file}`, fetchImpl);
+    const d = await getJson(`${bookDataBase()}/bestiary/${b.file}`, fetchImpl);
     const list = d && Array.isArray(d.monster) ? d.monster.filter(m => m && typeof m === 'object' && m.name) : [];
     loaded.set(b.code, list);
     return list;

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Written by Irmak Hakman — 2026-11-11 20:40
+// Written by Irmak Hakman — 2026-11-15 13:54
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -7,8 +7,8 @@
  * Fill a campaign's spell library from the 5etools data, then link every spell
  * on its character sheets to the library.
  *
- *   node scripts/import_spells.mjs --campaign "For the Glory of Amn"        (dry run)
- *   node scripts/import_spells.mjs --campaign "For the Glory of Amn" --apply
+ *   node scripts/import_spells.mjs --campaign "My Campaign"        (dry run)
+ *   node scripts/import_spells.mjs --campaign "My Campaign" --apply
  *   node scripts/import_spells.mjs --all --apply
  *   node scripts/import_spells.mjs --all --from ./my-spell-files
  *   node scripts/import_spells.mjs --campaign demo --books XPHB,XGE --apply
@@ -29,16 +29,15 @@
  * reports what would change.
  *
  * Where the data comes from
- *   default         the 5etools data files in the public GitHub repo
- *                   5etools-mirror-3/5etools-src (5e.tools itself refuses
- *                   automated downloads), fetched into memory for this run and
- *                   then discarded — nothing is written to disk
+ *   default         the data folder in BOOK_DATA_URL (lib/book-data.js; run
+ *                   with `node --env-file=.env …` to use the server's), fetched into memory for this
+ *                   run and then discarded — nothing is written to disk
  *                   (lib/spell-source.js, shared with the DM's Import from books).
  *   --books a,b     only these books (codes as in 5etools: XPHB, PHB, XGE…);
  *                   every official book otherwise, not just the PHB.
  *   --from <dir>    spells-*.json files saved by hand (and sources.json, which
  *                   holds the class lists, if you have it).
- *   Nothing from that repository is ever stored in, or committed to, this project.
+ *   Nothing from the source is ever stored in, or committed to, this project.
  *
  * What happens to a campaign
  *   1. Library: every spell goes in. A spell already there (same name and book)

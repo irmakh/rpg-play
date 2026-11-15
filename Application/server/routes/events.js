@@ -1,7 +1,8 @@
-// Written by Irmak Hakman — 2026-10-11 17:25
+// Written by Irmak Hakman — 2026-11-15 14:30
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
+import { calendarText } from '../../lib/local-content.js';
 import { describeWeather, weatherDetail } from '../../lib/weather-words.js';
 
 export default function register(app, ctx) {
@@ -83,9 +84,11 @@ export default function register(app, ctx) {
         return res.json({ ok: true, weather: withWords(ldb.getWeatherForDate(weatherDateKey(s))) });
       }
 
-      // The browser knows the month and festival names; the server does not.
+      // The browser sends the date as it shows it; failing that, the server
+      // writes it with the campaign calendar's festival names and era.
+      const cal = calendarText(ctx.localContent);
       const label = String(s.dateLabel || '').slice(0, 80)
-        || (s.frFestival ? `${s.frFestival}, ${s.frYear} DR` : `${s.frDay}/${s.frMonth}/${s.frYear} DR`);
+        || (s.frFestival ? `${cal.festival(s.frFestival)}, ${cal.year(s.frYear)}` : `${s.frDay}/${s.frMonth}/${cal.year(s.frYear)}`);
       let weather = ldb.getWeatherForDate(weatherDateKey(s));
       const rolledNow = !weather;
       if (rolledNow) {

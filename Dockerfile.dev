@@ -1,6 +1,6 @@
-# Written by Irmak Hakman in 2026.
+# Written by Irmak Hakman — 2026-11-15 15:05
 
-# Development Dockerfile for D&D Character Sheet App
+# Development Dockerfile for RPG Play
 FROM node:20-alpine
 
 # Install dependencies for better-sqlite3 native compilation
@@ -24,7 +24,6 @@ COPY Application/*.xml ./
 COPY Application/db ./db
 COPY Application/lib ./lib
 COPY Application/server ./server
-COPY Application/aiDM ./aiDM
 COPY Application/public ./public
 
 # Per-campaign SQLite files live here (Application/data/campaigns/<id>/).

@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-12 20:25
+// Written by Irmak Hakman — 2026-11-15 14:30
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -17,7 +17,7 @@
  * A spell is a summon spell when it is in SUMMON_RULES by name, or when its row
  * on the sheet is ticked "Summons a creature" (`summon`). Its candidates are
  * the campaign monsters that:
- *   - the spell's text names ({@creature Bestial Spirit|XPHB}, Find Familiar's
+ *   - the spell's text names ({@creature Draconic Spirit|XPHB}, Find Familiar's
  *     Bat, Cat, Owl…), or
  *   - say they are summoned by it (5etools `summonedBySpell`), or
  *   - fit its rule: creature type and highest CR, which can grow with the slot
@@ -35,38 +35,67 @@ const lc = s => String(s || '').trim().toLowerCase();
 // (maxCr a number, or a function of the slot level). Both 2014 and 2024 names.
 const FAMILIARS = ['Bat', 'Cat', 'Crab', 'Frog', 'Hawk', 'Lizard', 'Octopus', 'Owl', 'Poisonous Snake',
   'Venomous Snake', 'Fish', 'Quipper', 'Rat', 'Raven', 'Sea Horse', 'Spider', 'Weasel'];
-const SPIRIT = n => ({ names: [n] });
 
-export const SUMMON_RULES = {
+// The SRD's summon spells (a stat block printed in an SRD spell, such as the
+// Otherworldly Steed, is SRD too). Others come from the server's local-content
+// folder through applyLocalSummons().
+const DEFAULT_RULES = {
   'find familiar':            { names: FAMILIARS, types: ['beast'], maxCr: 0 },
-  'flock of familiars':       { names: FAMILIARS, types: ['beast'], maxCr: 0 },
   'find steed':               { names: ['Otherworldly Steed', 'Warhorse', 'Pony', 'Camel', 'Elk', 'Mastiff', 'Riding Horse'] },
-  'find greater steed':       { names: ['Griffon', 'Pegasus', 'Peryton', 'Dire Wolf', 'Rhinoceros', 'Saber-Toothed Tiger'] },
   'conjure animals':          { types: ['beast'], maxCr: 2 },
   'conjure woodland beings':  { types: ['fey'], maxCr: 2 },
   'conjure minor elementals': { types: ['elemental'], maxCr: 2 },
   'conjure elemental':        { types: ['elemental'], maxCr: lv => lv },
   'conjure fey':              { types: ['fey', 'beast'], maxCr: lv => lv },
   'conjure celestial':        { types: ['celestial'], maxCr: lv => (lv >= 9 ? 5 : 4) },
-  'summon lesser demons':     { types: ['fiend'], maxCr: 1 },
-  'summon greater demon':     { types: ['fiend'], maxCr: lv => lv + 1 },
-  'infernal calling':         { types: ['fiend'], maxCr: lv => lv + 1 },
   'animate dead':             { names: ['Skeleton', 'Zombie'] },
   'create undead':            { names: ['Ghoul', 'Ghast', 'Wight', 'Mummy'] },
   'giant insect':             { names: ['Giant Centipede', 'Giant Spider', 'Giant Wasp', 'Giant Scorpion'] },
-  'tiny servant':             { names: ['Tiny Servant'] },
-  'summon beast':             SPIRIT('Bestial Spirit'),
-  'summon fey':               SPIRIT('Fey Spirit'),
-  'summon undead':            SPIRIT('Undead Spirit'),
-  'summon celestial':         SPIRIT('Celestial Spirit'),
-  'summon fiend':             { names: ['Fiendish Spirit', 'Fiend Spirit'] },
-  'summon construct':         SPIRIT('Construct Spirit'),
-  'summon elemental':         SPIRIT('Elemental Spirit'),
-  'summon aberration':        { names: ['Aberrant Spirit', 'Aberration Spirit'] },
-  'summon draconic spirit':   { names: ['Draconic Spirit'] },
   'summon dragon':            { names: ['Draconic Spirit'] },
-  'summon shadowspawn':       { names: ['Shadow Spirit'] },
 };
+
+export const SUMMON_RULES = { ...DEFAULT_RULES };
+
+/** Back to the SRD rules alone (tests, and before applying a folder again). */
+export function resetSummonRules() {
+  for (const k of Object.keys(SUMMON_RULES)) delete SUMMON_RULES[k];
+  Object.assign(SUMMON_RULES, DEFAULT_RULES);
+}
+
+/**
+ * Add a server's own summon spells (local-content/summons.json):
+ *   { spells: { "summon critter": { names: ["Critter Spirit"] }, … },
+ *     addCreatures: { "find familiar": ["Glow Moth"] } }
+ * A rule takes names (stat blocks it uses), types and maxCr — a number, or
+ * { spellLevelPlus: n } for the slot level plus n. Anything malformed is
+ * skipped. Returns how many spells were added and extended.
+ */
+export function applyLocalSummons(cfg) {
+  resetSummonRules();
+  let added = 0, extended = 0;
+  if (!cfg || typeof cfg !== 'object') return { added, extended };
+  const strList = v => (Array.isArray(v) ? v.filter(x => typeof x === 'string' && x.trim()).map(x => x.trim().slice(0, 80)).slice(0, 100) : null);
+  for (const [name, r] of Object.entries(cfg.spells || {})) {
+    if (!r || typeof r !== 'object' || !lc(name)) continue;
+    const rule = {};
+    const names = strList(r.names); if (names && names.length) rule.names = names;
+    const types = strList(r.types); if (types && types.length) rule.types = types.map(lc);
+    if (Number.isFinite(r.maxCr)) rule.maxCr = r.maxCr;
+    else if (r.maxCr && Number.isFinite(r.maxCr.spellLevelPlus)) { const n = r.maxCr.spellLevelPlus; rule.maxCr = lv => lv + n; }
+    if (!rule.names && !(rule.types && rule.maxCr != null)) continue;
+    SUMMON_RULES[lc(name)] = rule;
+    added++;
+  }
+  for (const [name, extra] of Object.entries(cfg.addCreatures || {})) {
+    const key = lc(name);
+    const list = strList(extra);
+    if (!SUMMON_RULES[key] || !list || !list.length) continue;
+    const have = SUMMON_RULES[key].names || [];
+    SUMMON_RULES[key] = { ...SUMMON_RULES[key], names: [...have, ...list.filter(x => !have.includes(x))] };
+    extended++;
+  }
+  return { added, extended };
+}
 
 /** Is this sheet spell a summon spell? */
 export function isSummonSpell(sp) {

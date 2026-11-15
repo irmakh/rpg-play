@@ -1,7 +1,7 @@
-/* Written by Irmak Hakman — 2026-10-15 14:25 */
+/* Written by Irmak Hakman — 2026-11-15 14:30 */
 /* Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) */
 
-/* ── Forgotten Realms Calendar ───────────────────────────────────────────────── */
+/* ── Campaign Calendar ───────────────────────────────────────────────── */
 
 .cal-wrap { max-width: calc(860px*var(--fs, 1)); margin: 0 auto; }
 

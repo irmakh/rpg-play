@@ -339,13 +339,6 @@ char_sheet/
 │   ├── README.md                       #   Build, run, and how the session mirror works
 │   ├── package-lock.json               #   Dependency lockfile
 │   └── package.json                    #   Electron + electron-builder config
-├── retired/                            # Code kept for reference, NOT deployed
-│   └── aiDM/                           #   The retired AI Dungeon Master, unchanged since v236
-│       ├── public/                     #     Its frontend (ai-dm.html / .js / .css)
-│       ├── scenarios/index.json        #     Built-in scenario catalogue
-│       ├── README.md                   #     Why it was retired; do not revive as-is
-│       ├── db.js                       #     Its SQLite layer
-│       └── routes.js                   #     Its API + streaming endpoints
 ├── args/                               # GOTCHA: behaviour settings
 │   └── README.md                       #   Layer overview / placeholder
 ├── context/                            # GOTCHA: domain knowledge
@@ -402,7 +395,6 @@ char_sheet/
 | `Application/` | The web application — server, database layers, frontend, tests |
 | `Android/` | The Android app: both console screens from one icon on a two-screen handheld, the whole app on a phone |
 | `Desktop/` | The Windows desktop client (Electron thin client) |
-| `retired/` | Code kept for reference and not deployed — currently the AI DM |
 | `args/` `context/` `goals/` `hardprompts/` `tools/` | The [GOTCHA framework](CLAUDE.md) layers that drive how the project is built and maintained |
 | `data/` `memory/` | Persistent cross-session memory (committed index + SQLite store) |
 | `CLAUDE.md` | System handbook: framework, frontend release process, memory protocol |
@@ -441,7 +433,7 @@ The loot and merchant managers merged into the **Treasury** (`/treasury.html`). 
 
 All of the above are removed once every client reports the current `FRONTEND_VERSION`.
 
-The **AI Dungeon Master** was retired in v236 and moved, unchanged, to `retired/aiDM/`
-at the repository root. The server no longer loads it and its URLs return 404.
+The **AI Dungeon Master** was retired in v236 and its code has since been removed from the
+repository (it is still in the git history, up to commit 44fe15d). Its URLs return 404.
 
 > **Not in the tree:** runtime content created at install/use time is git-ignored — `node_modules/`, the campaign registry (`campaigns.db`) and every per-campaign database under `data/campaigns/<id>/`, plus the retained pre-multi-tenant copies (`localdb.db`, `characters.db`, `media.db`, `stories.db`), uploaded assets under `public/uploads/` and `public/story-images/`, environment files (`.env`), and the dated memory logs under `memory/logs/`. These are created on first run / during play.

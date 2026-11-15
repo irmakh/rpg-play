@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-23 11:55
+// Written by Irmak Hakman — 2026-11-15 13:54
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -16,8 +16,8 @@ import path from 'path';
 import request from 'supertest';
 import { makeApp, TEST_MASTER_PW } from '../helpers/test-app.js';
 
-const AMN  = 'campaign-amn';
-const WEST = 'campaign-waterdeep';
+const HIGHMOOR  = 'campaign-highmoor';
+const WEST = 'campaign-riverford';
 
 // A campaign's DM: the master password plus the campaign the request is for.
 const asDM = (a, campaignId) =>
@@ -29,14 +29,14 @@ function setup() {
 
   // Each campaign gets its own database, as in production (one SQLite file per
   // campaign), so each library is seeded into its own store.
-  const amn = ldbFor(AMN);
-  amn.createSoundFile('snd-tavern', { name: 'Tavern Brawl', url: '/uploads/sounds/tavern.mp3' });
-  amn.createSoundFile('snd-chase',  { name: 'Chase',        url: '/uploads/sounds/chase.mp3' });
-  amn.createPlaylist('pl-amn', { name: 'Amn', sounds: ['snd-tavern', 'snd-chase'] });
+  const highmoor = ldbFor(HIGHMOOR);
+  highmoor.createSoundFile('snd-tavern', { name: 'Tavern Brawl', url: '/uploads/sounds/tavern.mp3' });
+  highmoor.createSoundFile('snd-chase',  { name: 'Chase',        url: '/uploads/sounds/chase.mp3' });
+  highmoor.createPlaylist('pl-highmoor', { name: 'Highmoor', sounds: ['snd-tavern', 'snd-chase'] });
 
   const west = ldbFor(WEST);
   west.createSoundFile('snd-dirge', { name: 'Dirge', url: '/uploads/sounds/dirge.mp3' });
-  west.createPlaylist('pl-west', { name: 'Waterdeep', sounds: ['snd-dirge'] });
+  west.createPlaylist('pl-west', { name: 'Riverford', sounds: ['snd-dirge'] });
 
   return { app, ldb, ldbFor, broadcasts };
 }
@@ -51,7 +51,7 @@ const state = (app, campaignId) =>
 describe('sound playback state is per campaign', () => {
   it('starts silent in a campaign that has never played anything', async () => {
     const { app } = setup();
-    const res = await state(app, AMN);
+    const res = await state(app, HIGHMOOR);
     expect(res.status).toBe(200);
     expect(res.body.isPlaying).toBe(false);
     expect(res.body.url).toBe(null);
@@ -60,75 +60,75 @@ describe('sound playback state is per campaign', () => {
 
   it('does not leak one campaign’s track into another campaign', async () => {
     const { app } = setup();
-    await play(app, AMN, 'pl-amn', 0);
+    await play(app, HIGHMOOR, 'pl-highmoor', 0);
 
-    // The whole point: Waterdeep must still be silent.
+    // The whole point: Riverford must still be silent.
     const west = await state(app, WEST);
     expect(west.body.isPlaying).toBe(false);
     expect(west.body.name).toBe(null);
 
-    const amn = await state(app, AMN);
-    expect(amn.body.isPlaying).toBe(true);
-    expect(amn.body.name).toBe('Tavern Brawl');
+    const highmoor = await state(app, HIGHMOOR);
+    expect(highmoor.body.isPlaying).toBe(true);
+    expect(highmoor.body.name).toBe('Tavern Brawl');
   });
 
   it('lets two campaigns play different tracks at the same time', async () => {
     const { app } = setup();
-    await play(app, AMN,  'pl-amn',  0);
+    await play(app, HIGHMOOR,  'pl-highmoor',  0);
     await play(app, WEST, 'pl-west', 0);
 
-    const amn  = await state(app, AMN);
+    const highmoor  = await state(app, HIGHMOOR);
     const west = await state(app, WEST);
 
-    expect(amn.body.name).toBe('Tavern Brawl');
+    expect(highmoor.body.name).toBe('Tavern Brawl');
     expect(west.body.name).toBe('Dirge');
-    expect(amn.body.isPlaying).toBe(true);
+    expect(highmoor.body.isPlaying).toBe(true);
     expect(west.body.isPlaying).toBe(true);
     // Starting the second one must not have disturbed the first.
-    expect(amn.body.playlistId).toBe('pl-amn');
+    expect(highmoor.body.playlistId).toBe('pl-highmoor');
     expect(west.body.playlistId).toBe('pl-west');
   });
 
   it('stops only the campaign that asked to stop', async () => {
     const { app } = setup();
-    await play(app, AMN,  'pl-amn',  0);
+    await play(app, HIGHMOOR,  'pl-highmoor',  0);
     await play(app, WEST, 'pl-west', 0);
 
     await asDM(request(app).post('/api/sound/control'), WEST).send({ action: 'stop' });
 
     expect((await state(app, WEST)).body.isPlaying).toBe(false);
-    const amn = await state(app, AMN);
-    expect(amn.body.isPlaying).toBe(true);
-    expect(amn.body.name).toBe('Tavern Brawl');
+    const highmoor = await state(app, HIGHMOOR);
+    expect(highmoor.body.isPlaying).toBe(true);
+    expect(highmoor.body.name).toBe('Tavern Brawl');
   });
 
   it('pauses one campaign without pausing the other', async () => {
     const { app } = setup();
-    await play(app, AMN,  'pl-amn',  0);
+    await play(app, HIGHMOOR,  'pl-highmoor',  0);
     await play(app, WEST, 'pl-west', 0);
 
-    await asDM(request(app).post('/api/sound/control'), AMN).send({ action: 'pause', position: 12.5 });
+    await asDM(request(app).post('/api/sound/control'), HIGHMOOR).send({ action: 'pause', position: 12.5 });
 
-    const amn = await state(app, AMN);
-    expect(amn.body.isPlaying).toBe(false);
-    expect(amn.body.currentPosition).toBeCloseTo(12.5, 3);
-    expect(amn.body.name).toBe('Tavern Brawl');       // paused, not cleared
+    const highmoor = await state(app, HIGHMOOR);
+    expect(highmoor.body.isPlaying).toBe(false);
+    expect(highmoor.body.currentPosition).toBeCloseTo(12.5, 3);
+    expect(highmoor.body.name).toBe('Tavern Brawl');       // paused, not cleared
 
     expect((await state(app, WEST)).body.isPlaying).toBe(true);
   });
 
   it('advances the right campaign’s playlist on next', async () => {
     const { app } = setup();
-    await play(app, AMN,  'pl-amn',  0);
+    await play(app, HIGHMOOR,  'pl-highmoor',  0);
     await play(app, WEST, 'pl-west', 0);
 
-    await asDM(request(app).post('/api/sound/control'), AMN).send({ action: 'next' });
+    await asDM(request(app).post('/api/sound/control'), HIGHMOOR).send({ action: 'next' });
 
-    // Amn moves to its own second track; before this fix "next" read the shared
+    // Highmoor moves to its own second track; before this fix "next" read the shared
     // playlistId and could walk another campaign's list entirely.
-    const amn = await state(app, AMN);
-    expect(amn.body.trackIndex).toBe(1);
-    expect(amn.body.name).toBe('Chase');
+    const highmoor = await state(app, HIGHMOOR);
+    expect(highmoor.body.trackIndex).toBe(1);
+    expect(highmoor.body.name).toBe('Chase');
 
     const west = await state(app, WEST);
     expect(west.body.trackIndex).toBe(0);
@@ -137,56 +137,56 @@ describe('sound playback state is per campaign', () => {
 
   it('keeps loop mode, seek position and volume separate', async () => {
     const { app } = setup();
-    await play(app, AMN,  'pl-amn',  0);
+    await play(app, HIGHMOOR,  'pl-highmoor',  0);
     await play(app, WEST, 'pl-west', 0);
 
-    await asDM(request(app).post('/api/sound/control'), AMN).send({ action: 'loopMode', loopMode: 'playlist' });
-    await asDM(request(app).post('/api/sound/control'), AMN).send({ action: 'volume', volume: 0.25 });
+    await asDM(request(app).post('/api/sound/control'), HIGHMOOR).send({ action: 'loopMode', loopMode: 'playlist' });
+    await asDM(request(app).post('/api/sound/control'), HIGHMOOR).send({ action: 'volume', volume: 0.25 });
     await asDM(request(app).post('/api/sound/control'), WEST).send({ action: 'loopMode', loopMode: 'track' });
     await asDM(request(app).post('/api/sound/control'), WEST).send({ action: 'seek', position: 42 });
 
-    const amn  = (await state(app, AMN)).body;
+    const highmoor  = (await state(app, HIGHMOOR)).body;
     const west = (await state(app, WEST)).body;
 
-    expect(amn.loopMode).toBe('playlist');
-    expect(amn.volume).toBe(0.25);
+    expect(highmoor.loopMode).toBe('playlist');
+    expect(highmoor.volume).toBe(0.25);
     expect(west.loopMode).toBe('track');
     expect(west.volume).toBe(1);
     expect(west.currentPosition).toBeGreaterThanOrEqual(42);
-    expect(amn.currentPosition).toBeLessThan(42);
+    expect(highmoor.currentPosition).toBeLessThan(42);
   });
 
   it('sends every sound event only to the campaign it belongs to', async () => {
     const { app, broadcasts } = setup();
-    await play(app, AMN,  'pl-amn',  0);
+    await play(app, HIGHMOOR,  'pl-highmoor',  0);
     await play(app, WEST, 'pl-west', 0);
-    await asDM(request(app).post('/api/sound/control'), AMN).send({ action: 'next' });
+    await asDM(request(app).post('/api/sound/control'), HIGHMOOR).send({ action: 'next' });
 
     const sound = broadcasts.filter(b => b.channel === 'sound');
     expect(sound).toHaveLength(3);
-    expect(sound.every(b => b.campaignId === AMN || b.campaignId === WEST)).toBe(true);
+    expect(sound.every(b => b.campaignId === HIGHMOOR || b.campaignId === WEST)).toBe(true);
 
-    // Nothing addressed to Waterdeep may carry an Amn track, and vice versa.
+    // Nothing addressed to Riverford may carry an Highmoor track, and vice versa.
     const westNames = sound.filter(b => b.campaignId === WEST).map(b => b.payload.name);
-    const amnNames  = sound.filter(b => b.campaignId === AMN).map(b => b.payload.name);
+    const amnNames  = sound.filter(b => b.campaignId === HIGHMOOR).map(b => b.payload.name);
     expect(westNames).toEqual(['Dirge']);
     expect(amnNames).toEqual(['Tavern Brawl', 'Chase']);
   });
 
   it('still refuses control from a non-DM', async () => {
     const { app } = setup();
-    const res = await asPlayer(request(app).post('/api/sound/control'), AMN)
-      .send({ action: 'play', playlistId: 'pl-amn', trackIndex: 0 });
+    const res = await asPlayer(request(app).post('/api/sound/control'), HIGHMOOR)
+      .send({ action: 'play', playlistId: 'pl-highmoor', trackIndex: 0 });
     expect(res.status).toBe(401);
-    expect((await state(app, AMN)).body.isPlaying).toBe(false);
+    expect((await state(app, HIGHMOOR)).body.isPlaying).toBe(false);
   });
 
   it('reports position for the asking campaign only', async () => {
     const { app } = setup();
-    await play(app, AMN, 'pl-amn', 0, { position: 30 });
+    await play(app, HIGHMOOR, 'pl-highmoor', 0, { position: 30 });
 
-    const amn = (await state(app, AMN)).body;
-    expect(amn.currentPosition).toBeGreaterThanOrEqual(30);
+    const highmoor = (await state(app, HIGHMOOR)).body;
+    expect(highmoor.currentPosition).toBeGreaterThanOrEqual(30);
 
     const west = (await state(app, WEST)).body;
     expect(west.currentPosition).toBe(0);
@@ -197,7 +197,7 @@ describe('POST /api/sounds/upload (raw file)', () => {
   const MP3 = Buffer.concat([Buffer.from('ID3'), Buffer.alloc(2000, 7)]);
   const upload = (app, body, { name = 'Rain', type = 'audio/mpeg', dm = true } = {}) => {
     let r = request(app).post('/api/sounds/upload?name=' + encodeURIComponent(name))
-      .set('X-Campaign-Id', AMN).set('Content-Type', type);
+      .set('X-Campaign-Id', HIGHMOOR).set('Content-Type', type);
     if (dm) r = r.set('X-Master-Password', TEST_MASTER_PW);
     return r.send(body);
   };
@@ -210,7 +210,7 @@ describe('POST /api/sounds/upload (raw file)', () => {
     const onDisk = path.join(uploadsDir, 'sounds', path.basename(res.body.url));
     expect(fs.readFileSync(onDisk).equals(MP3)).toBe(true);
     expect(fs.existsSync(onDisk + '.part')).toBe(false);
-    expect(ldbFor(AMN).listSoundFiles().map(s => s.name)).toContain('Yağmur Sesi');
+    expect(ldbFor(HIGHMOOR).listSoundFiles().map(s => s.name)).toContain('Yağmur Sesi');
   });
 
   it('refuses a file over the limit and leaves nothing behind', async () => {
@@ -218,7 +218,7 @@ describe('POST /api/sounds/upload (raw file)', () => {
     const res = await upload(app, MP3);
     expect(res.status).toBe(413);
     expect(res.body.code).toBe('TOO_LARGE');
-    expect(ldbFor(AMN).listSoundFiles()).toHaveLength(0);
+    expect(ldbFor(HIGHMOOR).listSoundFiles()).toHaveLength(0);
     const dir = path.join(uploadsDir, 'sounds');
     expect(fs.existsSync(dir) ? fs.readdirSync(dir) : []).toEqual([]);
   });

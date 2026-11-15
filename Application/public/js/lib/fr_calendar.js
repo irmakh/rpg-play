@@ -1,103 +1,106 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-11-15 14:30
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
 'use strict';
 
-const FR_MONTHS = [
-  { num:1,  name:'Hammer',    epithet:'Deepwinter' },
-  { num:2,  name:'Alturiak',  epithet:'The Claw of Winter' },
-  { num:3,  name:'Ches',      epithet:'The Claw of the Sunsets' },
-  { num:4,  name:'Tarsakh',   epithet:'The Claw of the Storms' },
-  { num:5,  name:'Mirtul',    epithet:'The Melting' },
-  { num:6,  name:'Kythorn',   epithet:'The Time of Flowers' },
-  { num:7,  name:'Flamerule', epithet:'Summertide' },
-  { num:8,  name:'Eleasis',   epithet:'Highsun' },
-  { num:9,  name:'Eleint',    epithet:'The Fading' },
-  { num:10, name:'Marpenoth', epithet:'Leaffall' },
-  { num:11, name:'Uktar',     epithet:'The Rotting' },
-  { num:12, name:'Nightal',   epithet:'The Drawing Down' },
+/*
+ * The campaign calendar: 12 months of 30 days, three 10-day weeks each, with
+ * festival days between some months and one extra festival in leap years.
+ *
+ * The names are the campaign's own. The built-in ones below are generic; a
+ * server with a local-content folder (lib/local-content.js) puts that
+ * campaign's calendar into every page as window.RPG_LOCAL.calendar, and it
+ * replaces them here. Festival KEYS never change — saved dates refer to them —
+ * only the names shown for them do.
+ */
+const _CAL = (typeof window !== 'undefined' && window.RPG_LOCAL && window.RPG_LOCAL.calendar) || null;
+
+const _CAL_DEFAULT_MONTHS = Array.from({ length: 12 }, (_, i) => ({ num: i + 1, name: `Month ${i + 1}`, epithet: '' }));
+
+// afterMonth = falls after the last day of that month; every4Years = leap years only.
+const _CAL_DEFAULT_FESTIVALS = [
+  { key: 'midwinter',      name: 'Midwinter',        afterMonth: 1,  every4Years: false },
+  { key: 'greengrass',     name: 'Spring Festival',  afterMonth: 4,  every4Years: false },
+  { key: 'midsummer',      name: 'Midsummer',        afterMonth: 7,  every4Years: false },
+  { key: 'shieldmeet',     name: 'Leap Day',         afterMonth: 7,  every4Years: true  },
+  { key: 'highharvestide', name: 'Harvest Festival', afterMonth: 9,  every4Years: false },
+  { key: 'feast_of_moon',  name: 'Moon Festival',    afterMonth: 11, every4Years: false },
 ];
 
-// Festival days; afterMonth = occurs after the last day of that month number
-const FR_FESTIVALS = [
-  { key:'midwinter',      name:'Midwinter',             afterMonth:1,  every4Years:false },
-  { key:'greengrass',     name:'Greengrass',             afterMonth:4,  every4Years:false },
-  { key:'midsummer',      name:'Midsummer',              afterMonth:7,  every4Years:false },
-  { key:'shieldmeet',     name:'Shieldmeet',             afterMonth:7,  every4Years:true  },
-  { key:'highharvestide', name:'Highharvestide',         afterMonth:9,  every4Years:false },
-  { key:'feast_of_moon',  name:'The Feast of the Moon',  afterMonth:11, every4Years:false },
-];
+function _calMonths(list) {
+  if (!Array.isArray(list) || list.length !== 12) return null;
+  const out = list.map((m, i) => ({ num: i + 1, name: String((m && m.name) || `Month ${i + 1}`), epithet: String((m && m.epithet) || '') }));
+  return out;
+}
+function _calFestivals(list) {
+  if (!Array.isArray(list)) return null;
+  const known = new Set(_CAL_DEFAULT_FESTIVALS.map(f => f.key));
+  const out = list.filter(f => f && known.has(f.key)).map(f => ({
+    key: f.key,
+    name: String(f.name || f.key),
+    afterMonth: Math.min(12, Math.max(1, parseInt(f.afterMonth) || 1)),
+    every4Years: !!(f.leapYearsOnly ?? f.every4Years),
+  }));
+  return out.length ? out : null;
+}
 
-const FR_YEAR_NAMES = {
-  1480:'Year of Storms', 1481:'Year of the Grinning Halfling',
-  1482:'Year of the Stars Falling', 1483:'Year of the Tasked Weasel',
-  1484:'Year of the Awakened Sleepers', 1485:"Year of the Iron Dwarf's Vengeance",
-  1486:'Year of the Nether Mountain Scrolls', 1487:'Year of the Rune Lords Triumphant',
-  1488:'Year of Dwarvenkind Reborn', 1489:'Year of the Warrior Princess',
-  1490:"Year of the Star Walker's Return", 1491:'Year of the Scarlet Witch',
-  1492:'Year of Three Ships Sailing', 1493:'Year of the Purple Dragons',
-  1494:'Year of the Ageless One', 1495:'Year of the Pink Flumph',
-  1496:'Year of the Nether Mountain Scrolls', 1497:"Year of the Triton's Horn",
-  1498:'Year of the Leaning Post', 1499:'Year of the Smiling Halfling',
-  1500:"Year of the Sea's Secrets Revealed",
-  1501:'Year of the Shining Mythal', 1502:'Year of the Pox Plague',
-  1503:'Year of the Haunted Inn', 1504:'Year of the Conquering Queen',
-  1505:'Year of the Ogres Marching', 1506:'Year of the Discarded Shields',
-  1507:'Year of the Glowing Onyx', 1508:'Year of the Legend Reborn',
-  1509:'Year of the Sea Lion', 1510:'Year of the Treasure Abandoned',
-  1511:'Year of the Lion Rampant', 1512:'Year of the Shattered Mirror',
-  1513:'Year of the Tawny Feline', 1514:'Year of the Lost Wagers',
-  1515:'Year of the Howling Ghouls', 1516:"Year of the Hangman's Joke",
-  1517:'Year of the Coward Rewarded', 1518:'Year of the Adomal Tapestry',
-  1519:'Year of the Deceitful Brother', 1520:'Year of the Arcane',
-  1521:'Year of the Moon Harp Restored', 1522:'Year of the Bored Phylls',
-  1523:"Year of the Brownie's Delight", 1524:'Year of the Captive Harper',
-  1525:'Year of the Drawn Line', 1526:'Year of the Hazy Coast',
-  1527:'Year of the Hoard Retaken', 1528:'Year of the Insufferable Mystic',
-  1529:"Year of the Horseman's Triumph", 1530:'Year of the Long-toothed Tiger',
-  1531:'Year of the Oozing Bog', 1532:'Year of the Locked Crypt',
-  1533:'Year of the Mishapen Mage', 1534:'Year of the Pale Lords',
-  1535:'Year of the Laurel Wreath', 1536:'Year of the Mirrored Face',
-  1537:"Year of the Jungle's Vengeance", 1538:'Year of the Stalking Tiger',
-  1539:'Year of the Thoughtless Suitor', 1540:'Year of the Lifeless Archdruid',
-  1541:'Year of the Mirthful House', 1542:'Year of the Painted Grin',
-  1543:'Year of the Sacred Sceptre', 1544:'Year of the Shadow Fiends',
-  1545:'Year of the Undying March', 1546:'Year of the Winter Rose',
-  1547:'Year of the Dungeons Reclaimed', 1548:'Year of the Handsome Deal',
-  1549:'Year of the Meandering Archipelago', 1550:'Year of the Scarlet Tabard',
-  1551:'Year of the Misty Grave', 1552:'Year of the Overflowing Cup',
-  1553:'Year of the Request', 1554:'Year of the Dark Chosen',
-  1555:'Year of the Argent Scarab', 1556:'Year of the Stone Steps',
-  1557:'Year of the Murdered Sage', 1558:'Year of the Watchful Guardian',
-  1559:"Year of the Shepherd's Son", 1560:"Year of the Trees' Receding",
-  1561:'Year of the Wild Hunt', 1562:'Year of the Pointing Finger',
-  1563:'Year of the Starlit Necklace', 1564:'Year of the Slaughtered Lamb',
-  1565:'Year of the Unkindest Cut', 1566:'Year of the Weasel',
-  1567:'Year of the Sacred Lash', 1568:'Year of the Studious Enchanter',
-  1569:'Year of the Turned Page', 1570:'Year of the Vacant Cairn',
-  1571:'Year of the Red Mantle', 1572:'Year of the Stingray',
-  1573:'Year of the Wicked Jailor', 1574:'Year of the Rebuked Storm',
-  1575:'Year of the Twin Pavilions', 1576:'Year of the Vanishing Throne',
-  1577:'Year of the Whispering Hood', 1578:'Year of the Steadfast Patrol',
-  1579:'Year of the Underking', 1580:"Year of the Widow's Tears",
-  1581:'Year of the Rings', 1582:'Year of the Howling Winds',
-  1583:'Year of the Decay', 1584:'Year of the Skirling Pipes',
-  1585:'Year of the Bloodied Manacles', 1586:'Year of the Pax Draconomica',
-  1587:'Year of the Long Silence', 1588:'Year of the Swarming Ravens',
-  1589:'Year of the Watching Ancestors', 1590:'Year of the Coming Twilight',
-  1591:'Year of the Skeletons', 1592:'Year of the Dying Hate',
-  1593:'Year of the Rising Stars', 1594:'Year of the Fragrant Orchards',
-  1595:'Year of the Raging Baatezu', 1596:'Year of the Heavenly Scriptures',
-  1597:'Year of the Stolen Gold', 1598:'Year of the Doom Cauldron',
-  1599:'Year of the Black Pearls', 1600:'Year of the Unseen Enemies',
-};
+const FR_MONTHS    = (_CAL && _calMonths(_CAL.months)) || _CAL_DEFAULT_MONTHS;
+const FR_FESTIVALS = (_CAL && _calFestivals(_CAL.festivals)) || _CAL_DEFAULT_FESTIVALS;
+// Names for particular years ("Year of …"), shown beside the number.
+const FR_YEAR_NAMES = (_CAL && _CAL.yearNames && typeof _CAL.yearNames === 'object') ? _CAL.yearNames : {};
+// What follows a year number ("1492 DR"); none by default.
+const CAL_ERA = (_CAL && typeof _CAL.eraSuffix === 'string') ? _CAL.eraSuffix.trim().slice(0, 12) : '';
+// What a 10-day week is called.
+const CAL_WEEK = (_CAL && typeof _CAL.weekName === 'string' && _CAL.weekName.trim()) ? _CAL.weekName.trim().slice(0, 20) : 'Week';
+// The year a fresh campaign starts in.
+const CAL_DEFAULT_YEAR = (_CAL && parseInt(_CAL.defaultYear) > 0) ? parseInt(_CAL.defaultYear) : 1492;
+const _CAL_LEAP = (_CAL && parseInt(_CAL.leapEveryYears) > 0) ? parseInt(_CAL.leapEveryYears) : 4;
 
-function frIsLeapYear(y) { return y % 4 === 0; }
+function frIsLeapYear(y) { return y % _CAL_LEAP === 0; }
+
+/** "1492" or "1492 DR", as the campaign writes its years. */
+function frYearLabel(y) { return CAL_ERA ? `${y} ${CAL_ERA}` : String(y); }
 
 function frYearName(y) {
   const n = FR_YEAR_NAMES[y];
-  return n ? `${y} DR — ${n}` : `${y} DR`;
+  return n ? `${frYearLabel(y)} — ${n}` : frYearLabel(y);
+}
+
+/** "Mirtul — The Melting", or just the name when the month has no epithet. */
+function frMonthTitle(num) {
+  const m = FR_MONTHS.find(x => x.num === num);
+  if (!m) return '?';
+  return m.epithet ? `${m.name} — ${m.epithet}` : m.name;
+}
+
+/** "1st. Week" … for the three rows of a month grid. */
+function frWeekLabels() {
+  return ['1st', '2nd', '3rd'].map(o => `${o}. ${CAL_WEEK}`);
+}
+
+/**
+ * Fill the calendar's dropdowns and labels in a page from the names above:
+ * <select data-cal="months">, <select data-cal="festivals"> and
+ * <span data-cal="era"> (which shows " (DR)" when the campaign has an era).
+ */
+function frFillCalendarControls(root) {
+  const r = root || document;
+  r.querySelectorAll('select[data-cal="months"]').forEach(sel => {
+    const v = sel.value;
+    sel.innerHTML = FR_MONTHS.map(m => `<option value="${m.num}">${esc(m.name)}</option>`).join('');
+    if (v) sel.value = v;
+  });
+  r.querySelectorAll('select[data-cal="festivals"]').forEach(sel => {
+    const v = sel.value;
+    sel.innerHTML = FR_FESTIVALS.map(f => `<option value="${f.key}">${esc(f.name)}${f.every4Years ? ' (leap years)' : ''}</option>`).join('');
+    if (v) sel.value = v;
+  });
+  r.querySelectorAll('[data-cal="era"]').forEach(el => { el.textContent = CAL_ERA ? ` (${CAL_ERA})` : ''; });
+  r.querySelectorAll('input[data-cal="year"]').forEach(inp => { if (!inp.dataset.calSet) { inp.value = CAL_DEFAULT_YEAR; inp.dataset.calSet = '1'; } });
+}
+if (typeof document !== 'undefined' && document.addEventListener) {
+  document.addEventListener('DOMContentLoaded', () => frFillCalendarControls());
 }
 
 function frMonthName(num) { return FR_MONTHS.find(m => m.num === num)?.name || '?'; }
@@ -106,8 +109,8 @@ function frFestivalName(key) { return FR_FESTIVALS.find(f => f.key === key)?.nam
 
 function frFormatDate(d) {
   if (!d) return '—';
-  if (d.frFestival) return `${frFestivalName(d.frFestival)}, ${d.frYear} DR`;
-  return `${d.frDay} ${frMonthName(d.frMonth)}, ${d.frYear} DR`;
+  if (d.frFestival) return `${frFestivalName(d.frFestival)}, ${frYearLabel(d.frYear)}`;
+  return `${d.frDay} ${frMonthName(d.frMonth)}, ${frYearLabel(d.frYear)}`;
 }
 
 function frDatesEqual(a, b) {
@@ -158,7 +161,7 @@ function frNavigate(view, dir) {
 
 // Convert a date object to its corresponding calendar view page
 function frDateToView(d) {
-  if (!d || !d.frYear) return { type: 'month', month: 1, year: 1492 };
+  if (!d || !d.frYear) return { type: 'month', month: 1, year: CAL_DEFAULT_YEAR };
   if (d.frFestival) return { type: 'festival', festival: d.frFestival, year: d.frYear };
   return { type: 'month', month: d.frMonth || 1, year: d.frYear };
 }

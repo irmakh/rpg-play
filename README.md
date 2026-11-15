@@ -47,8 +47,6 @@ Vanilla JS, no build step, no framework. Runs on SQLite by default; nothing to p
 
 [![Electron](https://img.shields.io/badge/Windows_desktop_client-Electron_44-47848F?style=for-the-badge&logo=electron&logoColor=white)](#desktop-client-windows)
 
-![The desktop client — the table in a native window, with the menu bar, token panel and chat dock](docs/screenshots/desktop-client.webp)
-
 The desktop client is a **thin client**: it renders the pages this server already serves,
 so the web app stays unchanged and nothing needs redeploying when the desktop app changes.
 What it adds over a browser:
@@ -73,8 +71,6 @@ client itself.
 ## Feature Overview
 
 ### Campaigns (`/`) — the front door
-
-![The campaign picker — every campaign on the left, the selected one's cover, stats and login on the right](docs/screenshots/campaigns.webp)
 
 The server hosts any number of **campaigns**, and each one is a fully separate tenant: its own characters, table, initiative, monsters, treasury, calendar, weather, maps, sounds, chat and stories — and its own DM password.
 
@@ -182,8 +178,6 @@ Uploaded images and audio are split the same way: new uploads land in `public/up
 
 ### DM Calendar (`/events.html`) — DM only
 
-![The Calendar of Harptos — three tendays per month with rolled weather on the grid, and the day's events beside it](docs/screenshots/dm-calendar.webp)
-
 - Full **Calendar of Harptos** (Forgotten Realms): 12 months × 30 days as three tendays × 10 columns
 - Festival rows between months: Midwinter, Greengrass, Midsummer, Shieldmeet (leap years), Highharvestide, The Feast of the Moon
 - Dale Reckoning year names for years 1–1600 (e.g. 1492 DR — Year of Three Ships Sailing)
@@ -284,8 +278,6 @@ movement is not broadcast to players while parked.
 
 ### Monster Library (`/monsters.html`) — DM only
 
-![The monster library's 3rd Party tab — monsters from the imported books, filtered by book, with the selected one's stat block and its Copy to My Monsters button](docs/screenshots/monster-library.webp)
-
 - Two tabs: **My Monsters** (yours to edit) and **3rd Party**
 - **3rd Party monsters** — **Books…** imports whole 5etools bestiary books into the campaign (all 114 books are about 4,700 monsters). The files are downloaded, imported and discarded; adventure monsters built from another book's stat block come in whole. A book can be imported again to update it in place, or removed after a confirmation; monsters a token, initiative entry or prepared map still uses are kept. 3rd Party monsters cannot be edited, but go into initiative, onto the table (the **3rd Party** tab of Add Token) and onto prepared maps like your own, and cast their spells. **Copy to My Monsters** makes an editable copy
 - Full stat blocks: abilities, skills, saves, senses, CR, HP, AC, speed, traits, actions, legendary actions (multi-line text renders correctly)
@@ -296,21 +288,13 @@ movement is not broadcast to players while parked.
 
 ### Spell Library (`/spells.html`) — DM only
 
-![The spell library — every spell of the campaign by level, filtered by level, class and book, with the selected spell's full text and class list](docs/screenshots/spell-library.webp)
-
 - One spell library per campaign, which the character sheets pick spells from and the Cast a Spell pop-up reads descriptions from
 - **Import from books** — tick 5etools books and every spell in them comes in, with its class lists. The files are downloaded, imported and discarded; nothing from 5etools is stored except the spells. Importing a book again replaces each spell in place, and **Remove** (after a confirmation) takes a book out of the library but keeps the spells a character has taken
 - Add, edit and delete spells by hand, or import 5etools spell JSON
 
-<p align="center">
-  <img src="docs/screenshots/spell-cast.webp" width="560" alt="The Cast a Spell pop-up on the table — the wizard's spells grouped by level, and Lightning Bolt's details, its slot choice with the spent level 3 and 4 slots greyed out, and the damage scaled for a level 5 slot">
-</p>
-
 <p align="center"><em>Cast a Spell on the table: spent slot levels are greyed out, and the damage follows the slot chosen.</em></p>
 
 ### Music & Sound Player (`/playlists.html`) — DM only
-
-![The music library — playlists and the sound library on the left, the selected playlist's tracks on the right](docs/screenshots/music-library.webp)
 
 - Upload audio and organise into named playlists; reorder, rename, delete tracks
 - **DM playback on the table:** play / stop / seek (seek affects all listeners); **loop modes** (none / track / playlist auto-advance)
@@ -320,16 +304,11 @@ movement is not broadcast to players while parked.
 ### AI Dungeon Master — retired
 
 The AI DM was removed from the app in v236 (September 2026): its button and pages are
-gone. Its code is kept, unchanged, in `retired/aiDM/` at the top of the repository,
-outside the deployed application — see that folder's README before thinking of reviving
-it. Existing `aiDM.db` files are not deleted and are still included in the raw database
+gone, and its code has since been removed from the repository (it is still in the git
+history, up to commit 44fe15d). Existing `aiDM.db` files are not deleted and are still included in the raw database
 backup.
 
 ### Stories (`/stories.html`) — password protected
-
-![The story dashboard — a card per story, cover taken from its first panel, filterable by character](docs/screenshots/stories.webp)
-
-![The story viewer — comic panels in a grid with the cast strip above, switchable to a single vertical strip](docs/screenshots/story-viewer.webp)
 
 - Comic-book story system for session recaps and campaign moments
 - **Dashboard** — card grid (cover = first panel, title, cast, panel count, date) with character filter
@@ -716,6 +695,24 @@ installed app. Copy `Android/keystore/`, `Android/keystore.properties` and
 | `TRUST_PROXY` | No | off | Read the client IP from `X-Forwarded-For`. **Only enable behind a real reverse proxy** — with it on and no proxy, a client can forge the header and walk around the login lockout |
 | `TELEMETRY` | No | on | `off` stops the daily install report — see [Install reporting](#install-reporting) |
 | `TELEMETRY_URL` | No | `https://dnd.kimse.me` | Where install reports go |
+| `BOOK_DATA_URL` | No | — | Where **Import from books** (spells, monsters, items) reads its data: a folder in the 5etools layout (`spells/`, `bestiary/`, `items.json`, `books.json`). Unset, the import screens say book import is not set up. Use only data you have the right to use |
+| `LOCAL_CONTENT_DIR` | No | — | A folder with this server's own setting content, kept out of the repository — see [Local content](#local-content) |
+
+### Local content
+
+The code ships SRD-only defaults: a calendar with generic month and festival names, the
+SRD's summon spells, and the SRD classes for character import. A server can add its own
+setting through a folder named by `LOCAL_CONTENT_DIR` (`Application/local-content/` is
+git-ignored for this):
+
+| File | What it sets |
+|---|---|
+| `calendar.json` | Month, festival and year names, the week name and the era after a year (`"eraSuffix": "DR"`). Festival **keys** must stay as they are: saved dates refer to them |
+| `summons.json` | Summon spells beyond the SRD — `{ "spells": { "summon critter": { "names": ["Critter Spirit"] } } }`, or `types` with `maxCr` (a number, or `{ "spellLevelPlus": 1 }`) — and `addCreatures` for spells already known |
+| `classes.json` | Classes beyond the SRD for XML character import: `{ "Tinker": { "saves": ["con","int"], "hitDie": "d8", "spellAbility": "Intelligence" } }` |
+
+The server reads the folder once at start-up; restart it after a change. A missing file
+means the default, and one that cannot be parsed is logged and skipped.
 
 ### Install reporting
 
@@ -800,7 +797,6 @@ char_sheet/
 │   ├── src/preload/        #   Preloads — cross-window session mirror + settings bridge
 │   ├── src/renderer/       #   Its own pages — first-run setup, settings, offline screen
 │   └── assets/             #   App and tray icons
-├── retired/aiDM/          # The retired AI DM, kept unchanged and not deployed
 ├── goals/ tools/ context/ args/ hardprompts/   # GOTCHA framework layers (see CLAUDE.md)
 ├── memory/  data/          # Persistent cross-session memory (Application/data/ holds campaign DBs)
 ├── docker-compose.yml  Dockerfile.dev  docker-*.sh   # Docker deployment
@@ -811,6 +807,12 @@ char_sheet/
 📁 **Full file listing:** [structure.md](structure.md)
 
 ---
+
+## License
+
+RPG Play is licensed under the Business Source License 1.1 — see [LICENSE](LICENSE). The
+fonts, the 3D CSS dice and the npm packages are the work of others and keep their own
+licenses; they are listed in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
 
 ## Troubleshooting
 

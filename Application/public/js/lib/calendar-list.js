@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-11 17:40
+// Written by Irmak Hakman — 2026-11-15 14:30
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -120,8 +120,8 @@ function calScopeHeading(f) {
   }
   if (f.scope === 'upcoming') return f.today ? `Events from ${frFormatDate(f.today)} on` : 'Upcoming events';
   if (f.scope === 'all') return 'All events';
-  if (f.view && f.view.type === 'festival') return `Events on ${frFestivalName(f.view.festival)}, ${f.view.year} DR`;
-  return f.view ? `Events in ${frMonthName(f.view.month)} ${f.view.year} DR` : 'Events';
+  if (f.view && f.view.type === 'festival') return `Events on ${frFestivalName(f.view.festival)}, ${frYearLabel(f.view.year)}`;
+  return f.view ? `Events in ${frMonthName(f.view.month)} ${frYearLabel(f.view.year)}` : 'Events';
 }
 
 function calHasFilters(s) { return !!(s.q || s.kind || s.vis || s.author); }

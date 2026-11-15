@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-12 13:55
+// Written by Irmak Hakman — 2026-11-15 14:30
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -17,6 +17,10 @@ import { openCampaignDb } from '../../db/localdb.js';
 import registerBookItems from '../../server/routes/book-items.js';
 import * as S from '../../lib/item-source.js';
 
+// The book source is a server setting (BOOK_DATA_URL, lib/book-data.js); these
+// tests answer every request themselves, so any base will do.
+process.env.BOOK_DATA_URL = 'https://books.test/data';
+
 const FILES = {
   'items.json': { item: [
     { name: 'Cloak of Protection', source: 'XDMG', rarity: 'uncommon', reqAttune: true, wondrous: true, bonusAc: '+1',
@@ -25,7 +29,7 @@ const FILES = {
       entries: ['It deals {@damage 4d6} Lightning damage. {@dc 13} Dexterity save.'] },
     { name: 'Potion of Healing', source: 'XDMG', rarity: 'common', type: 'P', value: 5000, entries: ['Regain {@dice 2d4 + 2} Hit Points.'] },
     { name: 'Rope', source: 'XPHB', rarity: 'none', type: 'G', entries: ['Mundane.'] },
-    { name: 'Wand of Sparks', source: 'XGE', rarity: 'rare', type: 'WD', charges: 7, recharge: 'dawn',
+    { name: 'Wand of Sparks', source: 'HBK', rarity: 'rare', type: 'WD', charges: 7, recharge: 'dawn',
       entries: [{ type: 'list', items: ['One', 'Two'] }] },
   ], itemGroup: [] },
   'items-base.json': { baseitem: [
@@ -35,7 +39,7 @@ const FILES = {
     { name: '+1 Weapon', type: 'GV|DMG', requires: [{ weapon: true }],
       inherits: { namePrefix: '+1 ', source: 'XDMG', rarity: 'uncommon', bonusWeapon: '+1', entries: ['You have a {=bonusWeapon} bonus.'] } },
   ] },
-  'books.json': { book: [{ id: 'XDMG', name: "Dungeon Master's Guide (2024)" }, { id: 'XGE', name: "Xanathar's Guide to Everything" }] },
+  'books.json': { book: [{ id: 'XDMG', name: "The Treasure Vault (2024)" }, { id: 'HBK', name: "The Homebrew Grimoire" }] },
   'adventures.json': { adventure: [] },
 };
 const fakeFetch = async (url) => {
@@ -75,8 +79,8 @@ describe('5etools books', () => {
   it('lists only books with magic items, with their counts', async () => {
     const r = await dm(request(app).get('/api/book-items/books'));
     expect(r.body).toEqual([
-      { code: 'XDMG', name: "Dungeon Master's Guide (2024)", count: 4 },
-      { code: 'XGE', name: "Xanathar's Guide to Everything", count: 1 },
+      { code: 'XDMG', name: "The Treasure Vault (2024)", count: 4 },
+      { code: 'HBK', name: "The Homebrew Grimoire", count: 1 },
     ]);
   });
 
@@ -87,7 +91,7 @@ describe('5etools books', () => {
     expect((await search()).rows.map(i => i.name)).toEqual(['+1 Weapon', 'Cloak of Protection', 'Javelin of Lightning', 'Potion of Healing']);
     expect(broadcasts.some(b => b.event === 'bookItems')).toBe(true);
     expect((await dm(request(app).get('/api/book-items/sources'))).body)
-      .toEqual([{ source: 'XDMG', bookName: "Dungeon Master's Guide (2024)", origin: '5etools', count: 4 }]);
+      .toEqual([{ source: 'XDMG', bookName: "The Treasure Vault (2024)", origin: '5etools', count: 4 }]);
   });
 
   it('a second import updates in place', async () => {

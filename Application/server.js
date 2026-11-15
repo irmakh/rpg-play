@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-15 12:25
+// Written by Irmak Hakman — 2026-11-15 14:30
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -54,14 +54,28 @@ import registerMaintenance from './server/routes/maintenance.js';
 import registerTelemetry, { collectorEnabled } from './server/routes/telemetry.js';
 import { startTelemetry, createHostTracker } from './lib/telemetry.js';
 import makeNotify         from './server/notify.js';
-// The AI DM was retired in v236 and its code moved, unchanged, to
-// retired/aiDM/ at the repo root — outside Application/, so it no longer
-// deploys. It is not registered: none of its /ai-dm or /api/ai-dm routes exist.
+// The AI DM was retired in v236; its code has since been removed from the
+// repository (it is in the git history). None of its /ai-dm or /api/ai-dm
+// routes exist.
 import { resolveUploadPath, mimeToExt, safeFileId } from './lib/upload-paths.js';
 import { identityFromSession, payloadFor, tokenFromQuery } from './lib/realtime-audience.js';
+import { loadLocalContent, localContentScript } from './lib/local-content.js';
+import { applyLocalSummons } from './lib/summon.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// ── Local content ─────────────────────────────────────────────────────────────
+// This server's own setting content — calendar names, summon spells beyond the
+// SRD, extra classes — from a folder kept out of the public repository
+// (LOCAL_CONTENT_DIR, lib/local-content.js). Without it the SRD defaults apply.
+const localContent = loadLocalContent(
+  process.env.LOCAL_CONTENT_DIR ? path.resolve(__dirname, process.env.LOCAL_CONTENT_DIR) : '');
+if (localContent.summons) {
+  const r = applyLocalSummons(localContent.summons);
+  console.log(`local-content: ${r.added} summon spell(s) added, ${r.extended} extended`);
+}
+const LOCAL_CONTENT_SCRIPT = localContentScript(localContent);
 
 // ── Database ──────────────────────────────────────────────────────────────────
 // One backend: per-campaign SQLite. The hosted InstantDB alternative that used
@@ -507,7 +521,7 @@ const MAX_MEDIA_BYTES = 25 * 1024 * 1024;
 // Bump this number whenever frontend JS or CSS files change.
 // Also bump CACHE in public/sw.js to the same value.
 // Both must always match. See deployment notes in CLAUDE.md.
-const FRONTEND_VERSION = 356;
+const FRONTEND_VERSION = 357;
 
 // ── Express app ───────────────────────────────────────────────────────────────
 const app = express();
@@ -666,9 +680,12 @@ app.use((req, res, next) => {
         return `${attr}${url}?v=${FRONTEND_VERSION}${close}`;
       }
     );
+    // The campaign's own calendar and classes, before any script runs.
+    const page = LOCAL_CONTENT_SCRIPT ? versioned.replace(/<head>/i, m => `${m}
+${LOCAL_CONTENT_SCRIPT}`) : versioned;
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.setHeader('Cache-Control', 'no-store');
-    res.send(versioned);
+    res.send(page);
   });
 });
 
@@ -887,6 +904,8 @@ app.post('/api/console/event', (req, res) => {
 const ctx = {
   // DB
   ldb, genId,
+  // This server's own setting content (lib/local-content.js)
+  localContent,
   // Broadcast
   broadcast, sseClients, consoleSseClients, wsClients,
   // Auth — sessions, captcha and lockout; passwords are only checked at login

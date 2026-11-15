@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-12 02:10
+// Written by Irmak Hakman — 2026-11-15 14:30
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -959,13 +959,16 @@ function parseCreatorFormat(doc) {
     d['sk-exp-'+i]  = expSet.has(i);
   }
 
+  // The SRD's classes; a server's local-content classes.json adds its own
+  // (window.RPG_LOCAL.classes, lib/local-content.js).
+  const EXTRA = (typeof window !== 'undefined' && window.RPG_LOCAL && window.RPG_LOCAL.classes) || {};
   const SAVES = {
     'Wizard':['int','wis'],'Sorcerer':['con','cha'],'Warlock':['wis','cha'],
     'Cleric':['wis','cha'],'Druid':['int','wis'],'Bard':['dex','cha'],
     'Fighter':['str','con'],'Ranger':['str','dex'],'Rogue':['dex','int'],
-    'Paladin':['wis','cha'],'Barbarian':['str','con'],'Monk':['str','dex'],
-    'Artificer':['con','int']
+    'Paladin':['wis','cha'],'Barbarian':['str','con'],'Monk':['str','dex']
   };
+  for (const [n, c] of Object.entries(EXTRA)) if (c.saves && c.saves.length) SAVES[n] = c.saves;
   const saveSet = new Set(SAVES[d.class] || []);
   ['str','dex','con','int','wis','cha'].forEach(s => { d['save-prof-'+s] = saveSet.has(s); });
 
@@ -977,13 +980,15 @@ function parseCreatorFormat(doc) {
   d.hpcur = d.hpmax; d.hptemp = '0';
 
   const HD = {'Wizard':'d6','Sorcerer':'d6','Warlock':'d8','Cleric':'d8','Druid':'d8',
-    'Bard':'d8','Rogue':'d8','Monk':'d8','Artificer':'d8',
+    'Bard':'d8','Rogue':'d8','Monk':'d8',
     'Ranger':'d10','Fighter':'d10','Paladin':'d10','Barbarian':'d12'};
+  for (const [n, c] of Object.entries(EXTRA)) if (c.hitDie) HD[n] = c.hitDie;
   d.hd = lvl + (HD[d.class] || 'd8'); d.hdspent = '0';
 
   const SP_AB = {'Wizard':'Intelligence','Sorcerer':'Charisma','Warlock':'Charisma',
     'Cleric':'Wisdom','Druid':'Wisdom','Bard':'Charisma','Paladin':'Charisma',
-    'Ranger':'Wisdom','Artificer':'Intelligence'};
+    'Ranger':'Wisdom'};
+  for (const [n, c] of Object.entries(EXTRA)) if (c.spellAbility) SP_AB[n] = c.spellAbility;
   d['sp-ability'] = SP_AB[d.class] || '';
 
   // Full-caster spell slots by character level, spell levels 1–9 (PHB table).

@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-12 20:25
+// Written by Irmak Hakman — 2026-11-15 14:30
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -8,13 +8,19 @@
  * 'dm', 'player' (logged into this campaign) or absent, and X-Test-Char names
  * the player's own character.
  */
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, beforeAll, afterAll } from 'vitest';
 import request from 'supertest';
 import express from 'express';
 import crypto from 'crypto';
 
 import { openCampaignDb } from '../../db/localdb.js';
 import registerCast from '../../server/routes/cast.js';
+import { applyLocalSummons, resetSummonRules } from '../../lib/summon.js';
+
+// A summon spell beyond the SRD, as a server's local-content summons.json adds
+// it at start-up (lib/local-content.js). Invented, so no book's text is here.
+beforeAll(() => { applyLocalSummons({ spells: { 'summon critter': { names: ['Critter Spirit'] } } }); });
+afterAll(() => { resetSummonRules(); });
 
 let ldb, app, broadcasts, notes;
 
@@ -239,8 +245,8 @@ describe('a sheet still holding pre-v320 spell rows', () => {
 // ── Summon spells (lib/summon.js) ─────────────────────────────────────────────
 describe('summon spells', () => {
   const FAMILIAR = { id: 'sp-ff', name: 'Find Familiar', level: 1, ritual: true, prepared: true };
-  const SBEAST = { id: 'sp-sb', name: 'Summon Beast', level: 2, prepared: true,
-    entries: ['uses the {@creature Bestial Spirit|XPHB} stat block.'] };
+  const SBEAST = { id: 'sp-sb', name: 'Summon Critter', level: 2, prepared: true,
+    entries: ['uses the {@creature Critter Spirit|XPHB} stat block.'] };
   // Summons come from the 3rd Party monsters (imported books); `ids` maps a
   // test's short name to the id the book import gives the monster.
   const ids = {};
@@ -263,13 +269,13 @@ describe('summon spells', () => {
   });
 
   it('one candidate goes straight into the companions', async () => {
-    addMonster('m-bs', 'Bestial Spirit', { type: 'beast', cr: '', size: ['S'], hp: { special: '30 + 5 for each spell level above 2' }, ac: [{ special: '11 + the spell\'s level' }] });
+    addMonster('m-bs', 'Critter Spirit', { type: 'beast', cr: '', size: ['S'], hp: { special: '30 + 5 for each spell level above 2' }, ac: [{ special: '11 + the spell\'s level' }] });
     const r = await cast({ spellId: 'sp-sb', mode: 'slot', slotLevel: 3 });
     expect(r.status).toBe(200);
-    expect(r.body.summon).toMatchObject({ spell: 'Summon Beast', added: { name: 'Bestial Spirit', updated: false } });
+    expect(r.body.summon).toMatchObject({ spell: 'Summon Critter', added: { name: 'Critter Spirit', updated: false } });
     expect(r.body.keys).toContain('_companions');
     expect(JSON.parse(r.body.data._companions)).toHaveLength(1);
-    expect(companions()[0]).toMatchObject({ name: 'Bestial Spirit', monsterId: ids['m-bs'], hpMax: 35, ac: 14, size: 1 });
+    expect(companions()[0]).toMatchObject({ name: 'Critter Spirit', monsterId: ids['m-bs'], hpMax: 35, ac: 14, size: 1 });
     expect(broadcasts.some(b => b.event === 'characters' && b.payload.keys.includes('_companions'))).toBe(true);
   });
 
@@ -283,7 +289,7 @@ describe('summon spells', () => {
 
   it('none that fit says so', async () => {
     const r = await cast({ spellId: 'sp-sb', mode: 'slot', slotLevel: 2 });
-    expect(r.body.summon).toMatchObject({ spell: 'Summon Beast', none: true });
+    expect(r.body.summon).toMatchObject({ spell: 'Summon Critter', none: true });
   });
 
   const pick = (body, who = 'player', asChar = 'wiz') => {
@@ -342,14 +348,14 @@ describe('summon spells', () => {
 describe('summon spells search only what is imported', () => {
   it('never fetches anything: a creature in no imported book is not found', async () => {
     seed({ 'slot-2-total': '2', 'slot-2-used': '0',
-           _spells: JSON.stringify([{ id: 'sp-sb', name: 'Summon Beast', level: 2, prepared: true }]) });
+           _spells: JSON.stringify([{ id: 'sp-sb', name: 'Summon Critter', level: 2, prepared: true }]) });
     const realFetch = globalThis.fetch;
     let fetched = 0;
     globalThis.fetch = async () => { fetched++; throw new Error('no network'); };
     try {
       const r = await cast({ spellId: 'sp-sb', mode: 'slot', slotLevel: 2 });
       expect(r.status).toBe(200);
-      expect(r.body.summon).toMatchObject({ spell: 'Summon Beast', none: true });
+      expect(r.body.summon).toMatchObject({ spell: 'Summon Critter', none: true });
       expect(fetched).toBe(0);
     } finally { globalThis.fetch = realFetch; }
   });

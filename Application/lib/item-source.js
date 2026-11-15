@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-12 13:55
+// Written by Irmak Hakman — 2026-11-15 14:30
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -7,9 +7,9 @@
  * (server/routes/book-items.js).
  *
  * Two ways in:
- *   - the 5etools core data (items.json, items-base.json, magicvariants.json
- *     in the public GitHub repository 5etools-mirror-3/5etools-src), fetched
- *     for one import, used and dropped — nothing is written to disk;
+ *   - the core item data (items.json, items-base.json, magicvariants.json in
+ *     the data folder named by BOOK_DATA_URL, lib/book-data.js), fetched for
+ *     one import, used and dropped — nothing is written to disk;
  *   - a 5etools homebrew JSON file the DM uploads ({ _meta, item, itemGroup,
  *     magicvariant, baseitem }), read the same way and not kept either.
  *
@@ -20,7 +20,7 @@
  * into the treasury's own fields when the DM adds a copy to a pile.
  */
 
-export const MIRROR = 'https://raw.githubusercontent.com/5etools-mirror-3/5etools-src/main/data';
+import { bookDataBase, sourceBookNames } from './book-data.js';
 const TIMEOUT_MS = 60 * 1000;
 const MAX_FILE_BYTES = 24 * 1024 * 1024;       // items.json is about 3 MB
 const FIRST = ['XDMG', 'DMG', 'XGE', 'TCE', 'XPHB', 'PHB'];
@@ -43,24 +43,15 @@ const refKey = ref => { const [n, s] = String(ref || '').split('|'); return keyO
 export const isMagic = it => !!it && typeof it === 'object' && typeof it.name === 'string' && it.name.trim() !== ''
   && !NOT_MAGIC.has(String(it.rarity ?? '').toLowerCase());
 
-/** Book code -> readable name, from 5etools' own book and adventure lists. */
-async function bookNames(fetchImpl) {
-  const names = {};
-  for (const [file, key] of [['books.json', 'book'], ['adventures.json', 'adventure']]) {
-    try {
-      const d = await getJson(`${MIRROR}/${file}`, fetchImpl);
-      for (const b of arr(d && d[key])) if (b && b.id && b.name) names[b.id] = String(b.name);
-    } catch { /* names are a nicety: the code still shows */ }
-  }
-  return names;
-}
+/** Book code -> readable name, from the source's own book and adventure lists. */
+const bookNames = fetchImpl => sourceBookNames(getJson, fetchImpl);
 
 /** The three core files, in memory: { items, base, variants }. */
 async function loadCore(fetchImpl) {
   const [items, base, variants] = await Promise.all([
-    getJson(`${MIRROR}/items.json`, fetchImpl),
-    getJson(`${MIRROR}/items-base.json`, fetchImpl),
-    getJson(`${MIRROR}/magicvariants.json`, fetchImpl),
+    getJson(`${bookDataBase()}/items.json`, fetchImpl),
+    getJson(`${bookDataBase()}/items-base.json`, fetchImpl),
+    getJson(`${bookDataBase()}/magicvariants.json`, fetchImpl),
   ]);
   return {
     items: [...arr(items && items.item), ...arr(items && items.itemGroup)],

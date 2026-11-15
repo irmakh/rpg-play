@@ -1,12 +1,12 @@
-// Written by Irmak Hakman — 2026-10-15 14:25
+// Written by Irmak Hakman — 2026-11-15 14:30
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
 'use strict';
 
 let masterPw = '';
-let calView        = { type: 'month', month: 1, year: 1492 };
-let calCurrentDate = { frYear: 1492, frMonth: 1, frDay: 1, frFestival: '' };
+let calView        = { type: 'month', month: 1, year: CAL_DEFAULT_YEAR };
+let calCurrentDate = { frYear: CAL_DEFAULT_YEAR, frMonth: 1, frDay: 1, frFestival: '' };
 let calEvents      = [];
 let editingEventId = null;
 let calPendingMedia = [];   // media descriptors staged for the open event modal
@@ -125,8 +125,7 @@ function calRenderNavTitle() {
     title    = '✦ ' + frFestivalName(calView.festival);
     subtitle = frYearName(calView.year);
   } else {
-    const m  = FR_MONTHS.find(mo => mo.num === calView.month);
-    title    = (m ? `${m.name} — ${m.epithet}` : '?');
+    title    = frMonthTitle(calView.month);
     subtitle = frYearName(calView.year);
   }
   document.getElementById('cal-page-title').textContent    = title;
@@ -162,7 +161,7 @@ function calRenderGrid() {
     evByDay[k].push(e);
   }
 
-  const TENDAY_LABELS = ['1st. Tenday', '2nd. Tenday', '3rd. Tenday'];
+  const TENDAY_LABELS = frWeekLabels();
   let rows = '';
   for (let td = 0; td < 3; td++) {
     let cells = `<td class="cal-tenday-lbl">${TENDAY_LABELS[td]}</td>`;
@@ -293,13 +292,13 @@ function calSetCurrentDate() {
   let newDate;
   if (type === 'festival') {
     newDate = {
-      frYear: parseInt(document.getElementById('cal-jump-fest-year').value) || 1492,
+      frYear: parseInt(document.getElementById('cal-jump-fest-year').value) || CAL_DEFAULT_YEAR,
       frMonth: null, frDay: null,
       frFestival: document.getElementById('cal-jump-festival').value,
     };
   } else {
     newDate = {
-      frYear:    parseInt(document.getElementById('cal-jump-year').value)  || 1492,
+      frYear:    parseInt(document.getElementById('cal-jump-year').value)  || CAL_DEFAULT_YEAR,
       frMonth:   parseInt(document.getElementById('cal-jump-month').value) || 1,
       frDay:     Math.min(30, Math.max(1, parseInt(document.getElementById('cal-jump-day').value) || 1)),
       frFestival: '',
@@ -360,13 +359,13 @@ function weatherToggleDateType() { weatherToggleDateTypeView(); weatherOnDateCha
 function weatherReadDateInputs() {
   if (document.getElementById('weather-date-type').value === 'festival') {
     return {
-      frYear: parseInt(document.getElementById('weather-date-fest-year').value) || 1492,
+      frYear: parseInt(document.getElementById('weather-date-fest-year').value) || CAL_DEFAULT_YEAR,
       frMonth: null, frDay: null,
       frFestival: document.getElementById('weather-date-festival').value,
     };
   }
   return {
-    frYear: parseInt(document.getElementById('weather-date-year').value) || 1492,
+    frYear: parseInt(document.getElementById('weather-date-year').value) || CAL_DEFAULT_YEAR,
     frMonth: parseInt(document.getElementById('weather-date-month').value) || 1,
     frDay: Math.min(30, Math.max(1, parseInt(document.getElementById('weather-date-day').value) || 1)),
     frFestival: '',
@@ -679,7 +678,7 @@ async function calSaveEvent() {
     ev = {
       title,
       description: document.getElementById('cal-ev-desc').value.trim(),
-      frYear:      parseInt(document.getElementById('cal-ev-fest-year').value) || 1492,
+      frYear:      parseInt(document.getElementById('cal-ev-fest-year').value) || CAL_DEFAULT_YEAR,
       frMonth:     null,
       frDay:       null,
       frFestival:  document.getElementById('cal-ev-festival').value,
@@ -691,7 +690,7 @@ async function calSaveEvent() {
     ev = {
       title,
       description: document.getElementById('cal-ev-desc').value.trim(),
-      frYear:      parseInt(document.getElementById('cal-ev-year').value)  || 1492,
+      frYear:      parseInt(document.getElementById('cal-ev-year').value)  || CAL_DEFAULT_YEAR,
       frMonth:     parseInt(document.getElementById('cal-ev-month').value) || 1,
       frDay:       Math.min(30, Math.max(1, parseInt(document.getElementById('cal-ev-day').value) || 1)),
       frFestival:  '',

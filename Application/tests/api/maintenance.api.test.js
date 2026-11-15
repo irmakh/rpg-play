@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-11-15 13:54
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -24,7 +24,7 @@ function setup() {
   const auth = createAuth({ sessions, campaignIdFromReq: () => null, getCharacter: async () => null });
   const recorded = [];
   const nameLookups = [];
-  const campaigns = { 'camp-1': { id: 'camp-1', name: 'Glory of Amn' } };
+  const campaigns = { 'camp-1': { id: 'camp-1', name: 'Glory of Highmoor' } };
   // 57 logged events, newest first — as listAuthEvents returns them.
   const events = Array.from({ length: 57 }, (_, i) => ({ id: 57 - i, kind: 'login', campaignId: 'camp-1' }));
   const ctx = {
@@ -71,7 +71,7 @@ describe('GET /api/maintenance/blocked', () => {
     expect(res.headers['cache-control']).toBe('no-store');
     expect(res.body.locks).toEqual([expect.objectContaining({
       kind: 'pair', ip: IP, account: 'char:camp-1:ch-1',
-      scope: 'Aliyr in Glory of Amn', campaignName: 'Glory of Amn', charName: 'Aliyr',
+      scope: 'Aliyr in Glory of Highmoor', campaignName: 'Glory of Highmoor', charName: 'Aliyr',
       timesLocked: 1, failures: 5, lastAttemptKind: 'login-fail',
     })]);
     expect(res.body.locks[0].lastUserAgent).toContain('Chrome/153');
@@ -85,7 +85,7 @@ describe('GET /api/maintenance/blocked', () => {
     lockOut(loginGuard, IP, 'char:gone:x');
     const res = await request(app).get('/api/maintenance/blocked').set('X-Master-Password', admin);
     expect(res.body.locks.map(l => l.scope).sort()).toEqual([
-      'A character in a deleted campaign', 'Admin password', 'DM of Glory of Amn', 'Stories page in Glory of Amn',
+      'A character in a deleted campaign', 'Admin password', 'DM of Glory of Highmoor', 'Stories page in Glory of Highmoor',
     ]);
     expect(nameLookups).not.toContain('gone');
   });
@@ -123,7 +123,7 @@ describe('GET /api/maintenance/auth-events (paged)', () => {
     expect(res.body).toMatchObject({ page: 1, pageSize: 50, total: 57, pages: 2 });
     expect(ids(res)[0]).toBe(57);
     expect(res.body.events).toHaveLength(50);
-    expect(res.body.events[0].campaignName).toBe('Glory of Amn');
+    expect(res.body.events[0].campaignName).toBe('Glory of Highmoor');
   });
 
   it('carries on where the last page stopped', async () => {
@@ -165,7 +165,7 @@ describe('POST /api/maintenance/unblock', () => {
     expect(res.body).toEqual({ ok: true, removed: 1 });
     expect(loginGuard.check(IP, 'char:camp-1:ch-1').locked).toBe(false);
     expect(recorded).toContainEqual(expect.objectContaining({
-      kind: 'unblocked', role: 'admin', ip: IP, campaignId: 'camp-1', charName: 'Aliyr in Glory of Amn',
+      kind: 'unblocked', role: 'admin', ip: IP, campaignId: 'camp-1', charName: 'Aliyr in Glory of Highmoor',
     }));
   });
 
@@ -196,8 +196,8 @@ describe('GET /api/maintenance/sessions', () => {
     expect(res.status).toBe(200);
     const scopes = res.body.sessions.map(s => s.scope);
     expect(scopes).toContain('Super-admin');
-    expect(scopes).toContain('DM of Glory of Amn');
-    expect(scopes).toContain('Aliyr in Glory of Amn');
+    expect(scopes).toContain('DM of Glory of Highmoor');
+    expect(scopes).toContain('Aliyr in Glory of Highmoor');
     expect(res.body.sessions.filter(s => s.isMine)).toHaveLength(1);
   });
 
@@ -233,10 +233,10 @@ describe('POST /api/maintenance/end-session', () => {
     const { app, sessions, admin, recorded } = setup();
     sessions.create({ role: 'character', campaignId: 'camp-1', charId: 'ch-1', charName: 'Aliyr' });
     const list = await request(app).get('/api/maintenance/sessions').set('X-Master-Password', admin);
-    const id = list.body.sessions.find(s => s.scope === 'Aliyr in Glory of Amn').id;
+    const id = list.body.sessions.find(s => s.scope === 'Aliyr in Glory of Highmoor').id;
 
     await request(app).post('/api/maintenance/end-session').set('X-Master-Password', admin).send({ id });
-    expect(recorded.at(-1)).toMatchObject({ kind: 'session-ended', role: 'admin', charName: 'Aliyr in Glory of Amn' });
+    expect(recorded.at(-1)).toMatchObject({ kind: 'session-ended', role: 'admin', charName: 'Aliyr in Glory of Highmoor' });
   });
 
   it('refuses to end the caller’s own session', async () => {

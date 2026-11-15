@@ -1,13 +1,12 @@
-// Written by Irmak Hakman — 2026-11-11 19:20
+// Written by Irmak Hakman — 2026-11-15 14:30
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
 /**
  * The 5etools spell books, fetched for an import and then thrown away.
  *
- * Source: the 5etools data files in the public GitHub repository
- * 5etools-mirror-3/5etools-src (5e.tools itself answers automated requests
- * with a Cloudflare challenge). Used by the DM's "Import from books" button
+ * Source: the data folder in BOOK_DATA_URL (lib/book-data.js), in the
+ * 5etools layout; the repository names none. Used by the DM's "Import from books" button
  * (server/routes/spells.js) and by scripts/import_spells.mjs.
  *
  * Everything is held in memory for the length of one import. Nothing is
@@ -15,33 +14,14 @@
  * from that repository ever lands in this project.
  */
 
-export const MIRROR = 'https://raw.githubusercontent.com/5etools-mirror-3/5etools-src/main/data/spells';
+import { bookDataBase, sourceBookNames } from './book-data.js';
+
+// Spells sit in the data folder's spells/ (lib/book-data.js names the folder).
+const spellsBase = () => `${bookDataBase()}/spells`;
 const TIMEOUT_MS = 60 * 1000;
 const MAX_FILE_BYTES = 8 * 1024 * 1024;     // the largest book file is under 1 MB
 const BOOK_FILE = /^spells-[a-z0-9-]+\.json$/;
 
-// Readable names for the books 5etools lists; an unknown code is shown as is.
-export const BOOK_NAMES = {
-  XPHB: "Player's Handbook (2024)",
-  PHB: "Player's Handbook (2014)",
-  XGE: "Xanathar's Guide to Everything",
-  TCE: "Tasha's Cauldron of Everything",
-  FTD: "Fizban's Treasury of Dragons",
-  FRHoF: 'Forgotten Realms: Heroes of Faerûn',
-  EGW: "Explorer's Guide to Wildemount",
-  SCC: 'Strixhaven: A Curriculum of Chaos',
-  AAG: "Astral Adventurer's Guide",
-  AI: 'Acquisitions Incorporated',
-  'AitFR-AVT': 'Adventures in the Forgotten Realms: A Verdant Tomb',
-  AU: 'Arcana Unearthed',
-  BMT: 'The Book of Many Things',
-  EFA: 'Eberron: Forge of the Artificer',
-  GGR: "Guildmasters' Guide to Ravnica",
-  IDRotF: 'Icewind Dale: Rime of the Frostmaiden',
-  LLK: 'Lost Laboratory of Kwalish',
-  SatO: 'Sigil and the Outlands',
-  WoW: 'Warriors of Krynn / World of Warcraft',
-};
 // The order the DM sees them in: the core books first, then by name.
 const FIRST = ['XPHB', 'PHB', 'XGE', 'TCE'];
 
@@ -55,11 +35,12 @@ async function getJson(url, fetchImpl) {
 
 /** The books on offer: [{ code, name, file }], core books first. */
 export async function listBooks(fetchImpl = fetch) {
-  const index = await getJson(`${MIRROR}/index.json`, fetchImpl);
+  const index = await getJson(`${spellsBase()}/index.json`, fetchImpl);
+  const names = await sourceBookNames(getJson, fetchImpl);
   const books = [];
   for (const [code, file] of Object.entries(index || {})) {
     if (typeof file !== 'string' || !BOOK_FILE.test(file)) continue;   // only plain book files are fetched
-    books.push({ code, name: BOOK_NAMES[code] || code, file });
+    books.push({ code, name: names[code] || code, file });
   }
   const rank = b => { const i = FIRST.indexOf(b.code); return i < 0 ? FIRST.length : i; };
   return books.sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name));
@@ -79,9 +60,9 @@ export async function fetchBooks(codes, fetchImpl = fetch) {
     if (!b) throw new Error(`Unknown book: ${code}`);
     if (!chosen.includes(b)) chosen.push(b);
   }
-  const sources = await getJson(`${MIRROR}/sources.json`, fetchImpl);
+  const sources = await getJson(`${spellsBase()}/sources.json`, fetchImpl);
   const files = [];
-  for (const b of chosen) files.push({ book: b, data: await getJson(`${MIRROR}/${b.file}`, fetchImpl) });
+  for (const b of chosen) files.push({ book: b, data: await getJson(`${spellsBase()}/${b.file}`, fetchImpl) });
   const spells = [];
   const books = [];
   for (const f of files) {

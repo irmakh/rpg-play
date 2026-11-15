@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-12 01:20
+// Written by Irmak Hakman — 2026-11-15 13:54
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -926,7 +926,7 @@ describe('PATCH /api/characters/:id/equip', () => {
 describe('PATCH /api/characters/:id/spell-slot', () => {
   function withCaster() {
     const made = makeApp();
-    made.ldb.createCharacter('c1', { name: 'Elminster', dataJson: JSON.stringify({ 'slot-9-total': '1', 'slot-9-used': '0' }), createdAt: new Date().toISOString() });
+    made.ldb.createCharacter('c1', { name: 'Old Merriwick', dataJson: JSON.stringify({ 'slot-9-total': '1', 'slot-9-used': '0' }), createdAt: new Date().toISOString() });
     return made;
   }
 

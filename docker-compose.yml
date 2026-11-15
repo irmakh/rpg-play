@@ -1,4 +1,4 @@
-# Written by Irmak Hakman — 2026-09-15 18:08
+# Written by Irmak Hakman — 2026-11-15 15:05
 # Copyright (c) 2026 Irmak Hakman
 # SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -24,7 +24,8 @@ services:
       # SQLite databases are covered by the ./Application mount above:
       #   Application/campaigns.db            the campaign registry
       #   Application/data/campaigns/<id>/    one campaign's localdb / media /
-      #                                       stories / aiDM databases
+      #                                       stories databases (plus aiDM.db from
+      #                                       the retired AI DM, no longer read)
       # The pre-multi-tenant files (localdb.db, media.db, stories.db,
       # aiDM/aiDM.db) are still present as a rollback copy and are no longer
       # read by the server.
