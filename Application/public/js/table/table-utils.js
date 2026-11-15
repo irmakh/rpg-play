@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-11 22:00
+// Written by Irmak Hakman — 2026-11-15 12:25
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -243,8 +243,9 @@ const SPELL_FILTERS = [
  * ones the filter and search leave out are only hidden, so changing either
  * never has to rebuild the panel (which would take the cursor out of the
  * search box).
- * o: { filter, query, spAtk, prepares, canCast }   spAtk null = no spell attack button;
- *    canCast adds a Cast button to every ready spell (openTableSpellCast)
+ * o: { filter, query, prepares, canCast }   canCast adds a Cast button to every
+ *    ready spell (openTableSpellCast). No spell attack button since v356: a
+ *    spell's attack is rolled from the card Cast posts to chat.
  */
 function spellbookHTML(spells, o) {
   const list = (spells || []).map((s, idx) => ({ s, idx })).filter(x => x.s);
@@ -273,9 +274,6 @@ function spellbookHTML(spells, o) {
         + (s.ritual ? '<span class="rp-sb-flag rit" title="Ritual">R</span>' : '')
         + (o.canCast && ready
           ? `<span class="qroll-val rp-sb-cast" onclick="openTableSpellCast('${escJs(s.id)}')" title="Cast ${esc(name)}">Cast</span>`
-          : '')
-        + (o.spAtk != null
-          ? `<span class="qroll-val rp-sb-atk" onclick="qroll('${escJs(name)}','${escJs(String(o.spAtk))}')" title="Spell attack"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-bolt"></use></svg></span>`
           : '')
         + `</div>`;
     }).join('');

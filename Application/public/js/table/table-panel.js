@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-12 16:29
+// Written by Irmak Hakman — 2026-11-15 12:25
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -68,7 +68,6 @@ function _abilityModStr(score) {
 
 function renderSideCharacter() {
   const d = qrollData || {};
-  const spAtk = d['sp-atk'] !== undefined ? d['sp-atk'] : null;
   const initMod = (parseInt(d['init']) || 0) + (parseInt(d['init-bonus']) || 0);
   const initBonusStr = initMod >= 0 ? '+' + initMod : '' + initMod;
 
@@ -165,7 +164,7 @@ function renderSideCharacter() {
       ).join('')
     + `</div>`;
 
-  // ── Always-visible block: Abilities only (outside the tabs) ──
+  // ── Always-visible block: Saving Throws, the stats bar, then Abilities ──
   const abilitiesSection = hasAbilities
     ? `<div class="rp-flat-hdr rp-abil-hdr">Abilities</div>${abilityGridHtml}`
     : '';
@@ -181,7 +180,9 @@ function renderSideCharacter() {
     + `</div>`;
 
   // ── Combat tab content: Attacks + Actions sections ──
-  const atkCompactHtml = (weapons.some(r => r[0]) || spAtk !== null)
+  // Weapons only: a spell's attack and damage are rolled from its card in chat
+  // after Cast, so there is no separate Spell Atk row (v356).
+  const atkCompactHtml = weapons.some(r => r[0])
     ? `<div class="rp-atk-list">`
       + weapons.filter(r => r[0]).map(r => {
           const [wName, wAtk, wDmg, wNote] = [r[0]||'', r[1]||'+0', r[2]||'', r[3]||''];
@@ -194,16 +195,14 @@ function renderSideCharacter() {
             + (wDmg ? `<span class="rp-atk-sep">·</span><span class="rp-atk-dmg" onclick="${dmgClick}" title="Damage: ${esc(wDmg)}">${esc(wDmg)}</span>` : '')
             + `</div>`;
         }).join('')
-      + (spAtk !== null
-          ? `<div class="rp-atk-row"><span class="rp-atk-name">Spell Atk</span><span class="rp-atk-hit" onclick="qroll('Spell Attack','${escJs(String(spAtk))}')">${parseInt(spAtk) >= 0 ? '+' : ''}${esc(String(spAtk))}</span></div>`
-          : '')
       + `</div>`
     : `<div class="rp-tab-empty">No weapons.</div>`;
 
   // ── Tab panes ──
-  // Skills tab now also holds Saving Throws (moved out of the always-visible block).
-  const skillsPane = `<div class="rp-flat-hdr">Saving Throws</div>${saveGridHtml}`
-                   + `<div class="rp-flat-hdr">Skills</div><div class="rp-skill-grid">${skillRows}</div>`;
+  // Saving Throws are not in a tab since v356: they head the panel, above the
+  // stats, where a save the DM calls for is one click away whatever tab is open.
+  const savesSection = `<div class="rp-flat-hdr rp-saves-hdr">Saving Throws</div>${saveGridHtml}`;
+  const skillsPane = `<div class="rp-flat-hdr">Skills</div><div class="rp-skill-grid">${skillRows}</div>`;
   // Combat tab: Attacks + each non-empty action category as sub-tabs (one shown
   // at a time). The Short/Long rest control sits below the sub-tab panes.
   const combatSecs = [{ key: 'attacks', label: 'Attacks', body: atkCompactHtml }]
@@ -255,7 +254,8 @@ function renderSideCharacter() {
                   + (_hasCompanions && typeof sideCompanionsPane === 'function'
                       ? pane('companions', sideCompanionsPane(d, _sideCharId || '', canEditSlots)) : '');
 
-  return secStatsHtml
+  return savesSection
+    + secStatsHtml
     + abilitiesSection
     + tabBarHtml
     + panesHtml;
@@ -329,10 +329,63 @@ function _sideItemChip(it) {
   return '';
 }
 
+// Coins as the sheet holds them (pp2 is platinum: "pp" is passive perception).
+function _sideWallet(d) {
+  const n = k => Math.max(0, parseInt(d[k]) || 0);
+  return { pp: n('pp2'), gp: n('gp'), ep: n('ep'), sp: n('sp'), cp: n('cp') };
+}
+
+// The coins line at the top of the Items tab, with Give for whoever may hand
+// this character's things over (its player or the DM).
+function _sideCoinsHtml(d, canGive) {
+  const w = _sideWallet(d);
+  const shown = ['pp', 'gp', 'ep', 'sp', 'cp'].filter(k => w[k]).map(k => `<span class="rp-coin"><b>${w[k]}</b> ${k.toUpperCase()}</span>`).join('');
+  const any = Object.values(w).some(Boolean);
+  return `<div class="rp-coins-row"><span class="rp-coins">${shown || '<span class="rp-coins-none">No coins</span>'}</span>`
+    + (canGive && any ? `<button type="button" class="btn sm rp-give-coins" onclick="sideGiveCoins()">Give coins</button>` : '')
+    + `</div>`;
+}
+
+/** Who may give this character's items and coins away: its own player, or the DM. */
+function _sideCanGive() {
+  return !!_sideCharId && (isDM() || (isCharSession() && _sideCharId === sessionCharId))
+    && typeof openGiveDialog === 'function';
+}
+
+function _sideItemById(itemId) {
+  let its = [];
+  try { its = JSON.parse((qrollData && qrollData._items) || '[]'); } catch {}
+  return its.find(x => x && x.id === itemId) || null;
+}
+
+function sideShareItem(itemId) {
+  const it = _sideItemById(itemId);
+  if (it) postChatInfoCard(itemChatCard(it));
+}
+
+function sideGiveItem(itemId) {
+  const it = _sideItemById(itemId);
+  if (!it || !_sideCanGive()) return;
+  openGiveDialog({
+    fromId: _sideCharId, item: it, headers: authHeaders(),
+    onDone: r => { if (typeof showToast === 'function') showToast(`Gave ${r.given} to ${r.to}.`); },
+  });
+}
+
+function sideGiveCoins() {
+  if (!qrollData || !_sideCanGive()) return;
+  openGiveDialog({
+    fromId: _sideCharId, wallet: _sideWallet(qrollData), headers: authHeaders(),
+    onDone: r => { if (typeof showToast === 'function') showToast(`Gave ${r.given} to ${r.to}.`); },
+  });
+}
+
 function _buildSidePanelItems(d, canEdit) {
   let its = [];
   try { its = JSON.parse(d['_items'] || '[]'); } catch {}
-  if (!its.length) return '';
+  const canGive = _sideCanGive();
+  const coins = _sideCoinsHtml(d, canGive);
+  if (!its.length) return coins + `<div class="rp-tab-empty">No items.</div>`;
   const cells = its.map(it => {
     const worn = !!it.equipped;
     const attrs = canEdit
@@ -358,10 +411,20 @@ function _buildSidePanelItems(d, canEdit) {
         ? `<img class="rp-item-thumb" src="${esc(it.imgThumb || it.img)}" alt="" loading="lazy" title="Show the picture"`
           + ` onclick="event.stopPropagation();lightboxOpen('${escJs(it.img || it.imgThumb)}', 'image/*')">`
         : '')
-      + `<span class="rp-item-name">${esc(it.name || 'Item')}</span>${_sideItemChip(it)}${charge}</div>`;
+      + `<span class="rp-item-name">${esc(it.name || 'Item')}</span>${_sideItemChip(it)}${charge}`
+      + (canEdit ? _chatShareBtn(`sideShareItem(${esc(JSON.stringify(it.id))})`, it.name) : '')
+      + (canGive
+        ? `<span class="rp-share-btn rp-give-btn" role="button" tabindex="0" onclick="event.stopPropagation();sideGiveItem(${esc(JSON.stringify(it.id))})"`
+          + ` onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}"`
+          + ` title="Give ${esc(it.name || 'this item')} to someone" aria-label="Give ${esc(it.name || 'this item')} to someone"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-hand"></use></svg></span>`
+        : '')
+      + `</div>`;
   }).join('');
-  return `<div class="rp-flat-hdr">Items${canEdit ? ' <span style="font-size:calc(8px * var(--fs, 1));opacity:.5;font-weight:normal;letter-spacing:0">(click to wear / remove)</span>' : ''}</div>`
-    + `<div class="rp-item-grid">${cells}</div>`;
+  // With buttons on each item the cells go one to a row, or the names would
+  // have no room left beside them.
+  return coins
+    + `<div class="rp-flat-hdr">Items${canEdit ? ' <span style="font-size:calc(8px * var(--fs, 1));opacity:.5;font-weight:normal;letter-spacing:0">(click to wear / remove)</span>' : ''}</div>`
+    + `<div class="rp-item-grid${canEdit ? ' rp-item-list' : ''}">${cells}</div>`;
 }
 
 // Spend one charge of an item: shown at once, saved through the server (which
@@ -489,15 +552,27 @@ function _sidePanelActionSections(d, canEdit) {
   return { sections, restHtml };
 }
 
+// A spell in the Combat sub-tabs: its name and level, Cast (for whoever may
+// cast for this character) and Send to chat. Its attack and damage are rolled
+// from the card Cast posts, so the row has no roll buttons of its own (v356).
 function _renderSidePanelSpell(s, idx, d) {
   const sName = s.name || '?';
   const lvl = s.level ? `(${esc(String(s.level))})` : '(cantrip)';
-  const spAtk = d['sp-atk'];
   const nameSpan = `<span class="rp-spell-name" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px" onclick="postSpellInfoFromAll(${idx})" title="Send to chat">${esc(sName)}</span>`;
-  const atk = (spAtk !== undefined && spAtk !== null && spAtk !== '')
-    ? `<span class="qroll-val" onclick="event.stopPropagation();qroll('Spell Attack','${escJs(String(spAtk))}')" style="font-size:calc(11px * var(--fs, 1));cursor:pointer" title="Spell attack"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-bolt"></use></svg></span>`
+  const canCast = !!_sideCharId && !!s.id && (isDM() || (isCharSession() && _sideCharId === sessionCharId))
+    && typeof openSpellCast === 'function';
+  const cast = canCast
+    ? `<span class="qroll-val rp-sb-cast" onclick="event.stopPropagation();openTableSpellCast('${escJs(s.id)}')" title="Cast ${esc(sName)}">Cast</span>`
     : '';
-  return `<div class="qroll-row" style="padding:calc(3px*var(--fs, 1)) calc(10px*var(--fs, 1));font-size:calc(11px * var(--fs, 1))">${nameSpan} <span style="font-size:calc(10px * var(--fs, 1));color:var(--ash)">${lvl}</span> ${atk}</div>`;
+  return `<div class="qroll-row rp-act-spell" style="padding:calc(3px*var(--fs, 1)) calc(10px*var(--fs, 1));font-size:calc(11px * var(--fs, 1))">${nameSpan}<span style="font-size:calc(10px * var(--fs, 1));color:var(--ash);margin-left:calc(5px*var(--fs, 1))">${lvl}</span>`
+    + `<span class="rp-act-spell-btns">${cast}${_chatShareBtn(`postSpellInfoFromAll(${idx})`, sName)}</span></div>`;
+}
+
+// The small "send to chat" icon used on items, spells and companions.
+function _chatShareBtn(onclick, name) {
+  return `<span class="rp-share-btn" role="button" tabindex="0" onclick="event.stopPropagation();${onclick}"`
+    + ` onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}"`
+    + ` title="Send ${esc(name || '')} to chat" aria-label="Send ${esc(name || '')} to chat"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chat"></use></svg></span>`;
 }
 
 function _renderSidePanelCustom(a, canEdit) {
@@ -537,17 +612,7 @@ function useCharacterAction(id) {
   try { acts = JSON.parse(d._actions || '[]'); } catch {}
   const a = acts.find(x => x && String(x.id) === String(id));
   if (!a) return;
-  const name = a.name || 'Action';
-  const meta = [];
-  const catLabel = { action: 'Action', bonus: 'Bonus Action', reaction: 'Reaction', other: 'Other' }[a.category] || '';
-  if (catLabel) meta.push(catLabel);
-  if (a.dice) meta.push(`🎲 ${a.dice}`);
-  const uses = parseInt(a.uses) || 0;
-  if (uses > 0) {
-    const used = Math.min(parseInt(a.used) || 0, uses);
-    meta.push(`Uses ${uses - used}/${uses}`);
-  }
-  postChatInfoCard({ name, meta, text: a.description });
+  postChatInfoCard(actionChatCard(a));   // js/lib/chat-cards.js, as the sheet posts it
 }
 
 function clickActionBox(actionId, idx) {
@@ -849,8 +914,22 @@ async function loadSideQroll() {
   // sheet shut a moment after the button was pressed.
   if (!targetId && _sideQrollTokenId === SIDE_SELF) return;
 
+  // Following the turn: only to a token this viewer may open. A player whose
+  // panel shows their own sheet would otherwise see it emptied every time the
+  // turn passed to someone else's token or a monster (v356). The panel stays
+  // on what it showed; the turn's own token comes back the moment it is theirs.
+  let keepPanel = false;
   if (!targetId) {
-    targetId = getActiveTurnTokenId() || null;
+    const turnId = getActiveTurnTokenId() || null;
+    const turnTok = turnId ? tokens.find(t => t.id === turnId) : null;
+    if (turnTok && !isDM() && !isMyToken(turnTok)) {
+      const prev = _sidePrevTokenId && _sidePrevTokenId !== SIDE_SELF
+        ? tokens.find(t => t.id === _sidePrevTokenId) : null;
+      if (prev && isMyToken(prev)) targetId = prev.id;
+      else keepPanel = true;
+    } else {
+      targetId = turnId;
+    }
   }
   // Parked on a waiting screen there is no map to click and often no combat, so
   // fall back to the player's own character — the panel beside the image is the
@@ -863,6 +942,9 @@ async function loadSideQroll() {
     if (mine) targetId = mine.id;
     else return void loadOwnCharacterSheet();
   }
+  // Nothing of theirs to follow: leave the panel exactly as it is, and put the
+  // marker of what it shows back (the caller cleared it to force a refresh).
+  if (!targetId && keepPanel) { _sideQrollTokenId = _sidePrevTokenId; return; }
 
   if (targetId === _sideQrollTokenId) return; // already rendered (data unchanged)
   // Only reset section/tab state when switching to a genuinely different token
@@ -1062,17 +1144,7 @@ function toggleCritArmed() { setCritArmed(!_critArmed); }
 
 function _postSpellInfo(s) {
   if (!s) return;
-  const name = s.name || 'Spell';
-  // A library spell's own text (built safe by spell-data.js), then the
-  // player's notes, which may carry links (chat sanitises them).
-  const desc = spellDescHTML(s) + (s.notes || '');
-  // Raw meta values — postChatInfoCard escapes them.
-  const meta = [spellLevelLabel(s.level)];
-  const cast = s.castText || spellCastLabel(s);
-  if (cast)  meta.push(`⏱ ${cast}`);
-  if (s.range)  meta.push(`🎯 ${s.range}`);
-  if (s.duration) meta.push(`⏳ ${s.conc ? 'Concentration, ' : ''}${s.duration}`);
-  postChatInfoCard({ name, meta, html: desc || '' });
+  postChatInfoCard(spellChatCard(s));   // js/lib/chat-cards.js, as the sheet posts it
 }
 
 function postSpellInfoFromPanel(idx) { _postSpellInfo(_sideSpells[idx]); }

@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-12 14:15
+// Written by Irmak Hakman — 2026-11-15 12:25
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -1223,4 +1223,4 @@ export default function register(app, ctx) {
   });
 }
 
-export { objFromRecord, playerObj, sanitizeFields, grantItems, renameHeldCopies };
+export { objFromRecord, playerObj, sanitizeFields, grantItems, renameHeldCopies, weaponRowFor, weaponNotes };

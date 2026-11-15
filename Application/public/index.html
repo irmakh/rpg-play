@@ -1,4 +1,4 @@
-<!-- Written by Irmak Hakman — 2026-11-12 19:45 -->
+<!-- Written by Irmak Hakman — 2026-11-15 12:25 -->
 <!-- Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) -->
 <html lang="en" class="lamplit">
 <head>
@@ -313,6 +313,7 @@
         <div class="field"><label class="lbl">GP</label><input type="number" data-key="gp" style="text-align:center"></div>
         <div class="field"><label class="lbl">PP</label><input type="number" data-key="pp2" style="text-align:center"></div>
       </div>
+      <button class="add-btn" style="margin-top:calc(6px*var(--fs, 1))" onclick="sheetGiveCoins()">Give coins to…</button>
     </div></div>
   </div>
 
@@ -331,7 +332,7 @@
       <div class="g5">
         <div class="field"><label class="lbl">Ability</label><input type="text" data-key="sp-ability"></div>
         <div class="field"><label class="lbl">Spell Save DC</label><input type="number" data-key="sp-dc"></div>
-        <div class="field"><label class="lbl">Spell Atk Bonus</label><div class="rollable-field"><input type="text" data-key="sp-atk"><button class="edit-btn" onclick="setSpAtkEditMode()" title="Edit value"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-pencil"></use></svg> </button></div></div>
+        <div class="field"><label class="lbl">Spell Atk Bonus</label><input type="text" data-key="sp-atk"></div>
         <div class="field"><label class="lbl">Spell Modifier</label><input type="text" data-key="sp-mod"></div>
         <div class="field" id="prep-count-field"><label class="lbl">Prepared</label><input type="text" id="prep-count" readonly style="text-align:center;font-weight:bold;cursor:default"></div>
       </div>
@@ -1081,6 +1082,8 @@
 <script src="/js/lib/chat-pm.js" defer></script>
 <script src="/js/lib/dnd-data.js" defer></script>
 <script src="/js/lib/spell-data.js" defer></script>
+<script src="/js/lib/chat-cards.js" defer></script>
+<script src="/js/lib/give-ui.js" defer></script>
 <script src="/js/lib/spell-cast.js" defer></script>
 <script src="/js/lib/realtime.js" defer></script>
 <script src="/js/lib/notifications.js" defer></script>

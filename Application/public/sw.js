@@ -1,8 +1,8 @@
-// Written by Irmak Hakman — 2026-11-12 21:30
+// Written by Irmak Hakman — 2026-11-15 12:25
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
-const CACHE = 'rpg-v355';
+const CACHE = 'rpg-v356';
 
 const STATIC = [
   // Core pages
@@ -67,6 +67,8 @@ const STATIC = [
   '/js/lib/esc.js',
   '/js/lib/desktop-link.js',
   '/js/lib/chat-render.js',
+  '/js/lib/chat-cards.js',
+  '/js/lib/give-ui.js',
   '/js/lib/dnd-data.js',
   '/js/lib/realtime.js',
   '/js/table/table-waiting.js',

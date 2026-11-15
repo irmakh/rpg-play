@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-11 17:15
+// Written by Irmak Hakman — 2026-11-15 12:25
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -153,9 +153,9 @@ describe('spellbookHTML', () => {
     expect(html).toMatch(/data-f="prepared"[^>]*>Ready <span class="rp-sb-fc">3</);
     expect(html).toContain('value="st&quot;ep"');
   });
-  it('offers a spell attack only when the character has one', () => {
-    expect(spellbookHTML(BOOK, { filter: 'all', spAtk: '+5' })).toContain('rp-sb-atk');
-    expect(spellbookHTML(BOOK, { filter: 'all', spAtk: null })).not.toContain('rp-sb-atk');
+  it('never offers a spell attack button: it is rolled from the Cast card (v356)', () => {
+    expect(spellbookHTML(BOOK, { filter: 'all', spAtk: '+5' })).not.toContain('rp-sb-atk');
+    expect(spellbookHTML(BOOK, { filter: 'all', spAtk: '+5' })).not.toContain('qroll(');
   });
   it('escapes names and levels typed on the sheet', () => {
     // An old array row with markup where the level and name go, converted as the panel does.

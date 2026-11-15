@@ -1,9 +1,11 @@
-// Written by Irmak Hakman — 2026-11-12 00:20
+// Written by Irmak Hakman — 2026-11-15 12:25
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
 import { clientIp } from '../../lib/login-guard.js';
 import { SpellData as SD } from '../../lib/spell-data-node.js';
+import { moveItem, moveCoins, coinsLabel, GiveError } from '../../lib/give.js';
+import { weaponRowFor } from './treasury.js';
 
 export default function register(app, ctx) {
   const {
@@ -44,7 +46,9 @@ export default function register(app, ctx) {
       // sp-no-prep: the character does not prepare spells, so every spell is ready.
       const STAT_KEYS   = ['init','init-bonus','sp-atk','ac','prof-bonus','pb','proficiency','passive-perception','pp','sp-dc','speed','hpcur','hpmax','hptemp','sp-no-prep',
                            // Warlock pact slots, Sorcerer points and the Metamagic it knows (v325)
-                           'pact-slots','pact-level','pact-used','sorc-points','sorc-used', ...SD.spellMetamagicList().map(m => 'mm-' + m.key)];
+                           'pact-slots','pact-level','pact-used','sorc-points','sorc-used', ...SD.spellMetamagicList().map(m => 'mm-' + m.key),
+                           // Coins, for the Items tab's coins line and Give coins (v356). pp2 is platinum.
+                           'cp','sp','ep','gp','pp2'];
       const META_KEYS   = ['race','race-name','class','class-name','class-1','subclass','subclass-1','level','total-level','char-level'];
       const SLOT_KEYS   = Array.from({ length: 9 }, (_, i) => [`slot-${i+1}-total`,`slot-${i+1}-used`]).flat();
       const qroll = {};
@@ -371,6 +375,77 @@ export default function register(app, ctx) {
 
       res.json({ ok: true, equipped: it.equipped, ac: data.ac, speed: data.speed, init: data.init });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
+  });
+
+  // Give one inventory item, or coins, to another character (lib/give.js).
+  // Only the giver's own player or the DM may do it. For a character with a
+  // password that is exactly what charAuth checks; one with no password is open
+  // to anyone through charAuth, so then the caller must BE that character (or
+  // the DM). The receiver need not agree: it is handed over at the table, as
+  // the DM's Give is.
+  app.post('/api/characters/:id/give', async (req, res) => {
+    try {
+      const fromId = String(req.params.id);
+      const fromRec = await getCharacter(fromId);
+      if (!fromRec) return res.status(404).json({ error: 'Not found' });
+      const caller = auth.callerFor(req, fromId);
+      const isDm = masterAuth(req) || caller.isDm;
+      const isSelf = fromRec.passwordHash ? (await charAuth(fromId, req)) === 200 : caller.isSelf;
+      if (!isDm && !isSelf) return res.status(401).json({ error: 'Unauthorized' });
+      const { to, itemId, coins } = req.body || {};
+      const toId = to == null ? '' : String(to);
+      if (!toId) return res.status(400).json({ error: 'Choose who to give it to' });
+      if (toId === fromId) return res.status(400).json({ error: 'Choose someone else to give it to' });
+      const giveItem = itemId !== undefined && itemId !== null && itemId !== '';
+      if (giveItem === !!coins) return res.status(400).json({ error: 'Give either an item or coins' });
+
+      const toRec = await getCharacter(toId);
+      if (!toRec) return res.status(404).json({ error: 'That character is not in this campaign' });
+      let from = {}, dest = {};
+      try { from = JSON.parse(fromRec.dataJson || '{}'); } catch {}
+      try { dest = JSON.parse(toRec.dataJson || '{}'); } catch {}
+
+      let what;
+      let wasEquipped = false;
+      try {
+        if (giveItem) {
+          const r = moveItem(from, dest, itemId, (data, it) => weaponRowFor(data, it, it.notes || ''));
+          what = r.item.name || 'an item';
+          wasEquipped = r.wasEquipped;
+        } else {
+          what = coinsLabel(moveCoins(from, dest, coins));
+        }
+      } catch (e) {
+        if (e instanceof GiveError) return res.status(e.status).json({ error: e.message });
+        throw e;
+      }
+      // Taking off a worn item changes the giver's AC, speed and initiative.
+      if (wasEquipped) recalcDerived(from);
+
+      ldb.updateCharacter(fromId, { dataJson: JSON.stringify(from), name: fromRec.name });
+      ldb.updateCharacter(toId, { dataJson: JSON.stringify(dest), name: toRec.name });
+      if (wasEquipped) await syncLinkedTokens(fromId, from);
+      broadcast('characters', { action: 'updated', id: fromId });
+      broadcast('characters', { action: 'updated', id: toId });
+
+      const fromName = from.name || fromRec.name || 'Someone';
+      const toName = dest.name || toRec.name || 'someone';
+      ctx.notify?.({
+        to: toId, kind: 'gift', priority: 'alert', actorName: fromName,
+        title: `${fromName} gave you ${what}`,
+        body: giveItem ? 'It is in your inventory now.' : 'Added to your coins.',
+        data: { href: '/index.html' },
+      });
+      // The DM hears of every hand-over, unless they made it themselves.
+      if (!isDm) {
+        ctx.notify?.({
+          to: 'dm', kind: 'gift', priority: 'feed', actorName: fromName,
+          title: `${fromName} gave ${toName} ${what}`,
+          data: { href: '/table.html' },
+        });
+      }
+      res.json({ ok: true, given: what, to: toName });
+    } catch (err) { console.error('POST /api/characters/:id/give:', err); res.status(500).json({ error: 'Server error' }); }
   });
 
   // Adds a roll to a character's roll history. The table records a roll for

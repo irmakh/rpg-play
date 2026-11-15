@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-11 22:10
+// Written by Irmak Hakman — 2026-11-15 12:25
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -136,25 +136,18 @@ function _actRenderAttacks(attacks) {
     <tr><th>Attack</th><th>Range</th><th>Hit/DC</th><th>Damage</th><th>Notes</th></tr>${rows}</table></div>`;
 }
 
+// A spell here offers Cast and Send to chat, nothing else: its attack and
+// damage are rolled from the card Cast posts in chat (v356).
 function _actRenderSpellList(list) {
   if (!list || !list.length) return '';
-  const spAtkEl = document.querySelector('[data-key="sp-atk"]');
-  const spAtk = spAtkEl ? spAtkEl.value : '';
   return list.map(sp => {
     const n = esc(sp.name);
     const lvl = sp.level ? `(${esc(sp.level)})` : '(cantrip)';
-    const atkBtn = spAtk
-      ? `<button class="roll-btn" data-name="${n}" data-val="${esc(spAtk)}" onclick="startRoll(this.dataset.name + ' (Spell Atk)', this.dataset.val)" title="Roll spell attack"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg></button>`
-      : '';
-    // Damage dice from the player's notes, else from a library spell's own text.
-    const libDmg = /\{@damage ([^}|]+)/.exec(JSON.stringify(sp.entries || []));
-    const dmgMatch = (sp.notes || '').match(/\d+d\d+(\s*[+-]\s*\d+)?/) || (libDmg ? [libDmg[1].trim()] : null);
-    const dmgBtn = dmgMatch
-      ? `<button class="roll-btn" data-name="${n}" data-val="${esc(dmgMatch[0])}" onclick="rollDamage(this.dataset.name + ' Damage', this.dataset.val)" title="Roll damage ${esc(dmgMatch[0])}"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-swords"></use></svg></button>`
-      : '';
+    const idLit = esc(JSON.stringify(sp.id));
+    const share = sp.id ? `<button class="act-edit-btn" onclick="sheetShareSpell(${idLit})" title="Send ${n} to chat" aria-label="Send ${n} to chat"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chat"></use></svg></button>` : '';
     return `<div class="act-item act-spell">
       <div class="act-head"><span class="act-name">${n}</span> <span class="act-lvl">${lvl}</span>
-        <span class="act-controls">${sp.id && typeof openSheetSpellCast === 'function' ? `<button class="sp-cast-btn" onclick="openSheetSpellCast(${esc(JSON.stringify(sp.id))})" title="Cast ${n}">Cast</button>` : ''}${atkBtn}${dmgBtn}</span></div>
+        <span class="act-controls">${sp.id && typeof openSheetSpellCast === 'function' ? `<button class="sp-cast-btn" onclick="openSheetSpellCast(${idLit})" title="Cast ${n}">Cast</button>` : ''}${share}</span></div>
       ${sp.notes ? `<div class="act-desc">${esc(sp.notes)}</div>` : ''}
       ${sp.noSlot && sp.uses ? `<div class="act-desc">${esc(sp.uses - sp.used)} of ${esc(sp.uses)} uses left</div>` : ''}
     </div>`;
@@ -184,11 +177,21 @@ function _actRenderCustom(a) {
   return `<div class="act-item">
     <div class="act-head">
       <span class="act-name">${n}</span> <span class="act-tag">${esc(tag)}</span>
-      <span class="act-controls">${diceBtn}<button class="act-edit-btn" onclick="openActionModal(${esc(JSON.stringify(a.id))})" title="Edit"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-pencil"></use></svg></button></span>
+      <span class="act-controls">${diceBtn}<button class="act-edit-btn" onclick="sheetShareAction(${esc(JSON.stringify(a.id))})" title="Send ${n} to chat" aria-label="Send ${n} to chat"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chat"></use></svg></button><button class="act-edit-btn" onclick="openActionModal(${esc(JSON.stringify(a.id))})" title="Edit"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-pencil"></use></svg></button></span>
     </div>
     ${a.description ? `<div class="act-desc">${esc(a.description)}</div>` : ''}
     ${usesHtml}
   </div>`;
+}
+
+// ── Send to chat (js/lib/chat-cards.js; sheetShareCard in index-dice3d.js) ──────
+function sheetShareAction(id) {
+  const a = actions.find(x => x && String(x.id) === String(id));
+  if (a) sheetShareCard(actionChatCard(a));
+}
+function sheetShareSpell(id) {
+  const sp = (typeof spells !== 'undefined' ? spells : []).find(x => x && String(x.id) === String(id));
+  if (sp) sheetShareCard(spellChatCard(sp));
 }
 
 // ── Filter chips ──────────────────────────────────────────────────────────────

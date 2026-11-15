@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-09-27 11:13
+// Written by Irmak Hakman — 2026-11-15 12:25
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -117,6 +117,14 @@ async function postToChat(payload) {
       body: JSON.stringify(payload)
     });
   } catch {}
+}
+
+// Send a card (an item, spell, companion or action — js/lib/chat-cards.js) to
+// the table's chat under this sheet's name, formatted as the table posts it.
+function sheetShareCard(card) {
+  if (!card) return;
+  postToChat({ sender: getChatSender(), type: 'text', html: true, message: chatCardHTML(card) });
+  if (typeof setStatus === 'function') setStatus(`Sent ${card.name || 'it'} to chat`, false);
 }
 
 async function loadChat() {

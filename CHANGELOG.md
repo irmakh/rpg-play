@@ -21,6 +21,37 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [356] — 2026-11-15 — Giving items and coins, Send to chat, Cast-only spells
+
+*(Released.)*
+
+- **Give items to other players.** Each item on the character sheet's Inventory tab has
+  a **Give** button, and each item on the table's Items tab has a hand icon. Choose
+  who gets it and it moves straight to their inventory, exactly as you held it: an
+  unidentified item stays unidentified, and spent charges stay spent. A worn item comes
+  off first. A weapon's attack row moves with it, worked out again with the new
+  owner's numbers.
+- **Give coins.** **Give coins to…** under Coins on the sheet, or **Give coins** at the
+  top of the table's Items tab. Coins move as they are: gold goes as gold, and you
+  can't give more of a coin than you have.
+- The person receiving gets a notification. The DM also gets a quiet note of every
+  hand-over between players. The DM can give on behalf of any character.
+- **Send to chat** for items, spells, companions and actions, on the sheet and the
+  table. Look for the speech-bubble button. A card with the name, key stats and
+  description is posted to the table's chat.
+- **Spells only have Cast.** The spell attack and spell damage buttons are gone from
+  the sheet's Actions tab and the table's Combat tab, along with the table's "Spell
+  Atk" attack row. The Spell Atk Bonus field on the Spells tab no longer rolls when
+  clicked. Roll a spell's attack and damage from the card that Cast posts in chat.
+- **Saving Throws are at the top of the table's right panel**, above Initiative /
+  Prof. Bonus / Passive Perception / Spell DC and the Abilities. They're always in
+  view, so you no longer open the Skills tab to roll a save. The Skills tab now holds
+  only skills.
+- **Initiative no longer closes a player's right panel.** When the turn passes to a
+  token the player can't open (someone else's character, or a monster), the panel
+  stays on what it was showing. It goes back to following the turn when the turn
+  reaches one of their own tokens.
+
 ## [355] — 2026-11-12 — Spell details in "From library"
 
 *(Released.)*

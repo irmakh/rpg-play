@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-12 14:29
+// Written by Irmak Hakman — 2026-11-15 12:25
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -352,6 +352,48 @@ function deleteItem(id) {
   scheduleAutoSave();
 }
 
+// ── Send to chat, and giving to another character ─────────────────────────────
+function sheetShareItem(id) {
+  const item = items.find(i => i.id === id);
+  if (item) sheetShareCard(itemChatCard(item));   // js/lib/chat-cards.js
+}
+
+// The server moves what it has stored, so edits still waiting for the
+// autosave go first. Afterwards the sheet reloads itself: an update arriving
+// right after our own save is otherwise ignored for a moment (_suppressSSEReload)
+// and the given item would stay on screen, to be saved back on the next edit.
+async function _sheetFlushSave() {
+  clearTimeout(_autoSaveTimer);
+  try { await autoSaveCharacter(); } catch {}
+}
+async function _sheetReloadAfterGive(r) {
+  try {
+    const res = await fetch(`/api/characters/${currentCharId}`, { headers: sheetAuthHeaders() });
+    if (res.ok) {
+      const char = await res.json();
+      applyData(char.data || {});
+      if (typeof renderShopWallet === 'function') renderShopWallet();
+    }
+  } catch {}
+  if (r) setStatus(`Gave ${r.given} to ${r.to}`, false);
+}
+
+async function sheetGiveItem(id) {
+  const item = items.find(i => i.id === id);
+  if (!item || !currentCharId || typeof openGiveDialog !== 'function') return;
+  await _sheetFlushSave();
+  openGiveDialog({ fromId: currentCharId, item, headers: sheetAuthHeaders(), onDone: _sheetReloadAfterGive });
+}
+
+async function sheetGiveCoins() {
+  if (!currentCharId || typeof openGiveDialog !== 'function') return;
+  await _sheetFlushSave();
+  const n = k => Math.max(0, parseInt(document.querySelector(`[data-key="${k}"]`)?.value) || 0);
+  const wallet = { pp: n('pp2'), gp: n('gp'), ep: n('ep'), sp: n('sp'), cp: n('cp') };
+  if (!Object.values(wallet).some(Boolean)) { setStatus('No coins to give', true); return; }
+  openGiveDialog({ fromId: currentCharId, wallet, headers: sheetAuthHeaders(), onDone: _sheetReloadAfterGive });
+}
+
 function openItemDetail(id) {
   const item = items.find(i => i.id === id);
   if (!item) return;
@@ -468,6 +510,8 @@ function renderItems() {
       <span class="item-name" style="${equippedStyle};cursor:pointer" onclick="openItemDetail(${esc(JSON.stringify(item.id))})">${esc(item.name)}${attuneStr}${unidStr}</span>
       <span class="item-meta">${esc(typeLabel)}${bonusStr ? ' · ' + esc(bonusStr) : ''}${valueStr}</span>
       ${chargeStr}
+      <button class="act-edit-btn" onclick="sheetShareItem(${idLit})" title="Send ${esc(item.name)} to chat" aria-label="Send ${esc(item.name)} to chat"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chat"></use></svg></button>
+      <button class="char-btn" style="padding:calc(2px*var(--fs, 1)) calc(8px*var(--fs, 1));font-size:calc(11px * var(--fs, 1))" onclick="sheetGiveItem(${idLit})" title="Give ${esc(item.name)} to another character">Give</button>
       <button class="char-btn" style="padding:calc(2px*var(--fs, 1)) calc(8px*var(--fs, 1));font-size:calc(11px * var(--fs, 1))" onclick="openItemModal(${esc(JSON.stringify(item.id))})">Edit</button>
       <button class="del-btn" onclick="deleteItem(${esc(JSON.stringify(item.id))})"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg></button>
     </div>`;

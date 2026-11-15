@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-01 18:40
+// Written by Irmak Hakman — 2026-11-15 12:25
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -338,18 +338,13 @@ function getChatSender() {
   return qrollCharName || 'Table';
 }
 
-// Shared "info card" poster — used by the player-action, monster-action, and
-// spell "send to chat" features so they all format and break lines identically.
+// Shared "info card" poster — used by the player-action, monster-action, item,
+// companion and spell "send to chat" features so they all format and break
+// lines identically (chatCardHTML, js/lib/chat-cards.js).
 // `text` is treated as plain text (escaped, newlines -> <br>); `html` is used
 // as pre-formatted safe HTML (e.g. spell notes). Pass one of them.
 function postChatInfoCard({ name, meta, text, html, sender } = {}) {
-  let body = `<strong>${esc(name || '')}</strong>`;
-  const parts = (meta || []).filter(Boolean);
-  if (parts.length) body += `<div style="font-size:calc(10px * var(--fs, 1));opacity:.7;margin-top:1px">${esc(parts.join(' · '))}</div>`;
-  const descHtml = html != null && html !== ''
-    ? html
-    : (text ? esc(String(text)).replace(/\n/g, '<br>') : '');
-  if (descHtml) body += `<div style="margin-top:calc(4px*var(--fs, 1))">${descHtml}</div>`;
+  const body = chatCardHTML({ name, meta, text, html });
   // The server keeps html:true only from a logged-in sender (v235), so the card
   // carries our credential; without it the card would arrive as escaped text.
   return fetch('/api/chat', {

@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-12 19:45
+// Written by Irmak Hakman — 2026-11-15 12:25
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -58,12 +58,13 @@ function renderCompanionPanel(tok) {
 
   const notes = c.notes ? `<div class="rp-flat-hdr">Notes</div><div class="cmp-notes">${esc(c.notes)}</div>` : '';
   const sb = c.statBlock && typeof c.statBlock === 'object' ? c.statBlock : null;
+  const share = `<button class="btn sm cmp-share" onclick="shareCompanionToken('${id}')"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chat"></use></svg> Send to chat</button>`;
   if (sb) {
     return stats + _cmpBlockTop(sb, tok) + `<div class="rp-flat-hdr">Attacks</div>${atkHtml}` + _cmpBlockRest(sb) + notes
-      + `<button class="btn sm danger cmp-dismiss" onclick="dismissCompanion('${id}')">Dismiss ${esc(tok.name)}</button>`;
+      + share + `<button class="btn sm danger cmp-dismiss" onclick="dismissCompanion('${id}')">Dismiss ${esc(tok.name)}</button>`;
   }
   return stats + `<div class="rp-flat-hdr">Attacks</div>${atkHtml}${notes}`
-    + `<button class="btn sm danger cmp-dismiss" onclick="dismissCompanion('${id}')">Dismiss ${esc(tok.name)}</button>`;
+    + share + `<button class="btn sm danger cmp-dismiss" onclick="dismissCompanion('${id}')">Dismiss ${esc(tok.name)}</button>`;
 }
 
 // ── A companion made from a monster: its full stat block ──────────────────────
@@ -231,9 +232,26 @@ function sideCompanionsPane(d, charId, canSummon) {
       + (img ? `<img class="cmp-side-img" src="${esc(img)}" alt="">` : `<span class="cmp-side-img cmp-side-ph" aria-hidden="true">🐾</span>`)
       + `<div class="cmp-side-main"><div class="cmp-side-name">${esc(c.name || 'Companion')}</div>`
       + `<div class="cmp-side-meta">${esc(meta)}${onMap ? ` · <b>${onMap} on map</b>` : ''}</div></div>`
+      + (canSummon && typeof _chatShareBtn === 'function' ? _chatShareBtn(`sideShareCompanion('${escJs(c.id)}')`, c.name) : '')
       + (canSummon ? `<button class="btn sm" onclick="summonCompanion('${escJs(charId)}','${escJs(c.id)}')">Summon</button>` : '')
       + `</div>`;
   }).join('');
+}
+
+/** Send one of the panel character's companions to chat (js/lib/chat-cards.js). */
+function sideShareCompanion(companionId) {
+  let list = [];
+  try { list = JSON.parse((qrollData && qrollData._companions) || '[]'); } catch {}
+  const c = Array.isArray(list) ? list.find(x => x && x.id === companionId) : null;
+  if (c) postChatInfoCard(companionChatCard(c));
+}
+
+/** A companion token's panel: send what it is to chat, under its own name. */
+function shareCompanionToken(tokId) {
+  const tok = tokens.find(t => t.id === tokId);
+  if (!tok || !isMyToken(tok)) return;
+  const c = companionOf(tok);
+  postChatInfoCard({ ...companionChatCard({ ...c, name: tok.name }), sender: companionSender(tok) });
 }
 
 async function summonCompanion(charId, companionId) {

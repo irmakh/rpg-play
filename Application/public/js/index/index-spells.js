@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-12 21:30
+// Written by Irmak Hakman — 2026-11-15 12:25
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -236,6 +236,7 @@ function _spRowHTML(s, prepares) {
     ${uses}
     <span class="sp-btns">
       ${ready && s.name ? `<button type="button" class="sp-cast-btn" onclick="openSheetSpellCast(${id})" title="Cast ${esc(s.name)}">Cast</button>` : ''}
+      ${s.name ? `<button type="button" class="act-edit-btn" onclick="sheetShareSpell(${id})" title="Send ${esc(s.name)} to chat" aria-label="Send ${esc(s.name)} to chat">${_spIco('chat')}</button>` : ''}
       <button type="button" class="act-edit-btn" onclick="openSpellModal(${id})" title="Edit">${_spIco('pencil')}</button>
       <button type="button" class="del-btn" onclick="deleteSpell(${id})" title="Delete spell">${_spIco('close')}</button>
     </span>

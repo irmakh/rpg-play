@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-01 15:10
+// Written by Irmak Hakman — 2026-11-15 12:25
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -7,7 +7,6 @@ let toastTimer = null;
 let toastDismissHandler = null;
 let _autoSaveTimer = null;
 let _initEditMode  = false;
-let _spAtkEditMode = false;
 let _sheetCritArmed = false;  // a natural-20 attack makes the next damage roll a crit
 
 function startRoll(label, modifier) {
@@ -110,14 +109,6 @@ function setInitEditMode() {
   el.focus();
   el.select();
 }
-function setSpAtkEditMode() {
-  const el = document.querySelector('[data-key="sp-atk"]');
-  if (!el) return;
-  _spAtkEditMode = true;
-  el.classList.remove('rollable');
-  el.focus();
-  el.select();
-}
 
 function pushRoll(entry) {
   rollHistory.unshift(entry);
@@ -202,12 +193,6 @@ function initRollClickHandlers() {
     initEl.addEventListener('click', function() { if (_initEditMode) return; rollMyInitiative(); });
     initEl.addEventListener('blur', function() { _initEditMode = false; this.classList.add('rollable'); });
   }
-  // Spell attack bonus
-  const spAtkEl = document.querySelector('[data-key="sp-atk"]');
-  if (spAtkEl) {
-    spAtkEl.classList.add('rollable');
-    spAtkEl.title = 'Click to roll spell attack';
-    spAtkEl.addEventListener('click', function() { if (_spAtkEditMode) return; startRoll('Spell Attack', this.value); });
-    spAtkEl.addEventListener('blur', function() { _spAtkEditMode = false; this.classList.add('rollable'); });
-  }
+  // The Spell Atk Bonus field is a plain number since v356: a spell's attack is
+  // rolled from the card Cast posts to chat, not from the sheet.
 }

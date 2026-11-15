@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-12 19:45
+// Written by Irmak Hakman — 2026-11-15 12:25
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -46,10 +46,17 @@ function renderCompanions() {
         ${atks ? `<div class="cmp-atks">${atks}</div>` : ''}
       </div>
       ${c.statBlock ? `<button class="char-btn" style="padding:calc(2px*var(--fs, 1)) calc(8px*var(--fs, 1));font-size:calc(11px * var(--fs, 1))" onclick="openCompanionStatBlock(${idLit})" title="The full stat block of the monster it was summoned as">Stats</button>` : ''}
+      <button class="act-edit-btn" onclick="sheetShareCompanion(${idLit})" title="Send ${esc(c.name || 'Companion')} to chat" aria-label="Send ${esc(c.name || 'Companion')} to chat"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chat"></use></svg></button>
       <button class="char-btn" style="padding:calc(2px*var(--fs, 1)) calc(8px*var(--fs, 1));font-size:calc(11px * var(--fs, 1))" onclick="openCompanionModal(${idLit})">Edit</button>
       <button class="del-btn" onclick="deleteCompanion(${idLit})" title="Delete companion"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg></button>
     </div>`;
   }).join('');
+}
+
+// Send a companion to chat (js/lib/chat-cards.js; sheetShareCard in index-dice3d.js).
+function sheetShareCompanion(id) {
+  const c = companions.find(x => x.id === id);
+  if (c) sheetShareCard(companionChatCard(c));
 }
 
 function openCompanionModal(id) {
