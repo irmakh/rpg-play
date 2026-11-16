@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-11-17 15:00
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -91,7 +91,7 @@ describe('music-sync — audio ownership election', () => {
     expect(table.arb.isOwner()).toBe(true);
   });
 
-  it('a player window outranks a table window that already owns the audio', () => {
+  it('the window already playing keeps the audio when a music window opens', () => {
     const w1 = makeWindow(bus);
     const w2 = makeWindow(bus);
 
@@ -99,30 +99,63 @@ describe('music-sync — audio ownership election', () => {
     table.settle();
     expect(table.arb.isOwner()).toBe(true);
 
-    // Opening the dedicated music player hands the sound over…
+    // Opening the music window, which ranks higher, does not take the sound.
     const player = spawn(w2, w2.read('MUSIC_PRIO_PLAYER'));
-    expect(table.log).toEqual(['acquire', 'release']);
-    expect(table.arb.isOwner()).toBe(false);
-
-    // …and the player knows it can play even before its own grace ends,
-    // because the table answered its hello.
     player.settle();
-    expect(player.arb.isOwner()).toBe(true);
+    expect(table.arb.isOwner()).toBe(true);
+    expect(table.log).toEqual(['acquire']);
+    expect(player.arb.isOwner()).toBe(false);
+    expect(player.log).toEqual([]);
   });
 
-  it('the table takes the audio back when the player window closes', () => {
+  it('a page already playing keeps the audio when a table opens', () => {
     const w1 = makeWindow(bus);
     const w2 = makeWindow(bus);
 
+    const page = spawn(w1, w1.read('MUSIC_PRIO_PAGE'));
+    page.settle();
+    const table = spawn(w2, w2.read('MUSIC_PRIO_TABLE'));
+    table.settle();
+    expect(page.arb.isOwner()).toBe(true);
+    expect(table.arb.isOwner()).toBe(false);
+  });
+
+  it('when the playing window closes, the best one left takes over', () => {
+    const w1 = makeWindow(bus);
+    const w2 = makeWindow(bus);
+    const w3 = makeWindow(bus);
+
+    const page = spawn(w1, w1.read('MUSIC_PRIO_PAGE'));
+    page.settle();
+    const table = spawn(w2, w2.read('MUSIC_PRIO_TABLE'));
+    table.settle();
+    const player = spawn(w3, w3.read('MUSIC_PRIO_PLAYER'));
+    player.settle();
+    expect(page.arb.isOwner()).toBe(true);
+
+    page.arb.stop();                         // page closed or navigated → 'bye'
+    expect(player.arb.isOwner()).toBe(true); // highest priority of those left
+    expect(table.arb.isOwner()).toBe(false);
+    expect(table.log).toEqual([]);
+  });
+
+  it('two windows claiming at the same moment end with one owner', () => {
+    const w1 = makeWindow(bus);
     const table = spawn(w1, w1.read('MUSIC_PRIO_TABLE'));
     table.settle();
-    const player = spawn(w2, w2.read('MUSIC_PRIO_PLAYER'));
-    player.settle();
-    expect(table.arb.isOwner()).toBe(false);
-
-    player.arb.stop();                       // window closed → 'bye'
     expect(table.arb.isOwner()).toBe(true);
-    expect(table.log).toEqual(['acquire', 'release', 'acquire']);
+    // A music window that claimed before hearing about the table.
+    table.arb._handle({ k: 'ping', id: 'racer', priority: w1.read('MUSIC_PRIO_PLAYER'), joinedAt: Date.now(), owning: true });
+    expect(table.arb.isOwner()).toBe(false);
+  });
+
+  it('a passive window never counts as the next owner', () => {
+    const w = makeWindow(bus);
+    const page = spawn(w, w.read('MUSIC_PRIO_PAGE'));
+    // An older passive frame of the same priority must not keep the page quiet.
+    page.arb._handle({ k: 'ping', id: 'frame', priority: 0, joinedAt: 1, passive: true });
+    page.settle();
+    expect(page.arb.isOwner()).toBe(true);
   });
 
   it('between two equal windows the older one keeps the audio', () => {

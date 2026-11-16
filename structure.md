@@ -62,6 +62,7 @@ char_sheet/
 │   │   │   ├── notifications.css       #     Notification bell, panel and toasts
 │   │   │   ├── range.css               #     One slider look (map zoom, music, prepare-map grid), finger-sized thumb
 │   │   │   ├── stories.css             #     Stories (dashboard/builder/viewer) styles
+│   │   │   ├── table-phone.css         #     Table on a phone: bottom tab bar, sheets, peek card, tools button (phone width only)
 │   │   │   ├── table-sheet-popout.css  #     Scoped layout for the popped-out character sheet
 │   │   │   ├── table-theme-modern.css  #     Modern HUD table theme
 │   │   │   ├── table-ux.css            #     Table ease-of-use layer: View menu, dice settings, hint, token menu, hover card
@@ -132,6 +133,7 @@ char_sheet/
 │   │   │   │   ├── lightbox.js         #       Fullscreen image/video viewer
 │   │   │   │   ├── modal-guard.js      #       Backdrop/Escape guard so a filled-in modal is never lost
 │   │   │   │   ├── music-sync.js       #       Music audio ownership across windows on one machine
+│   │   │   │   ├── page-music.js       #       The DM's music on every logged-in page, with a now-playing chip by the bell
 │   │   │   │   ├── notifications.js    #       Notification bell, feed and toasts; Undo notices (notifUndoToast)
 │   │   │   │   ├── palette.js          #       Ctrl+K search for DM and players; ?q= fills a page's search
 │   │   │   │   ├── prefs.js            #       Preferences panel (per device): dice, motion, notifications
@@ -153,6 +155,7 @@ char_sheet/
 │   │   │   │   ├── table-monsters.js   #       Monster tokens + stat block
 │   │   │   │   ├── table-music.js      #       Synced music playback
 │   │   │   │   ├── table-panel.js      #       Right-side token quick-roll panel, attack → damage prompt, crit damage
+│   │   │   │   ├── table-phone.js      #       Phone layout: tab bar, which sheet shows, peek card, tools button, More
 │   │   │   │   ├── table-popout.js     #       Pop panels into separate windows
 │   │   │   │   ├── table-realtime.js   #       Live event handling
 │   │   │   │   ├── table-state.js      #       Shared state + session
@@ -275,6 +278,7 @@ char_sheet/
 │   │       ├── localdb-import.test.js  #     localdb import
 │   │       ├── login-guard.test.js     #     Failed-login lockout
 │   │       ├── music-sync.test.js      #     Music audio ownership
+│   │       ├── page-music.test.js      #     Music on every page: which pages play, ownership, tap to resume
 │   │       ├── realtime-audience.test.js  #  Per-connection event delivery
 │   │       ├── realtime.test.js        #     Frontend live transport
 │   │       ├── security-middleware.test.js  # Headers, session gate, body limits
@@ -283,6 +287,7 @@ char_sheet/
 │   │       ├── table-monster-damage.test.js  # Monster damage extraction
 │   │       ├── table-spells.test.js    #     Table spell list
 │   │       ├── table-utils.test.js     #     Table helpers
+│   │       ├── table-phone.test.js     #     Table phone layout: CSS cannot reach a computer; tab and sheet logic
 │   │       ├── table-ux.test.js        #     Table ease-of-use helpers: zoom steps, quick HP, tool keys, hover/menu markup
 │   │       ├── upload-paths.test.js    #     Upload paths (server wiring)
 │   │       ├── treasury-ui.test.js     #     Treasury manager UI

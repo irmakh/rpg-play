@@ -1,8 +1,8 @@
-// Written by Irmak Hakman — 2026-11-16 19:50
+// Written by Irmak Hakman — 2026-11-17 14:20
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
-const CACHE = 'rpg-v362';
+const CACHE = 'rpg-v365';
 
 const STATIC = [
   // Core pages
@@ -42,6 +42,7 @@ const STATIC = [
   '/css/minimap.css',
   '/css/table-theme-modern.css',
   '/css/table-ux.css',
+  '/css/table-phone.css',
   '/css/range.css',
   '/css/table-sheet-popout.css',
   '/css/weather.css',
@@ -75,6 +76,7 @@ const STATIC = [
   '/js/lib/icons.js',
   '/js/lib/notifications.js',
   '/js/lib/music-sync.js',
+  '/js/lib/page-music.js',
   '/js/lib/dice-engine.js',
   '/js/lib/lightbox.js',
   '/js/lib/fr_calendar.js',
@@ -108,6 +110,7 @@ const STATIC = [
   '/js/table/table-weather.js',
   '/js/table/table-main.js',
   '/js/table/table-ux.js',
+  '/js/table/table-phone.js',
   // Console JS
   '/js/lib/auth-ui.js',
   '/js/console/console-login.js',

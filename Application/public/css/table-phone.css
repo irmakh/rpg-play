@@ -1,0 +1,244 @@
+/* Written by Irmak Hakman — 2026-11-17 12:10 */
+/* Copyright (c) 2026 Irmak Hakman
+   SPDX-License-Identifier: BUSL-1.1  (see LICENSE) */
+
+/* ── The table screen on a phone (v363) ──────────────────────────────────────
+   js/table/table-phone.js puts body.tbl-phone on a phone-sized screen. Then the
+   map takes the whole screen, the toolbar shrinks to one line, and everything
+   else opens from a bottom tab bar as a sheet over the map:
+     Map · Turn (the initiative panel) · Details (the side panel) · Chat · More
+   The panels are the same elements as on a computer, only placed differently,
+   so every feature keeps working.
+
+   Computers stay exactly as they were: every rule below sits inside the same
+   media query the script uses AND needs body.tbl-phone, except the first one,
+   which hides the phone-only elements everywhere else.
+   (tests/frontend/table-phone.test.js checks this file for that.) */
+
+#ph-tabs,#ph-tool,#ph-peek,#ph-more,.ph-quick-dice{display:none}
+
+@media (max-width:760px), (pointer:coarse) and (max-height:500px){
+
+  body.tbl-phone{
+    --ph-tabs-h:calc(56px + env(safe-area-inset-bottom,0px));
+    --ph-sheet-top:96px;     /* the map's top edge, set by the script */
+    --ph-lift:0px;           /* the peek card's height, so map buttons sit above it */
+  }
+
+  /* ── Top line: campaign, DM badge, connection light, bell ─────────────── */
+  body.tbl-phone #toolbar{flex-wrap:nowrap;overflow:hidden;gap:6px;padding:4px 8px;min-height:44px;
+    padding-left:max(8px,env(safe-area-inset-left,0px));padding-right:max(8px,env(safe-area-inset-right,0px))}
+  body.tbl-phone #toolbar > *{display:none!important}
+  body.tbl-phone #toolbar > #campaign-badge:not([style*="display:none"]):not([style*="display: none"]),
+  body.tbl-phone #toolbar > #dm-badge:not([style*="display:none"]):not([style*="display: none"]),
+  body.tbl-phone #toolbar > #btn-dm-unlock:not([style*="display:none"]):not([style*="display: none"]){display:inline-flex!important}
+  body.tbl-phone #toolbar > #campaign-badge{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block!important;
+    background:none!important;border:0!important;color:var(--bone)!important;font-weight:700;font-size:14px!important;padding:0!important}
+  body.tbl-phone #toolbar > #campaign-badge[style*="display:none"],
+  body.tbl-phone #toolbar > #campaign-badge[style*="display: none"]{display:none!important}
+  body.tbl-phone #toolbar > #rt-conn{display:inline-flex!important;margin-left:auto}
+  body.tbl-phone #toolbar > [data-notif-bell]{display:inline-flex!important;min-width:40px;min-height:40px}
+  /* The toolbar never hides on a phone; its strip is not needed. */
+  body.tbl-phone.toolbar-hidden #toolbar{display:flex!important}
+  body.tbl-phone #toolbar-strip{display:none!important}
+
+  /* ── Music: one line, name and volume ─────────────────────────────────── */
+  body.tbl-phone #now-playing-state,
+  body.tbl-phone #now-playing-pos,
+  body.tbl-phone #now-playing-seek,
+  body.tbl-phone #now-playing-dur,
+  body.tbl-phone #local-vol-pct,
+  body.tbl-phone #now-playing-bar > :nth-child(7),
+  body.tbl-phone #now-playing-bar > button{display:none!important}
+  body.tbl-phone #local-vol-slider{width:90px!important}
+
+  /* ── Drawing tools: one row that scrolls sideways ─────────────────────── */
+  body.tbl-phone #draw-toolbar{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  body.tbl-phone #draw-toolbar::-webkit-scrollbar{display:none}
+  body.tbl-phone #draw-toolbar > *{flex:none}
+  body.tbl-phone #draw-toolbar #draw-area-fields{display:inline-flex;gap:6px;align-items:center;flex:none}
+  body.tbl-phone #draw-toolbar #draw-area-fields[style*="display:none"],
+  body.tbl-phone #draw-toolbar #draw-area-fields[style*="display: none"]{display:none!important}
+
+  /* ── What leaves the screen ───────────────────────────────────────────── */
+  body.tbl-phone #vtool-strip,
+  body.tbl-phone #left-strip,
+  body.tbl-phone #right-strip,
+  body.tbl-phone #rh-left,
+  body.tbl-phone #rh-right,
+  body.tbl-phone #rh-chat,
+  body.tbl-phone #minimap,
+  body.tbl-phone #ux-hint{display:none!important}
+  body.tbl-phone #left-panel,
+  body.tbl-phone #side-panel,
+  body.tbl-phone #chat-bar{display:none!important}
+
+  /* Zoom: a + and − pair, above the peek card when one shows. */
+  body.tbl-phone #map-zoom{flex-direction:column;padding:0;gap:0;bottom:calc(12px + var(--ph-lift))!important;right:10px!important}
+  body.tbl-phone #map-zoom #slider-zoom,
+  body.tbl-phone #map-zoom #zoom-val{display:none!important}
+  body.tbl-phone #map-zoom button{width:44px;height:42px;min-height:42px;font-size:20px}
+
+  /* ── Bottom tab bar ───────────────────────────────────────────────────── */
+  body.tbl-phone #ph-tabs{display:grid;grid-template-columns:repeat(5,1fr);flex:none;position:relative;z-index:820;
+    height:var(--ph-tabs-h);padding-bottom:env(safe-area-inset-bottom,0px);
+    padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px);
+    background:var(--slate);border-top:1px solid var(--rule-hi)}
+  body.tbl-phone #ph-tabs button{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+    min-height:56px;padding:0;margin:0;border:0;border-radius:0;background:none;color:var(--ash);font-size:11px;font-weight:600;cursor:pointer}
+  body.tbl-phone #ph-tabs button .lt-icon{width:20px;height:20px}
+  body.tbl-phone #ph-tabs button[aria-selected="true"]{color:var(--arc);box-shadow:inset 0 3px 0 var(--arc)}
+  body.tbl-phone #ph-tabs button:focus-visible{outline:2px solid var(--arc);outline-offset:-4px}
+  body.tbl-phone .ph-badge{position:absolute;top:5px;left:calc(50% + 6px);min-width:17px;height:17px;padding:0 4px;border-radius:9px;
+    background:var(--blood);color:#fff;font-size:10px;font-weight:700;line-height:17px;text-align:center}
+  body.tbl-phone .ph-badge[hidden]{display:none}
+  body.tbl-phone .ph-badge.gold{background:var(--arc);color:var(--ink)}
+  body.tbl-phone .ph-badge.dot{min-width:9px;width:9px;height:9px;padding:0;top:9px;left:calc(50% + 9px);background:var(--arc)}
+
+  /* ── Sheets: one at a time, over the map, above the tab bar ───────────── */
+  body.tbl-phone.ph-tab-turn #left-panel,
+  body.tbl-phone.ph-tab-details:not(.ph-peek) #side-panel,
+  body.tbl-phone.ph-tab-chat #chat-bar,
+  body.tbl-phone.ph-tab-more #ph-more{
+    display:flex!important;flex-direction:column;position:fixed!important;z-index:800;
+    left:0;right:0;bottom:var(--ph-tabs-h);top:auto;
+    width:auto!important;min-width:0!important;max-width:none!important;
+    margin:0;border:0;border-top:1px solid var(--rule-hi);border-radius:14px 14px 0 0;
+    background:var(--slate);box-shadow:0 -8px 28px #000a;overflow-y:auto;overscroll-behavior:contain;
+    padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)}
+  /* Full height: details, chat. Fitted, up to most of the screen: turn, more. */
+  body.tbl-phone.ph-tab-details:not(.ph-peek) #side-panel,
+  body.tbl-phone.ph-tab-chat #chat-bar{top:var(--ph-sheet-top);height:auto}
+  body.tbl-phone.ph-tab-turn #left-panel,
+  body.tbl-phone.ph-tab-more #ph-more{max-height:calc(100dvh - var(--ph-tabs-h) - var(--ph-sheet-top));height:auto}
+
+  /* A grab bar on each sheet's header: tap or swipe it down to close. */
+  body.tbl-phone #rp-hdr,
+  body.tbl-phone #init-hdr,
+  body.tbl-phone #chat-bar-hdr,
+  body.tbl-phone .ph-more-hdr{position:sticky;top:0;z-index:6;min-height:48px;padding-top:14px!important;
+    border-radius:14px 14px 0 0;touch-action:none}
+  body.tbl-phone #rp-hdr::before,
+  body.tbl-phone #init-hdr::before,
+  body.tbl-phone #chat-bar-hdr::before,
+  body.tbl-phone .ph-more-hdr::before{content:"";position:absolute;top:6px;left:50%;transform:translateX(-50%);
+    width:40px;height:4px;border-radius:2px;background:var(--rule-hi)}
+  body.tbl-phone #rp-hdr > svg:last-child{transform:rotate(90deg)}    /* the chevrons point down: */
+  body.tbl-phone #init-hdr > svg:last-child{transform:rotate(-90deg)}  /* swipe or tap to close */
+
+  /* Several tokens selected: Details shows only their bulk-edit panel. */
+  body.tbl-phone.ph-bulk #rp-placeholder,
+  body.tbl-phone.ph-bulk #rp-token-details{display:none!important}
+  body.tbl-phone #side-panel #lp-bulk-section .rp-cond-grid .cond-btn{min-height:34px;padding:6px 9px;font-size:13px}
+
+  /* Turn sheet */
+  body.tbl-phone #left-panel .init-row{min-height:44px}
+  body.tbl-phone #left-panel .dice-btn{min-height:40px;padding:0 12px}
+
+  /* Details sheet: one column, bigger targets. */
+  body.tbl-phone #side-panel .cond-btn{min-height:34px;padding:6px 9px;font-size:13px}
+  body.tbl-phone #side-panel .btn.sm,
+  body.tbl-phone #side-panel .roll-btn,
+  body.tbl-phone #side-panel .qroll-row button{min-height:38px}
+  body.tbl-phone #side-panel .rp-hp-entry{font-size:16px;min-height:40px}   /* 16px: iOS does not zoom in */
+
+  /* Chat sheet: the log fills it, the input sits at the bottom. */
+  body.tbl-phone.ph-tab-chat #chat-bar{overflow:hidden}
+  body.tbl-phone #chat-body-wrap{display:flex!important;flex:1 1 auto;min-height:0;flex-direction:column}
+  body.tbl-phone #chat-bar .chat-log{height:auto!important;flex:1 1 auto;min-height:0}
+  body.tbl-phone #chat-bar .chat-roller{flex:none;padding-bottom:6px}
+  body.tbl-phone #chat-input{font-size:16px;min-height:40px}
+  body.tbl-phone #chat-send-btn,
+  body.tbl-phone #chat-img-label{min-height:40px}
+  body.tbl-phone .ph-quick-dice{display:flex;gap:6px;padding:6px 8px 0;overflow-x:auto;scrollbar-width:none}
+  body.tbl-phone .ph-quick-dice button{flex:1 0 auto;min-width:44px;min-height:36px;border-radius:8px;border:1px solid var(--rule-hi);
+    background:var(--slate-hi);color:var(--bone);font-size:13px;font-weight:700}
+
+  /* ── More sheet ───────────────────────────────────────────────────────── */
+  body.tbl-phone .ph-more-hdr{display:flex;align-items:center;justify-content:space-between;padding:0 14px 8px;
+    background:var(--slate);font-weight:700;font-size:14px;color:var(--bone)}
+  body.tbl-phone .ph-more-body{display:flex;flex-direction:column;gap:6px;padding:0 14px 16px}
+  body.tbl-phone .ph-lab{margin-top:8px;font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--ash)}
+  body.tbl-phone .ph-seg{display:flex;border:1px solid var(--rule-hi);border-radius:9px;overflow:hidden}
+  body.tbl-phone .ph-seg button{flex:1;min-height:42px;border:0;border-radius:0;background:none;color:var(--bone);font-size:14px}
+  body.tbl-phone .ph-seg button + button{border-left:1px solid var(--rule-hi)}
+  body.tbl-phone .ph-seg button[aria-pressed="true"]{background:color-mix(in srgb, var(--arc) 18%, transparent);color:var(--arc);font-weight:700}
+  body.tbl-phone .ph-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+  body.tbl-phone .ph-gi{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:64px;padding:6px 2px;
+    border-radius:10px;border:1px solid var(--rule-hi);background:var(--slate-hi);color:var(--bone);font-size:12px;text-align:center;
+    text-decoration:none;line-height:1.2}
+  body.tbl-phone .ph-gi .lt-icon{width:20px;height:20px}
+  body.tbl-phone .ph-gi[aria-pressed="true"]{border-color:var(--arc);color:var(--arc)}
+  body.tbl-phone .ph-weather{font-size:13px;color:var(--ash)}
+
+  /* ── Peek card: the selected token at a glance ────────────────────────── */
+  body.tbl-phone.ph-tab-details.ph-peek #ph-peek{display:flex}
+  body.tbl-phone #ph-peek{flex-direction:column;gap:7px;position:fixed;z-index:790;left:0;right:0;bottom:var(--ph-tabs-h);
+    padding:20px max(14px,env(safe-area-inset-right,0px)) 12px max(14px,env(safe-area-inset-left,0px));
+    background:var(--slate);border-top:1px solid var(--rule-hi);border-radius:14px 14px 0 0;box-shadow:0 -8px 24px #000b;
+    color:var(--bone);cursor:pointer;touch-action:none}
+  body.tbl-phone #ph-peek::before{content:"";position:absolute;top:7px;left:50%;transform:translateX(-50%);width:40px;height:4px;border-radius:2px;background:var(--rule-hi)}
+  body.tbl-phone .ph-pk-top{display:flex;align-items:center;gap:8px}
+  body.tbl-phone .ph-pk-img{width:30px;height:30px;border-radius:50%;object-fit:cover;flex:none;border:1px solid var(--rule-hi);background:var(--slate-hi)}
+  body.tbl-phone .ph-pk-name{flex:1;min-width:0;font-weight:700;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  body.tbl-phone .ph-pk-pill{flex:none;padding:2px 9px;border-radius:999px;border:1px solid var(--rule-hi);font-size:12px;color:var(--ash)}
+  body.tbl-phone .ph-pk-pill b{color:var(--arc)}
+  body.tbl-phone .ph-pk-hp{display:flex;justify-content:space-between;font-size:12px;color:var(--ash)}
+  body.tbl-phone .ph-pk-hp b{color:var(--bone);font-size:14px}
+  body.tbl-phone .ph-pk-bar{height:7px;border-radius:4px;background:color-mix(in srgb, var(--blood) 30%, transparent);overflow:hidden}
+  body.tbl-phone .ph-pk-bar i{display:block;height:100%;background:var(--verdigris)}
+  body.tbl-phone .ph-pk-chips{display:flex;flex-wrap:wrap;gap:5px}
+  body.tbl-phone .ph-pk-chip{padding:3px 9px;border-radius:999px;font-size:12px;border:1px solid color-mix(in srgb, var(--arc) 55%, transparent);color:var(--arc)}
+  body.tbl-phone .ph-pk-hint{font-size:12px;color:var(--ash);text-align:center}
+
+  /* ── Map tools: one round button, a row of tools, back-to-Move ────────── */
+  body.tbl-phone #ph-tool{display:flex;align-items:flex-end;gap:8px;position:fixed;z-index:780;
+    left:calc(10px + env(safe-area-inset-left,0px));bottom:calc(var(--ph-tabs-h) + 12px + var(--ph-lift))}
+  body.tbl-phone.ph-tab-turn #ph-tool,
+  body.tbl-phone.ph-tab-chat #ph-tool,
+  body.tbl-phone.ph-tab-more #ph-tool,
+  body.tbl-phone.ph-tab-details:not(.ph-peek) #ph-tool{display:none}
+  body.tbl-phone .ph-fab{width:48px;height:48px;min-height:48px;border-radius:50%;padding:0;display:grid;place-items:center;
+    background:var(--slate);border:1px solid var(--rule-hi);color:var(--bone);box-shadow:0 4px 14px #0009}
+  body.tbl-phone .ph-fab .lt-icon{width:22px;height:22px}
+  body.tbl-phone .ph-fab.on{color:var(--arc);border-color:var(--arc)}
+  body.tbl-phone .ph-fab[hidden],
+  body.tbl-phone .ph-tool-row[hidden]{display:none}
+  body.tbl-phone .ph-tool-row{position:absolute;left:0;bottom:58px;display:flex;gap:4px;padding:5px;border-radius:14px;
+    background:var(--slate);border:1px solid var(--rule-hi);box-shadow:0 6px 18px #000a}
+  body.tbl-phone .ph-tool-row button{width:44px;height:44px;min-height:44px;padding:0;border-radius:10px;border:0;background:none;color:var(--ash);
+    display:grid;place-items:center}
+  body.tbl-phone .ph-tool-row button .lt-icon{width:20px;height:20px}
+  body.tbl-phone .ph-tool-row button[aria-pressed="true"]{color:var(--arc);background:color-mix(in srgb, var(--arc) 15%, transparent)}
+  body.tbl-phone .ph-tool-chip{align-self:center;display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:0 6px 0 12px;
+    border-radius:999px;background:var(--slate);border:1px solid var(--arc);color:var(--arc);font-weight:700;font-size:13px;box-shadow:0 4px 14px #0009}
+  body.tbl-phone .ph-tool-chip[hidden]{display:none}
+  body.tbl-phone .ph-tool-chip span{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--slate-hi);color:var(--bone)}
+
+  /* ── Above every sheet: the turn banner and combat prompts ───────────── */
+  body.tbl-phone #combat-prompts,
+  body.tbl-phone .turn-banner{z-index:830}
+  body.tbl-phone #combat-prompts{max-width:calc(100vw - 16px)}
+
+  /* The damage prompt after an attack sits above the tab bar. */
+  body.tbl-phone #weapon-dmg-prompt{bottom:calc(var(--ph-tabs-h) + 10px)!important;max-width:calc(100vw - 16px)}
+
+  /* Pop-up windows open above the sheets and fit the screen. */
+  body.tbl-phone .modal-overlay{z-index:2000}
+  body.tbl-phone .modal-box{max-width:calc(100vw - 16px)!important;max-height:calc(100dvh - 24px);overflow-y:auto}
+}
+
+/* Phone turned sideways: the sheets become a drawer on the right, so the
+   map keeps its full height, and the tabs drop their labels. */
+@media (pointer:coarse) and (max-height:500px) and (min-width:761px){
+  body.tbl-phone{--ph-tabs-h:calc(44px + env(safe-area-inset-bottom,0px))}
+  body.tbl-phone #ph-tabs button{min-height:44px;font-size:0}
+  body.tbl-phone #ph-tabs .ph-badge{top:3px}
+  body.tbl-phone.ph-tab-turn #left-panel,
+  body.tbl-phone.ph-tab-details:not(.ph-peek) #side-panel,
+  body.tbl-phone.ph-tab-chat #chat-bar,
+  body.tbl-phone.ph-tab-more #ph-more,
+  body.tbl-phone #ph-peek{left:auto;width:min(380px,48vw)!important;top:var(--ph-sheet-top);max-height:none;
+    border-radius:14px 0 0 0;border-left:1px solid var(--rule-hi)}
+  body.tbl-phone #ph-peek{top:auto}
+}

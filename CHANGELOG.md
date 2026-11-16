@@ -21,6 +21,72 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [365] — 2026-11-17 — The DM's music on every page
+
+Released 2026-11-17.
+
+- The music the DM plays now continues on **every logged-in page**: the character
+  sheet, the DM page, monsters, spells, treasury, handouts, calendar, stories,
+  prepare map, waiting screens, playlists, loot and merchant. It used to play only
+  on the table and in the music window.
+- Each page picks the track up where it is. Changing page pauses it for about a
+  second, because browsers stop sound when a page changes.
+- Phones (iPhones always, Android sometimes) won't start sound on a new page until
+  it is touched: the chip says **Tap to resume music**, and any tap starts it.
+- A **now-playing chip** sits beside the bell, or in the bottom-right corner on
+  pages without one. Tap it for this device's volume and mute, the same setting as
+  the table's volume slider.
+- Still one player per device, and **the window already playing always keeps the
+  sound**: opening the table, the music window or another page never takes it over.
+  When the playing window closes or changes page, the music window takes over if
+  one is open, then a table, then any other page.
+- On the DM's device the playlist still moves on to the next track when the DM is
+  on another page.
+
+---
+
+## [364] — 2026-11-17 — Bulk edit in Details on a phone
+
+- On a phone, selecting several tokens (DM) opens their bulk-edit panel (HP,
+  conditions, initiative) in the **Details** sheet instead of under the turn order.
+  Clearing the selection closes it. Computers keep it in the initiative column.
+- Fixed: on a phone, a player tapping **Details** with no token selected saw their
+  sheet reload over and over. It now loads once.
+
+---
+
+## [363] — 2026-11-17 — The table screen on a phone
+
+Released 2026-11-17. Phones only: computers and tablets look and work
+exactly as before.
+
+- On a phone the **map fills the screen**. The toolbar becomes one line with the
+  campaign name, the connection light and the bell.
+- A **tab bar** along the bottom: **Map · Turn · Details · Chat · More**. Each opens
+  a sheet over the map; one at a time. Tap the open tab, Map, the sheet's header or
+  swipe it down to close it. Turn shows a "!" on your turn and a dot while combat
+  runs; Chat counts unread messages.
+- **Tapping a token** shows a short card: name, HP bar, AC and conditions with their
+  rounds. Tap it or swipe up for the full details panel; its header goes back to
+  the card. With nothing selected, Details opens a player's own sheet.
+- **Turn** is the initiative panel, full width; tapping a name selects that token and
+  moves the map to it. Selecting several tokens (DM) opened bulk edit there (moved to
+  Details in v364).
+- **Chat** opens nearly full height with a row of quick dice (d4 to d100) above the
+  message box, which stays above the phone's keyboard.
+- **More** holds what the toolbar did: roll mode (Ask, Normal, Adv, Dis), dice
+  roller, next-damage crit, dice animation, follow the turn, the DM's Token, Music,
+  Handouts and Waiting screen, search, settings, log out, today's weather and links
+  to other pages.
+- **Map tools** sit behind one round button on the map: Move, Pan, Ruler, Ping,
+  Draw (and Multi-select and Notes for the DM). Away from Move a chip names the tool,
+  with an X back to Move. Undo appears beside it after a move.
+- The drawing tools stay in one row that scrolls sideways; music shrinks to the
+  track name and volume; zoom becomes + and −; the minimap is hidden.
+- Turned sideways, the sheets open as a drawer on the right.
+
+---
+
 ## [362] — 2026-11-16 — Condition names in the durations list, CON button
 
 - A **CON** button joins the condition buttons on the table. It lights up while the

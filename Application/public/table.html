@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Written by Irmak Hakman — 2026-11-16 18:10 -->
+<!-- Written by Irmak Hakman — 2026-11-17 10:30 -->
 <!-- Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) -->
 <html lang="en" class="lamplit">
 <head>
@@ -24,6 +24,7 @@
 <link rel="stylesheet" href="/css/table-theme-modern.css">
 <link rel="stylesheet" href="/css/table-ux.css">
 <link rel="stylesheet" href="/css/weather.css">
+<link rel="stylesheet" href="/css/table-phone.css">
 </head>
 <body>
 
@@ -500,6 +501,28 @@
   </div>
 </div>
 
+<!-- Phone layout (v363): a tab bar, the map tools button, the peek card and
+     the More sheet. Hidden above phone width (css/table-phone.css); driven by
+     js/table/table-phone.js. -->
+<div id="ph-tool">
+  <div class="ph-tool-row" role="group" aria-label="Map tools" hidden></div>
+  <button type="button" class="ph-fab ph-fab-main" aria-label="Map tools" aria-expanded="false" onclick="phoneToolRow()"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-move"></use></svg></button>
+  <button type="button" class="ph-fab ph-fab-undo" aria-label="Undo last move" title="Undo last move" onclick="undoLastMove()" hidden><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-undo"></use></svg></button>
+  <button type="button" class="ph-tool-chip" onclick="phonePickTool('move')" hidden></button>
+</div>
+<div id="ph-peek" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();phoneDetailsExpand()}"></div>
+<div id="ph-more" role="dialog" aria-label="More">
+  <div class="ph-more-hdr" role="button" tabindex="0" onclick="phoneSetTab('map')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();phoneSetTab('map')}"><span>More</span><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chevron-down"></use></svg></div>
+  <div class="ph-more-body"></div>
+</div>
+<nav id="ph-tabs" role="tablist" aria-label="Table">
+  <button type="button" role="tab" data-ph-tab="map" aria-selected="true" onclick="phoneTabClick('map')"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-map"></use></svg><span>Map</span></button>
+  <button type="button" role="tab" data-ph-tab="turn" aria-selected="false" onclick="phoneTabClick('turn')"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-swords"></use></svg><span>Turn</span><span class="ph-badge" hidden></span></button>
+  <button type="button" role="tab" data-ph-tab="details" aria-selected="false" onclick="phoneTabClick('details')"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-document"></use></svg><span>Details</span></button>
+  <button type="button" role="tab" data-ph-tab="chat" aria-selected="false" onclick="phoneTabClick('chat')"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-chat"></use></svg><span>Chat</span><span class="ph-badge" hidden></span></button>
+  <button type="button" role="tab" data-ph-tab="more" aria-selected="false" onclick="phoneTabClick('more')"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-more"></use></svg><span>More</span></button>
+</nav>
+
 <!-- Player initiative roll modal -->
 <div id="init-roll-modal" style="position:fixed;inset:0;background:var(--scrim);display:none;align-items:center;justify-content:center;z-index:2500">
   <div style="background:var(--slate);border:1px solid var(--rule-hi);border-radius:calc(8px*var(--fs, 1));padding:calc(16px*var(--fs, 1)) calc(20px*var(--fs, 1));min-width:calc(220px*var(--fs, 1));max-width:calc(280px*var(--fs, 1))" onclick="event.stopPropagation()">
@@ -824,5 +847,6 @@
 <script src="/js/table/table-ux.js" defer></script>
 <script src="/js/lib/minimap.js" defer></script>
 <script src="/js/table/table-minimap.js" defer></script>
+<script src="/js/table/table-phone.js" defer></script>
 </body>
 </html>

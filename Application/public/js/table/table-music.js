@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-11-17 15:00
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -125,8 +125,8 @@ function initMusicPlayer() {
     if (sk) { sk.style.pointerEvents = 'none'; sk.style.cursor = 'default'; }
   }
 
-  // Join the audio election. A dedicated music window outranks the table, so
-  // opening one here hands it the sound instead of double-playing the track.
+  // Join the audio election (js/lib/music-sync.js). Whichever window is already
+  // playing keeps the sound; this one plays only when nothing else does.
   if (typeof createAudioArbiter === 'function') {
     _musicOwning = false;       // stay silent until the election settles
     _musicArb = createAudioArbiter({
@@ -337,8 +337,8 @@ function closeMusicModal() {
 
 // ── Pop-out player ────────────────────────────────────────────────────────────
 // A plain standalone window on the same page the desktop client opens. It seeds
-// itself from the server and claims the audio through the arbiter, so there is
-// no opener handshake to get wrong and closing it hands the sound straight back.
+// itself from the server and joins the audio election: it plays only if no other
+// window already is, and takes over when the window playing closes.
 function openMusicPopup() {
   closeMusicModal();
   window.open(

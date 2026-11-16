@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-11-17 14:20
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -10,14 +10,17 @@
 // apart — a flanging echo.
 //
 // So the windows on a machine elect exactly one audio owner over a
-// BroadcastChannel. Election rules, highest first:
-//   1. higher priority wins   — a dedicated music window beats a table screen
-//   2. older window wins      — whoever joined first keeps the audio
+// BroadcastChannel. The window already playing always keeps the audio (v365):
+// opening a table, a music window or any other page never takes it away, so the
+// music does not jump between windows. Only when the owner closes, navigates
+// away or goes silent (its heartbeat goes stale, e.g. it crashed) does another
+// window take over, resuming from the server's playback state. Who takes over,
+// highest first:
+//   1. higher priority wins   — a music window, then a table, then other pages
+//   2. older window wins      — whoever joined first
 //   3. lower id wins          — deterministic tie-break, never happens in practice
-//
-// A window that loses ownership pauses its audio and shows state only; when the
-// owner closes (or its heartbeat goes stale, e.g. it crashed) the next window in
-// line takes over and resumes from the server's playback state.
+// Two windows that claim at the same moment settle it by the same order.
+// A passive window (the table modal's iframe) never plays and never counts.
 //
 // This replaces the old 'music-popup' handshake, which had the table screen
 // broadcast 'dismiss' on load to CLOSE the pop-out player. That made a
@@ -30,6 +33,7 @@ const MUSIC_STALE_MS = 6000;   // a peer unheard for this long is gone
 const MUSIC_GRACE_MS = 700;    // listen before claiming, so we don't double-play
 
 // Priorities — a dedicated player window outranks a table screen.
+const MUSIC_PRIO_PAGE   = 0;   // any other page (js/lib/page-music.js): plays only when nothing else does
 const MUSIC_PRIO_TABLE  = 1;
 const MUSIC_PRIO_PLAYER = 2;
 
@@ -67,7 +71,7 @@ function createAudioArbiter(opts) {
   let owning   = false;
   let settled  = false;       // grace period over — safe to claim
 
-  // Does peer `a` outrank peer `b`?
+  // Does peer `a` outrank peer `b` as the next owner?
   function outranks(a, b) {
     if (a.priority !== b.priority) return a.priority > b.priority;
     if (a.joinedAt !== b.joinedAt) return a.joinedAt < b.joinedAt;
@@ -82,10 +86,15 @@ function createAudioArbiter(opts) {
   function evaluate() {
     if (passive || !settled) return;
     dropStale();
-    let shouldOwn = true;
-    for (const p of peers.values()) if (outranks(p, me)) { shouldOwn = false; break; }
+    const others = [...peers.values()].filter(p => !p.passive);
+    const owners = others.filter(p => p.owning);
+    let shouldOwn;
+    if (owning) shouldOwn = !owners.some(p => outranks(p, me));   // keep it, unless a same-moment claim outranks us
+    else if (owners.length) shouldOwn = false;                     // someone is already playing: leave it to them
+    else shouldOwn = !others.some(p => outranks(p, me));           // nobody is: the best candidate takes it
     if (shouldOwn === owning) return;
     owning = shouldOwn;
+    ping(false);   // tell the others at once, so nobody else claims meanwhile
     (owning ? onAcquire : onRelease)();
   }
 
@@ -95,7 +104,7 @@ function createAudioArbiter(opts) {
   }
 
   function ping(hello) {
-    send({ k: 'ping', id: me.id, priority: me.priority, joinedAt: me.joinedAt, hello: !!hello });
+    send({ k: 'ping', id: me.id, priority: me.priority, joinedAt: me.joinedAt, hello: !!hello, owning, passive });
   }
 
   function handle(msg) {
@@ -104,6 +113,7 @@ function createAudioArbiter(opts) {
       peers.set(msg.id, {
         id: msg.id, priority: msg.priority || 0,
         joinedAt: msg.joinedAt || Date.now(), seenAt: Date.now(),
+        owning: !!msg.owning, passive: !!msg.passive,
       });
       // Answer a newcomer at once so it learns about us inside its grace period
       // instead of claiming the audio and then handing it straight back.
