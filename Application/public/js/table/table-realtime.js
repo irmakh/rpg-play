@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-12 16:29
+// Written by Irmak Hakman — 2026-11-16 14:12
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -27,6 +27,7 @@ function startSSE() {
           renderTokens(); break;
         }
         case 'token-updated': {
+          if (typeof combatNewsFromUpdate === 'function') combatNewsFromUpdate(d);
           const prevU = tokens.find(t => t.id === d.token.id);
           if (prevU && (prevU.x !== d.token.x || prevU.y !== d.token.y)) {
             recordTokenMove(d.token.id, prevU.x || 0, prevU.y || 0, prevU.movedFt || 0);
@@ -77,6 +78,7 @@ function startSSE() {
     'waiting-screen': (d) => {
       if (typeof applyWaitingScreen === 'function') applyWaitingScreen(d && d.active);
     },
+    'rt-reconnected': () => refreshAfterReconnect(),
     initiative: async (d) => {
       const prevCurrentId = initData.currentId;
       await fetchInitiative();
@@ -252,6 +254,35 @@ async function loadMapInto(img) {
     _mapBlobUrl = URL.createObjectURL(await r.blob());
     img.src = _mapBlobUrl;
   } catch { img.src = ''; }
+}
+
+// ── After a dropped connection ───────────────────────────────────────────────
+// Whatever changed while the light was amber or red never arrived, so fetch
+// the table again. The map image is only reloaded when the map itself
+// changed; tokens, fog, items, notes and initiative always are.
+async function refreshAfterReconnect() {
+  try {
+    const res = await fetch('/api/table', { headers: authHeaders() });
+    if (!res.ok) return;
+    const { state, tokens: tok } = await res.json();
+    const mapChanged = !tableState || !!state.hasMap !== !!tableState.hasMap
+      || state.mapWidth !== tableState.mapWidth || state.mapHeight !== tableState.mapHeight;
+    if (mapChanged) { await fetchAll(); }
+    else {
+      tableState = state;
+      tokens = tok;
+      applyFogRegions(state.fogRegions || []);
+      applyHiddenItems(state.hiddenItems || []);
+      applyMapNotes(state.mapNotes || []);
+      renderFog();
+      renderItems();
+      renderTokens();
+    }
+    await fetchInitiative();
+    renderInitiativeTracker();
+    updateInitiativeButton();
+    loadSideQroll();
+  } catch (err) { console.error(err); }
 }
 
 // ── Data fetching ─────────────────────────────────────────────────────────────

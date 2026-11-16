@@ -1,10 +1,10 @@
-// Written by Irmak Hakman — 2026-09-26 16:50
+// Written by Irmak Hakman — 2026-11-16 14:15
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
 // ── Real-time updates (connectRealtime in js/lib/realtime.js) ─────────────────
 window.addEventListener('load', function startRealtime() {
-  connectRealtime({
+  const handlers = {
     characters: async (payload) => {
       // Refresh the DM dropdown metadata only (names/locks/new chars). Pass
       // skipLoad=true so this NEVER reloads the open sheet — an unrelated
@@ -23,6 +23,9 @@ window.addEventListener('load', function startRealtime() {
             // those fields update, and any field you're editing is left alone.
             // Fall back to a full apply for full saves / older broadcasts.
             if (Array.isArray(payload.keys) && payload.keys.length) applyPartial(payload.keys, char.data);
+            // After a dropped connection: every field, but still skipping the
+            // ones being edited, so a reconnect never wipes what you typed.
+            else if (payload.all) applyPartial(Object.keys(char.data || {}), char.data || {});
             else applyData(char.data);
             document.getElementById('char-title').textContent = char.name || 'Character Sheet';
             renderShopWallet();
@@ -72,5 +75,13 @@ window.addEventListener('load', function startRealtime() {
     handouts: () => {
       if (typeof loadHandouts === 'function') loadHandouts();
     },
-  });
+  };
+  // What changed while the connection was down never arrived: fetch it now.
+  handlers['rt-reconnected'] = () => {
+    if (currentCharId) handlers.characters({ id: currentCharId, all: true });
+    handlers.initiative();
+    if (typeof loadTreasuryTab === 'function') handlers.treasury();
+    if (typeof loadHandouts === 'function') loadHandouts();
+  };
+  connectRealtime(handlers);
 });

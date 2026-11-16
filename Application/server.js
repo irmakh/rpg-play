@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-15 16:30
+// Written by Irmak Hakman — 2026-11-16 12:16
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -54,6 +54,9 @@ import registerMaintenance from './server/routes/maintenance.js';
 import registerTelemetry, { collectorEnabled } from './server/routes/telemetry.js';
 import { startTelemetry, createHostTracker } from './lib/telemetry.js';
 import makeNotify         from './server/notify.js';
+import registerUndo       from './server/routes/undo.js';
+import registerCombat     from './server/routes/combat.js';
+import { createUndoRegistry } from './lib/undo.js';
 // The AI DM was retired in v236; its code has since been removed from the
 // repository (it is in the git history). None of its /ai-dm or /api/ai-dm
 // routes exist.
@@ -521,7 +524,7 @@ const MAX_MEDIA_BYTES = 25 * 1024 * 1024;
 // Bump this number whenever frontend JS or CSS files change.
 // Also bump CACHE in public/sw.js to the same value.
 // Both must always match. See deployment notes in CLAUDE.md.
-const FRONTEND_VERSION = 359;
+const FRONTEND_VERSION = 362;
 
 // ── Express app ───────────────────────────────────────────────────────────────
 const app = express();
@@ -942,6 +945,8 @@ const ctx = {
 };
 
 ctx.notify = makeNotify(ctx);
+// Undo for actions that happen at once (lib/undo.js, POST /api/undo/:id).
+ctx.undo = createUndoRegistry();
 
 // ── Register all route modules ────────────────────────────────────────────────
 registerCampaigns(app, ctx);
@@ -962,6 +967,7 @@ registerMonsters(app, ctx);
 registerEvents(app, ctx);
 registerBackup(app, ctx);
 registerTable(app, ctx);
+registerCombat(app, ctx);   // after registerTable: it uses ctx.broadcastToken
 registerSound(app, ctx);
 registerStories(app, ctx);
 registerHandouts(app, ctx);
@@ -969,6 +975,7 @@ registerSpells(app, ctx);
 registerCast(app, ctx);
 registerMonsterCast(app, ctx);
 registerNotifs(app, ctx);
+registerUndo(app, ctx);
 registerMaintenance(app, ctx);
 // Collector for install reports — the licensor's server only.
 if (COLLECTOR_ON) registerTelemetry(app, ctx);

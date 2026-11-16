@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-12 13:55
+// Written by Irmak Hakman — 2026-11-16 13:50
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -1137,14 +1137,26 @@ async function duplicateItem(id) {
 async function deleteItem(id) {
   const it = byId(id || curId);
   if (!it) return;
-  if (!confirm(`Delete “${it.name}”? This cannot be undone.`)) return;
+  // Deleting comes with Undo for 15 seconds, so it needs no confirmation,
+  // except when players are asking for the item: their requests are turned
+  // down and an undo does not bring those back.
+  const asking = asksFor(it.id).length;
+  if (asking && !confirm(`${asking} player${asking === 1 ? ' is' : 's are'} asking for “${it.name}”. Deleting it turns ${asking === 1 ? 'them' : 'them all'} down. Go ahead?`)) return;
   pending.delete(it.id);
   try {
     const res = await api(`/api/treasury/${it.id}`, { method: 'DELETE' });
     if (res.status === 401) { handleUnauth(); return; }
     if (!res.ok) { showStatus('Could not delete it.', true); return; }
+    const undoInfo = await res.json().catch(() => ({}));
     if (lastUndo && lastUndo.id === it.id) lastUndo = null;
-    showStatus('Deleted.', false);
+    if (typeof notifUndoToast === 'function') {
+      notifUndoToast({ kind: 'info', title: `Deleted “${it.name}”` }, undoInfo, {
+        headers: { 'X-Master-Password': masterPw },
+        onUndone: async () => { await loadItems(); await loadRequests(); },
+      });
+    } else {
+      showStatus('Deleted.', false);
+    }
     if (curId === it.id) { curId = null; drawerOpen = false; }
     await loadItems();
     await loadRequests();

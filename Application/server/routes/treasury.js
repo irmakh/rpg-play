@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-15 12:25
+// Written by Irmak Hakman — 2026-11-16 12:40
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -728,11 +728,26 @@ export default function register(app, ctx) {
       if (!masterAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
       const existing = await getOne(req.params.id);
       if (!existing) return res.status(404).json({ error: 'Not found' });
-      dropImageFiles(existing);
       await deleteOne(req.params.id);
       await declinePendingFor(req.params.id, new Date().toISOString());
       broadcast('treasury', { action: 'deleted', id: req.params.id });
-      res.json({ ok: true });
+      // Undo brings the item back as it was. Its image files stay until the
+      // undo window ends, so they can come back with it; without an undo
+      // registry they go at once, as before. Declined requests stay declined.
+      const undoInfo = ctx.undo ? ctx.undo.register({
+        campaignId: ctx.currentCampaignId ? ctx.currentCampaignId() : '',
+        ownerCharId: '',
+        label: `Deleted ${existing.name || 'an item'}`,
+        onExpire: () => dropImageFiles(existing),
+        run: async () => {
+          if (await getOne(existing.id)) return;
+          const { id: _id, ...fields } = existing;
+          await createOne(existing.id, fields);
+          await updateOne(existing.id, fields);   // every column, including ones added later
+          broadcast('treasury', { action: 'created', id: existing.id });
+        },
+      }) : (dropImageFiles(existing), null);
+      res.json({ ok: true, ...(undoInfo || {}) });
     } catch (err) { console.error('DELETE /api/treasury/:id:', err); res.status(500).json({ error: 'Server error' }); }
   });
 

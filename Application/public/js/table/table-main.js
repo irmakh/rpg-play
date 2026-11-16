@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-12 16:29
+// Written by Irmak Hakman — 2026-11-16 18:45
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -11,7 +11,8 @@ function initTheme() {
 
 // ── Dice animation on/off ─────────────────────────────────────────────────────
 function initDiceAnim() {
-  const on = localStorage.getItem('diceAnimEnabled') !== '0'; // default on
+  // Default on; "Reduce motion" in Preferences (js/lib/prefs.js) turns it off.
+  const on = localStorage.getItem('diceAnimEnabled') !== '0' && !(typeof prefReduceMotion === 'function' && prefReduceMotion());
   window.diceAnimEnabled = on;
   _updateDiceAnimBtn(on);
 }

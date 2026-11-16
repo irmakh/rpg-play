@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-15 12:25
+// Written by Irmak Hakman — 2026-11-16 13:25
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -367,17 +367,25 @@ function sideGiveItem(itemId) {
   const it = _sideItemById(itemId);
   if (!it || !_sideCanGive()) return;
   openGiveDialog({
-    fromId: _sideCharId, item: it, headers: authHeaders(),
-    onDone: r => { if (typeof showToast === 'function') showToast(`Gave ${r.given} to ${r.to}.`); },
+    fromId: _sideCharId, item: it, headers: authHeaders(), onDone: _sideGiveDone,
   });
 }
 
 function sideGiveCoins() {
   if (!qrollData || !_sideCanGive()) return;
   openGiveDialog({
-    fromId: _sideCharId, wallet: _sideWallet(qrollData), headers: authHeaders(),
-    onDone: r => { if (typeof showToast === 'function') showToast(`Gave ${r.given} to ${r.to}.`); },
+    fromId: _sideCharId, wallet: _sideWallet(qrollData), headers: authHeaders(), onDone: _sideGiveDone,
   });
+}
+
+// What was given, with Undo for 15 seconds. The 'characters' update that
+// follows a give or its undo repaints this panel.
+function _sideGiveDone(r) {
+  if (typeof notifUndoToast === 'function') {
+    notifUndoToast({ kind: 'gift', title: `Gave ${r.to} ${r.given}` }, r, { headers: authHeaders() });
+  } else if (typeof showToast === 'function') {
+    showToast(`Gave ${r.given} to ${r.to}.`);
+  }
 }
 
 function _buildSidePanelItems(d, canEdit) {

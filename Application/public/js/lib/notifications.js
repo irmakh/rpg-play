@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-01 17:30
+// Written by Irmak Hakman — 2026-11-16 13:10
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -21,6 +21,9 @@ const NOTIF_TOAST_MAX = 8;       // more than this on screen and the oldest goes
 // Kinds that pop up on screen as well as landing in the bell, even though they
 // are 'feed' (silent): every roll, and table chat — which carries group rolls.
 const NOTIF_TOAST_KINDS = new Set(['dice', 'chat']);
+// How long an Undo button stays on screen. The server keeps the undo a few
+// seconds longer (lib/undo.js), so a click in the last moment still lands.
+const NOTIF_UNDO_MS = 15000;
 
 let _notifItems   = [];
 let _notifUnread  = 0;
@@ -73,7 +76,7 @@ const NOTIF_ICONS = {
   'handout': '📜', 'your-turn': '⚔️', 'combat-started': '⚔️',
   'dice': '🎲', 'chat': '💬', 'music': '🎵', 'damage': '🩸', 'healing': '💚',
   'condition': '🌀', 'shop-open': '🛒', 'shop-closed': '🛒', 'calendar': '📅', 'weather': '🌦',
-  'security': '🛡️', 'info': 'ℹ️', 'error': '⚠️',
+  'security': '🛡️', 'info': 'ℹ️', 'error': '⚠️', 'gift': '🎁',
 };
 function notifIcon(kind) { return NOTIF_ICONS[kind] || '🔔'; }
 
@@ -192,6 +195,9 @@ function notifFollow(data) {
 // Toasts stack: the newest goes on top and any already showing move down, so
 // two rolls in quick succession are both on screen. Each stays NOTIF_TOAST_MS
 // or until its × is clicked.
+// n.action = { label, run } adds a button (Undo). A toast with an action and
+// n.ms shows a bar counting down the time the action is still offered; n.ms
+// also replaces NOTIF_TOAST_MS as how long the toast stays.
 function notifToast(n) {
   let host = document.getElementById('notif-toasts');
   if (!host) {
@@ -205,7 +211,9 @@ function notifToast(n) {
     `<span class="notif-toast-icon">${notifIcon(n.kind)}</span>` +
     `<div class="notif-toast-text"><div class="notif-toast-title">${_notifEsc(n.title)}</div>` +
     (n.body ? `<div class="notif-toast-body">${_notifEsc(n.body)}</div>` : '') + '</div>' +
-    `<button type="button" class="notif-toast-close" title="Close" aria-label="Close">×</button>`;
+    (n.action ? `<button type="button" class="notif-toast-act">${_notifEsc(n.action.label || 'Undo')}</button>` : '') +
+    `<button type="button" class="notif-toast-close" title="Close" aria-label="Close">×</button>` +
+    (n.action && n.ms ? `<span class="notif-toast-bar" style="animation-duration:${Math.round(n.ms)}ms"></span>` : '');
   let gone = false;
   const dismiss = () => {
     if (gone) return;
@@ -214,6 +222,15 @@ function notifToast(n) {
     setTimeout(() => el.remove(), 400);
   };
   el.querySelector('.notif-toast-close').onclick = (e) => { e.stopPropagation(); dismiss(); };
+  if (n.action) {
+    el.classList.add('has-act');
+    const btn = el.querySelector('.notif-toast-act');
+    btn.onclick = async (e) => {
+      e.stopPropagation();
+      btn.disabled = true;
+      try { await n.action.run(); } finally { dismiss(); }
+    };
+  }
   if (n.data && n.data.href) {
     el.style.cursor = 'pointer';
     el.onclick = () => notifFollow(n.data);
@@ -222,7 +239,73 @@ function notifToast(n) {
   // Too many at once (a round of a dozen rolls): the oldest make room.
   const live = [...host.querySelectorAll('.notif-toast:not(.out)')];
   live.slice(NOTIF_TOAST_MAX).forEach(old => { old.classList.add('out'); setTimeout(() => old.remove(), 400); });
-  setTimeout(dismiss, NOTIF_TOAST_MS);
+  setTimeout(dismiss, n.ms || NOTIF_TOAST_MS);
+  return { dismiss };
+}
+
+// ── Undo ─────────────────────────────────────────────────────────────────────
+// A route that did something at once answers with { undoId, undoUntil }
+// (lib/undo.js). notifUndoToast shows what happened with an Undo button for
+// NOTIF_UNDO_MS; notifUndo asks the server to reverse it.
+//
+// opts.headers: the page's own auth headers, when it has them (the table's
+// authHeaders()); otherwise the session's, as the bell uses.
+// opts.onUndone: called after a successful undo, to refresh the page.
+// opts.undo: a local reverse instead of the server's (an HP change the page
+// can simply set back). Return a message to show, or throw to report failure.
+async function notifUndo(undoId, opts = {}) {
+  try {
+    const h = { ...(opts.headers || notifHeaders()) };
+    const res = await fetch('/api/undo/' + encodeURIComponent(undoId), { method: 'POST', headers: h });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      notifToast({ kind: 'error', title: body.error || 'Could not undo that' });
+      return false;
+    }
+    notifToast({ kind: 'info', title: 'Undone', body: body.undone || '', ms: 4000 });
+    if (typeof opts.onUndone === 'function') { try { opts.onUndone(); } catch (e) { console.error(e); } }
+    return true;
+  } catch {
+    notifToast({ kind: 'error', title: 'Could not undo that: no connection' });
+    return false;
+  }
+}
+
+function notifUndoToast(n, info, opts = {}) {
+  const hasServerUndo = info && info.undoId;
+  if (!hasServerUndo && typeof opts.undo !== 'function') return notifToast(n);
+  return notifToast({
+    ...n,
+    ms: NOTIF_UNDO_MS,
+    action: {
+      label: 'Undo',
+      run: async () => {
+        if (hasServerUndo) return notifUndo(info.undoId, opts);
+        try {
+          const msg = await opts.undo();
+          notifToast({ kind: 'info', title: 'Undone', body: msg || '', ms: 4000 });
+        } catch (e) {
+          notifToast({ kind: 'error', title: (e && e.message) || 'Could not undo that' });
+        }
+      },
+    },
+  });
+}
+
+/** Undo still on offer for a notification row (the DM undoing a player's give). */
+function _notifUndoLive(n) {
+  const d = n && n.data;
+  return !!(d && d.undoId && Number(d.undoUntil) > Date.now());
+}
+
+async function notifUndoRow(rowId, ev) {
+  if (ev) { ev.stopPropagation(); ev.preventDefault(); }
+  const n = _notifItems.find(i => String(i.rowId) === String(rowId));
+  if (!n || !_notifUndoLive(n)) return;
+  const ok = await notifUndo(n.data.undoId);
+  n.data = { ...n.data, undoId: '' };
+  if (ok) n.body = (n.body ? n.body + '\n' : '') + 'Undone.';
+  if (_notifOpen) _notifRenderPanel();
 }
 
 // ── Bell + panel ─────────────────────────────────────────────────────────────
@@ -283,6 +366,8 @@ function _notifRenderPanel() {
           <div class="notif-row-title">${_notifEsc(n.title)}${
             n.count > 1 ? `<span class="notif-row-count">×${n.count}</span>` : ''}</div>
           ${n.body ? `<div class="notif-row-body">${_notifEsc(n.body)}</div>` : ''}
+          ${_notifUndoLive(n) ? `<button type="button" class="notif-link notif-row-undo"
+              onclick="notifUndoRow(${_notifEsc(JSON.stringify(String(n.rowId)))}, event)">Undo</button>` : ''}
         </div>
         <span class="notif-row-when">${_notifEsc(notifAgo(n.createdAt))}</span>
       </div>`).join('');
@@ -426,7 +511,10 @@ function handleNotification(payload) {
   _notifRenderCount();
   if (_notifOpen) _notifRenderPanel();
 
-  if (payload.priority === 'alert') {
+  if (_notifMe === 'dm' && _notifUndoLive(item)) {
+    // The DM can reverse a player's action (a give) straight from the pop-up.
+    notifUndoToast(item, item.data, {});
+  } else if (payload.priority === 'alert') {
     notifToast(item);
     notifChime();
     notifPopup(item);

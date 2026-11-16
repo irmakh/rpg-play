@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-12 12:52
+// Written by Irmak Hakman — 2026-11-16 18:15
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -101,7 +101,9 @@ function renderList() {
   $('sl-shown').textContent = library.length ? `${rows.length} shown` : '';
   $('sl-all').checked = rows.length > 0 && rows.every(r => selected.has(r.id));
   if (!library.length) {
-    list.innerHTML = '<div class="app-empty">The library is empty.<br>Import a spell or a 5etools spell file to begin.</div>';
+    list.innerHTML = '<div class="app-empty"><div><b>The spell library is empty</b><br>Spells here can be added to any character sheet.'
+      + '<br><br><button class="btn primary" onclick="openImportModal()">Import spells…</button> '
+      + '<button class="btn" onclick="openBooksModal()">From books…</button></div></div>';
   } else if (!rows.length) {
     list.innerHTML = '<div class="app-empty">No spells match.</div>';
   } else {

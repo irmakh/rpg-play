@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-12 19:45
+// Written by Irmak Hakman — 2026-11-16 15:58
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -116,6 +116,10 @@ export default function register(app, ctx) {
       forOthers: { action: 'token-removed', id: tok.id },
     });
   }
+  // The combat routes (server/routes/combat.js) announce token changes the
+  // same way, hidden tokens included.
+  ctx.broadcastToken = broadcastToken;
+  ctx.ownsCompanion = ownsCompanion;
 
   // ── A character's or monster's portrait changed ──────────────────────────────
   // Tokens keep their own copy of the portrait URL, taken when they were placed,
@@ -700,6 +704,8 @@ export default function register(app, ctx) {
         if (conditions !== undefined)    update.conditions = Array.isArray(conditions) ? JSON.stringify(conditions) : String(conditions);
         if (linkedId !== undefined)      update.linkedId = String(linkedId);
         if (assignedCharId !== undefined) update.assignedCharId = String(assignedCharId);
+        // Timers of removed conditions go; damage queues a concentration save (combat.js).
+        Object.assign(update, ctx.combatFieldsFor?.(tok, update) || {});
         ldb.updateTableToken(req.params.id, update);
         const updated = { ...tok, ...update };
         broadcastToken(updated, { action: 'token-updated', token: updated });
@@ -774,6 +780,7 @@ export default function register(app, ctx) {
           if (body.visible !== undefined)    update.visible   = !!body.visible;
           if (body.conditions !== undefined) update.conditions = Array.isArray(body.conditions) ? JSON.stringify(body.conditions) : String(body.conditions);
           if (!Object.keys(update).length) return res.status(400).json({ error: 'Nothing to update' });
+          Object.assign(update, ctx.combatFieldsFor?.(tok, update) || {});
           ldb.updateTableToken(req.params.id, update);
           const updated = { ...tok, ...update };
           broadcastToken(updated, { action: 'token-updated', token: updated });
@@ -789,14 +796,17 @@ export default function register(app, ctx) {
         }
         if (body.conditions !== undefined && Object.keys(body).length === 1) {
           const condVal = Array.isArray(body.conditions) ? JSON.stringify(body.conditions) : String(body.conditions);
-          ldb.updateTableToken(req.params.id, { conditions: condVal });
-          broadcastToken(tok, { action: 'token-updated', token: { ...tok, conditions: condVal } });
+          const condUpdate = { conditions: condVal };
+          Object.assign(condUpdate, ctx.combatFieldsFor?.(tok, condUpdate) || {});
+          ldb.updateTableToken(req.params.id, condUpdate);
+          broadcastToken(tok, { action: 'token-updated', token: { ...tok, ...condUpdate } });
           return res.json({ ok: true });
         }
         if ((body.hpCurrent !== undefined || body.hpTemp !== undefined) && (tok.type === 'character' || tok.type === 'npc')) {
           const update = {};
           if (body.hpCurrent !== undefined) update.hpCurrent = Math.max(0, parseInt(body.hpCurrent) || 0);
           if (body.hpTemp !== undefined)    update.hpTemp    = Math.max(0, parseInt(body.hpTemp) || 0);
+          Object.assign(update, ctx.combatFieldsFor?.(tok, update) || {});
           ldb.updateTableToken(req.params.id, update);
           const updated = { ...tok, ...update };
           broadcastToken(updated, { action: 'token-updated', token: updated });
@@ -844,11 +854,14 @@ export default function register(app, ctx) {
       // The DM removes any token; a player dismisses their own companion.
       if (!masterAuth(req) && !(await ownsCompanion(tok, req))) return res.status(401).json({ error: 'Unauthorized' });
       if (!tok) return res.status(404).json({ error: 'Not found' });
+      const isDmCaller = masterAuth(req);
 
       let initiativeBroadcastNeeded = false;
+      const initSnap = tok.initiativeId ? ldb.getInitEntry(tok.initiativeId) : null;
+      let wasCurrentTurn = false, nextAfter = '';
       if (tok.initiativeId) {
         const state = ldb.getInitState();
-        const wasCurrentTurn = state.currentId === tok.initiativeId;
+        wasCurrentTurn = state.currentId === tok.initiativeId;
         if (wasCurrentTurn) {
           const entries = ldb.listInitEntries();
           const idx = entries.findIndex(e => e.id === tok.initiativeId);
@@ -856,6 +869,7 @@ export default function register(app, ctx) {
           const nextId = remaining.length > 0 ? (remaining[idx % remaining.length]?.id || remaining[0].id) : '';
           ldb.deleteInitEntry(tok.initiativeId);
           ldb.setInitState(nextId);
+          nextAfter = nextId;
         } else {
           ldb.deleteInitEntry(tok.initiativeId);
         }
@@ -866,7 +880,32 @@ export default function register(app, ctx) {
 
       broadcast('table', { action: 'token-removed', id: req.params.id });
       if (initiativeBroadcastNeeded) broadcast('initiative', { action: 'delete' });
-      res.json({ ok: true });
+
+      // Undo: put the token back exactly as it was, with its initiative entry,
+      // and its turn if the turn has not moved on since.
+      const undoInfo = ctx.undo ? ctx.undo.register({
+        campaignId: ctx.currentCampaignId ? ctx.currentCampaignId() : '',
+        ownerCharId: isDmCaller ? '' : (tok.assignedCharId || ''),
+        label: `Removed ${tok.name || 'a token'}`,
+        run: async () => {
+          if (ldb.getTableToken(tok.id)) return;   // already back
+          const { id: _id, ...fields } = tok;
+          ldb.createTableToken(tok.id, fields);
+          ldb.updateTableToken(tok.id, fields);    // every column, including ones added later
+          let initChanged = false;
+          if (initSnap && !ldb.getInitEntry(initSnap.id)) {
+            const { id: _iid, ...ifields } = initSnap;
+            ldb.createInitEntry(initSnap.id, ifields);
+            ldb.updateInitEntry(initSnap.id, ifields);
+            if (wasCurrentTurn && (ldb.getInitState()?.currentId || '') === nextAfter) ldb.setInitState(initSnap.id);
+            initChanged = true;
+          }
+          const back = ldb.getTableToken(tok.id);
+          broadcastToken(back, { action: 'token-added', token: back });
+          if (initChanged) broadcast('initiative', { action: 'updated' });
+        },
+      }) : null;
+      res.json({ ok: true, ...(undoInfo || {}) });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
   });
 

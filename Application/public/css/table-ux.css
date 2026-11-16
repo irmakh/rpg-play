@@ -1,4 +1,4 @@
-/* Written by Irmak Hakman — 2026-10-28 15:19 */
+/* Written by Irmak Hakman — 2026-11-16 19:50 */
 /* Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) */
 
 /* ── Table screen: ease of use ──────────────────────────────────────────────
@@ -194,3 +194,79 @@ html.lamplit .mctx .cond-btn{min-height:calc(22px*var(--fs, 1));padding:calc(2px
 .ux-help-row{display:flex;align-items:baseline;gap:var(--s3);padding:calc(3px*var(--fs, 1)) 0;font-size:calc(12px * var(--fs, 1))}
 .ux-help-row kbd{flex:0 0 calc(108px*var(--fs, 1));text-align:left;font-size:calc(11px * var(--fs, 1));white-space:nowrap}
 .ux-help-row span{color:var(--bone)}
+
+/* ── Turns (v360): End turn, "Your turn" banner, "On deck" tag ─────────── */
+#btn-init-next.init-end-turn{background:var(--arc);border-color:var(--arc);color:var(--ink);font-weight:bold}
+.init-deck-tag{display:inline-block;margin-left:calc(5px*var(--fs, 1));padding:1px calc(5px*var(--fs, 1));border-radius:calc(3px*var(--fs, 1));
+  font-size:calc(9px * var(--fs, 1));font-weight:bold;letter-spacing:.06em;text-transform:uppercase;vertical-align:middle;
+  color:var(--arc);border:1px solid var(--arc)}
+.turn-banner{position:fixed;transform:translateX(-50%);z-index:1200;display:flex;align-items:center;gap:calc(12px*var(--fs, 1));
+  padding:calc(8px*var(--fs, 1)) calc(14px*var(--fs, 1));border-radius:calc(8px*var(--fs, 1));max-width:calc(100vw - 24px);
+  background:var(--slate);color:var(--bone);border:1px solid var(--rule-hi);box-shadow:0 6px 20px #0008;font-size:calc(13px * var(--fs, 1))}
+.turn-banner.mine{border-color:var(--arc)}
+.turn-banner.mine b{color:var(--arc);font-size:calc(15px * var(--fs, 1))}
+.turn-banner-end{background:var(--arc);color:var(--ink);border:0;border-radius:calc(6px*var(--fs, 1));font:inherit;font-weight:bold;
+  min-height:calc(36px*var(--fs, 1));padding:0 calc(14px*var(--fs, 1));cursor:pointer}
+.turn-banner-end:focus-visible{outline:2px solid var(--bone);outline-offset:2px}
+.turn-banner.deck{opacity:.92}
+
+/* Type-to-adjust HP: "-7", "+5", "20" and a preview of what Enter does */
+input.rp-num-input.rp-hp-entry{width:calc(72px*var(--fs, 1));flex:0 0 calc(72px*var(--fs, 1));background:var(--slate-hi);border:1px solid var(--rule-hi);
+  color:var(--bone);border-radius:calc(4px*var(--fs, 1));padding:calc(5px*var(--fs, 1)) calc(6px*var(--fs, 1));font-size:calc(14px * var(--fs, 1));
+  font-weight:bold;text-align:center;font-variant-numeric:tabular-nums}
+input.rp-num-input.rp-hp-entry:focus{border-color:var(--arc);outline:none}
+.rp-hp-preview{margin-top:calc(5px*var(--fs, 1));font-size:calc(11px * var(--fs, 1));color:var(--ash);font-variant-numeric:tabular-nums}
+.rp-hp-preview.bad{color:var(--blood)}
+
+/* Condition durations and concentration (table-combat.js) */
+#combat-prompts{position:fixed;transform:translateX(-50%);z-index:1190;display:flex;flex-direction:column;gap:calc(8px*var(--fs, 1));
+  width:min(calc(440px*var(--fs, 1)), calc(100vw - 24px))}
+.cbt-card{background:var(--slate);color:var(--bone);border:1px solid var(--rule-hi);border-left:3px solid var(--arc);border-radius:calc(8px*var(--fs, 1));
+  box-shadow:0 6px 20px #0008;padding:calc(10px*var(--fs, 1)) calc(12px*var(--fs, 1));display:grid;gap:calc(8px*var(--fs, 1));font-size:calc(13px * var(--fs, 1))}
+.cbt-card.conc{border-left-color:#6fa8f0}
+.cbt-sub{display:block;color:var(--ash);font-size:calc(11px * var(--fs, 1));margin-top:2px}
+.cbt-btns{display:flex;flex-wrap:wrap;gap:calc(6px*var(--fs, 1))}
+.cbt-btn{min-height:calc(34px*var(--fs, 1));padding:0 calc(12px*var(--fs, 1));border-radius:calc(6px*var(--fs, 1));border:1px solid var(--rule-hi);
+  background:var(--slate-hi);color:var(--bone);font:inherit;font-weight:bold;cursor:pointer}
+.cbt-btn.go{background:var(--arc);border-color:var(--arc);color:var(--ink)}
+.cbt-btn.ghost{background:none}
+.cbt-btn:focus-visible{outline:2px solid var(--arc);outline-offset:2px}
+.cbt-panel{margin-top:calc(8px*var(--fs, 1));display:grid;gap:calc(4px*var(--fs, 1))}
+.cbt-rows-hint{font-size:calc(10px * var(--fs, 1));color:var(--ash)}
+.cbt-row{display:flex;align-items:center;gap:calc(6px*var(--fs, 1));font-size:calc(12px * var(--fs, 1))}
+.cbt-row-name{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* input[type=number]: the page-wide rule (table.css) gives every number box width:100%,
+   which took the whole row and squeezed the condition name to its first letter. */
+input[type=number].cbt-rounds{width:calc(52px*var(--fs, 1));flex:0 0 calc(52px*var(--fs, 1));background:var(--slate-hi);border:1px solid var(--rule-hi);color:var(--bone);border-radius:calc(4px*var(--fs, 1));
+  padding:calc(3px*var(--fs, 1)) calc(4px*var(--fs, 1));text-align:center;font:inherit}
+.cbt-row-unit{color:var(--ash);font-size:calc(11px * var(--fs, 1))}
+.cbt-conc{display:flex;align-items:center;justify-content:space-between;gap:calc(8px*var(--fs, 1));margin-top:calc(4px*var(--fs, 1));
+  padding:calc(6px*var(--fs, 1)) calc(8px*var(--fs, 1));border-radius:calc(6px*var(--fs, 1));background:#14283a;border:1px solid #2c4e6e;font-size:calc(12px * var(--fs, 1))}
+.token-conditions .tok-conc{background:#2c4e6e;color:#d5e8fa}
+
+/* ── Phones: the details panel is a bottom sheet over the map (v360) ───────
+   Beside the map it squeezed a 400px screen to a sliver. Now the map keeps
+   the whole width and the panel slides up over its lower part; its header
+   (the grab bar) folds it to a "Details" pill in the corner. */
+@media (max-width:760px){
+  body:not(.rp-collapsed) #side-panel.rp-open,
+  body[data-theme="modern"]:not(.rp-collapsed) #side-panel.rp-open{
+    position:fixed;left:0;right:0;bottom:0;top:auto;z-index:800;width:auto;min-width:0;max-width:none;
+    height:min(62vh, calc(100vh - 120px));border:0;border-top:1px solid var(--rule-hi);
+    border-radius:calc(14px*var(--fs, 1)) calc(14px*var(--fs, 1)) 0 0;box-shadow:0 -8px 28px #000a;
+    padding-bottom:env(safe-area-inset-bottom,0px);overflow-y:auto;background:var(--slate)}
+  body:not(.rp-collapsed) #side-panel.rp-open #rp-hdr{justify-content:center;min-height:calc(40px*var(--fs, 1));position:sticky;top:0}
+  body:not(.rp-collapsed) #side-panel.rp-open #rp-hdr::before{content:"";position:absolute;top:6px;left:50%;transform:translateX(-50%);
+    width:40px;height:4px;border-radius:2px;background:var(--rule-hi)}
+  #rh-right{display:none!important}
+  body.rp-collapsed #right-strip{position:fixed;right:calc(12px + env(safe-area-inset-right,0px));bottom:calc(12px + env(safe-area-inset-bottom,0px));
+    z-index:790;flex-direction:row;width:auto;min-height:calc(44px*var(--fs, 1));padding:0 calc(14px*var(--fs, 1));
+    border:1px solid var(--rule-hi);border-radius:999px;box-shadow:0 4px 16px #0008}
+  body.rp-collapsed #right-strip .ls-label{writing-mode:horizontal-tb}
+  /* Prompts and the turn banner stay above the sheet. */
+  #combat-prompts{z-index:810}
+  .turn-banner{z-index:810}
+}
+/* A [hidden] box must stay hidden whatever display its own rule sets. */
+#combat-prompts[hidden],.turn-banner[hidden],.cbt-panel[hidden]{display:none!important}
+.cond-btn.cond-conc.active{background:#2c4e6e;border-color:#6fa8f0;color:#d5e8fa}

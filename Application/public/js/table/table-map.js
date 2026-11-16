@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-12 21:00
+// Written by Irmak Hakman — 2026-11-16 13:32
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -453,10 +453,17 @@ function renderTokens() {
     }
 
     const conds = parseConditions(tok.conditions);
-    if (conds.length > 0) {
+    if (conds.length > 0 || tok.concentration) {
       const condDiv = document.createElement('div');
       condDiv.className = 'token-conditions';
-      condDiv.innerHTML = conds.map(c => `<span title="${esc(c)}">${esc(COND_ABBREV[c] || String(c).slice(0,3).toUpperCase())}</span>`).join('');
+      // A timed condition shows its rounds left ("PSN 2"); concentration a "C".
+      const timers = typeof tokTimers === 'function' ? tokTimers(tok) : {};
+      condDiv.innerHTML = conds.map(c => {
+        const t = timers[c];
+        const ab = COND_ABBREV[c] || String(c).slice(0,3).toUpperCase();
+        return `<span title="${esc(c)}${t ? `, ${t.rounds} round${t.rounds === 1 ? '' : 's'} left` : ''}">${esc(ab)}${t ? ' ' + t.rounds : ''}</span>`;
+      }).join('')
+        + (tok.concentration ? `<span class="tok-conc" title="Concentrating on ${esc(tok.concentration)}">C</span>` : '');
       // Under the name (and the controller's), not above the token where it
       // covered whatever stood in the square above.
       label.appendChild(condDiv);
@@ -482,6 +489,8 @@ function renderTokens() {
       tokenLabelLayer.appendChild(labelWrap);
     }
   }
+  // Duration questions and concentration saves follow the token data (table-combat.js).
+  if (typeof renderCombatPrompts === 'function') renderCombatPrompts();
 }
 
 // ── Token selection ───────────────────────────────────────────────────────────
@@ -540,18 +549,32 @@ async function deleteSelectedToken() {
   if (!tok) return;
   // A player dismisses their own companion (table-companions.js).
   if (!isDM()) { if (tok.type === 'companion' && isMyToken(tok)) dismissCompanion(tok.id); return; }
-  if (!await showConfirm(`Remove "${tok.name}" from the map?`)) return;
-  // UI cleanup — immediate
+  // No "Are you sure?": the token goes at once and the notice offers Undo for
+  // 15 seconds (lib/undo.js puts it back with its initiative entry).
   const id = selectedTokenId;
   selectedTokenId = null;
   // Network — queued
   _tokQ.run(async () => {
     try {
-      await fetch(`/api/table/tokens/${id}`, {
+      const r = await fetch(`/api/table/tokens/${id}`, {
         method: 'DELETE', headers: { 'X-Master-Password': masterPw }
       });
+      const body = await r.json().catch(() => ({}));
+      if (!r.ok) { showToast(body.error || 'Failed to delete token.', true); return; }
+      _tokenRemovedNotice(tok, body);
     } catch { showToast('Failed to delete token.', true); }
   });
+}
+
+// "Removed Goblin #1" with Undo. The server's token-added broadcast repaints
+// the map when it comes back.
+function _tokenRemovedNotice(tok, undoInfo) {
+  const name = (typeof tokDisplayName === 'function' ? tokDisplayName(tok) : '') || tok.name || 'token';
+  if (typeof notifUndoToast === 'function') {
+    notifUndoToast({ kind: 'info', title: `Removed ${name}` }, undoInfo, { headers: authHeaders() });
+  } else {
+    showToast(`Removed ${name}.`);
+  }
 }
 
 // ── Token drag & move ─────────────────────────────────────────────────────────

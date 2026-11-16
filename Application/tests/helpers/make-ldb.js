@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-12 16:29
+// Written by Irmak Hakman — 2026-11-16 15:52
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -40,6 +40,7 @@ export function makeLdb() {
       initiativeId TEXT DEFAULT '', visible INTEGER DEFAULT 1,
       tokenSize INTEGER DEFAULT 1, portrait TEXT, portraitThumb TEXT, customPortrait INTEGER DEFAULT 0,
       label TEXT DEFAULT '', conditions TEXT DEFAULT '[]', ac INTEGER, companion TEXT DEFAULT '',
+      condTimers TEXT DEFAULT '{}', concentration TEXT DEFAULT '', concChecks TEXT DEFAULT '[]',
       createdAt TEXT DEFAULT (datetime('now'))
     );
     CREATE TABLE IF NOT EXISTS table_state (

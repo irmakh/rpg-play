@@ -1,4 +1,4 @@
-/* Written by Irmak Hakman — 2026-11-12 21:30 */
+/* Written by Irmak Hakman — 2026-11-16 19:30 */
 /* Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) */
 
 *{box-sizing:border-box;margin:0;padding:0}
@@ -248,7 +248,8 @@ a.char-btn{display:inline-block;text-decoration:none;line-height:1.5}
 .reload-btn{background:var(--wash);border:1px solid var(--rule-hi);color:var(--bone);padding:calc(8px*var(--fs, 1)) calc(22px*var(--fs, 1));border-radius:calc(4px*var(--fs, 1));cursor:pointer;font-size:calc(14px * var(--fs, 1));font-weight:bold}
 .reload-btn:hover{background:var(--rule-hi)}
 #save-status{font-size:calc(12px * var(--fs, 1));min-width:calc(100px*var(--fs, 1));color:var(--verdigris)}
-#save-status.error{color:var(--blood)}
+#save-status.error{color:var(--blood);font-weight:bold}
+#save-status .save-retry{margin-left:calc(6px*var(--fs, 1));background:none;border:1px solid var(--blood);color:var(--blood);border-radius:calc(4px*var(--fs, 1));font:inherit;font-weight:bold;padding:calc(2px*var(--fs, 1)) calc(8px*var(--fs, 1));cursor:pointer}
 #save-status.info{color:var(--bone)}
 /* Loading overlay */
 #loading-overlay{position:fixed;inset:0;background:var(--scrim);display:none;align-items:center;justify-content:center;z-index:2000;flex-direction:column;gap:calc(14px*var(--fs, 1))}
@@ -899,3 +900,61 @@ html.lamplit input.big[readonly]{color:var(--arc)}
 .sp-mm-list label span{color:var(--ash);font-size:var(--t-xs)}
 .sp-mm-list input{accent-color:var(--arc)}
 .sp-ap{font-size:var(--t-xs);color:var(--verdigris);white-space:nowrap}
+
+/* ── Turns (v360): End turn, "Your turn" banner, "On deck" tag ─────────── */
+#init-next-btn.init-end-turn{background:var(--arc);border-color:var(--arc);color:var(--ink);font-weight:bold}
+.init-deck-tag{display:inline-block;margin-left:calc(5px*var(--fs, 1));padding:1px calc(5px*var(--fs, 1));border-radius:calc(3px*var(--fs, 1));
+  font-size:calc(9px * var(--fs, 1));font-weight:bold;letter-spacing:.06em;text-transform:uppercase;vertical-align:middle;
+  color:var(--arc);border:1px solid var(--arc)}
+.turn-banner{position:fixed;top:calc(10px + env(safe-area-inset-top, 0px));left:50%;transform:translateX(-50%);z-index:1200;
+  display:flex;align-items:center;gap:calc(12px*var(--fs, 1));padding:calc(8px*var(--fs, 1)) calc(14px*var(--fs, 1));
+  border-radius:calc(8px*var(--fs, 1));max-width:calc(100vw - 24px);background:var(--slate);color:var(--bone);
+  border:1px solid var(--arc);box-shadow:0 6px 20px #0008;font-size:calc(13px * var(--fs, 1))}
+.turn-banner b{color:var(--arc);font-size:calc(15px * var(--fs, 1))}
+.turn-banner-end{background:var(--arc);color:var(--ink);border:0;border-radius:calc(6px*var(--fs, 1));font:inherit;font-weight:bold;
+  min-height:calc(36px*var(--fs, 1));padding:0 calc(14px*var(--fs, 1));cursor:pointer}
+.turn-banner-end:focus-visible{outline:2px solid var(--bone);outline-offset:2px}
+
+/* ── Phone view (v360): Play page and bottom tab bar (index-play.js) ───────
+   Desktop keeps its row of tabs; the Play page and the bar exist only under
+   760px. Buttons on the bar and the Play page are at least 44px. */
+.tab.tab-phone{display:none}
+#phone-nav,#phone-more,#phone-more-bg{display:none}
+.play-quick{display:flex;flex-wrap:wrap;gap:var(--s2);margin-bottom:var(--s3)}
+.play-big{min-height:calc(44px*var(--fs, 1));flex:1 1 calc(120px*var(--fs, 1))}
+.play-empty{color:var(--ash);font-size:var(--t-sm);text-align:center;padding:var(--s4) var(--s2)}
+.play-slot-row{display:flex;align-items:center;gap:var(--s2);min-height:calc(44px*var(--fs, 1))}
+.play-slot-lbl{flex:0 0 calc(86px*var(--fs, 1));font-size:var(--t-sm);color:var(--bone)}
+.play-slot-boxes{display:flex;flex-wrap:wrap;gap:calc(6px*var(--fs, 1));flex:1}
+.play-slot-left{font-size:var(--t-xs);color:var(--ash);white-space:nowrap}
+.play-slot{width:calc(30px*var(--fs, 1));height:calc(30px*var(--fs, 1));border-radius:calc(6px*var(--fs, 1));
+  border:2px solid var(--arc);background:transparent;cursor:pointer;padding:0}
+.play-slot.used{background:var(--arc)}
+.play-slot:focus-visible{outline:2px solid var(--bone);outline-offset:2px}
+@media (max-width:760px){
+  .tabs{display:none}
+  #tab-play .act-atk-tbl .roll-btn,#tab-play .act-box,#tab-actions .roll-btn{min-width:calc(44px*var(--fs, 1));min-height:calc(44px*var(--fs, 1))}
+  .play-slot{width:calc(36px*var(--fs, 1));height:calc(36px*var(--fs, 1))}
+  #phone-nav{display:grid;grid-template-columns:repeat(4,1fr);position:fixed;left:0;right:0;bottom:0;z-index:520;
+    background:var(--slate);border-top:1px solid var(--rule-hi);padding-bottom:env(safe-area-inset-bottom,0px)}
+  #phone-nav button{min-height:calc(56px*var(--fs, 1));display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+    background:none;border:0;color:var(--ash);font:inherit;font-size:var(--t-xs);font-weight:bold;letter-spacing:.04em;text-transform:uppercase;cursor:pointer}
+  #phone-nav button .lt-icon{width:calc(20px*var(--fs, 1));height:calc(20px*var(--fs, 1))}
+  #phone-nav button.on{color:var(--arc);box-shadow:inset 0 3px 0 var(--arc)}
+  #phone-nav button:focus-visible{outline:2px solid var(--arc);outline-offset:-4px}
+  /* The chat / initiative dock sits on top of the bar, not under it. */
+  .panel-stack{bottom:calc(56px*var(--fs, 1) + env(safe-area-inset-bottom,0px))}
+  .sheet{padding-bottom:calc(300px*var(--fs, 1))}
+  #phone-more-bg:not([hidden]){display:block;position:fixed;inset:0;z-index:530;background:#0008}
+  #phone-more:not([hidden]){display:block;position:fixed;left:0;right:0;bottom:0;z-index:540;background:var(--slate);
+    border-radius:var(--r-md) var(--r-md) 0 0;border-top:1px solid var(--rule-hi);
+    padding:var(--s2) var(--s3) calc(var(--s4) + env(safe-area-inset-bottom,0px));max-height:70vh;overflow-y:auto}
+  .pm-grab{width:40px;height:4px;border-radius:2px;background:var(--rule-hi);margin:0 auto var(--s3)}
+  .pm-list{display:grid;grid-template-columns:1fr 1fr;gap:var(--s2)}
+  .pm-item{min-height:calc(48px*var(--fs, 1));background:var(--slate-hi);border:1px solid var(--rule-hi);border-radius:var(--r-sm);
+    color:var(--bone);font:inherit;font-weight:bold;cursor:pointer}
+  .pm-item:focus-visible{outline:2px solid var(--arc);outline-offset:2px}
+  .turn-banner{top:auto;bottom:calc(64px*var(--fs, 1) + env(safe-area-inset-bottom,0px))}
+}
+/* A [hidden] box must stay hidden whatever display its own rule sets. */
+.turn-banner[hidden]{display:none!important}

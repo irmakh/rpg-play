@@ -1,4 +1,4 @@
-<!-- Written by Irmak Hakman — 2026-11-15 16:30 -->
+<!-- Written by Irmak Hakman — 2026-11-16 18:10 -->
 <!-- Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) -->
 <html lang="en" class="lamplit">
 <head>
@@ -103,7 +103,7 @@
     </div>
     <div class="vitals-act">
       <label class="vitals-lbl" for="vitals-amt">Amount</label>
-      <input type="number" id="vitals-amt" min="0" step="1" placeholder="0" inputmode="numeric">
+      <input type="text" id="vitals-amt" placeholder="−7 / +5" autocomplete="off" spellcheck="false" inputmode="text" title="Enter: -7 damage, +5 heal, 20 sets HP">
       <button type="button" class="char-btn danger" onclick="vitalsApply(-1)">Damage</button>
       <button type="button" class="char-btn" onclick="vitalsApply(1)">Heal</button>
     </div>
@@ -117,6 +117,7 @@
        screen readers. Previously these were <div onclick> with no tabindex,
        so they could not be reached by keyboard at all. -->
   <div class="tabs" role="tablist" aria-label="Character sheet sections">
+    <button class="tab tab-phone" role="tab" type="button" id="tabbtn-play" aria-controls="tab-play" aria-selected="false" tabindex="-1" onclick="showTab('play',this)">Play</button>
     <button class="tab active" role="tab" type="button" id="tabbtn-main" aria-controls="tab-main" aria-selected="true" tabindex="0" onclick="showTab('main',this)">Main</button>
     <button class="tab" role="tab" type="button" id="tabbtn-actions" aria-controls="tab-actions" aria-selected="false" tabindex="-1" onclick="showTab('actions',this)">Actions</button>
     <button class="tab" role="tab" type="button" id="tabbtn-spells" aria-controls="tab-spells" aria-selected="false" tabindex="-1" onclick="showTab('spells',this)">Spells</button>
@@ -128,6 +129,11 @@
     <button class="tab" id="tab-btn-treasury" role="tab" type="button" aria-controls="tab-treasury" aria-selected="false" tabindex="-1" onclick="showTab('treasury',this)">Treasury</button>
     <button class="tab" id="tab-btn-calendar" role="tab" type="button" aria-controls="tab-calendar" aria-selected="false" tabindex="-1" onclick="showTab('calendar',this)">Calendar</button>
     <button class="tab" id="tab-btn-handouts" role="tab" type="button" aria-controls="tab-handouts" aria-selected="false" tabindex="-1" onclick="showTab('handouts',this)">Handouts</button>
+  </div>
+
+  <!-- PLAY (phones): what a turn needs on one screen (js/index/index-play.js) -->
+  <div id="tab-play" role="tabpanel" aria-labelledby="tabbtn-play" tabindex="0" class="page">
+    <div id="play-body"></div>
   </div>
 
   <!-- MAIN -->
@@ -1084,9 +1090,12 @@
 <script src="/js/lib/spell-data.js" defer></script>
 <script src="/js/lib/chat-cards.js" defer></script>
 <script src="/js/lib/give-ui.js" defer></script>
+<script src="/js/lib/combat-rules.js" defer></script>
 <script src="/js/lib/spell-cast.js" defer></script>
 <script src="/js/lib/realtime.js" defer></script>
 <script src="/js/lib/notifications.js" defer></script>
+<script src="/js/lib/palette.js" defer></script>
+<script src="/js/lib/prefs.js" defer></script>
 <script src="/js/index/index-state.js" defer></script>
 <script src="/js/index/index-utils.js" defer></script>
 <script src="/js/index/index-calc.js" defer></script>
@@ -1097,6 +1106,7 @@
 <script src="/js/index/index-companions.js" defer></script>
 <script src="/js/index/index-spells.js" defer></script>
 <script src="/js/index/index-actions.js" defer></script>
+<script src="/js/index/index-play.js" defer></script>
 <script src="/js/index/index-media.js" defer></script>
 <script src="/js/index/index-treasury.js" defer></script>
 <script src="/js/index/index-handouts.js" defer></script>
@@ -1115,7 +1125,7 @@
     <div class="panel-body" id="init-body-wrap">
       <div class="init-panel-btns">
         <button class="dice-btn" onclick="rollMyInitiative()" title="Roll your initiative"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-dice"></use></svg> Roll</button>
-        <button class="dice-btn" onclick="initSkipTurn()" title="Next turn"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-next"></use></svg> Next</button>
+        <button class="dice-btn" id="init-next-btn" onclick="initSkipTurn()" title="Next turn" style="display:none"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-next"></use></svg> Next</button>
         <button class="dice-btn" style="border-color:color-mix(in srgb, var(--blood) 40%, transparent);color:var(--blood);background:color-mix(in srgb, var(--blood) 7%, transparent)" onclick="initClear()" title="Clear all"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg> </button>
       </div>
       <div id="init-tracker-list"><div class="init-empty-msg">No combatants yet.</div></div>
@@ -1152,6 +1162,19 @@
   <div class="dice-result-big" id="dice-result-big"></div>
   <div class="dice-result-sub" id="dice-result-sub"></div>
   <div class="dice-dismiss-hint show">click to dismiss</div>
+</div>
+
+<!-- Phones: bottom tab bar within thumb reach (js/index/index-play.js) -->
+<nav id="phone-nav" aria-label="Sheet pages">
+  <button type="button" data-pn="play" onclick="phoneNavGo('play')"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-swords"></use></svg><span>Play</span></button>
+  <button type="button" data-pn="spells" onclick="phoneNavGo('spells')"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-bolt"></use></svg><span>Spells</span></button>
+  <button type="button" data-pn="inventory" onclick="phoneNavGo('inventory')"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-shield"></use></svg><span>Items</span></button>
+  <button type="button" data-pn="more" onclick="openPhoneMore()" aria-haspopup="dialog"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-more"></use></svg><span>More</span></button>
+</nav>
+<div id="phone-more-bg" hidden onclick="closePhoneMore()"></div>
+<div id="phone-more" role="dialog" aria-modal="true" aria-label="More pages" hidden>
+  <div class="pm-grab" aria-hidden="true"></div>
+  <div class="pm-list"></div>
 </div>
 </body>
 </html>

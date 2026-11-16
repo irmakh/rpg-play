@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-09-27 11:13
+// Written by Irmak Hakman — 2026-11-16 15:10
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -66,11 +66,15 @@ function renderInitiativeTracker(showBadge = false) {
   if (showBadge && initTrackerCollapsed && sorted.length > 0) {
     document.getElementById('init-badge').style.display = '';
   }
+  if (typeof _indexTurnUI === 'function') _indexTurnUI();
   if (sorted.length === 0) {
     list.innerHTML = '<div class="init-empty-msg">No combatants yet.</div>';
     return;
   }
   initDataMap = {};
+  const all = initData.entries || [];
+  const curIdx = all.findIndex(e => e.id === initData.currentId);
+  const onDeckId = curIdx >= 0 && all.length > 1 ? all[(curIdx + 1) % all.length].id : null;
   sorted.forEach(e => { initDataMap[e.id] = e; });
   const dm = indexIsDM();
   list.innerHTML = sorted.map(e => {
@@ -88,7 +92,7 @@ function renderInitiativeTracker(showBadge = false) {
       : '';
     return `<div class="init-row${isCur ? ' init-cur' : ''}">
       <span class="init-cur-marker">${isCur ? '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-play"></use></svg>' : ''}</span>
-      <span class="init-row-name">${esc(displayName)}</span>
+      <span class="init-row-name">${esc(displayName)}${e.id === onDeckId ? ' <span class="init-deck-tag">On deck</span>' : ''}</span>
       <span class="init-row-roll">${e.roll}</span>
       ${editBtns}
     </div>`;
@@ -154,9 +158,55 @@ async function submitInitNpc() {
 
 async function initSkipTurn() {
   try {
-    // Ending your turn needs a login since v240.
-    await fetch('/api/initiative/next', { method: 'POST', headers: sheetAuthHeaders() });
+    // The DM moves the turn on; a player ends only their own (the server checks).
+    const headers = indexIsDM() && indexMasterPw()
+      ? { 'Content-Type': 'application/json', 'X-Master-Password': indexMasterPw() }
+      : sheetAuthHeaders();
+    const res = await fetch('/api/initiative/next', { method: 'POST', headers });
+    if (!res.ok && res.status !== 401) {
+      const b = await res.json().catch(() => ({}));
+      if (typeof notifToast === 'function') notifToast({ kind: 'error', title: b.error || 'Could not end the turn' });
+    }
   } catch {}
+}
+
+// ── Whose turn (the sheet) ───────────────────────────────────────────────────
+// The open character's turn: the Next button becomes End turn and a banner
+// says so. The DM keeps Next. Everyone else sees no turn button.
+function indexIsMyTurn() {
+  if (!initData.currentId || indexIsDM() || !currentCharId) return false;
+  const e = (initData.entries || []).find(x => x.id === initData.currentId);
+  return !!e && !!e.charId && String(e.charId) === String(currentCharId);
+}
+
+function _indexTurnUI() {
+  const running = !!initData.currentId;
+  const dm = indexIsDM();
+  const mine = indexIsMyTurn();
+  const btn = document.getElementById('init-next-btn');
+  if (btn) {
+    btn.style.display = running && (dm || mine) ? '' : 'none';
+    const label = dm ? 'Next' : 'End turn';
+    if (btn.dataset.label !== label) {
+      btn.dataset.label = label;
+      btn.innerHTML = `<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-next"></use></svg> ${label}`;
+      btn.title = dm ? 'Next turn' : 'End your turn';
+    }
+    btn.classList.toggle('init-end-turn', !dm);
+  }
+  let el = document.getElementById('turn-banner');
+  if (!mine) { if (el) el.hidden = true; return; }
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'turn-banner';
+    el.className = 'turn-banner mine';
+    el.setAttribute('role', 'status');
+    el.setAttribute('aria-live', 'polite');
+    document.body.appendChild(el);
+  }
+  const name = document.getElementById('char-title')?.textContent || '';
+  el.innerHTML = `<b>Your turn${name ? ', ' + esc(name) : ''}</b><button type="button" class="turn-banner-end" onclick="initSkipTurn()">End turn</button>`;
+  el.hidden = false;
 }
 
 function initClear() {

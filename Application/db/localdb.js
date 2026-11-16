@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-12 21:00
+// Written by Irmak Hakman — 2026-11-16 15:52
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -376,6 +376,13 @@ try { db.exec(`ALTER TABLE table_tokens ADD COLUMN customPortrait INTEGER DEFAUL
 try { db.exec(`ALTER TABLE table_tokens ADD COLUMN companion TEXT DEFAULT ''`); } catch {}
 // A monster token's spent spell uses: JSON { use key: times used } (v329, spell-data.js monsterSpellRows).
 try { db.exec(`ALTER TABLE table_tokens ADD COLUMN spellUses TEXT DEFAULT ''`); } catch {}
+// Combat bookkeeping (v360). condTimers: condition durations, JSON
+// { name: { rounds, ask, atEnd } } (lib/cond-timers.js). concentration: the
+// spell the token is concentrating on. concChecks: CON saves still owed after
+// damage, JSON [ { dc, damage } ].
+try { db.exec(`ALTER TABLE table_tokens ADD COLUMN condTimers TEXT DEFAULT '{}'`); } catch {}
+try { db.exec(`ALTER TABLE table_tokens ADD COLUMN concentration TEXT DEFAULT ''`); } catch {}
+try { db.exec(`ALTER TABLE table_tokens ADD COLUMN concChecks TEXT DEFAULT '[]'`); } catch {}
 try { db.exec(`ALTER TABLE calendar_events ADD COLUMN author_char_id TEXT DEFAULT ''`); } catch {}
 try { db.exec(`ALTER TABLE calendar_events ADD COLUMN author_name    TEXT DEFAULT ''`); } catch {}
 try { db.exec(`ALTER TABLE calendar_events ADD COLUMN media_json     TEXT DEFAULT '[]'`); } catch {}

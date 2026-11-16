@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-12 14:39
+// Written by Irmak Hakman — 2026-11-16 14:05
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -313,6 +313,7 @@ async function connectRealtime(handlers) {
     console.info('[realtime] not connecting: this tab is not logged in');
     return;
   }
+  _rtSetConn('connecting');
   if (provider === 'localdb') {
     function connect() {
       const base = _wsBase(wsUrl);
@@ -323,9 +324,11 @@ async function connectRealtime(handlers) {
         // A URL this browser will not open. Retry like a dropped connection
         // rather than leaving the page silently not live.
         console.warn('[realtime] cannot open', base, err);
+        _rtConnLost();
         setTimeout(connect, 3000);
         return;
       }
+      ws.onopen = () => _rtConnUp();
       ws.onmessage = e => {
         const { event, data } = JSON.parse(e.data);
         if (event === 'force-reload') return _onForceReload(data);   // handled for every page
@@ -336,6 +339,7 @@ async function connectRealtime(handlers) {
         // ended on the maintenance page). Reconnecting would only be refused
         // again every 3 seconds — go and log in, as a 401 from fetch() does.
         if (e && e.code === 4401) { _dropStoredSession(); goToLogin(); return; }
+        _rtConnLost();
         setTimeout(connect, 3000);
       };
     }
@@ -344,6 +348,98 @@ async function connectRealtime(handlers) {
     _rtSource = new EventSource('/api/events?' + _realtimeParams());
     for (const event of Object.keys(_rtHandlers)) _rtSubscribe(event);
     _rtSource.addEventListener('force-reload', e => _onForceReload(JSON.parse(e.data)));   // every page
-    _rtSource.onerror = () => {};
+    _rtSource.onopen = () => _rtConnUp();
+    // EventSource retries by itself; CLOSED means it gave up.
+    _rtSource.onerror = () => { _rtConnLost(_rtSource && _rtSource.readyState === 2); };
   }
+}
+
+// ── Connection light ─────────────────────────────────────────────────────────
+// Live updates used to drop and come back silently, so nobody knew their
+// changes might not be reaching the others. A small light now shows it:
+// green while connected, amber while reconnecting, red when offline. It sits
+// just before the notification bell, or in the bottom-left corner on a page
+// without one.
+//
+// After a drop, pages get a 'rt-reconnected' event (subscribe like any other:
+// connectRealtime({ 'rt-reconnected': fn })) to fetch what they missed.
+const RT_OFFLINE_AFTER = 3;   // failed attempts in a row before "offline"
+let _rtConnState = 'idle';    // idle | connecting | live | reconnecting | offline
+let _rtFails = 0;
+let _rtWasLive = false;
+
+function _rtConnUp() {
+  const recovered = _rtWasLive && _rtConnState !== 'live';
+  _rtFails = 0;
+  _rtWasLive = true;
+  _rtSetConn('live');
+  if (recovered) {
+    _rtEmit('rt-reconnected', {});
+    if (typeof notifLoad === 'function') { try { notifLoad(); } catch {} }
+  }
+}
+
+function _rtConnLost(gaveUp) {
+  _rtFails++;
+  const offline = gaveUp || _rtFails >= RT_OFFLINE_AFTER
+    || (typeof navigator !== 'undefined' && navigator.onLine === false);
+  _rtSetConn(offline ? 'offline' : 'reconnecting');
+}
+
+const RT_CONN_TEXT = {
+  connecting:   ['', 'Connecting to live updates'],
+  live:         ['', 'Live: connected'],
+  reconnecting: ['Reconnecting…', 'Live updates dropped; reconnecting'],
+  offline:      ['Offline: changes may not sync', 'Not connected. What you change may not reach the others until the connection is back.'],
+};
+
+function _rtSetConn(state) {
+  _rtConnState = state;
+  if (typeof document === 'undefined' || !document.createElement) return;
+  try {
+    _rtConnStyle();
+    let el = document.getElementById('rt-conn');
+    if (!el) {
+      if (!document.body) return;
+      el = document.createElement('span');
+      el.id = 'rt-conn';
+      el.setAttribute('role', 'status');
+      el.setAttribute('aria-live', 'polite');
+      const bell = document.querySelector('[data-notif-bell]');
+      if (bell && bell.parentNode) bell.parentNode.insertBefore(el, bell);
+      else { el.classList.add('rt-conn-float'); document.body.appendChild(el); }
+    }
+    const [text, title] = RT_CONN_TEXT[state] || RT_CONN_TEXT.connecting;
+    el.className = 'rt-conn rt-' + state + (el.classList.contains('rt-conn-float') ? ' rt-conn-float' : '');
+    el.title = title;
+    el.innerHTML = '<span class="rt-dot" aria-hidden="true"></span>'
+      + (text ? '<span class="rt-text"></span>' : '<span class="rt-sr"></span>');
+    (el.querySelector('.rt-text') || el.querySelector('.rt-sr')).textContent = text || title;
+  } catch {}
+}
+
+function _rtConnStyle() {
+  if (document.getElementById('rt-conn-style')) return;
+  const st = document.createElement('style');
+  st.id = 'rt-conn-style';
+  st.textContent = [
+    '.rt-conn{display:inline-flex;align-items:center;gap:6px;font-size:calc(11px*var(--fs,1));font-weight:bold;line-height:1;',
+    '  padding:4px 8px;border-radius:999px;margin-right:6px;vertical-align:middle;white-space:nowrap;color:var(--bone,#e6edf7)}',
+    '.rt-conn.rt-live,.rt-conn.rt-connecting{padding:4px;background:none}',
+    '.rt-conn.rt-reconnecting{background:#3a2f12;border:1px solid #e8b04a}',
+    '.rt-conn.rt-offline{background:#3a1714;border:1px solid #e5604f}',
+    '.rt-dot{width:9px;height:9px;border-radius:50%;background:#4cc38a;flex:none;box-shadow:0 0 0 2px #4cc38a33}',
+    '.rt-reconnecting .rt-dot,.rt-connecting .rt-dot{background:#e8b04a;box-shadow:none}',
+    '.rt-offline .rt-dot{background:#e5604f;box-shadow:none}',
+    '.rt-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}',
+    '.rt-conn-float{position:fixed;left:calc(10px + env(safe-area-inset-left,0px));bottom:calc(10px + env(safe-area-inset-bottom,0px));z-index:4900;margin:0}',
+    '.rt-conn-float.rt-live{opacity:.7}',
+    '@media (prefers-reduced-motion:no-preference){.rt-reconnecting .rt-dot,.rt-connecting .rt-dot{animation:rt-pulse 1s ease-in-out infinite}}',
+    '@keyframes rt-pulse{50%{opacity:.35}}',
+  ].join('\n');
+  (document.head || document.documentElement).appendChild(st);
+}
+
+if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+  window.addEventListener('offline', () => { if (_rtConnState !== 'idle') _rtSetConn('offline'); });
 }

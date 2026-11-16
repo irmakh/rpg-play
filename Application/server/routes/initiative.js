@@ -1,6 +1,8 @@
-// Written by Irmak Hakman — 2026-10-28 14:25
+// Written by Irmak Hakman — 2026-11-16 14:44
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
+
+import { provenCharId } from '../../lib/caller.js';
 
 export default function register(app, ctx) {
   const { ldb, genId, masterAuth, charAuth, sessionAuth, broadcast } = ctx;
@@ -158,6 +160,7 @@ export default function register(app, ctx) {
       if (entries.length === 0) return res.status(400).json({ error: 'No initiative entries' });
       const firstId = entries[0].id;
       ldb.setInitState(firstId);
+      ctx.onTurnChange?.('', firstId);
       broadcast('initiative', { action: 'start' });
       ctx.notify?.({
         to: 'players', kind: 'combat-started', priority: 'alert',
@@ -169,30 +172,48 @@ export default function register(app, ctx) {
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
   });
 
+  // Whose turn an entry is: the character it was rolled for, or the player a
+  // token in it belongs to (their character's token, or a companion assigned
+  // to them). Same rule as the console's "End my turn" (sIsMyToken).
+  function entryControlledBy(entry, charId) {
+    if (!entry || !charId) return false;
+    if (entry.charId && String(entry.charId) === charId) return true;
+    return ldb.getTableTokensByInitId(entry.id).some(t =>
+      String(t.assignedCharId || '') === charId || (t.type === 'character' && String(t.linkedId || '') === charId));
+  }
+
   // POST /api/initiative/next — advance to next turn; resets movedFt for incoming token.
-  // Players end their own turn with this, so it is not DM-only — but since v240
-  // it takes a login (DM or any character of this campaign).
+  // The DM moves the turn on at any time. A player ends only their own turn:
+  // the button shows for them alone, and the server checks it too, so nobody
+  // can skip someone else's turn.
   app.post('/api/initiative/next', async (req, res) => {
     if (!sessionAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
     try {
       const entries = ldb.listInitEntries();
       const state   = ldb.getInitState();
       if (entries.length === 0) return res.json({ ok: true });
+      if (!masterAuth(req)) {
+        const current = state?.currentId ? entries.find(e => e.id === state.currentId) : null;
+        if (!entryControlledBy(current, await provenCharId(req, ctx))) {
+          return res.status(403).json({ error: 'Only the DM, or the player whose turn it is, can end the turn' });
+        }
+      }
       const idx    = state?.currentId ? entries.findIndex(e => e.id === state.currentId) : -1;
       const nextId = entries[(idx + 1) % entries.length].id;
       ldb.setInitState(nextId);
       _resetMovedFt(nextId);
+      ctx.onTurnChange?.(state?.currentId || '', nextId);
       broadcast('initiative', { action: 'next' });
       notifyTurn(entries.find(e => e.id === nextId));
       res.json({ ok: true });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
   });
 
-  // POST /api/initiative/prev — go to previous turn; resets movedFt for incoming token
+  // POST /api/initiative/prev — go to previous turn; resets movedFt for incoming token.
+  // The DM's alone: a player ends their own turn, but never steps back.
   app.post('/api/initiative/prev', async (req, res) => {
-    // Symmetric with /next: any logged-in player may step back a turn, not only
-    // the DM (item 8 — Prev previously 401'd for non-DM while Next worked).
     if (!sessionAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
+    if (!masterAuth(req)) return res.status(403).json({ error: 'Only the DM can go back a turn' });
     try {
       const entries = ldb.listInitEntries();
       const state   = ldb.getInitState();
@@ -201,6 +222,7 @@ export default function register(app, ctx) {
       const prevId = entries[(idx - 1 + entries.length) % entries.length].id;
       ldb.setInitState(prevId);
       _resetMovedFt(prevId);
+      ctx.onTurnChange?.(state?.currentId || '', prevId, { rewind: true });
       broadcast('initiative', { action: 'prev' });
       res.json({ ok: true });
     } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }

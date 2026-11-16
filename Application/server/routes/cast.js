@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-15 16:00
+// Written by Irmak Hakman — 2026-11-16 16:30
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -256,6 +256,14 @@ export default function register(app, ctx) {
       };
       ldb.appendChatLog(entry);
       broadcast('chat', entry);
+      // A concentration spell: the caster's tokens on the map concentrate on it
+      // (server/routes/combat.js), so damage asks for a Constitution save.
+      if (sp.conc && typeof ctx.startConcentration === 'function') {
+        try {
+          ctx.startConcentration(ldb.listTableTokens().filter(t =>
+            (t.type === 'character' || t.type === 'npc') && String(t.linkedId || '') === String(charId)), sp.name);
+        } catch (e) { console.error('startConcentration:', e); }
+      }
 
       ctx.notify?.({
         to: 'all', exclude: [charId], kind: 'chat', actorName: entry.sender, priority: 'feed',

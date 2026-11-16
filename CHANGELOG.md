@@ -21,6 +21,69 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [362] — 2026-11-16 — Condition names in the durations list, CON button
+
+- A **CON** button joins the condition buttons on the table. It lights up while the
+  token is concentrating (set by casting a concentration spell) and marks or drops
+  concentration by hand; damage then asks for the save as usual.
+- The rounds list in the table's details panel shows each condition's full name
+  ("Poisoned", "Frightened"). The rounds box was taking the whole row and cut the
+  name down to its first letter.
+
+## [361] — 2026-11-16 — Combat prompts close when answered
+
+- Answering a condition-duration question (Decrease now / At end of turn / Disregard)
+  now closes it. The answer always went through, but the box stayed on screen. The
+  concentration prompt and the "Your turn" banner had the same fault and close
+  properly too.
+
+## [360] — 2026-11-16 — Faster combat, undo, phone view, DM navigation
+
+*(Released to production 2026-11-16.)* The UX plan in `docs/plans/UX_PLAN_2026-11-16.md`,
+all four parts in one release.
+
+**Status and undo**
+- **Undo instead of "Are you sure?".** Giving an item or coins, removing a token,
+  changing HP, removing a condition and deleting a treasury item now happen at once,
+  with an **Undo** button on the notice for 15 seconds. The DM can undo a player's give
+  from the notification too. Undo is refused when the thing changed again since.
+- **Connection light** beside the bell on every page: green when live, amber while
+  reconnecting, red when offline. After a drop the table and the sheet fetch what they
+  missed.
+- The sheet's **"Not saved"** state stays in red with a **Retry** button, and tries again
+  by itself after 10 seconds and when the connection comes back.
+
+**Faster combat**
+- **End turn** shows only for the player whose turn it is; the DM keeps Prev and Next.
+  The server enforces it: a player can no longer end someone else's turn or step back.
+- **"Your turn" banner** on the table and the sheet, and an **On deck** tag on whoever
+  goes next.
+- **Type to change HP:** `-7` deals damage, `+5` heals, `20` sets HP, with a preview of
+  the result. On the table's HP box and the sheet's.
+- **Condition durations.** A condition can be given a number of rounds. When the token's
+  turn starts, its player (or the DM) is asked: decrease now, at end of turn, or
+  disregard. The rounds left show on the token.
+- **Concentration.** Casting a concentration spell marks the caster. Damage asks for a
+  Constitution save (DC 10 or half the damage); the player rolls it from the prompt and
+  a failure ends the spell. 0 HP ends it outright.
+
+**Phone view**
+- The character sheet gets a **bottom tab bar** on phones (Play, Spells, Items, More) and
+  a **Play** page with attacks, actions, spell slots, Cast a Spell and the rests.
+- On the table, the details panel is a **bottom sheet** over the map on phones, folding
+  to a "Details" button.
+
+**DM navigation**
+- A **DM bar** under the header of every DM page, with the current page marked.
+- **Ctrl+K search** for the DM and players: pages, monsters, spells, items, handouts,
+  characters and a few actions (start combat, next turn, end combat). Players find only
+  what they can already see.
+- **Empty lists** (monsters, spells, handouts) say what goes there and offer the next step.
+- A **new-campaign checklist** on the DM page: add characters, invite players, upload a
+  map, prepare an encounter. Each step ticks itself off.
+- **Preferences** behind a gear beside the bell: dice animation, reduce motion, and the
+  notification switches, saved on this device.
+
 ## [359] — 2026-11-15 — Fifth-edition wording, SRD attribution, licence clean-up
 
 *(In the repository; production stays on 358 until the next upload.)* About how the project presents itself; no change to how the app

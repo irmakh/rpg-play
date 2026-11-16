@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Written by Irmak Hakman — 2026-11-15 12:25 -->
+<!-- Written by Irmak Hakman — 2026-11-16 18:10 -->
 <!-- Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) -->
 <html lang="en" class="lamplit">
 <head>
@@ -374,6 +374,7 @@
         <div class="rp-flat-hdr">Conditions</div>
         <div class="rp-blk-body">
           <div id="hp-conditions-grid" class="rp-cond-grid"></div>
+          <div id="hp-cond-timers" class="cbt-panel" hidden></div>
         </div>
       </div>
 
@@ -382,12 +383,13 @@
         <div class="rp-flat-hdr">Adjust HP</div>
         <div class="rp-blk-body">
           <div class="rp-hp-main">
-            <input type="number" id="hp-amount" value="1" min="1" class="rp-num-input" aria-label="HP amount">
+            <input type="text" id="hp-amount" value="" class="rp-num-input rp-hp-entry" aria-label="HP change: -7 damage, +5 heal, 20 sets" aria-describedby="hp-preview" placeholder="−7 / +5" autocomplete="off" spellcheck="false" inputmode="text">
             <button class="btn sm" onclick="setHpAmount(5)">5</button>
             <button class="btn sm" onclick="setHpAmount(10)">10</button>
             <button class="btn danger sm" onclick="applyHpChange('dmg')"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg> Dmg</button>
             <button class="btn success sm" onclick="applyHpChange('heal')"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-heart"></use></svg> Heal</button>
           </div>
+          <div id="hp-preview" class="rp-hp-preview" aria-live="polite">Type −7 for damage, +5 to heal, 20 to set HP, then Enter.</div>
         </div>
         <div class="rp-flat-hdr">Temp HP</div>
         <div class="rp-blk-body rp-temp-body">
@@ -784,10 +786,13 @@
 <script src="/js/lib/spell-data.js" defer></script>
 <script src="/js/lib/chat-cards.js" defer></script>
 <script src="/js/lib/give-ui.js" defer></script>
+<script src="/js/lib/combat-rules.js" defer></script>
 <script src="/js/lib/spell-cast.js" defer></script>
 <script src="/js/lib/official-monsters.js" defer></script>
 <script src="/js/lib/realtime.js" defer></script>
 <script src="/js/lib/notifications.js" defer></script>
+<script src="/js/lib/palette.js" defer></script>
+<script src="/js/lib/prefs.js" defer></script>
 <script src="/js/lib/music-sync.js" defer></script>
 <script src="/js/lib/fr_calendar.js" defer></script>
 <script src="/js/lib/weather-ui.js" defer></script>
@@ -807,6 +812,7 @@
 <script src="/js/table/table-panel.js" defer></script>
 <script src="/js/table/table-companions.js" defer></script>
 <script src="/js/table/table-hppanel.js" defer></script>
+<script src="/js/table/table-combat.js" defer></script>
 <script src="/js/table/table-addtoken.js" defer></script>
 <script src="/js/table/table-music.js" defer></script>
 <script src="/js/table/table-popout.js" defer></script>

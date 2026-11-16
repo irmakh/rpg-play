@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-11 21:50
+// Written by Irmak Hakman — 2026-11-16 18:25
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -59,8 +59,56 @@ const _gate = AuthUI.dmGate({
     document.getElementById('main-content').style.display = '';
     await loadInitiative();
     loadDmMonsters(); // non-blocking — loads in background while page is already interactive
+    loadSetupChecklist();
   },
 });
+
+// ── New-campaign checklist (v360) ────────────────────────────────────────────
+// Four steps to a first session, each ticked by what is really there (not by
+// a click), with a link to where it is done. Dismissible per campaign; it also
+// goes away by itself once every step is done.
+function _setupKey() {
+  const c = typeof campaignFromCookie === 'function' ? campaignFromCookie() : '';
+  return 'setupChecklistDone:' + (c || 'default');
+}
+
+async function loadSetupChecklist() {
+  const box = document.getElementById('setup-checklist');
+  if (!box) return;
+  try { if (localStorage.getItem(_setupKey())) { box.hidden = true; return; } } catch {}
+  const get = async (url) => {
+    try { const r = await fetch(url, { headers: { 'X-Master-Password': masterPw } }); return r.ok ? await r.json() : null; } catch { return null; }
+  };
+  const [chars, maps, table] = await Promise.all([get('/api/characters'), get('/api/prepared-maps'), get('/api/table')]);
+  if (!chars && !maps) { box.hidden = true; return; }
+  const pcs = (chars || []).filter(c => c.char_type !== 'npc');
+  const steps = [
+    { done: pcs.length > 0, label: 'Add characters', hint: 'Create a sheet for each player character.', href: '/index.html', go: 'Open sheets' },
+    { done: pcs.some(c => c.has_password), label: 'Invite players', hint: 'Give a character a password, then share it with its player so they can sign in.', href: '/index.html', go: 'Set a password' },
+    { done: (maps || []).length > 0 || !!(table && table.state && table.state.hasMap), label: 'Upload a map', hint: 'Add a battle map to prepare.', href: '/prepare-map.html', go: 'Prepare map' },
+    { done: (maps || []).some(m => (m.preparedTokens || []).length > 0), label: 'Prepare an encounter', hint: 'Place monsters and NPCs on a prepared map.', href: '/prepare-map.html', go: 'Place tokens' },
+  ];
+  const done = steps.filter(s => s.done).length;
+  if (done === steps.length) { box.hidden = true; return; }
+  box.innerHTML = `
+    <div class="setup-hdr"><h2 id="setup-title">Get this campaign ready</h2>
+      <span class="setup-count">${done} of ${steps.length}</span>
+      <button type="button" class="btn sm" onclick="dismissSetupChecklist()">Hide</button></div>
+    <div class="setup-bar" aria-hidden="true"><i style="width:${Math.round(done / steps.length * 100)}%"></i></div>
+    <ol class="setup-steps">${steps.map(s => `
+      <li class="${s.done ? 'done' : ''}">
+        <span class="setup-box" aria-hidden="true">${s.done ? '✓' : ''}</span>
+        <div class="setup-text"><b>${s.label}</b>${s.done ? '<span class="sr-only"> (done)</span>' : `<span class="setup-hint">${s.hint}</span>`}</div>
+        ${s.done ? '' : `<a class="btn sm" href="${s.href}">${s.go}</a>`}
+      </li>`).join('')}</ol>`;
+  box.hidden = false;
+}
+
+function dismissSetupChecklist() {
+  try { localStorage.setItem(_setupKey(), '1'); } catch {}
+  const box = document.getElementById('setup-checklist');
+  if (box) box.hidden = true;
+}
 function authenticate() { return _gate.submit(); }
 
 async function loadInitiative() {

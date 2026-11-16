@@ -1,4 +1,4 @@
-/* Written by Irmak Hakman — 2026-10-15 14:25 */
+/* Written by Irmak Hakman — 2026-11-16 18:25 */
 /* Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) */
 
 *{box-sizing:border-box;margin:0;padding:0}
@@ -136,3 +136,20 @@ html.lamplit .nav-link:hover{background:var(--slate-hi)}
 .ce-dmg-rolls{opacity:.75}
 .ce-dmg-type{color:var(--ash);text-transform:uppercase;letter-spacing:1px;font-size:calc(10px * var(--fs, 1));overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ce-dmg-val{color:var(--arc);font-weight:bold;font-size:calc(12px * var(--fs, 1));justify-self:end}
+
+/* ── New-campaign checklist (v360, js/dm.js) ── */
+.setup-checklist{margin:var(--s3) 0;padding:var(--s3) var(--s4);background:var(--slate);border:1px solid var(--rule-hi);border-radius:var(--r-md)}
+.setup-checklist[hidden]{display:none}
+.setup-hdr{display:flex;align-items:center;gap:var(--s3);flex-wrap:wrap}
+.setup-hdr h2{margin:0;font-size:var(--t-md);flex:1}
+.setup-count{color:var(--ash);font-size:var(--t-sm)}
+.setup-bar{height:6px;border-radius:3px;background:var(--slate-hi);overflow:hidden;margin:var(--s2) 0 var(--s3)}
+.setup-bar i{display:block;height:100%;background:var(--verdigris)}
+.setup-steps{list-style:none;margin:0;padding:0;display:grid;gap:var(--s2)}
+.setup-steps li{display:flex;align-items:center;gap:var(--s3);min-height:calc(44px*var(--fs, 1))}
+.setup-box{width:22px;height:22px;border-radius:5px;border:2px solid var(--rule-hi);flex:none;display:grid;place-items:center;font-size:13px;font-weight:bold;color:var(--ink)}
+.setup-steps li.done .setup-box{background:var(--verdigris);border-color:var(--verdigris)}
+.setup-steps li.done b{color:var(--ash);text-decoration:line-through}
+.setup-text{flex:1;min-width:0;display:flex;flex-direction:column}
+.setup-hint{color:var(--ash);font-size:var(--t-sm)}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}

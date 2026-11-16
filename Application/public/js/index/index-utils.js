@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 15:08
+// Written by Irmak Hakman — 2026-11-16 17:00
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -71,6 +71,7 @@ function showTab(name, el) {
   if (name === 'handouts' && typeof loadHandouts === 'function') loadHandouts();
   if (name === 'calendar') pcalLoad();
   if (name === 'actions' && typeof renderActionsTab === 'function') renderActionsTab();
+  if (typeof syncPhoneNav === 'function') syncPhoneNav(name);
 }
 
 
@@ -135,6 +136,7 @@ function vitalsApply(sign) {
   if (!amt || isNaN(amt)) { amtEl.focus(); return; }
   const curEl = _vitEl('hpcur'), tmpEl = _vitEl('hptemp');
   if (!curEl) return;
+  const before = { cur: curEl.value, tmp: tmpEl ? tmpEl.value : '' };
   let cur = parseInt(curEl.value, 10) || 0;
   const max = parseInt(_vitEl('hpmax')?.value, 10) || 0;
 
@@ -155,14 +157,61 @@ function vitalsApply(sign) {
   curEl.dispatchEvent(new Event('input', { bubbles: true }));
   amtEl.value = '';
   syncVitals();
+  _vitalsUndoNotice(before);
+}
+
+// "-7" / "+5" / "20" from the amount box (js/lib/combat-rules.js parseHpEntry).
+function vitalsApplyEntry(entry) {
+  if (!entry) return;
+  const amtEl = document.getElementById('vitals-amt');
+  if (entry.mode !== 'set') { amtEl.value = String(entry.n); vitalsApply(entry.mode === 'dmg' ? -1 : 1); return; }
+  const curEl = _vitEl('hpcur'), tmpEl = _vitEl('hptemp');
+  if (!curEl) return;
+  const before = { cur: curEl.value, tmp: tmpEl ? tmpEl.value : '' };
+  const max = parseInt(_vitEl('hpmax')?.value, 10) || 0;
+  curEl.value = String(max > 0 ? Math.min(max, entry.n) : entry.n);
+  curEl.dispatchEvent(new Event('input', { bubbles: true }));
+  amtEl.value = '';
+  syncVitals();
+  _vitalsUndoNotice(before);
+}
+
+// "HP 24 → 17" with Undo for 15 seconds, refused if HP changed again since.
+function _vitalsUndoNotice(before) {
+  if (typeof notifUndoToast !== 'function') return;
+  const curEl = _vitEl('hpcur'), tmpEl = _vitEl('hptemp');
+  if (!curEl) return;
+  const after = { cur: curEl.value, tmp: tmpEl ? tmpEl.value : '' };
+  if (after.cur === before.cur && after.tmp === before.tmp) return;
+  const d = (parseInt(after.cur) || 0) - (parseInt(before.cur) || 0);
+  const t = (parseInt(after.tmp) || 0) - (parseInt(before.tmp) || 0);
+  const parts = [];
+  if (d) parts.push(`${d > 0 ? '+' : ''}${d} HP`);
+  if (t) parts.push(`${t > 0 ? '+' : ''}${t} temp`);
+  notifUndoToast({ kind: d < 0 || t < 0 ? 'damage' : 'healing', title: parts.join(', '), body: `HP ${after.cur || 0}` }, null, {
+    undo: async () => {
+      if (curEl.value !== after.cur || (tmpEl && tmpEl.value !== after.tmp)) throw new Error('HP changed again, so it was not undone');
+      if (tmpEl) { tmpEl.value = before.tmp; tmpEl.dispatchEvent(new Event('input', { bubbles: true })); }
+      curEl.value = before.cur;
+      curEl.dispatchEvent(new Event('input', { bubbles: true }));
+      syncVitals();
+      return `HP is back to ${before.cur || 0}`;
+    },
+  });
 }
 
 if (typeof document !== 'undefined' && document.addEventListener) {
   document.addEventListener('input', function (e) {
     if (e.target.matches && e.target.matches('[data-key="hpcur"],[data-key="hpmax"],[data-key="hptemp"],[data-key="ac"],[data-key="speed"]')) syncVitals();
   });
-  // Enter in the amount box applies damage, the commoner case in play
+  // Enter in the amount box: "-7" damages, "+5" heals, "20" sets HP (the
+  // same as the table's HP box, js/lib/combat-rules.js). A bare number with no
+  // sign still damages when the page has no combat-rules.js.
   document.addEventListener('keydown', function (e) {
-    if (e.key === 'Enter' && e.target.id === 'vitals-amt') { e.preventDefault(); vitalsApply(-1); }
+    if (e.key !== 'Enter' || e.target.id !== 'vitals-amt') return;
+    e.preventDefault();
+    const entry = typeof parseHpEntry === 'function' ? parseHpEntry(e.target.value) : null;
+    if (entry) vitalsApplyEntry(entry);
+    else vitalsApply(-1);
   });
 }

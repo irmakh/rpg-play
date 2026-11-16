@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-11 17:45
+// Written by Irmak Hakman — 2026-11-16 16:30
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -117,6 +117,9 @@ export default function register(app, ctx) {
       };
       ldb.appendChatLog(entry);
       broadcast('chat', entry, undefined, hidden ? { dmOnly: true } : {});
+      if (row.s.conc && typeof ctx.startConcentration === 'function') {
+        try { ctx.startConcentration([ldb.getTableToken(tok.id)], row.s.name); } catch (e) { console.error('startConcentration:', e); }
+      }
       res.json({ ok: true, spellUses: tok.spellUses || '', entry });
     } catch (err) { console.error('POST /api/table/tokens/:id/cast:', err); res.status(500).json({ error: 'Server error' }); }
   });

@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 15:29
+// Written by Irmak Hakman — 2026-11-16 14:58
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -15,6 +15,7 @@ function renderInitiativeTracker(showBadge) {
     return tok ? !!tok.assignedCharId : false;
   });
   const sorted = [...visibleEntries].sort((a, b) => (b.roll || 0) - (a.roll || 0));
+  const onDeckId = initOnDeckId();
   // Opens the left panel when initiative is first rolled, folds it to its
   // strip when the tracker empties (leftPanelAuto, table-chat.js).
   if (typeof leftPanelAuto === 'function') leftPanelAuto(sorted.length);
@@ -26,6 +27,7 @@ function renderInitiativeTracker(showBadge) {
   list.innerHTML = sorted.map(e => {
     const isCur    = e.id === initData.currentId;
     const isViewing = e.id === _sideViewInitId;
+    const deckHtml = e.id === onDeckId ? ' <span class="init-deck-tag">On deck</span>' : '';
     const eTok     = _findInitToken(e);
     // "Can see details" → drives whether clicking the row loads it in the right panel.
     // The DM sees everything; a player only their own character / assigned monster
@@ -74,7 +76,7 @@ function renderInitiativeTracker(showBadge) {
       return `<div class="init-row${isCur ? ' init-cur' : ''}${isViewing ? ' init-viewing' : ''}" ${clickAttr}>
         ${avatarHtml}
         <div class="init-meta">
-          <div class="init-meta-name">${nameHtml}</div>
+          <div class="init-meta-name">${nameHtml}${deckHtml}</div>
           ${statsHtml}
         </div>
         ${rollHtml}
@@ -85,7 +87,7 @@ function renderInitiativeTracker(showBadge) {
     // ── Classic row ──────────────────────────────────────────────────────────
     return `<div class="init-row${isCur ? ' init-cur' : ''}${isViewing ? ' init-viewing' : ''}" ${clickAttr}>
       <span class="init-cur-marker">${isCur ? '<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-play"></use></svg>' : ''}</span>
-      <span class="init-row-name">${nameHtml}</span>
+      <span class="init-row-name">${nameHtml}${deckHtml}</span>
       ${rollHtml}
       ${delHtml}
     </div>`;
@@ -229,14 +231,88 @@ async function endInitiative() {
 
 function updateInitiativeButton() {
   const running  = !!initData.currentId;
+  const dm       = isDM();
+  const mine     = running && isMyTurn();
   const btnStart = document.getElementById('btn-init-start');
   const btnEnd   = document.getElementById('btn-init-end');
   const btnPrev  = document.getElementById('btn-init-prev');
   const btnNext  = document.getElementById('btn-init-next');
   if (btnStart) btnStart.style.display = running ? 'none' : '';
   if (btnEnd)   btnEnd.style.display   = running ? '' : 'none';
-  if (btnPrev)  btnPrev.style.display  = running ? '' : 'none';
-  if (btnNext)  btnNext.style.display  = running ? '' : 'none';
+  // The DM steps back and forward. A player sees only End turn, and only on
+  // their own turn (the server refuses anything else).
+  if (btnPrev)  btnPrev.style.display  = running && dm ? '' : 'none';
+  if (btnNext) {
+    btnNext.style.display = running && (dm || mine) ? '' : 'none';
+    const label = dm ? 'Next' : 'End turn';
+    if (btnNext.dataset.label !== label) {
+      btnNext.dataset.label = label;
+      btnNext.innerHTML = `<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-next"></use></svg> ${label}`;
+    }
+    btnNext.classList.toggle('init-end-turn', !dm);
+  }
+  renderTurnBanner();
+}
+
+// ── Whose turn ───────────────────────────────────────────────────────────────
+// The active entry is this player's when it was rolled for their character, or
+// a token in it is theirs (their character, or a companion assigned to them).
+function isMyTurn() {
+  if (!initData.currentId || isDM()) return false;
+  const e = (initData.entries || []).find(x => x.id === initData.currentId);
+  if (!e) return false;
+  if (e.charId && sessionCharId && String(e.charId) === String(sessionCharId)) return true;
+  return tokens.some(t => t.initiativeId === e.id && t.type !== 'monster' && isMyToken(t));
+}
+
+// Who goes after the current turn, in the server's order (roll, then who
+// joined first), wrapping round to the top.
+function initOnDeckId() {
+  const all = initData.entries || [];
+  if (!initData.currentId || all.length < 2) return null;
+  const i = all.findIndex(e => e.id === initData.currentId);
+  if (i < 0) return null;
+  return all[(i + 1) % all.length].id;
+}
+
+// "Your turn, Mira" across the top of the map with an End turn button, for
+// the player whose turn it is. Players who are next see "You're on deck".
+function renderTurnBanner() {
+  let el = document.getElementById('turn-banner');
+  const mine = isMyTurn();
+  let deck = false;
+  if (!mine && !isDM() && initData.currentId) {
+    const d = (initData.entries || []).find(x => x.id === initOnDeckId());
+    deck = !!d && ((d.charId && String(d.charId) === String(sessionCharId))
+      || tokens.some(t => t.initiativeId === d.id && t.type !== 'monster' && isMyToken(t)));
+  }
+  if (!mine && !deck) { if (el) el.hidden = true; return; }
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'turn-banner';
+    el.setAttribute('role', 'status');
+    el.setAttribute('aria-live', 'polite');
+    document.body.appendChild(el);
+    window.addEventListener('resize', _placeTurnBanner);
+  }
+  const e = (initData.entries || []).find(x => x.id === initData.currentId);
+  const who = sessionCharName || (e && e.name) || '';
+  el.className = mine ? 'turn-banner mine' : 'turn-banner deck';
+  el.innerHTML = mine
+    ? `<b>Your turn${who ? ', ' + esc(who) : ''}</b><button type="button" class="turn-banner-end" onclick="initSkipTurn()">End turn</button>`
+    : `<span>You're on deck</span>`;
+  el.hidden = false;
+  _placeTurnBanner();
+}
+
+// Centred over the map, just below its top edge, whatever the side panels do.
+function _placeTurnBanner() {
+  const el = document.getElementById('turn-banner');
+  const area = document.getElementById('canvas-area');
+  if (!el || el.hidden || !area) return;
+  const r = area.getBoundingClientRect();
+  el.style.top = Math.round(r.top + 10) + 'px';
+  el.style.left = Math.round(r.left + r.width / 2) + 'px';
 }
 
 // ── Entry management ──────────────────────────────────────────────────────────

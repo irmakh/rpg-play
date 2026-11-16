@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-15 12:25
+// Written by Irmak Hakman — 2026-11-16 13:32
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -203,12 +203,16 @@ function rollCompanionInitiative(tokId) {
 async function dismissCompanion(tokId) {
   const tok = tokens.find(t => t.id === tokId);
   if (!tok || !isMyToken(tok)) return;
-  if (!await showConfirm(`Dismiss "${tok.name}"? It leaves the map; summon it again from your sheet.`)) return;
+  // Dismissed at once, with Undo on the notice instead of a confirmation.
   if (selectedTokenId === tokId) { selectedTokenId = null; if (typeof closeHpPanel === 'function') closeHpPanel(); }
   _tokQ.run(async () => {
     try {
       const r = await fetch(`/api/table/tokens/${encodeURIComponent(tokId)}`, { method: 'DELETE', headers: authHeaders() });
-      if (!r.ok) showToast('Could not dismiss it.', true);
+      const body = await r.json().catch(() => ({}));
+      if (!r.ok) { showToast(body.error || 'Could not dismiss it.', true); return; }
+      if (typeof notifUndoToast === 'function') {
+        notifUndoToast({ kind: 'info', title: `Dismissed ${tok.name}` }, body, { headers: authHeaders() });
+      }
     } catch { showToast('Connection error.', true); }
   });
 }

@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-23 11:55
+// Written by Irmak Hakman — 2026-11-16 12:16
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -33,6 +33,9 @@ import registerMonsters    from '../../server/routes/monsters.js';
 import registerLoot        from '../../server/routes/loot.js';
 import registerStories     from '../../server/routes/stories.js';
 import makeNotify          from '../../server/notify.js';
+import registerUndo        from '../../server/routes/undo.js';
+import registerCombat      from '../../server/routes/combat.js';
+import { createUndoRegistry } from '../../lib/undo.js';
 import Database            from 'better-sqlite3';
 import { createSessionStore, createSetupTickets } from '../../lib/sessions.js';
 import { createCaptchaStore } from '../../lib/captcha.js';
@@ -100,7 +103,7 @@ function makeMediaDbStub() {
   };
 }
 
-export function makeApp({ maxStoryVideoBytes, maxSoundBytes } = {}) {
+export function makeApp({ maxStoryVideoBytes, maxSoundBytes, now } = {}) {
   const app = express();
 
   // Story panel media is written to disk, so each app gets its own scratch
@@ -285,9 +288,12 @@ export function makeApp({ maxStoryVideoBytes, maxSoundBytes } = {}) {
   // notify() needs the finished ctx, and is attached before any route module —
   // exactly as in server.js.
   ctx.notify = makeNotify(ctx);
+  // `now` lets a test move the undo clock past the window.
+  ctx.undo = createUndoRegistry(now ? { now } : {});
 
   registerInitiative(app, ctx);
   registerTable(app, ctx);
+  registerCombat(app, ctx);
   registerCharacters(app, ctx);
   registerAuth(app, ctx);
   registerEvents(app, ctx);
@@ -298,9 +304,10 @@ export function makeApp({ maxStoryVideoBytes, maxSoundBytes } = {}) {
   registerMonsters(app, ctx);
   registerLoot(app, ctx);
   registerStories(app, ctx);
+  registerUndo(app, ctx);
 
   return {
-    app, ldb, ldbFor, masterPw: TEST_MASTER_PW, hashPassword, broadcasts, deletedFiles, parkedCampaigns,
+    app, ldb, ldbFor, masterPw: TEST_MASTER_PW, hashPassword, broadcasts, deletedFiles, parkedCampaigns, undo: ctx.undo,
     sessions, setupTickets, captcha, loginGuard, auditEvents, sharedMedia, storyImagesDir, uploadsDir,
   };
 }

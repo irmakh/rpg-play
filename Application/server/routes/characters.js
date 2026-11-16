@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-15 12:25
+// Written by Irmak Hakman — 2026-11-16 12:25
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -6,6 +6,7 @@ import { clientIp } from '../../lib/login-guard.js';
 import { SpellData as SD } from '../../lib/spell-data-node.js';
 import { moveItem, moveCoins, coinsLabel, GiveError } from '../../lib/give.js';
 import { weaponRowFor } from './treasury.js';
+import { UndoError } from '../../lib/undo.js';
 
 export default function register(app, ctx) {
   const {
@@ -329,8 +330,10 @@ export default function register(app, ctx) {
       const updFields = { hpCurrent: newHpCur, hpMax: newHpMax, hpTemp: newHpTemp, speed: newSpeed };
       if (newAc != null) updFields.ac = newAc;
       for (const t of linkedTokens) {
-        ldb.updateTableToken(t.id, updFields);
-        broadcast('table', { action: 'token-updated', token: { ...t, ...updFields } });
+        // Damage taken on the sheet asks a concentrating token for its save too.
+        const fields = { ...updFields, ...(ctx.combatFieldsFor?.(t, updFields) || {}) };
+        ldb.updateTableToken(t.id, fields);
+        broadcast('table', { action: 'token-updated', token: { ...t, ...fields } });
       }
     } catch (syncErr) { console.error('token sync:', syncErr); }
   }
@@ -407,13 +410,17 @@ export default function register(app, ctx) {
 
       let what;
       let wasEquipped = false;
+      let movedId = null, movedCoins = null, origItem = null;
       try {
         if (giveItem) {
+          try { origItem = JSON.parse(from._items || '[]').find(x => x && String(x.id) === String(itemId)) || null; } catch {}
           const r = moveItem(from, dest, itemId, (data, it) => weaponRowFor(data, it, it.notes || ''));
           what = r.item.name || 'an item';
           wasEquipped = r.wasEquipped;
+          movedId = r.item.id;
         } else {
-          what = coinsLabel(moveCoins(from, dest, coins));
+          movedCoins = moveCoins(from, dest, coins);
+          what = coinsLabel(movedCoins);
         }
       } catch (e) {
         if (e instanceof GiveError) return res.status(e.status).json({ error: e.message });
@@ -430,6 +437,49 @@ export default function register(app, ctx) {
 
       const fromName = from.name || fromRec.name || 'Someone';
       const toName = dest.name || toRec.name || 'someone';
+      // Undo: the same hand-over the other way, while the receiver still has it.
+      // The giver gets a worn item back worn, as it was.
+      const undoInfo = ctx.undo ? ctx.undo.register({
+        campaignId: ctx.currentCampaignId ? ctx.currentCampaignId() : '',
+        ownerCharId: isDm ? '' : fromId,
+        label: `Gave ${toName} ${what}`,
+        run: async () => {
+          const f = await getCharacter(fromId), t = await getCharacter(toId);
+          if (!f || !t) throw new UndoError(410, 'One of the characters is gone');
+          let fd = {}, td = {};
+          try { fd = JSON.parse(f.dataJson || '{}'); } catch {}
+          try { td = JSON.parse(t.dataJson || '{}'); } catch {}
+          let backWorn = false;
+          try {
+            if (giveItem) {
+              const back = moveItem(td, fd, movedId, (data, it) => weaponRowFor(data, it, it.notes || ''));
+              if (origItem && (origItem.equipped || origItem.attuned)) {
+                const items = JSON.parse(fd._items || '[]');
+                const it = items.find(x => x && String(x.id) === String(back.item.id));
+                if (it) { it.equipped = !!origItem.equipped; it.attuned = !!origItem.attuned; backWorn = !!origItem.equipped; }
+                fd._items = JSON.stringify(items);
+              }
+            } else {
+              moveCoins(td, fd, movedCoins);
+            }
+          } catch (e) {
+            if (e instanceof GiveError) throw new UndoError(409, `${toName} no longer has ${what}`);
+            throw e;
+          }
+          if (backWorn) recalcDerived(fd);
+          ldb.updateCharacter(fromId, { dataJson: JSON.stringify(fd), name: f.name });
+          ldb.updateCharacter(toId, { dataJson: JSON.stringify(td), name: t.name });
+          if (backWorn) await syncLinkedTokens(fromId, fd);
+          broadcast('characters', { action: 'updated', id: fromId });
+          broadcast('characters', { action: 'updated', id: toId });
+          ctx.notify?.({
+            to: toId, kind: 'gift', priority: 'alert', actorName: fromName,
+            title: `${fromName}'s gift was undone`,
+            body: `${what} went back to ${fromName}.`,
+            data: { href: '/index.html' },
+          });
+        },
+      }) : null;
       ctx.notify?.({
         to: toId, kind: 'gift', priority: 'alert', actorName: fromName,
         title: `${fromName} gave you ${what}`,
@@ -441,10 +491,11 @@ export default function register(app, ctx) {
         ctx.notify?.({
           to: 'dm', kind: 'gift', priority: 'feed', actorName: fromName,
           title: `${fromName} gave ${toName} ${what}`,
-          data: { href: '/table.html' },
+          // The DM can undo a player's hand-over from this notification.
+          data: { href: '/table.html', ...(undoInfo || {}) },
         });
       }
-      res.json({ ok: true, given: what, to: toName });
+      res.json({ ok: true, given: what, to: toName, ...(undoInfo || {}) });
     } catch (err) { console.error('POST /api/characters/:id/give:', err); res.status(500).json({ error: 'Server error' }); }
   });
 

@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-01 18:15
+// Written by Irmak Hakman — 2026-11-16 20:00
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -72,6 +72,7 @@ function closeHpPanel() {
   else document.getElementById('side-panel')?.classList.remove('rp-open');
 }
 function _refreshHpPanel(tok) {
+  setTimeout(_hpPreview, 0);   // after patchToken: the preview reads the token's new HP
   const hpPct = (tok.hpMax || 0) > 0 ? Math.max(0, Math.min(1, (tok.hpCurrent || 0) / tok.hpMax)) : 0;
   // Prefer the token's live AC (kept current by SSE token-updated) over the cache
   // fetched on panel open, so AC changes on the character sheet refresh in real time.
@@ -163,7 +164,18 @@ function _refreshHpPanel(tok) {
       btn.onclick = () => toggleCondition(c);
       condGrid.appendChild(btn);
     }
+    // Concentration is kept apart from the conditions (combat.js): casting a
+    // concentration spell sets it, and damage asks for the CON save. This
+    // button shows it and lets it be set or dropped by hand.
+    const con = document.createElement('button');
+    con.className = 'cond-btn cond-conc' + (tok.concentration ? ' active' : '');
+    con.textContent = 'CON';
+    con.title = tok.concentration ? `Concentrating on ${tok.concentration}. Click to drop it.` : 'Concentration (click to mark)';
+    con.setAttribute('aria-pressed', tok.concentration ? 'true' : 'false');
+    con.onclick = () => toggleConcentration(tok.id);
+    condGrid.appendChild(con);
   }
+  if (typeof renderCombatPanel === 'function') renderCombatPanel(tok);
   // Roll Initiative — DM, all token types; a companion's owner, for one that
   // takes its own turn (one that shares its owner's turn has no row).
   const initRow = document.getElementById('hp-init-row');
@@ -628,14 +640,18 @@ function updateHpPanel(tok) {
 }
 
 function _putHp(fields) {
-  // Optimistic update — immediate
-  const tok = tokens.find(t => t.id === selectedTokenId);
+  // Capture the id now; selectedTokenId may change before the queue runs.
+  _putTokenFields(selectedTokenId, fields);
+}
+
+// Optimistic update of one token, then the PUT through the token queue.
+function _putTokenFields(id, fields) {
+  const tok = tokens.find(t => t.id === id);
   if (tok) {
-    patchToken(selectedTokenId, fields);
-    _refreshHpPanel({ ...tok, ...fields });
+    patchToken(id, fields);
+    if (selectedTokenId === id) _refreshHpPanel({ ...tok, ...fields });
+    if ('conditions' in fields) renderTokens();
   }
-  // Network — queued (capture id now; selectedTokenId may change before queue runs)
-  const id = selectedTokenId;
   _tokQ.run(async () => {
     try {
       await fetch(`/api/table/tokens/${id}`, {
@@ -647,16 +663,64 @@ function _putHp(fields) {
   });
 }
 
+// ── Undo for HP and conditions ───────────────────────────────────────────────
+// These need no server help: the page sets the old values back. It refuses
+// when the token changed again in between, so an undo never wipes out
+// somebody else's later change.
+function _hpChangeNotice(tok, before, after) {
+  if (typeof notifUndoToast !== 'function') return;
+  const name = tokDisplayName(tok) || tok.name || 'token';
+  const d = (after.hpCurrent ?? before.hpCurrent) - before.hpCurrent;
+  const t = (after.hpTemp ?? before.hpTemp) - before.hpTemp;
+  const parts = [];
+  if (d) parts.push(`${d > 0 ? '+' : ''}${d} HP`);
+  if (t) parts.push(`${t > 0 ? '+' : ''}${t} temp`);
+  if (!parts.length) return;
+  const id = tok.id;
+  notifUndoToast(
+    { kind: d < 0 || t < 0 ? 'damage' : 'healing', title: `${name}: ${parts.join(', ')}`,
+      body: `HP ${after.hpCurrent ?? before.hpCurrent} / ${tok.hpMax || 0}` },
+    null,
+    { undo: async () => {
+      const now = tokens.find(x => x.id === id);
+      if (!now) throw new Error(`${name} is no longer on the map`);
+      if ((now.hpCurrent || 0) !== (after.hpCurrent ?? before.hpCurrent)
+          || (now.hpTemp || 0) !== (after.hpTemp ?? before.hpTemp)) {
+        throw new Error(`${name}'s HP changed again, so it was not undone`);
+      }
+      _putTokenFields(id, { hpCurrent: before.hpCurrent, hpTemp: before.hpTemp });
+      return `${name} is back to ${before.hpCurrent} HP`;
+    } });
+}
+
+function _conditionRemovedNotice(tok, name) {
+  if (typeof notifUndoToast !== 'function') return;
+  const who = tokDisplayName(tok) || tok.name || 'token';
+  const id = tok.id;
+  notifUndoToast({ kind: 'condition', title: `Removed ${name} from ${who}` }, null, {
+    undo: async () => {
+      const now = tokens.find(x => x.id === id);
+      if (!now) throw new Error(`${who} is no longer on the map`);
+      const active = parseConditions(now.conditions);
+      if (active.includes(name)) return `${who} already has ${name}`;
+      _putTokenFields(id, { conditions: JSON.stringify([...active, name]) });
+      return `${name} is back on ${who}`;
+    },
+  });
+}
+
 function toggleCondition(name) {
   const tok = tokens.find(t => t.id === selectedTokenId);
   if (!tok) return;
   const active = parseConditions(tok.conditions);
-  const next = active.includes(name) ? active.filter(c => c !== name) : [...active, name];
+  const removing = active.includes(name);
+  const next = removing ? active.filter(c => c !== name) : [...active, name];
   const condStr = JSON.stringify(next);
   // Optimistic update — immediate
   patchToken(selectedTokenId, { conditions: condStr });
   _refreshHpPanel({ ...tok, conditions: condStr });
   renderTokens();
+  if (removing) _conditionRemovedNotice(tok, name);
   // Network — queued
   const id = selectedTokenId;
   _tokQ.run(async () => {
@@ -695,37 +759,69 @@ async function unassignToken() {
   await saveTokenAssignment();
 }
 
+// The Dmg / Heal buttons use the number in the box as an amount, whatever
+// sign it was typed with. Enter in the box reads the sign instead (below).
 function applyHpChange(mode) {
-  const tok = tokens.find(t => t.id === selectedTokenId);
-  if (!tok) return;
-  const amount = Math.max(0, parseInt(document.getElementById('hp-amount').value) || 0);
+  const m = /\d+/.exec(document.getElementById('hp-amount').value || '');
+  const amount = m ? parseInt(m[0], 10) : 0;
   if (amount === 0) return;
-  if (mode === 'dmg') {
-    // Damage absorbs temp HP first
-    let remaining = amount;
-    const newTemp = Math.max(0, (tok.hpTemp || 0) - remaining);
-    remaining = Math.max(0, remaining - (tok.hpTemp || 0));
-    const newHp = Math.max(0, (tok.hpCurrent || 0) - remaining);
-    _putHp({ hpCurrent: newHp, hpTemp: newTemp });
-  } else {
-    const newHp = Math.min(tok.hpMax || 0, (tok.hpCurrent || 0) + amount);
-    _putHp({ hpCurrent: newHp });
-  }
+  _applyHpEntryToSelected({ mode: mode === 'dmg' ? 'dmg' : 'heal', n: amount });
 }
+
+// One HP change to the selected token, with Undo and the concentration check.
+function _applyHpEntryToSelected(entry) {
+  const tok = tokens.find(t => t.id === selectedTokenId);
+  if (!tok || !entry) return;
+  const before = { hpCurrent: tok.hpCurrent || 0, hpTemp: tok.hpTemp || 0 };
+  const r = applyHpEntry({ ...before, hpMax: tok.hpMax || 0 }, entry);
+  const after = entry.mode === 'dmg' ? { hpCurrent: r.hpCurrent, hpTemp: r.hpTemp } : { hpCurrent: r.hpCurrent };
+  _putHp(after);
+  _hpChangeNotice(tok, before, after);
+  if (r.damage > 0 && typeof concentrationCheckAfterDamage === 'function') concentrationCheckAfterDamage(tok, r.damage);
+  const box = document.getElementById('hp-amount');
+  if (box) { box.value = ''; _hpPreview(); }
+}
+
 // Quick-set buttons: fill the amount field without applying — user then clicks Dmg/Heal.
 function setHpAmount(n) {
   const el = document.getElementById('hp-amount');
-  if (el) el.value = n;
+  if (el) { el.value = n; _hpPreview(); }
+}
+
+// Under the box, what Enter would do: "Enter: 7 damage → 20 HP (temp 3 → 0)".
+function _hpPreview() {
+  const out = document.getElementById('hp-preview');
+  const box = document.getElementById('hp-amount');
+  const tok = tokens.find(t => t.id === selectedTokenId);
+  if (!out || !box) return;
+  const raw = box.value.trim();
+  if (!raw) { out.textContent = 'Type −7 for damage, +5 to heal, 20 to set HP, then Enter.'; out.classList.remove('bad'); return; }
+  const entry = parseHpEntry(raw);
+  if (!entry || !tok) { out.textContent = 'Use −7, +5 or 20.'; out.classList.add('bad'); return; }
+  out.classList.remove('bad');
+  const before = { hpCurrent: tok.hpCurrent || 0, hpTemp: tok.hpTemp || 0, hpMax: tok.hpMax || 0 };
+  const r = applyHpEntry(before, entry);
+  const what = entry.mode === 'dmg' ? `${entry.n} damage` : entry.mode === 'heal' ? `heal ${entry.n}` : `set to ${entry.n}`;
+  const temp = r.hpTemp !== before.hpTemp ? ` (temp ${before.hpTemp} → ${r.hpTemp})` : '';
+  out.textContent = `Enter: ${what} → ${r.hpCurrent} HP${temp}`;
 }
 async function applyTempHp() {
   const val = Math.max(0, parseInt(document.getElementById('hp-temp-input').value) || 0);
+  const tok = tokens.find(t => t.id === selectedTokenId);
+  const before = tok ? { hpCurrent: tok.hpCurrent || 0, hpTemp: tok.hpTemp || 0 } : null;
   _putHp({ hpTemp: val });
+  if (tok) _hpChangeNotice(tok, before, { hpTemp: val });
 }
 
-// Enter key on amount field triggers damage by default
+// Enter in the box: "-7" damages, "+5" heals, "20" sets HP (js/lib/combat-rules.js).
 document.getElementById('hp-amount')?.addEventListener('keydown', e => {
-  if (e.key === 'Enter') applyHpChange('dmg');
+  if (e.key !== 'Enter') return;
+  e.preventDefault();
+  const entry = parseHpEntry(e.target.value);
+  if (entry) _applyHpEntryToSelected(entry);
+  else _hpPreview();
 });
+document.getElementById('hp-amount')?.addEventListener('input', _hpPreview);
 
 // ── Bulk selection (DM only) ──────────────────────────────────────────────────
 function clearBulkSelection() {
@@ -796,9 +892,11 @@ function applyBulkHpChange(mode) {
   if (bulkTokenIds.size === 0) return;
   const amount = Math.max(0, parseInt(document.getElementById('bulk-amount').value) || 0);
   if (amount === 0) return;
+  const changes = [];   // { id, before, after } for the one Undo below
   for (const id of bulkTokenIds) {
     const tok = tokens.find(t => t.id === id);
     if (!tok) continue;
+    const before = { hpCurrent: tok.hpCurrent || 0, hpTemp: tok.hpTemp || 0 };
     let fields;
     if (mode === 'dmg') {
       let remaining = amount;
@@ -809,6 +907,7 @@ function applyBulkHpChange(mode) {
       fields = { hpCurrent: Math.min(tok.hpMax || 0, (tok.hpCurrent || 0) + amount) };
     }
     patchToken(id, fields);
+    changes.push({ id, before, after: { hpCurrent: fields.hpCurrent, hpTemp: fields.hpTemp ?? before.hpTemp } });
     const tid = id, f = fields;
     _tokQ.run(async () => {
       try { await fetch(`/api/table/tokens/${tid}`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(f) }); } catch {}
@@ -817,6 +916,24 @@ function applyBulkHpChange(mode) {
   renderTokens();
   const selTok = tokens.find(t => t.id === selectedTokenId);
   if (selTok && bulkTokenIds.has(selectedTokenId)) _refreshHpPanel(selTok);
+  if (changes.length && typeof notifUndoToast === 'function') {
+    const n = changes.length;
+    notifUndoToast({ kind: mode === 'dmg' ? 'damage' : 'healing',
+      title: `${mode === 'dmg' ? `${amount} damage` : `Healed ${amount}`} on ${n} token${n === 1 ? '' : 's'}` }, null, {
+      undo: async () => {
+        // Each token goes back unless it changed again since.
+        let back = 0;
+        for (const c of changes) {
+          const now = tokens.find(x => x.id === c.id);
+          if (!now || (now.hpCurrent || 0) !== c.after.hpCurrent || (now.hpTemp || 0) !== c.after.hpTemp) continue;
+          _putTokenFields(c.id, c.before);
+          back++;
+        }
+        if (!back) throw new Error('Their HP changed again, so nothing was undone');
+        return back === n ? '' : `${back} of ${n} put back; the others changed again`;
+      },
+    });
+  }
 }
 
 function applyBulkQuickDmg(n) { document.getElementById('bulk-amount').value = n; applyBulkHpChange('dmg'); }

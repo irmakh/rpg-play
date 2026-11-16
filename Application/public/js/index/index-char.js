@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-15 16:30
+// Written by Irmak Hakman — 2026-11-16 14:22
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -178,6 +178,13 @@ function applyData(d) {
   recalcAll();
   _applyingData = false;
   _lastSavedData = collectData();
+  if (typeof _refreshPlayIfShown === 'function') _refreshPlayIfShown();
+}
+
+// The phone's Play page (index-play.js) shows slots and actions from the
+// fields just filled in.
+function _refreshPlayIfShown() {
+  if (typeof renderPlayTab === 'function' && document.getElementById('tab-play')?.classList.contains('active')) renderPlayTab();
 }
 
 // Apply ONLY the named keys from an incoming SSE update, leaving every other
@@ -225,6 +232,7 @@ function applyPartial(keys, d) {
     if (cur[k] !== _lastSavedData[k]) continue;
     _lastSavedData[k] = after[k];
   }
+  if (typeof _refreshPlayIfShown === 'function') _refreshPlayIfShown();
 }
 
 // ── API + Password state ───────────────────────────────────────────────────────
@@ -492,8 +500,10 @@ async function autoSaveCharacter() {
     const res = await fetch(`/api/characters/${currentCharId}`, {
       method: 'PATCH', headers, body: JSON.stringify({ patch })
     });
-    if (!res.ok) { setStatus('Save failed', true); return; }
+    if (!res.ok) { _showSaveFailed(); return; }
     const result = await res.json();
+    _saveFailed = false;
+    clearTimeout(_saveRetryTimer);
     for (const k of keys) _lastSavedData[k] = patch[k];   // advance snapshot
     if ('name' in patch && result.name) {
       const lockPfx = charHasPassword[currentCharId] ? '🔒 ' : '';
@@ -504,10 +514,42 @@ async function autoSaveCharacter() {
     }
     setStatus('Saved!', false);
   } catch(e) {
-    setStatus('Save failed', true);
+    _showSaveFailed();
   } finally {
     setTimeout(() => { _suppressSSEReload = false; }, 1500);
   }
+}
+
+// ── A save that did not go through ───────────────────────────────────────────
+// "Save failed" used to flash for 2.5 seconds and vanish, so a lost edit went
+// unnoticed. Now it stays, in red, with a Retry button, and the sheet tries
+// again by itself after 10 seconds and when the live connection comes back.
+// The unsaved changes stay on screen the whole time: the snapshot only moves
+// forward after a save succeeds.
+let _saveFailed = false;
+let _saveRetryTimer = null;
+
+function _showSaveFailed() {
+  _saveFailed = true;
+  const el = document.getElementById('save-status');
+  if (el) {
+    clearTimeout(statusTimer);
+    el.className = 'error';
+    el.innerHTML = 'Not saved <button type="button" class="save-retry" onclick="retryCharacterSave()">Retry</button>';
+  }
+  clearTimeout(_saveRetryTimer);
+  _saveRetryTimer = setTimeout(() => { if (_saveFailed) autoSaveCharacter(); }, 10000);
+}
+
+function retryCharacterSave() {
+  clearTimeout(_saveRetryTimer);
+  autoSaveCharacter();
+}
+
+if (typeof connectRealtime === 'function') {
+  window.addEventListener('load', () => {
+    connectRealtime({ 'rt-reconnected': () => { if (_saveFailed) autoSaveCharacter(); } });
+  });
 }
 
 async function reloadCharacter() {

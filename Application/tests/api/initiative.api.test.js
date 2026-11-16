@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-09-27 11:13
+// Written by Irmak Hakman — 2026-11-16 14:48
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -391,14 +391,49 @@ describe('POST /api/initiative/next', () => {
     expect(broadcasts.some(b => b.channel === 'initiative')).toBe(false);
   });
 
-  it('lets a player end the turn, not only the DM', async () => {
+  it('lets a player end their own turn', async () => {
     const { app, ldb, hashPassword } = makeApp();
     ldb.createCharacter('c1', { name: 'Gerion', charType: 'pc', passwordHash: hashPassword('pw1') });
-    seed(ldb, [{ id: 'e1', name: 'High', roll: 20 }, { id: 'e2', name: 'Low', roll: 5 }]);
+    seed(ldb, [{ id: 'e1', name: 'Gerion', roll: 20, charId: 'c1' }, { id: 'e2', name: 'Low', roll: 5 }]);
     ldb.setInitState('e1');
-    const res = await request(app).post('/api/initiative/next').set('X-Character-Password', 'pw1');
+    const res = await request(app).post('/api/initiative/next')
+      .set('X-Character-Id', 'c1').set('X-Character-Password', 'pw1');
     expect(res.status).toBe(200);
     expect(ldb.getInitState().currentId).toBe('e2');
+  });
+
+  it('lets a player end the turn of a companion assigned to them', async () => {
+    const { app, ldb, hashPassword } = makeApp();
+    ldb.createCharacter('c1', { name: 'Gerion', charType: 'pc', passwordHash: hashPassword('pw1') });
+    seed(ldb, [{ id: 'e1', name: 'Wolf', roll: 20 }, { id: 'e2', name: 'Low', roll: 5 }]);
+    ldb.createTableToken('wolf', { name: 'Wolf', type: 'companion', assignedCharId: 'c1', initiativeId: 'e1' });
+    ldb.setInitState('e1');
+    const res = await request(app).post('/api/initiative/next')
+      .set('X-Character-Id', 'c1').set('X-Character-Password', 'pw1');
+    expect(res.status).toBe(200);
+  });
+
+  it("does not let a player end someone else's turn", async () => {
+    const { app, ldb, hashPassword, broadcasts } = makeApp();
+    ldb.createCharacter('c1', { name: 'Gerion', charType: 'pc', passwordHash: hashPassword('pw1') });
+    seed(ldb, [{ id: 'e1', name: 'Goblin', roll: 20 }, { id: 'e2', name: 'Gerion', roll: 5, charId: 'c1' }]);
+    ldb.setInitState('e1');
+    const res = await request(app).post('/api/initiative/next')
+      .set('X-Character-Id', 'c1').set('X-Character-Password', 'pw1');
+    expect(res.status).toBe(403);
+    expect(ldb.getInitState().currentId).toBe('e1');
+    expect(broadcasts.some(b => b.channel === 'initiative')).toBe(false);
+  });
+
+  it('does not let a player who only claims a character id end its turn', async () => {
+    const { app, ldb, hashPassword } = makeApp();
+    ldb.createCharacter('c1', { name: 'Gerion', charType: 'pc', passwordHash: hashPassword('pw1') });
+    ldb.createCharacter('c2', { name: 'Mira', charType: 'pc', passwordHash: hashPassword('pw2') });
+    seed(ldb, [{ id: 'e1', name: 'Gerion', roll: 20, charId: 'c1' }, { id: 'e2', name: 'Mira', roll: 5, charId: 'c2' }]);
+    ldb.setInitState('e1');
+    const res = await request(app).post('/api/initiative/next')
+      .set('X-Character-Id', 'c1').set('X-Character-Password', 'pw2');
+    expect(res.status).toBe(403);
   });
 
   it('is a no-op when there are no entries', async () => {
@@ -461,11 +496,15 @@ describe('POST /api/initiative/next', () => {
 
 // ── POST /api/initiative/prev ─────────────────────────────────────────────────
 describe('POST /api/initiative/prev', () => {
-  it('works for a player, not only the DM (symmetric with /next — item 8)', async () => {
+  it("is the DM's alone: a player cannot step back, even on their own turn", async () => {
     const { app, ldb, hashPassword } = makeApp();
     ldb.createCharacter('c1', { name: 'Gerion', charType: 'pc', passwordHash: hashPassword('pw1') });
-    const res = await request(app).post('/api/initiative/prev').set('X-Character-Password', 'pw1');
-    expect(res.status).toBe(200);
+    seed(ldb, [{ id: 'e1', name: 'High', roll: 20 }, { id: 'e2', name: 'Gerion', roll: 5, charId: 'c1' }]);
+    ldb.setInitState('e2');
+    const res = await request(app).post('/api/initiative/prev')
+      .set('X-Character-Id', 'c1').set('X-Character-Password', 'pw1');
+    expect(res.status).toBe(403);
+    expect(ldb.getInitState().currentId).toBe('e2');
   });
 
   // A login is needed since v240.

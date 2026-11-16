@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-15 12:25
+// Written by Irmak Hakman — 2026-11-16 13:25
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -375,7 +375,14 @@ async function _sheetReloadAfterGive(r) {
       if (typeof renderShopWallet === 'function') renderShopWallet();
     }
   } catch {}
-  if (r) setStatus(`Gave ${r.given} to ${r.to}`, false);
+  if (!r) return;
+  // A notice with Undo for 15 seconds; without the notice script, the status line.
+  if (typeof notifUndoToast === 'function') {
+    notifUndoToast({ kind: 'gift', title: `Gave ${r.to} ${r.given}` }, r,
+      { headers: sheetAuthHeaders(), onUndone: () => _sheetReloadAfterGive(null) });
+  } else {
+    setStatus(`Gave ${r.given} to ${r.to}`, false);
+  }
 }
 
 async function sheetGiveItem(id) {

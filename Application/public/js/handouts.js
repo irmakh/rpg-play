@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-22 10:05
+// Written by Irmak Hakman — 2026-11-16 18:15
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -74,9 +74,10 @@ function renderList() {
     !q || (h.title + ' ' + (h.tag || '')).toLowerCase().includes(q));
 
   if (!rows.length) {
-    box.innerHTML = '<div class="detail-empty"><div>'
-      + (_handouts.length ? 'Nothing matches.' : 'No handouts yet.')
-      + '</div></div>';
+    box.innerHTML = _handouts.length
+      ? '<div class="detail-empty"><div>Nothing matches.</div></div>'
+      : '<div class="detail-empty"><div><b>No handouts yet</b><br>Letters, maps and clues you give players show here.'
+        + '<br><br><button class="btn primary" onclick="newHandout()">New handout</button></div></div>';
     return;
   }
 

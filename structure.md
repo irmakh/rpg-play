@@ -21,7 +21,9 @@ char_sheet/
 │   │   └── storiesdb.js                #   openStoriesDb() — stories and sequences
 │   ├── lib/                            # Cross-cutting server helpers
 │   │   ├── auth.js                     #   Token checks: masterAuth, charAuth, sessionAuth (any login to this campaign)
+│   │   ├── caller.js                   #   provenCharId(): the character a request proves to be
 │   │   ├── captcha.js                  #   In-house maths captcha, rendered to PNG by sharp
+│   │   ├── cond-timers.js              #   Condition durations, asked about at the start of a turn (pure)
 │   │   ├── login-guard.js              #   Failed-login lockout per address + account
 │   │   ├── passwords.js                #   Async scrypt hash/verify (salt:hash)
 │   │   ├── realtime-audience.js        #   Who each live connection is, and which events it may receive
@@ -29,6 +31,7 @@ char_sheet/
 │   │   ├── security-middleware.js      #   Security headers, session gate, body limits by caller
 │   │   ├── sessions.js                 #   Opaque session tokens (stored as SHA-256) + setup tickets
 │   │   ├── telemetry.js                #   Install report to the licensor at startup and daily (README "Install reporting")
+│   │   ├── undo.js                     #   Undo registry: 15-second reverses, owner or DM, per campaign
 │   │   ├── upload-paths.js             #   The one rule for resolving upload paths safely
 │   │   └── weather-words.js            #   A day's weather log (numbers and levels) in words
 │   ├── public/                         # Served frontend (HTML / CSS / JS + PWA)
@@ -107,6 +110,7 @@ char_sheet/
 │   │   │   │   ├── index-items.js      #       Inventory / equipment
 │   │   │   │   ├── index-main.js       #       Bootstrap + event wiring
 │   │   │   │   ├── index-media.js      #       Portrait + media attachments
+│   │   │   │   ├── index-play.js       #       Phone view: Play page + bottom tab bar
 │   │   │   │   ├── index-realtime.js   #       Live sync
 │   │   │   │   ├── index-state.js      #       Shared mutable state, session, sheetAuthHeaders()
 │   │   │   │   ├── index-treasury.js   #       Treasury tab — Free Loot / Shop segments, carts, claimed loots
@@ -116,8 +120,10 @@ char_sheet/
 │   │   │   │   ├── calendar-list.js    #       Calendar list view shared by the DM and player calendars
 │   │   │   │   ├── chat-pm.js          #       Private messages: recipient picker, own credential headers
 │   │   │   │   ├── chat-render.js      #       Render chat messages; sanitises HTML message bodies
+│   │   │   │   ├── combat-rules.js     #       HP entry (-7 / +5 / 20) and concentration DC (pure)
 │   │   │   │   ├── desktop-link.js     #       Offers the Windows desktop client to browser users
 │   │   │   │   ├── dice-engine.js      #       3D dice engine (d20 icosahedron, d10 trapezohedron)
+│   │   │   │   ├── dm-nav.js           #       DM bar under the header of every DM page
 │   │   │   │   ├── dnd-data.js         #       5e SRD constants (skills, abilities)
 │   │   │   │   ├── esc.js              #       esc() / escJs() — escaping for markup and inline handlers
 │   │   │   │   ├── fr_calendar.js      #       Calendar of Harptos logic
@@ -126,8 +132,10 @@ char_sheet/
 │   │   │   │   ├── lightbox.js         #       Fullscreen image/video viewer
 │   │   │   │   ├── modal-guard.js      #       Backdrop/Escape guard so a filled-in modal is never lost
 │   │   │   │   ├── music-sync.js       #       Music audio ownership across windows on one machine
-│   │   │   │   ├── notifications.js    #       Notification bell, feed and toasts
-│   │   │   │   ├── realtime.js         #       WS/SSE transport (session token), force-reload, campaign guard
+│   │   │   │   ├── notifications.js    #       Notification bell, feed and toasts; Undo notices (notifUndoToast)
+│   │   │   │   ├── palette.js          #       Ctrl+K search for DM and players; ?q= fills a page's search
+│   │   │   │   ├── prefs.js            #       Preferences panel (per device): dice, motion, notifications
+│   │   │   │   ├── realtime.js         #       WS/SSE transport (session token), force-reload, campaign guard, connection light
 │   │   │   │   ├── stories-auth.js     #       Stories login gate + authenticated fetch
 │   │   │   │   ├── template.js         #       Display template + UI size: applies the choice before first paint, the palette button and pop-up
 │   │   │   │   └── weather-ui.js       #       Shared weather icons, tooltip, day markers
@@ -135,6 +143,7 @@ char_sheet/
 │   │   │   │   ├── table-addtoken.js   #       Add-token modal
 │   │   │   │   ├── table-auth.js       #       Session load, authHeaders(), logout
 │   │   │   │   ├── table-chat.js       #       Table chat, dice broadcast, info cards
+│   │   │   │   ├── table-combat.js     #       Condition-duration and concentration prompts, panel rows
 │   │   │   │   ├── table-companions.js #       Companion tokens: summon, attacks, own initiative row, dismiss
 │   │   │   │   ├── table-handouts.js   #       Handout pop-up, right-panel tab, multi-character hand-out modal
 │   │   │   │   ├── table-hppanel.js    #       HP panel + group ability/save rolls
@@ -197,6 +206,7 @@ char_sheet/
 │   │       ├── campaigns.js            #     Campaign registry API — list/detail/enter/create/settings/delete
 │   │       ├── characters.js           #     Character CRUD, quick-roll, roll history, spell slots
 │   │       ├── chat.js                 #     Chat, private messages, image sharing, dice broadcast, drawings
+│   │       ├── combat.js               #     Condition durations, concentration, turn-change hook
 │   │       ├── events.js               #     Calendar dates, events, journals & media, weather
 │   │       ├── handouts.js             #     Handouts: two bodies, blind server-side check, DM confirm
 │   │       ├── initiative.js           #     Initiative CRUD + turn control
@@ -209,7 +219,8 @@ char_sheet/
 │   │       ├── stories.js              #     Stories & panels (images, MP4/WebM videos)
 │   │       ├── table.js                #     Tokens, map, fog, ping, prepared maps, waiting screens
 │   │       ├── telemetry.js            #     Install-report collector (licensor's server only)
-│   │       └── treasury.js             #     Unified catalogue: modes, claim, purchase, images, ledger
+│   │       ├── treasury.js             #     Unified catalogue: modes, claim, purchase, images, ledger
+│   │       └── undo.js                 #     POST /api/undo/:id
 │   ├── tests/                          # Vitest suites — 64 files, 1705 tests
 │   │   ├── api/                        #   API / integration tests (23)
 │   │   │   ├── auth.api.test.js        #     Login, captcha, lockout, sessions

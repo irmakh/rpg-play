@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-12 14:15
+// Written by Irmak Hakman — 2026-11-16 12:48
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -265,16 +265,22 @@ describe('treasury CRUD', () => {
     expect((await asDM(request(app).delete('/api/treasury/nope'))).status).toBe(404);
   });
 
-  it('deletes the item and its image files', async () => {
-    const { app, ldb, deletedFiles } = setup();
+  it('deletes the item, and its image files once the undo window ends', async () => {
+    let t = 1000;
+    const { app, ldb, hashPassword, deletedFiles, undo } = makeApp({ now: () => t });
+    ldb.createCharacter('char-a', { name: 'Alice', passwordHash: hashPassword(PW_A) });
     const id = seed(ldb, {
       name: 'Painting',
       imageUrl: '/uploads/treasury/a.jpg',
       imageThumb: '/uploads/treasury/a_thumb.webp',
       imageMedium: '/uploads/treasury/a_medium.webp',
     });
-    await asDM(request(app).delete(`/api/treasury/${id}`));
+    const res = await asDM(request(app).delete(`/api/treasury/${id}`));
     expect(ldb.getTreasuryItem(id)).toBeNull();
+    expect(res.body.undoId).toBeTruthy();
+    expect(deletedFiles).toEqual([]);          // kept while it can still be undone
+    t += 60000;
+    undo.sweep();
     expect(deletedFiles).toEqual([
       '/uploads/treasury/a.jpg',
       '/uploads/treasury/a_thumb.webp',

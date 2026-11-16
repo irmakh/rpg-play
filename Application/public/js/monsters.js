@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-15 16:00
+// Written by Irmak Hakman — 2026-11-16 18:15
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -115,8 +115,12 @@ function renderTable() {
     return m.name.toLowerCase().includes(q) || type.includes(q);
   });
   if (filtered.length === 0) {
-    wrap.innerHTML = '<div class="app-empty">' +
-      (monsters.length === 0 ? 'No monsters imported yet.' : 'No monsters match your search.') + '</div>';
+    // An empty library says what goes here and offers the way to fill it.
+    wrap.innerHTML = monsters.length === 0
+      ? '<div class="app-empty"><div><b>No monsters yet</b><br>Monsters you create or import show here, ready to place on the map.'
+        + '<br><br><button class="btn primary" onclick="openAddMonsterModal()">Create monster</button> '
+        + '<button class="btn" onclick="openImportModal()">Import…</button></div></div>'
+      : '<div class="app-empty">No monsters match your search.</div>';
     return;
   }
   wrap.innerHTML = filtered.map(m => `

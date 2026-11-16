@@ -1,4 +1,4 @@
-/* Written by Irmak Hakman — 2026-11-01 17:30 */
+/* Written by Irmak Hakman — 2026-11-16 13:20 */
 /* Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) */
 
 /* ── Notifications ───────────────────────────────────────────────────────────
@@ -89,6 +89,17 @@
 .notif-toast-close{flex-shrink:0;background:none;border:0;padding:0 calc(2px*var(--fs, 1));margin:calc(-2px*var(--fs, 1)) calc(-4px*var(--fs, 1)) 0 0;
   color:var(--ash);font-size:calc(16px * var(--fs, 1));line-height:1;cursor:pointer}
 .notif-toast-close:hover,.notif-toast-close:focus-visible{color:var(--bone)}
+/* Undo (or another action) on a toast, with a bar counting down its time. */
+.notif-toast.has-act{position:relative;overflow:hidden;align-items:center}
+.notif-toast-act{flex-shrink:0;background:none;border:1px solid var(--arc, var(--bone));color:var(--arc, var(--bone));
+  border-radius:calc(4px*var(--fs, 1));font:inherit;font-weight:bold;cursor:pointer;
+  min-height:calc(32px*var(--fs, 1));padding:0 calc(12px*var(--fs, 1))}
+.notif-toast-act:hover,.notif-toast-act:focus-visible{background:var(--wash)}
+.notif-toast-act:disabled{opacity:.5;cursor:default}
+.notif-toast-bar{position:absolute;left:0;bottom:0;height:3px;width:100%;background:var(--arc, var(--bone));
+  transform-origin:left;animation:notif-countdown linear forwards}
+.notif-row-undo{padding-left:0;margin-top:2px;color:var(--arc, var(--bone));font-weight:bold}
+@keyframes notif-countdown{from{transform:scaleX(1)}to{transform:scaleX(0)}}
 @keyframes notif-in{from{opacity:0;transform:translateY(-12px)}to{opacity:1;transform:none}}
 @keyframes notif-out{to{opacity:0;transform:translateY(-12px)}}
 
@@ -99,4 +110,5 @@
 }
 @media (prefers-reduced-motion:reduce){
   .notif-toast,.notif-toast.out{animation:none}
+  .notif-toast-bar{animation:none;opacity:.6}
 }
