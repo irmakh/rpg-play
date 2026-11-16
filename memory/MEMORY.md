@@ -155,7 +155,8 @@
 - Official monsters (v331+): per-campaign read-only official_monsters table filled from 5etools bestiary books (Monsters page > Official > Books...); not in backups - re-importing a book relinks tokens since ids are off-<book>-<name-slug>. v333 released 2026-11-11 (production is at v333).
 - Production is at v356 (released + restarted 2026-11-15). Server restarts stay the user's job unless they approve one in that session; the screen session name changes, so find it first (screen -ls) every time.
 - Production runs v358 (2026-11-15). v359 is committed but not uploaded; the next upload must include v359's frontend files. Copyright work is about the public repo only; screenshots still to be retaken by the user; git history rewrite undecided.
+- v360-v365 released 2026-11-16/17 (UX plan, table phone layout, music on every page); production on v365, repo at 5fbc2fe
 ---
 
-*Last updated: 2026-11-15*
+*Last updated: 2026-11-16*
 *This file is the source of truth for persistent facts. Edit directly to update.*
