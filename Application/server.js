@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-17 14:20
+// Written by Irmak Hakman — 2026-11-20 16:54
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -524,7 +524,7 @@ const MAX_MEDIA_BYTES = 25 * 1024 * 1024;
 // Bump this number whenever frontend JS or CSS files change.
 // Also bump CACHE in public/sw.js to the same value.
 // Both must always match. See deployment notes in CLAUDE.md.
-const FRONTEND_VERSION = 365;
+const FRONTEND_VERSION = 366;
 
 // ── Express app ───────────────────────────────────────────────────────────────
 const app = express();
@@ -987,6 +987,10 @@ const useSSL   = !!(SSL_KEY && SSL_CERT);
 
 const PORT      = parseInt(process.env.PORT)      || (useSSL ? 443 : 3000);
 const HTTP_PORT = parseInt(process.env.HTTP_PORT) || 80;
+// HOST: the address to listen on. Unset = every interface (Docker, LAN). Behind a
+// reverse proxy on the same machine set HOST=127.0.0.1, so nobody can reach the
+// app directly and fake X-Forwarded-For past the proxy (TRUST_PROXY trusts it).
+const HOST      = (process.env.HOST || '').trim() || undefined;
 
 let httpServer;
 if (useSSL) {
@@ -1048,9 +1052,9 @@ const wsHeartbeat = setInterval(() => {
 wsHeartbeat.unref?.();                                   // never hold the process open
 wss.on('close', () => clearInterval(wsHeartbeat));
 
-httpServer.listen(PORT, () => {
+httpServer.listen(PORT, HOST, () => {
   const proto = useSSL ? 'HTTPS' : 'HTTP';
-  console.log(`${proto} server listening on port ${PORT}`);
+  console.log(`${proto} server listening on ${HOST || 'all interfaces'}, port ${PORT}`);
 
   // Install reporting — README "Install reporting"; TELEMETRY=off disables it.
   startTelemetry({
@@ -1090,7 +1094,7 @@ if (useSSL) {
     res.writeHead(301, { Location: `https://${req.headers.host}${req.url}` });
     res.end();
   });
-  redirectServer.listen(HTTP_PORT, () => console.log(`HTTP redirect listening on port ${HTTP_PORT}`));
+  redirectServer.listen(HTTP_PORT, HOST, () => console.log(`HTTP redirect listening on port ${HTTP_PORT}`));
 
   // A renewed certificate is picked up without a restart: twice a day, if the
   // files have changed, the HTTPS server swaps them in for new connections.

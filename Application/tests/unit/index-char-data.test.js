@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-11 17:10
+// Written by Irmak Hakman — 2026-11-20 16:54
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -42,7 +42,7 @@ function extractFunctions(src, ...names) {
 // applyData now delegates to _applyScalars / _applyLists and snapshots via
 // collectData(), so all four must be loaded into the vm context together.
 // applyPartial is the concurrency-safe SSE applier.
-const FN_SRC = extractFunctions(CHAR_SRC, 'collectData', '_applyScalars', '_applyLists', 'applyData', 'applyPartial');
+const FN_SRC = extractFunctions(CHAR_SRC, 'collectData', '_applyScalars', '_applyLists', 'applyData', '_keepDerivedUnsaved', 'applyPartial');
 
 // ── DOM stub factory ──────────────────────────────────────────────────────────
 
@@ -196,8 +196,10 @@ function load({
   actions      = [],
   actionIdCounter = 0,
   spells       = [],
+  recalc       = null,   // stand-in for recalcAll(): (dom) => void
 } = {}) {
   const dom = makeDom({ keyValues, inspire, wpnRows, spellRows });
+  const autoSaves = { count: 0 };
 
   const ctx = createContext({
     rollHistory:   [...rollHistory],
@@ -219,7 +221,8 @@ function load({
     renderCompanions:            () => {},
     renderActionsTab:            () => {},
     renderSpells:                () => {},
-    recalcAll:                   () => {},
+    recalcAll:                   () => { if (recalc) recalc(dom); },
+    scheduleAutoSave:            () => { autoSaves.count++; },
     parseInt, Math, JSON, String, Date,
   });
 
@@ -240,6 +243,8 @@ function load({
     get actions()      { return ctx.actions; },
     get actionIdCounter(){ return ctx.actionIdCounter; },
     get spells()       { return ctx.spells; },
+    get lastSaved()    { return ctx._lastSavedData; },
+    get autoSaves()    { return autoSaves.count; },
   };
 }
 
@@ -704,5 +709,39 @@ describe('applyPartial', () => {
     expect(() => env.applyPartial([], { str: '99' })).not.toThrow();
     expect(() => env.applyPartial(null, { str: '99' })).not.toThrow();
     expect(elFor(env, 'str').value).toBe('10');
+  });
+});
+
+// ── Worked-out values (request 3, v366) ───────────────────────────────────────
+// recalcAll() works out AC, speed, initiative, saves and skills from the stored
+// inputs. When the stored copy is out of date (DEX changed from outside the
+// sheet page), the sheet showed the right number but recorded it as already
+// saved, so it never reached the server and the table token kept the old AC.
+describe('worked-out values are saved when the stored copy is out of date', () => {
+  const setKey = (dom, key, v) => { dom.keyEls.find(e => e.dataset.key === key).value = v; };
+
+  it('applyData leaves an out-of-date AC unsaved and asks for an autosave', () => {
+    const env = load({ keyValues: { dex: '10', ac: '10' }, recalc: dom => setKey(dom, 'ac', '13') });
+    env.applyData({ dex: '16', ac: '10' });
+    expect(env.collectData().ac).toBe('13');
+    expect(env.lastSaved.ac).toBe('10');     // autosave diff now includes ac
+    expect(env.autoSaves).toBe(1);
+  });
+
+  it('applyData asks for nothing when the stored values already match', () => {
+    const env = load({ keyValues: { dex: '10', ac: '10' }, recalc: dom => setKey(dom, 'ac', '13') });
+    env.applyData({ dex: '16', ac: 13 });     // server stores numbers for some derived keys
+    expect(env.lastSaved.ac).toBe('13');
+    expect(env.autoSaves).toBe(0);
+  });
+
+  it('applyPartial leaves an out-of-date AC unsaved after a DEX change', () => {
+    let acNow = '10';
+    const env = load({ keyValues: { dex: '10', ac: '10' }, recalc: dom => setKey(dom, 'ac', acNow) });
+    env.applyData({ dex: '10', ac: '10' });
+    acNow = '13';
+    env.applyPartial(['dex'], { dex: '16', ac: '10' });
+    expect(env.lastSaved.ac).toBe('10');
+    expect(env.autoSaves).toBe(1);
   });
 });

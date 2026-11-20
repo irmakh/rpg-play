@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-16 12:25
+// Written by Irmak Hakman — 2026-11-20 16:54
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -301,6 +301,25 @@ export default function register(app, ctx) {
     return data;
   }
 
+  // Work the derived values (AC, speed, initiative, saves, skills, passive
+  // perception, spell DC/attack) out again on every save, so a DEX or item change
+  // from outside the sheet page (Character Creator, an API PATCH, a DM edit)
+  // reaches the stored data and the table tokens. Keys named in `keep` are left
+  // as sent: the sheet page works the same values out itself and stays the author.
+  // A character with no DEX (a blank NPC sheet) is left alone. Returns the keys
+  // whose stored value changed.
+  function applyDerived(data, keep = []) {
+    if (data.dex === undefined || data.dex === null || String(data.dex).trim() === '') return [];
+    const before = { ...data };
+    recalcDerived(data);
+    const changed = [];
+    for (const k of Object.keys(data)) {
+      if (keep.includes(k)) { data[k] = before[k]; continue; }
+      if (String(before[k] ?? '') !== String(data[k] ?? '')) changed.push(k);
+    }
+    return changed;
+  }
+
   // Push HP / AC / speed from a character's data onto its linked table tokens and
   // broadcast token-updated. Shared by PUT (full save) and PATCH (partial save).
   async function syncLinkedTokens(charId, data) {
@@ -563,6 +582,7 @@ export default function register(app, ctx) {
       const { data } = req.body;
       if (!data) return res.status(400).json({ error: 'Data required' });
       const name = (data.name || '').trim() || 'Unnamed';
+      applyDerived(data);
       ldb.updateCharacter(req.params.id, { name, dataJson: JSON.stringify(data) });
       broadcast('characters', { action: 'updated', id: req.params.id });
 
@@ -587,8 +607,9 @@ export default function register(app, ctx) {
         return res.status(400).json({ error: 'patch object required' });
       let data = {};
       try { data = JSON.parse(char.dataJson || '{}'); } catch {}
-      const keys = Object.keys(patch);
-      for (const k of keys) data[k] = patch[k];
+      const sent = Object.keys(patch);
+      for (const k of sent) data[k] = patch[k];
+      const keys = [...new Set([...sent, ...applyDerived(data, sent)])];
       // A character made blank (no template) has its name only in the column, not
       // in the data, so the first autosave of anything renamed it "Unnamed".
       const name = (data.name || '').trim() || char.name || 'Unnamed';
@@ -596,6 +617,7 @@ export default function register(app, ctx) {
       broadcast('characters', { action: 'updated', id: charId, keys });
 
       // Only touch linked tokens when the patch could have changed HP/AC/speed.
+      // `keys` includes worked-out values, so a DEX change reaches the token's AC.
       const SYNC_KEYS = ['hpcur','hpmax','hptemp','speed','speed-base','speed-bonus','ac','ac-bonus','_items'];
       if (keys.some(k => SYNC_KEYS.includes(k))) await syncLinkedTokens(charId, data);
 

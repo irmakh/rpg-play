@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-16 14:22
+// Written by Irmak Hakman — 2026-11-20 16:54
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -178,7 +178,28 @@ function applyData(d) {
   recalcAll();
   _applyingData = false;
   _lastSavedData = collectData();
+  _keepDerivedUnsaved(d);
   if (typeof _refreshPlayIfShown === 'function') _refreshPlayIfShown();
+}
+
+// After recalcAll(), a worked-out value can differ from the stored one (DEX or
+// items changed from outside the sheet page). The table reads the stored copies
+// (token AC, rolls), so point the saved snapshot at the stored value, which puts
+// the key in the autosave diff, and ask for that autosave.
+// `stored` is the character's full stored data.
+function _keepDerivedUnsaved(stored) {
+  const derived = ['ac', 'speed', 'init', 'pp', 'sp-dc', 'sp-atk', 'sp-mod',
+    'save-str', 'save-dex', 'save-con', 'save-int', 'save-wis', 'save-cha'];
+  for (let i = 0; i < 18; i++) derived.push('sk-' + i);
+  const now = collectData();
+  let stale = false;
+  for (const k of derived) {
+    if (!(k in now)) continue;
+    const s = stored[k] === undefined || stored[k] === null ? '' : String(stored[k]);
+    _lastSavedData[k] = s;
+    if (now[k] !== s) stale = true;
+  }
+  if (stale && typeof scheduleAutoSave === 'function') scheduleAutoSave();
 }
 
 // The phone's Play page (index-play.js) shows slots and actions from the
@@ -232,6 +253,8 @@ function applyPartial(keys, d) {
     if (cur[k] !== _lastSavedData[k]) continue;
     _lastSavedData[k] = after[k];
   }
+  // Worked-out fields count as saved only when the stored copy matches them.
+  _keepDerivedUnsaved(d);
   if (typeof _refreshPlayIfShown === 'function') _refreshPlayIfShown();
 }
 

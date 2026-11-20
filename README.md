@@ -687,6 +687,7 @@ installed app. Copy `Android/keystore/`, `Android/keystore.properties` and
 | `CAMPAIGNS_DB` | No | `Application/campaigns.db` | Override the campaign registry file |
 | `CAMPAIGN_DATA_DIR` | No | `Application/data/campaigns` | Override where per-campaign databases live |
 | `TRUST_PROXY` | No | off | Read the client IP from `X-Forwarded-For`. **Only enable behind a real reverse proxy** — with it on and no proxy, a client can forge the header and walk around the login lockout |
+| `HOST` | No | all interfaces | Address to listen on. Behind a reverse proxy on the same machine set `127.0.0.1`, so the app is reachable only through the proxy and `X-Forwarded-For` cannot be forged by going round it. Leave unset in Docker |
 | `TELEMETRY` | No | on | `off` stops the daily install report — see [Install reporting](#install-reporting) |
 | `TELEMETRY_URL` | No | `https://dnd.kimse.me` | Where install reports go |
 | `BOOK_DATA_URL` | No | — | Where **Import from books** (spells, monsters, items) reads its data: a folder in the 5etools layout (`spells/`, `bestiary/`, `items.json`, `books.json`). Unset, the import screens say book import is not set up. Use only data you have the right to use |

@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-15 13:54
+// Written by Irmak Hakman — 2026-11-20 16:54
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -241,6 +241,18 @@ describe('PUT /api/characters/:id', () => {
     expect(tok.ac).toBe(15); // unchanged — no AC in the payload
   });
 
+  it('replaces an out-of-date AC in a whole-sheet save with the worked-out one', async () => {
+    const { app, ldb } = makeApp();
+    ldb.createCharacter('c1', { name: 'Rogue', dataJson: '{}', createdAt: new Date().toISOString() });
+    ldb.createTableToken('tok-1', { name: 'Rogue', linkedId: 'c1', hpCurrent: 8, hpMax: 8, ac: 10 });
+    // Character Creator sends the whole sheet with the AC it read earlier.
+    await request(app).put('/api/characters/c1').send({
+      data: { name: 'Rogue', dex: '18', ac: '10', hpcur: '8', hpmax: '8' }
+    });
+    expect(String(JSON.parse(ldb.getCharacter('c1').dataJson).ac)).toBe('14');
+    expect(ldb.getTableToken('tok-1').ac).toBe(14);
+  });
+
   it('requires correct password for a locked character', async () => {
     const { app } = makeApp();
     const createRes = await dm(request(app).post('/api/characters')).send({ name: 'Paladin', password: 'holy' });
@@ -291,7 +303,9 @@ describe('PATCH /api/characters/:id', () => {
     const charBroadcast = broadcasts.find(b => b.channel === 'characters');
     expect(charBroadcast).toBeDefined();
     expect(charBroadcast.payload.id).toBe('c1');
-    expect(charBroadcast.payload.keys.sort()).toEqual(['dex', 'str']);
+    // The sent keys, plus any worked-out value they changed (v366).
+    expect(charBroadcast.payload.keys).toEqual(expect.arrayContaining(['dex', 'str']));
+    expect(charBroadcast.payload.keys).toContain('save-str');
   });
 
   it('syncs linked tokens when the patch touches HP/AC/speed', async () => {
@@ -311,6 +325,54 @@ describe('PATCH /api/characters/:id', () => {
     ldb.createTableToken('tok-1', { name: 'Hero', linkedId: 'c1', hpCurrent: 10, hpMax: 10 });
     await request(app).patch('/api/characters/c1').send({ patch: { notes: 'just a note' } });
     expect(broadcasts.find(b => b.channel === 'table')).toBeUndefined();
+  });
+
+  // Worked-out values (request 3, v366). A DEX or item change from outside the
+  // sheet page (Character Creator, an API PATCH) used to leave the stored AC,
+  // initiative, saves and skills at their old values, and the table token with them.
+  it('works out AC, initiative, saves and skills again when only DEX is patched', async () => {
+    const { app, ldb, broadcasts } = makeApp();
+    ldb.createCharacter('c1', { name: 'Rogue', createdAt: new Date().toISOString(),
+      dataJson: JSON.stringify({ name: 'Rogue', dex: '10', profbonus: '2', 'save-prof-dex': true, 'sk-prof-15': true,
+        ac: '10', init: '+0', 'save-dex': '+2', 'sk-15': '+2' }) });
+    ldb.createTableToken('tok-1', { name: 'Rogue', linkedId: 'c1', hpCurrent: 8, hpMax: 8, ac: 10 });
+    await request(app).patch('/api/characters/c1').send({ patch: { dex: '16' } });
+    const stored = JSON.parse(ldb.getCharacter('c1').dataJson);
+    expect(String(stored.ac)).toBe('13');
+    expect(stored.init).toBe('+3');
+    expect(stored['save-dex']).toBe('+5');
+    expect(stored['sk-15']).toBe('+5');                 // Sleight of Hand (DEX, proficient)
+    expect(ldb.getTableToken('tok-1').ac).toBe(13);
+    const keys = broadcasts.find(b => b.channel === 'characters').payload.keys;
+    expect(keys).toEqual(expect.arrayContaining(['dex', 'ac', 'init', 'save-dex', 'sk-15']));
+  });
+
+  it('works out AC again when armor is equipped through an _items patch', async () => {
+    const { app, ldb } = makeApp();
+    ldb.createCharacter('c1', { name: 'Fighter', createdAt: new Date().toISOString(),
+      dataJson: JSON.stringify({ name: 'Fighter', dex: '14', ac: '12' }) });
+    ldb.createTableToken('tok-1', { name: 'Fighter', linkedId: 'c1', hpCurrent: 10, hpMax: 10, ac: 12 });
+    const items = [{ id: 1, name: 'Chain Mail', itemType: 'armor', armorType: 'heavy', acBase: 16, equipped: true }];
+    await request(app).patch('/api/characters/c1').send({ patch: { _items: JSON.stringify(items) } });
+    expect(String(JSON.parse(ldb.getCharacter('c1').dataJson).ac)).toBe('16');
+    expect(ldb.getTableToken('tok-1').ac).toBe(16);
+  });
+
+  it('keeps a worked-out value the patch sends itself (the sheet page is the author)', async () => {
+    const { app, ldb } = makeApp();
+    ldb.createCharacter('c1', { name: 'Hero', createdAt: new Date().toISOString(),
+      dataJson: JSON.stringify({ name: 'Hero', dex: '10', ac: '10' }) });
+    await request(app).patch('/api/characters/c1').send({ patch: { dex: '14', ac: '17' } });
+    expect(String(JSON.parse(ldb.getCharacter('c1').dataJson).ac)).toBe('17');
+  });
+
+  it('leaves a character without ability scores alone (blank NPC sheets)', async () => {
+    const { app, ldb } = makeApp();
+    ldb.createCharacter('c1', { name: 'Hero', createdAt: new Date().toISOString(), dataJson: JSON.stringify({ name: 'Hero' }) });
+    await request(app).patch('/api/characters/c1').send({ patch: { notes: 'x' } });
+    const stored = JSON.parse(ldb.getCharacter('c1').dataJson);
+    expect(stored.ac).toBeUndefined();
+    expect(stored.init).toBeUndefined();
   });
 
   it('returns 400 when patch is missing or not an object', async () => {

@@ -21,6 +21,29 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [366] — 2026-11-20 — Table tokens show the right AC
+
+Not yet released.
+
+- **A token's AC (and speed) now follows the character sheet.** When DEX or worn items
+  changed somewhere other than the sheet page (Character Creator, an API save, a change
+  from another screen), the sheet showed the new AC but the stored value stayed old, so
+  the table token, the initiative tracker and the HP panel kept the old number.
+- The same applied to initiative, saving throws, skills, passive perception and the
+  spell save DC / attack, which the table rolls from the stored values. They are now
+  kept up to date as well.
+- The server works these values out again on every character save, with the same
+  rules as the sheet page, and tells linked tokens and open sheets about any that
+  changed. Characters without ability scores (blank sheets) are left alone.
+- Opening a sheet whose stored values are out of date now saves the correct ones
+  straight away, which repairs existing characters.
+- New `HOST` setting *(no frontend bump)*: the address the server listens on. Behind
+  a reverse proxy on the same machine, set `HOST=127.0.0.1` so the app can be reached
+  only through the proxy and nobody can fake `X-Forwarded-For` to get round the login
+  lockout. Unset (the default) still listens on every interface, as Docker needs.
+
+---
+
 ## [365] — 2026-11-17 — The DM's music on every page
 
 Released 2026-11-17.
