@@ -156,7 +156,9 @@
 - Production is at v356 (released + restarted 2026-11-15). Server restarts stay the user's job unless they approve one in that session; the screen session name changes, so find it first (screen -ls) every time.
 - Production runs v358 (2026-11-15). v359 is committed but not uploaded; the next upload must include v359's frontend files. Copyright work is about the public repo only; screenshots still to be retaken by the user; git history rewrite undecided.
 - v360-v365 released 2026-11-16/17 (UX plan, table phone layout, music on every page); production on v365, repo at 5fbc2fe
+- PRODUCTION NOW BEHIND CADDY (2026-11-19 16:53 UTC, done from the Character Creator session with the user's permission): Caddy (systemd, /etc/caddy/Caddyfile) owns 443/80 and proxies https://dnd.kimse.me -> char-sheet on 127.0.0.1:3000. char-sheet .env: PORT=3000, TRUST_PROXY=1, SSL_KEY/SSL_CERT commented out (backup .env.before-caddy). Caddy renews certificates itself, so renew-cert.sh and certbot are no longer needed. Restart char-sheet as before (node server.js in its screen); it no longer binds 443/80. Rollback: E:\cc\context\deploy.md. Backup: ~/hdd1/dnd-new-bk-20261119-caddy.
+- v366 (worked-out AC/speed/saves saved server-side + HOST env) and v367 (weapon attacks follow STR/DEX/proficiency, lib/weapon-attack.js) released 2026-11-20; production on v367, repo at b739e80. Prod .env should get HOST=127.0.0.1 (behind Caddy) - not yet set.
 ---
 
-*Last updated: 2026-11-16*
+*Last updated: 2026-11-20*
 *This file is the source of truth for persistent facts. Edit directly to update.*
