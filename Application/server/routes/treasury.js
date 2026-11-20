@@ -1,6 +1,8 @@
-// Written by Irmak Hakman — 2026-11-16 12:40
+// Written by Irmak Hakman — 2026-11-20 17:40
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
+
+import { weaponAtkStr, weaponDmgStr } from '../../lib/weapon-attack.js';
 
 /**
  * Treasury — the unified item catalogue that replaces the separate loot and
@@ -179,30 +181,13 @@ function itemProps(item) {
 
 /**
  * The attack-table row for a weapon: [name, atk, damage, notes], with ATK and
- * damage resolved against this character's STR/DEX, level and the item's magic
- * bonus. Finesse takes the better of STR/DEX; Ammunition uses DEX.
+ * damage resolved against this character's STR/DEX, proficiency bonus and the
+ * item's magic bonus. Finesse takes the better of STR/DEX; Ammunition uses DEX.
+ * Same maths as the sheet page and the save-time refresh (lib/weapon-attack.js).
  */
 function weaponRowFor(charData, item, notesStr) {
-  const props = itemProps(item);
-  const strMod = Math.floor(((parseInt(charData.str) || 10) - 10) / 2);
-  const dexMod = Math.floor(((parseInt(charData.dex) || 10) - 10) / 2);
-  const level = parseInt(charData.level) || 1;
-  const profBonus = Math.floor((level - 1) / 4) + 2;
-  const abilityMod = props.includes('Finesse') ? Math.max(strMod, dexMod)
-                   : props.includes('Ammunition') ? dexMod
-                   : strMod;
-  const magicBonus = parseInt(item.weaponAtk) || 0;
-  const totalAtk = profBonus + abilityMod + magicBonus;
-  const atkStr = (totalAtk >= 0 ? '+' : '') + totalAtk;
-  const dmgRaw = (item.weaponDmg || '1d4').trim();
-  const spaceIdx = dmgRaw.indexOf(' ');
-  const dicePart = spaceIdx === -1 ? dmgRaw : dmgRaw.slice(0, spaceIdx);
-  const typePart = spaceIdx === -1 ? '' : dmgRaw.slice(spaceIdx + 1).trim();
-  const dmgBonus = abilityMod + magicBonus;
-  const dmgStr = dmgBonus > 0 ? `${dicePart}+${dmgBonus}${typePart ? ' ' + typePart : ''}`
-               : dmgBonus < 0 ? `${dicePart}${dmgBonus}${typePart ? ' ' + typePart : ''}`
-               : dmgRaw;
-  return [item.name, atkStr, dmgStr, notesStr];
+  const it = { ...item, weaponProperties: itemProps(item) };
+  return [item.name, weaponAtkStr(charData, it), weaponDmgStr(charData, it), notesStr];
 }
 
 function weaponNotes(item, desc) {

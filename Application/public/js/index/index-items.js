@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-16 13:25
+// Written by Irmak Hakman — 2026-11-20 17:40
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -219,6 +219,29 @@ function syncWeaponItemToAttacks(item) {
     tbl.appendChild(tr);
   }
   renderWeaponsSummary();
+}
+
+// Called from recalcAll(): attack rows linked to a weapon item (data-item-id)
+// follow STR / DEX / proficiency, like AC follows DEX. Only the attack and
+// damage cells change; the name, notes and rows added by hand stay as they are.
+// The damage is left alone when the item has no damage dice of its own.
+function refreshWeaponAttacks() {
+  let changed = false;
+  for (const item of items) {
+    if (!item || item.itemType !== 'weapon' || item.unidentified) continue;
+    const row = document.querySelector(`#wpn-tbl tr[data-item-id="${item.id}"]`);
+    if (!row) continue;
+    const inp = row.querySelectorAll('input[type=text], input[type=number]');
+    const props = item.weaponProperties || [];
+    const magic = parseInt(item.weaponAtk) || 0;
+    const set = (el, v) => {
+      if (!el || el === document.activeElement || el.value === v) return;
+      el.value = v; changed = true;
+    };
+    set(inp[1], calcWeaponAtkStr(magic, props));
+    if (String(item.weaponDmg || '').trim()) set(inp[2], calcWeaponDmgStr(magic, item.weaponDmg, props));
+  }
+  if (changed && typeof renderWeaponsSummary === 'function') renderWeaponsSummary();
 }
 
 function itemTypeChange() {

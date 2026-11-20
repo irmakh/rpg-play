@@ -1,4 +1,4 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-11-20 17:40
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -209,5 +209,70 @@ describe('calcWeaponDmgStr — Finesse and Ammunition', () => {
     // STR 18 (mod +4), DEX 14 (mod +2) → Ammunition uses DEX → +2
     const { calcWeaponDmgStr } = load({ str: 18, dex: 14 });
     expect(calcWeaponDmgStr(0, '1d8', ['Ammunition'])).toBe('1d8+2');
+  });
+});
+
+// ── refreshWeaponAttacks (v367) ───────────────────────────────────────────────
+// recalcAll() calls it so attack rows linked to a weapon item follow STR / DEX /
+// proficiency. Rows the player added by hand (no item) are left alone.
+describe('refreshWeaponAttacks — linked rows follow the character', () => {
+  function loadRefresh({ str = 10, dex = 10, prof = 2, items = [], rows = {} } = {}) {
+    const abMod = s => Math.floor((s - 10) / 2);
+    const inputs = {};   // item id → [name, atk, dmg, notes] inputs
+    for (const [id, vals] of Object.entries(rows)) inputs[id] = vals.map(v => ({ value: v }));
+    let summaries = 0;
+    const ctx = createContext({
+      getMod: s => s === 'str' ? abMod(str) : s === 'dex' ? abMod(dex) : 0,
+      items,
+      renderWeaponsSummary: () => { summaries++; },
+      document: {
+        activeElement: null,
+        querySelector: (sel) => {
+          if (sel.includes('"profbonus"')) return { value: String(prof) };
+          const m = sel.match(/data-item-id="([^"]+)"/);
+          if (m && inputs[m[1]]) return { querySelectorAll: () => inputs[m[1]] };
+          return null;
+        },
+      },
+      Math, parseInt, String, Array, Number, isNaN,
+    });
+    runInContext(ENGINE_SRC, ctx);
+    runInContext(extractFunctions(SRC, 'calcWeaponAtkStr', 'calcWeaponDmgStr', 'refreshWeaponAttacks'), ctx);
+    return { ctx, inputs, get summaries() { return summaries; } };
+  }
+  const sword = { id: 1, name: 'Longsword', itemType: 'weapon', weaponAtk: '', weaponDmg: '1d8 slashing', weaponProperties: [] };
+
+  it('rewrites attack and damage of a linked row after STR changes', () => {
+    const env = loadRefresh({ str: 16, items: [sword], rows: { 1: ['Longsword', '+2', '1d8 slashing', 'heavy'] } });
+    env.ctx.refreshWeaponAttacks();
+    expect(env.inputs[1].map(i => i.value)).toEqual(['Longsword', '+5', '1d8+3 slashing', 'heavy']);
+    expect(env.summaries).toBe(1);
+  });
+
+  it('follows the proficiency bonus', () => {
+    const env = loadRefresh({ prof: 4, items: [sword], rows: { 1: ['Longsword', '+2', '1d8 slashing', ''] } });
+    env.ctx.refreshWeaponAttacks();
+    expect(env.inputs[1][1].value).toBe('+4');
+  });
+
+  it('does nothing (no re-render) when the row is already right', () => {
+    const env = loadRefresh({ items: [sword], rows: { 1: ['Longsword', '+2', '1d8 slashing', ''] } });
+    env.ctx.refreshWeaponAttacks();
+    expect(env.summaries).toBe(0);
+  });
+
+  it('leaves the damage alone when the item has no damage dice of its own', () => {
+    const club = { id: 3, name: 'Club', itemType: 'weapon', weaponAtk: '', weaponDmg: '', weaponProperties: [] };
+    const env = loadRefresh({ str: 14, items: [club], rows: { 3: ['Club', '+2', '1d4 bludgeoning', ''] } });
+    env.ctx.refreshWeaponAttacks();
+    expect(env.inputs[3][1].value).toBe('+4');
+    expect(env.inputs[3][2].value).toBe('1d4 bludgeoning');
+  });
+
+  it('skips unidentified items and items that are not weapons', () => {
+    const odd = { id: 4, name: 'Mystery', itemType: 'weapon', unidentified: true, weaponDmg: '1d6', weaponProperties: [] };
+    const env = loadRefresh({ str: 18, items: [odd], rows: { 4: ['Mystery', '+0', '?', ''] } });
+    env.ctx.refreshWeaponAttacks();
+    expect(env.inputs[4][1].value).toBe('+0');
   });
 });

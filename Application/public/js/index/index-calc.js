@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-11 15:40
+// Written by Irmak Hakman — 2026-11-20 17:40
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -114,6 +114,8 @@ function recalcAll() {
     const acEl = document.querySelector('[data-key="ac"]');
     if (acEl && document.activeElement !== acEl) acEl.value = baseAC + flatBonus + manualAcBonus;
   }
+  // Attack rows linked to weapon items follow STR / DEX / proficiency (index-items.js)
+  if (typeof refreshWeaponAttacks === 'function') refreshWeaponAttacks();
   // vitals mirror AC and Speed, so refresh after they are recalculated
   if (typeof syncVitals === 'function') syncVitals();
 }

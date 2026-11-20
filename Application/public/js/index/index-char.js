@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-20 16:54
+// Written by Irmak Hakman — 2026-11-20 17:40
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -189,12 +189,14 @@ function applyData(d) {
 // `stored` is the character's full stored data.
 function _keepDerivedUnsaved(stored) {
   const derived = ['ac', 'speed', 'init', 'pp', 'sp-dc', 'sp-atk', 'sp-mod',
-    'save-str', 'save-dex', 'save-con', 'save-int', 'save-wis', 'save-cha'];
+    'save-str', 'save-dex', 'save-con', 'save-int', 'save-wis', 'save-cha', '_weapons'];
   for (let i = 0; i < 18; i++) derived.push('sk-' + i);
   const now = collectData();
   let stale = false;
   for (const k of derived) {
     if (!(k in now)) continue;
+    // No stored attack list at all: nothing there can be out of date.
+    if (k === '_weapons' && (stored[k] === undefined || stored[k] === null)) continue;
     const s = stored[k] === undefined || stored[k] === null ? '' : String(stored[k]);
     _lastSavedData[k] = s;
     if (now[k] !== s) stale = true;

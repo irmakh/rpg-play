@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-20 16:54
+// Written by Irmak Hakman — 2026-11-20 17:40
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -733,6 +733,18 @@ describe('worked-out values are saved when the stored copy is out of date', () =
     env.applyData({ dex: '16', ac: 13 });     // server stores numbers for some derived keys
     expect(env.lastSaved.ac).toBe('13');
     expect(env.autoSaves).toBe(0);
+  });
+
+  it('applyData leaves out-of-date attack rows unsaved (v367)', () => {
+    const env = load({ keyValues: { str: '10' } });
+    // recalcAll rewrites the linked row's attack; stand in for it with a stale stored copy
+    const stored = JSON.stringify([['Longsword', '+2', '1d8 slashing', '', 1]]);
+    env.applyData({ str: '16', _weapons: stored });
+    const shown = env.collectData()._weapons;
+    // the vm DOM keeps no weapon rows, so what is shown differs from what is stored
+    expect(shown).not.toBe(stored);
+    expect(env.lastSaved._weapons).toBe(stored);
+    expect(env.autoSaves).toBe(1);
   });
 
   it('applyPartial leaves an out-of-date AC unsaved after a DEX change', () => {

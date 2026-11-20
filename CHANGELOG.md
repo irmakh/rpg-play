@@ -21,9 +21,29 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [367] — 2026-11-20 — Attacks follow your stats
+
+Released 2026-11-20.
+
+- **Weapon attacks now update by themselves.** When STR, DEX or the proficiency
+  bonus changes, every attack row that comes from a weapon in the inventory shows
+  the new attack bonus and damage straight away: on the sheet, and in what the
+  table rolls. They used to keep the numbers from when the weapon was added.
+- This works for changes made anywhere: the sheet page, Character Creator, the
+  API, or another screen. A level change made outside the sheet now also moves
+  the proficiency bonus, as typing the level on the sheet always did.
+- Only the attack and damage of rows linked to an inventory weapon change. Rows
+  you typed in yourself, and every row's name and notes, are left as they are.
+- Weapons claimed from the treasury or bought in the shop use the sheet's own
+  rules too. A damage value with its own modifier ("1d8+1") now comes out as one
+  modifier ("1d8+4") instead of two ("1d8+1+3"). Shop weapons are now linked to
+  their inventory item, so they follow later changes as well.
+
+---
+
 ## [366] — 2026-11-20 — Table tokens show the right AC
 
-Not yet released.
+Released 2026-11-20.
 
 - **A token's AC (and speed) now follows the character sheet.** When DEX or worn items
   changed somewhere other than the sheet page (Character Creator, an API save, a change

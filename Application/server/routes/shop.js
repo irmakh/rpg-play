@@ -1,6 +1,8 @@
-// Written by Irmak Hakman in 2026.
+// Written by Irmak Hakman — 2026-11-20 17:40
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
+
+import { weaponAtkStr, weaponDmgStr } from '../../lib/weapon-attack.js';
 
 export default function register(app, ctx) {
   const {
@@ -173,25 +175,16 @@ export default function register(app, ctx) {
         let props = []; try { props = JSON.parse(shopItem.weaponPropertiesJson || '[]'); } catch {}
         for (let i = 0; i < qty; i++) {
           if (shopItem.itemType === 'weapon') {
-            const strMod = Math.floor(((parseInt(charData.str) || 10) - 10) / 2);
-            const dexMod = Math.floor(((parseInt(charData.dex) || 10) - 10) / 2);
-            const level = parseInt(charData.level) || 1;
-            const profBonus = Math.floor((level - 1) / 4) + 2;
-            const abilityMod = props.includes('Finesse') ? Math.max(strMod, dexMod) : props.includes('Ammunition') ? dexMod : strMod;
+            // Same maths as the sheet page (lib/weapon-attack.js). The row carries
+            // the item's id (5th entry) so it follows later STR / DEX / level changes.
+            const wItem = { weaponAtk: shopItem.weaponAtk, weaponDmg: shopItem.weaponDmg, weaponProperties: props };
             const magicBonus = parseInt(shopItem.weaponAtk) || 0;
-            const totalAtk = profBonus + abilityMod + magicBonus;
-            const atkStr = (totalAtk >= 0 ? '+' : '') + totalAtk;
-            const dmgRaw = (shopItem.weaponDmg || '1d4').trim();
-            const spaceIdx = dmgRaw.indexOf(' ');
-            const dicePart = spaceIdx === -1 ? dmgRaw : dmgRaw.slice(0, spaceIdx);
-            const typePart = spaceIdx === -1 ? '' : dmgRaw.slice(spaceIdx + 1).trim();
-            const dmgBonus = abilityMod + magicBonus;
-            const dmgStr = dmgBonus > 0 ? `${dicePart}+${dmgBonus}${typePart ? ' '+typePart : ''}` : dmgBonus < 0 ? `${dicePart}${dmgBonus}${typePart ? ' '+typePart : ''}` : dmgRaw;
             const propsStr = props.length ? props.join(', ') : '';
             const notesStr = [shopItem.notes, propsStr].filter(Boolean).join(' — ');
-            weapons.push([shopItem.name, atkStr, dmgStr, notesStr]);
+            const id = ++idCounter;
+            weapons.push([shopItem.name, weaponAtkStr(charData, wItem), weaponDmgStr(charData, wItem), notesStr, id]);
             const rawAtk = magicBonus !== 0 ? (magicBonus > 0 ? '+' : '') + magicBonus : '';
-            items.push({ id: ++idCounter, name: shopItem.name, itemType: 'weapon', weaponAtk: rawAtk, weaponDmg: shopItem.weaponDmg || '', armorType: 'light', acBase: 10, value: cpToGpString(shopItem.valueCp ?? 0), equipped: false, requiresAttunement: !!shopItem.requiresAttunement, attuned: false, acBonus: shopItem.acBonus ?? 0, initBonus: shopItem.initBonus ?? 0, speedBonus: shopItem.speedBonus ?? 0, notes: notesStr });
+            items.push({ id, name: shopItem.name, itemType: 'weapon', weaponAtk: rawAtk, weaponDmg: shopItem.weaponDmg || '', weaponProperties: props, armorType: 'light', acBase: 10, value: cpToGpString(shopItem.valueCp ?? 0), equipped: false, requiresAttunement: !!shopItem.requiresAttunement, attuned: false, acBonus: shopItem.acBonus ?? 0, initBonus: shopItem.initBonus ?? 0, speedBonus: shopItem.speedBonus ?? 0, notes: notesStr });
           } else {
             items.push({ id: ++idCounter, name: shopItem.name, itemType: shopItem.itemType, armorType: shopItem.armorType, acBase: shopItem.acBase ?? 10, value: cpToGpString(shopItem.valueCp ?? 0), equipped: false, requiresAttunement: !!shopItem.requiresAttunement, attuned: false, acBonus: shopItem.acBonus ?? 0, initBonus: shopItem.initBonus ?? 0, speedBonus: shopItem.speedBonus ?? 0, notes: shopItem.notes || '' });
           }

@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-20 16:54
+// Written by Irmak Hakman — 2026-11-20 17:40
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -364,6 +364,60 @@ describe('PATCH /api/characters/:id', () => {
       dataJson: JSON.stringify({ name: 'Hero', dex: '10', ac: '10' }) });
     await request(app).patch('/api/characters/c1').send({ patch: { dex: '14', ac: '17' } });
     expect(String(JSON.parse(ldb.getCharacter('c1').dataJson).ac)).toBe('17');
+  });
+
+  // Attack rows linked to a weapon item follow STR / DEX / proficiency (v367).
+  const longsword = { id: 1, name: 'Longsword', itemType: 'weapon', weaponAtk: '', weaponDmg: '1d8 slashing', weaponProperties: [] };
+  const rapier    = { id: 2, name: 'Rapier', itemType: 'weapon', weaponAtk: '1', weaponDmg: '1d8 piercing', weaponProperties: ['Finesse'] };
+  const seedFighter = (ldb, extra = {}) => ldb.createCharacter('c1', { name: 'Fighter', createdAt: new Date().toISOString(),
+    dataJson: JSON.stringify({ name: 'Fighter', str: '10', dex: '10', level: '4', profbonus: '2',
+      _items: JSON.stringify([longsword, rapier]),
+      _weapons: JSON.stringify([['Longsword', '+2', '1d8 slashing', 'heavy', 1], ['Rapier', '+3', '1d8+1 piercing', '', 2],
+                                ['Bite', '+9', '2d6', 'my own row', null]]),
+      ...extra }) });
+  const weaponsOf = (ldb) => JSON.parse(JSON.parse(ldb.getCharacter('c1').dataJson)._weapons);
+
+  it('updates linked attack rows when STR changes', async () => {
+    const { app, ldb, broadcasts } = makeApp();
+    seedFighter(ldb);
+    await request(app).patch('/api/characters/c1').send({ patch: { str: '16' } });
+    const [sword, rap, bite] = weaponsOf(ldb);
+    expect(sword).toEqual(['Longsword', '+5', '1d8+3 slashing', 'heavy', 1]);
+    expect(rap.slice(1, 3)).toEqual(['+6', '1d8+4 piercing']);   // Finesse: best of STR/DEX, +1 magic
+    expect(bite).toEqual(['Bite', '+9', '2d6', 'my own row', null]);   // not linked to an item: untouched
+    expect(broadcasts.find(b => b.channel === 'characters').payload.keys).toContain('_weapons');
+  });
+
+  it('updates linked attack rows when the proficiency bonus changes', async () => {
+    const { app, ldb } = makeApp();
+    seedFighter(ldb);
+    await request(app).patch('/api/characters/c1').send({ patch: { profbonus: '3' } });
+    expect(weaponsOf(ldb)[0].slice(1, 3)).toEqual(['+3', '1d8 slashing']);
+  });
+
+  it('a level change sent without a proficiency bonus moves the bonus and the attacks', async () => {
+    const { app, ldb, broadcasts } = makeApp();
+    seedFighter(ldb);
+    await request(app).patch('/api/characters/c1').send({ patch: { level: '5' } });
+    expect(String(JSON.parse(ldb.getCharacter('c1').dataJson).profbonus)).toBe('3');
+    expect(weaponsOf(ldb)[0][1]).toBe('+3');
+    expect(broadcasts.find(b => b.channel === 'characters').payload.keys).toContain('profbonus');
+  });
+
+  it('keeps attack rows the patch sends itself', async () => {
+    const { app, ldb } = makeApp();
+    seedFighter(ldb);
+    const mine = [['Longsword', '+4', '1d8+2 slashing', 'heavy', 1]];
+    await request(app).patch('/api/characters/c1').send({ patch: { str: '16', _weapons: JSON.stringify(mine) } });
+    expect(weaponsOf(ldb)).toEqual(mine);
+  });
+
+  it('updates linked attack rows in a whole-sheet save', async () => {
+    const { app, ldb } = makeApp();
+    seedFighter(ldb);
+    const stored = JSON.parse(ldb.getCharacter('c1').dataJson);
+    await request(app).put('/api/characters/c1').send({ data: { ...stored, dex: '18' } });
+    expect(weaponsOf(ldb)[1].slice(1, 3)).toEqual(['+7', '1d8+5 piercing']);
   });
 
   it('leaves a character without ability scores alone (blank NPC sheets)', async () => {

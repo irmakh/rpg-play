@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-20 16:54
+// Written by Irmak Hakman — 2026-11-20 17:40
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -6,6 +6,7 @@ import { clientIp } from '../../lib/login-guard.js';
 import { SpellData as SD } from '../../lib/spell-data-node.js';
 import { moveItem, moveCoins, coinsLabel, GiveError } from '../../lib/give.js';
 import { weaponRowFor } from './treasury.js';
+import { profBonusForLevel, refreshWeaponRows } from '../../lib/weapon-attack.js';
 import { UndoError } from '../../lib/undo.js';
 
 export default function register(app, ctx) {
@@ -306,12 +307,22 @@ export default function register(app, ctx) {
   // from outside the sheet page (Character Creator, an API PATCH, a DM edit)
   // reaches the stored data and the table tokens. Keys named in `keep` are left
   // as sent: the sheet page works the same values out itself and stays the author.
-  // A character with no DEX (a blank NPC sheet) is left alone. Returns the keys
-  // whose stored value changed.
-  function applyDerived(data, keep = []) {
+  // A character with no DEX (a blank NPC sheet) is left alone. `prev` is the
+  // stored data before this save: a level change that brings no proficiency
+  // bonus of its own moves the bonus, as typing the level on the sheet does.
+  // Attack rows linked to weapon items follow too (lib/weapon-attack.js).
+  // Returns the keys whose stored value changed.
+  function applyDerived(data, keep = [], prev = {}) {
     if (data.dex === undefined || data.dex === null || String(data.dex).trim() === '') return [];
     const before = { ...data };
+    if (String(data.level ?? '') !== String(prev.level ?? '')
+        && String(data.profbonus ?? '') === String(prev.profbonus ?? '')) {
+      const p = profBonusForLevel(data.level);
+      if (p !== null) data.profbonus = String(p);
+    }
     recalcDerived(data);
+    const weapons = refreshWeaponRows(data);
+    if (weapons !== null) data._weapons = weapons;
     const changed = [];
     for (const k of Object.keys(data)) {
       if (keep.includes(k)) { data[k] = before[k]; continue; }
@@ -582,7 +593,9 @@ export default function register(app, ctx) {
       const { data } = req.body;
       if (!data) return res.status(400).json({ error: 'Data required' });
       const name = (data.name || '').trim() || 'Unnamed';
-      applyDerived(data);
+      let prev = {};
+      try { prev = JSON.parse(char.dataJson || '{}'); } catch {}
+      applyDerived(data, [], prev);
       ldb.updateCharacter(req.params.id, { name, dataJson: JSON.stringify(data) });
       broadcast('characters', { action: 'updated', id: req.params.id });
 
@@ -607,9 +620,10 @@ export default function register(app, ctx) {
         return res.status(400).json({ error: 'patch object required' });
       let data = {};
       try { data = JSON.parse(char.dataJson || '{}'); } catch {}
+      const prev = { ...data };
       const sent = Object.keys(patch);
       for (const k of sent) data[k] = patch[k];
-      const keys = [...new Set([...sent, ...applyDerived(data, sent)])];
+      const keys = [...new Set([...sent, ...applyDerived(data, sent, prev)])];
       // A character made blank (no template) has its name only in the column, not
       // in the data, so the first autosave of anything renamed it "Unnamed".
       const name = (data.name || '').trim() || char.name || 'Unnamed';
