@@ -21,6 +21,40 @@ went out with, marked *(no frontend bump)*.
 
 ---
 
+## [369] — 2026-11-21 — Table readable with light templates
+
+Released 2026-11-21.
+
+- **The map stays readable with a light colour template.** With Metallic Chic,
+  Minimal Yet Warm or any of the other five light templates, character names
+  under tokens, the minimap, the zoom bar, the tool hint and the "players are on
+  a waiting screen" banner came out dark on dark. Everything on or over the map
+  now keeps the dark colours, which read well over any map, while the side
+  panels, chat and initiative still follow your template. Text size still
+  follows the template everywhere.
+- **Names under tokens are easier to read.** The strip behind a character's
+  name, its controller and its conditions is darker, so it holds up on bright
+  maps.
+- **The DM's prepare-map screen gets the same fix.** Its map, zoom buttons,
+  minimap and phone tool bar keep the dark colours under a light template.
+  Token names and fog-area labels on the map now have a dark outline and are a
+  little larger. Before, they were plain orange or lavender text that
+  disappeared on bright maps.
+- Divider lines in the side panels show up on light templates. They were faint
+  white and vanished.
+- The selected button in group initiative and group checks, and the
+  Visible/Hidden button for a token, have readable text. The selected group
+  buttons were white on near-white even with the default colours.
+
+## [368] — 2026-11-21 — Main page on phones
+
+Released 2026-11-21.
+
+- **Phones open the character sheet on Main.** The bottom bar's first button is
+  now Main, where Play used to be, and the sheet opens there. The phone-only Play
+  page is gone. Its attacks, spell slots, Cast a Spell and the rests are all
+  still on the Actions and Spells pages, which you reach from More and Spells.
+
 ## [367] — 2026-11-20 — Attacks follow your stats
 
 Released 2026-11-20.

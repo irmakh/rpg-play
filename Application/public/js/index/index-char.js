@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-20 17:40
+// Written by Irmak Hakman — 2026-11-21 09:50
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -179,7 +179,6 @@ function applyData(d) {
   _applyingData = false;
   _lastSavedData = collectData();
   _keepDerivedUnsaved(d);
-  if (typeof _refreshPlayIfShown === 'function') _refreshPlayIfShown();
 }
 
 // After recalcAll(), a worked-out value can differ from the stored one (DEX or
@@ -202,12 +201,6 @@ function _keepDerivedUnsaved(stored) {
     if (now[k] !== s) stale = true;
   }
   if (stale && typeof scheduleAutoSave === 'function') scheduleAutoSave();
-}
-
-// The phone's Play page (index-play.js) shows slots and actions from the
-// fields just filled in.
-function _refreshPlayIfShown() {
-  if (typeof renderPlayTab === 'function' && document.getElementById('tab-play')?.classList.contains('active')) renderPlayTab();
 }
 
 // Apply ONLY the named keys from an incoming SSE update, leaving every other
@@ -257,7 +250,6 @@ function applyPartial(keys, d) {
   }
   // Worked-out fields count as saved only when the stored copy matches them.
   _keepDerivedUnsaved(d);
-  if (typeof _refreshPlayIfShown === 'function') _refreshPlayIfShown();
 }
 
 // ── API + Password state ───────────────────────────────────────────────────────

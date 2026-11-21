@@ -1,4 +1,4 @@
-/* Written by Irmak Hakman — 2026-11-15 16:30 */
+/* Written by Irmak Hakman — 2026-11-21 18:23 */
 /* Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) */
 
 /* ════════════════════════════════════════════════════════════
@@ -59,7 +59,7 @@ body[data-theme="modern"] .vtool-btn.active {
 body[data-theme="modern"] .vtool-sep {
   width: calc(22px*var(--fs, 1));
   height: 1px;
-  background: rgba(255,255,255,.06);
+  background: var(--rule);
   flex-shrink: 0;
   margin: calc(2px*var(--fs, 1)) 0;
 }
@@ -126,7 +126,7 @@ body[data-theme="modern"] .lp-section-hdr {
   
   background: var(--slate);
   border-left: 3px solid var(--rule-hi);
-  border-bottom: 1px solid rgba(255,255,255,.04);
+  border-bottom: 1px solid var(--wash);
 }
 body[data-theme="modern"] .lp-section-hdr:hover { background: var(--slate) }
 body[data-theme="modern"] .lp-token-hdr {
@@ -140,14 +140,14 @@ body[data-theme="modern"] .init-panel-btns {
   padding: calc(8px*var(--fs, 1)) calc(10px*var(--fs, 1));
   gap: calc(5px*var(--fs, 1));
   background: var(--ink);
-  border-bottom: 1px solid rgba(255,255,255,.04);
+  border-bottom: 1px solid var(--wash);
 }
 body[data-theme="modern"] #init-tracker-list { max-height: calc(380px*var(--fs, 1)) }
 
 body[data-theme="modern"] .init-row {
   padding: calc(7px*var(--fs, 1)) calc(10px*var(--fs, 1)) calc(7px*var(--fs, 1)) calc(12px*var(--fs, 1));
   gap: calc(8px*var(--fs, 1));
-  border-bottom: 1px solid rgba(255,255,255,.035);
+  border-bottom: 1px solid var(--wash);
   border-left: 3px solid transparent;
   align-items: center;
   transition: background .12s, border-color .12s;
@@ -187,7 +187,7 @@ body[data-theme="modern"] .init-avatar-ph {
   justify-content: center;
   font-size: calc(14px * var(--fs, 1));
   background: var(--slate);
-  color: rgba(255,255,255,.35);
+  color: var(--ash-dim);
 }
 /* Active-turn glow on portrait */
 body[data-theme="modern"] .init-cur-portrait {
@@ -324,7 +324,7 @@ body[data-theme="modern"] #side-panel {
 body[data-theme="modern"] #rp-placeholder { color: var(--ash-dim) }
 body[data-theme="modern"] .rp-action-row {
   background: var(--ink);
-  border-bottom: 1px solid rgba(255,255,255,.04);
+  border-bottom: 1px solid var(--wash);
 }
 body[data-theme="modern"] .rp-portrait-area {
   background: linear-gradient(180deg, var(--slate) 0%, var(--ink) 100%);
@@ -347,7 +347,7 @@ body[data-theme="modern"] #hp-panel-name { font-size: calc(14px * var(--fs, 1));
 body[data-theme="modern"] #rp-subtitle { color: var(--ash); font-size: calc(11px * var(--fs, 1)) }
 body[data-theme="modern"] .rp-stats-row {
   background: var(--ink);
-  border-color: rgba(255,255,255,.04);
+  border-color: var(--wash);
 }
 body[data-theme="modern"] .rp-stat-block { padding: calc(10px*var(--fs, 1)) calc(4px*var(--fs, 1)) }
 body[data-theme="modern"] .rp-stat-cur { font-size: calc(26px * var(--fs, 1)) !important }
@@ -375,9 +375,9 @@ body[data-theme="modern"] #hp-init-row,
 body[data-theme="modern"] #hp-portrait-row,
 body[data-theme="modern"] #hp-label-row,
 body[data-theme="modern"] #hp-assign-row {
-  border-top-color: rgba(255,255,255,.04);
+  border-top-color: var(--wash);
 }
-body[data-theme="modern"] .rp-num-input { background: var(--slate); border-color: rgba(255,255,255,.1); }
+body[data-theme="modern"] .rp-num-input { background: var(--slate); border-color: var(--rule-hi); }
 body[data-theme="modern"] .rp-num-input:focus { border-color: var(--arc); background: var(--slate); }
 
 /* HP panel bigger numbers override (they're now in rp-stats-row) */
@@ -402,7 +402,7 @@ body[data-theme="modern"] #side-panel.rp-open {
 }
 
 /* ── Secondary stats row (modern) ── */
-body[data-theme="modern"] .rp-sec-stats { background: var(--ink); border-color: rgba(255,255,255,.04) }
+body[data-theme="modern"] .rp-sec-stats { background: var(--ink); border-color: var(--wash) }
 body[data-theme="modern"] .rp-sec-stat { padding: calc(8px*var(--fs, 1)) calc(2px*var(--fs, 1)) }
 body[data-theme="modern"] .rp-sec-stat[onclick]:hover { background: var(--arc-fill); cursor: pointer }
 body[data-theme="modern"] .rp-sec-val { font-size: calc(17px * var(--fs, 1)); color:var(--bone) }
@@ -412,7 +412,7 @@ body[data-theme="modern"] .rp-sec-divider { background: var(--wash) }
 /* ── Flat section headers (modern, no collapse) ── */
 body[data-theme="modern"] .rp-flat-hdr {
   background: var(--slate);
-  border-color: rgba(255,255,255,.04);
+  border-color: var(--wash);
   color: var(--bone);
   
   padding: calc(6px*var(--fs, 1)) calc(10px*var(--fs, 1)) calc(4px*var(--fs, 1));
@@ -443,7 +443,7 @@ body[data-theme="modern"] .rp-tab {
   cursor: pointer;
   transition: color .12s, background .12s, border-color .12s;
 }
-body[data-theme="modern"] .rp-tab:hover { color: var(--bone); background: rgba(255,255,255,.03) }
+body[data-theme="modern"] .rp-tab:hover { color: var(--bone); background: var(--wash) }
 body[data-theme="modern"] .rp-tab.active {
   color: var(--arc);
   border-bottom-color: var(--arc);
@@ -466,7 +466,7 @@ body[data-theme="modern"] .rp-subtab {
   font-weight: 600;
   
   color: var(--ash);
-  background: rgba(255,255,255,.03);
+  background: var(--wash);
   border: 1px solid var(--wash);
   border-radius: calc(5px*var(--fs, 1));
   cursor: pointer;
@@ -522,7 +522,7 @@ body[data-theme="modern"] .rp-save-prof .rp-save-val { color: var(--bone) }
 /* Trait entries */
 .rp-mon-trait {
   padding: calc(5px*var(--fs, 1)) calc(10px*var(--fs, 1)) calc(6px*var(--fs, 1));
-  border-bottom: 1px solid rgba(255,255,255,.03);
+  border-bottom: 1px solid var(--wash);
 }
 .rp-mon-trait-name {
   font-size: calc(11px * var(--fs, 1));
@@ -546,7 +546,7 @@ body[data-theme="modern"] .rp-save-prof .rp-save-val { color: var(--bone) }
 .rp-mon-defense-lbl { color:var(--bone); font-weight: bold }
 
 /* Footer link */
-.rp-mon-link { padding: calc(6px*var(--fs, 1)) calc(10px*var(--fs, 1)); border-top: 1px solid rgba(255,255,255,.04) }
+.rp-mon-link { padding: calc(6px*var(--fs, 1)) calc(10px*var(--fs, 1)); border-top: 1px solid var(--wash) }
 .rp-mon-link a { color:var(--bone); font-size: calc(10px * var(--fs, 1)); opacity: .55; text-decoration: none }
 .rp-mon-link a:hover { opacity: 1 }
 

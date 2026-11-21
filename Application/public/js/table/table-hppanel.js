@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-16 20:00
+// Written by Irmak Hakman — 2026-11-21 18:23
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -145,7 +145,7 @@ function _refreshHpPanel(tok) {
       const who = isDM() ? 'players' : 'the others';
       visBtn.innerHTML = isVisible ? `<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-eye"></use></svg> Visible to ${who}` : `<svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-eye-off"></use></svg> Hidden from ${who}`;
       visBtn.style.background = isVisible ? 'var(--verdigris)' : 'var(--blood)';
-      visBtn.style.color = '#fff';
+      visBtn.style.color = 'var(--ink)';
       visBtn.style.border = 'none';
     } else {
       visRow.style.display = 'none';
@@ -489,7 +489,7 @@ function _updateGroupInitUI() {
     if (!btn) continue;
     const active = _groupInitMode === m;
     btn.style.background = active ? 'var(--bone)' : '';
-    btn.style.color = active ? '#fff' : '';
+    btn.style.color = active ? 'var(--ink)' : '';
     btn.style.borderColor = active ? 'var(--bone)' : '';
   }
   for (const t of ['normal', 'adv', 'dis']) {
@@ -497,7 +497,7 @@ function _updateGroupInitUI() {
     if (!btn) continue;
     const active = _groupInitRollType === t;
     btn.style.background = active ? 'var(--bone)' : '';
-    btn.style.color = active ? '#fff' : '';
+    btn.style.color = active ? 'var(--ink)' : '';
     btn.style.borderColor = active ? 'var(--bone)' : '';
   }
 }
@@ -1015,7 +1015,7 @@ function _updateGroupCheckUI() {
     if (!btn) continue;
     const active = _groupCheckAbility === i;
     btn.style.background  = active ? 'var(--bone)' : '';
-    btn.style.color       = active ? '#fff' : '';
+    btn.style.color       = active ? 'var(--ink)' : '';
     btn.style.borderColor = active ? 'var(--bone)' : '';
   }
   for (const t of ['normal', 'adv', 'dis']) {
@@ -1023,7 +1023,7 @@ function _updateGroupCheckUI() {
     if (!btn) continue;
     const active = _groupCheckRollType === t;
     btn.style.background  = active ? 'var(--bone)' : '';
-    btn.style.color       = active ? '#fff' : '';
+    btn.style.color       = active ? 'var(--ink)' : '';
     btn.style.borderColor = active ? 'var(--bone)' : '';
   }
 }

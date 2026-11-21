@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-12 16:56
+// Written by Irmak Hakman — 2026-11-21 18:25
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -360,6 +360,20 @@ function _getTokImg(src) {
   return null;
 }
 
+// A label on the map with a dark outline, so it reads over a bright map as well
+// as a dark one (the plain coloured text it replaced vanished on light maps).
+function _prepLabel(text, x, y, px, colour) {
+  fCtx.save();
+  fCtx.font = `bold ${px}px sans-serif`;
+  fCtx.lineJoin = 'round';
+  fCtx.lineWidth = Math.max(3, px * 0.3);
+  fCtx.strokeStyle = 'rgba(0,0,0,.85)';
+  fCtx.strokeText(text, x, y);
+  fCtx.fillStyle = colour;
+  fCtx.fillText(text, x, y);
+  fCtx.restore();
+}
+
 function renderPrepFog() {
   const W = fogCvs.width, H = fogCvs.height;
   const cs = (prepState.cellSize || 50) * viewScale;
@@ -373,9 +387,7 @@ function renderPrepFog() {
     fCtx.strokeStyle = r.visible ? 'rgba(0,200,100,0.7)' : 'rgba(140,158,255,0.5)';
     fCtx.lineWidth = 1;
     fCtx.strokeRect(px, py, pw, ph);
-    fCtx.fillStyle = 'rgba(140,158,255,0.9)';
-    fCtx.font = '10px sans-serif';
-    fCtx.fillText(r.label || '', px + 3, py + 12);
+    _prepLabel(r.label || '', px + 3, py + 12, 10, 'rgba(160,176,255,1)');
   }
   // Render hidden items
   for (const item of (prepState.hiddenItems || [])) {
@@ -456,9 +468,8 @@ function renderPrepFog() {
       fCtx.textAlign = 'start';
       fCtx.textBaseline = 'alphabetic';
     }
-    fCtx.fillStyle = hidden ? 'rgba(140,158,255,0.55)' : 'rgba(255,200,100,0.95)';
-    fCtx.font = `${Math.max(7, Math.round(cs * 0.15))}px sans-serif`;
-    fCtx.fillText(tok.name.slice(0, 14), ox + tok.x * cs + 2, oy + (tok.y + ts) * cs - 3);
+    _prepLabel(tok.name.slice(0, 14), ox + tok.x * cs + 2, oy + (tok.y + ts) * cs - 3,
+      Math.max(9, Math.round(cs * 0.18)), hidden ? 'rgba(170,184,255,0.85)' : 'rgba(255,205,110,1)');
   }
   _drawPrepNotes(cs, ox, oy);
 }

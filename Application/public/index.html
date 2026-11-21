@@ -1,4 +1,4 @@
-<!-- Written by Irmak Hakman — 2026-11-17 14:20 -->
+<!-- Written by Irmak Hakman — 2026-11-21 09:50 -->
 <!-- Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) -->
 <html lang="en" class="lamplit">
 <head>
@@ -117,7 +117,6 @@
        screen readers. Previously these were <div onclick> with no tabindex,
        so they could not be reached by keyboard at all. -->
   <div class="tabs" role="tablist" aria-label="Character sheet sections">
-    <button class="tab tab-phone" role="tab" type="button" id="tabbtn-play" aria-controls="tab-play" aria-selected="false" tabindex="-1" onclick="showTab('play',this)">Play</button>
     <button class="tab active" role="tab" type="button" id="tabbtn-main" aria-controls="tab-main" aria-selected="true" tabindex="0" onclick="showTab('main',this)">Main</button>
     <button class="tab" role="tab" type="button" id="tabbtn-actions" aria-controls="tab-actions" aria-selected="false" tabindex="-1" onclick="showTab('actions',this)">Actions</button>
     <button class="tab" role="tab" type="button" id="tabbtn-spells" aria-controls="tab-spells" aria-selected="false" tabindex="-1" onclick="showTab('spells',this)">Spells</button>
@@ -129,11 +128,6 @@
     <button class="tab" id="tab-btn-treasury" role="tab" type="button" aria-controls="tab-treasury" aria-selected="false" tabindex="-1" onclick="showTab('treasury',this)">Treasury</button>
     <button class="tab" id="tab-btn-calendar" role="tab" type="button" aria-controls="tab-calendar" aria-selected="false" tabindex="-1" onclick="showTab('calendar',this)">Calendar</button>
     <button class="tab" id="tab-btn-handouts" role="tab" type="button" aria-controls="tab-handouts" aria-selected="false" tabindex="-1" onclick="showTab('handouts',this)">Handouts</button>
-  </div>
-
-  <!-- PLAY (phones): what a turn needs on one screen (js/index/index-play.js) -->
-  <div id="tab-play" role="tabpanel" aria-labelledby="tabbtn-play" tabindex="0" class="page">
-    <div id="play-body"></div>
   </div>
 
   <!-- MAIN -->
@@ -1168,7 +1162,7 @@
 
 <!-- Phones: bottom tab bar within thumb reach (js/index/index-play.js) -->
 <nav id="phone-nav" aria-label="Sheet pages">
-  <button type="button" data-pn="play" onclick="phoneNavGo('play')"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-swords"></use></svg><span>Play</span></button>
+  <button type="button" data-pn="main" onclick="phoneNavGo('main')"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-clipboard"></use></svg><span>Main</span></button>
   <button type="button" data-pn="spells" onclick="phoneNavGo('spells')"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-bolt"></use></svg><span>Spells</span></button>
   <button type="button" data-pn="inventory" onclick="phoneNavGo('inventory')"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-shield"></use></svg><span>Items</span></button>
   <button type="button" data-pn="more" onclick="openPhoneMore()" aria-haspopup="dialog"><svg class="lt-icon" aria-hidden="true" focusable="false"><use href="#i-more"></use></svg><span>More</span></button>

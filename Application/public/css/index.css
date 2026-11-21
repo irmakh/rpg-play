@@ -1,4 +1,4 @@
-/* Written by Irmak Hakman — 2026-11-16 19:30 */
+/* Written by Irmak Hakman — 2026-11-21 09:50 */
 /* Copyright (c) 2026 Irmak Hakman — SPDX-License-Identifier: BUSL-1.1 (see LICENSE) */
 
 *{box-sizing:border-box;margin:0;padding:0}
@@ -915,26 +915,13 @@ html.lamplit input.big[readonly]{color:var(--arc)}
   min-height:calc(36px*var(--fs, 1));padding:0 calc(14px*var(--fs, 1));cursor:pointer}
 .turn-banner-end:focus-visible{outline:2px solid var(--bone);outline-offset:2px}
 
-/* ── Phone view (v360): Play page and bottom tab bar (index-play.js) ───────
-   Desktop keeps its row of tabs; the Play page and the bar exist only under
-   760px. Buttons on the bar and the Play page are at least 44px. */
-.tab.tab-phone{display:none}
+/* ── Phone view (v360): bottom tab bar (index-play.js) ───────────────────
+   Desktop keeps its row of tabs; the bar exists only under 760px. Buttons on
+   the bar are at least 44px. */
 #phone-nav,#phone-more,#phone-more-bg{display:none}
-.play-quick{display:flex;flex-wrap:wrap;gap:var(--s2);margin-bottom:var(--s3)}
-.play-big{min-height:calc(44px*var(--fs, 1));flex:1 1 calc(120px*var(--fs, 1))}
-.play-empty{color:var(--ash);font-size:var(--t-sm);text-align:center;padding:var(--s4) var(--s2)}
-.play-slot-row{display:flex;align-items:center;gap:var(--s2);min-height:calc(44px*var(--fs, 1))}
-.play-slot-lbl{flex:0 0 calc(86px*var(--fs, 1));font-size:var(--t-sm);color:var(--bone)}
-.play-slot-boxes{display:flex;flex-wrap:wrap;gap:calc(6px*var(--fs, 1));flex:1}
-.play-slot-left{font-size:var(--t-xs);color:var(--ash);white-space:nowrap}
-.play-slot{width:calc(30px*var(--fs, 1));height:calc(30px*var(--fs, 1));border-radius:calc(6px*var(--fs, 1));
-  border:2px solid var(--arc);background:transparent;cursor:pointer;padding:0}
-.play-slot.used{background:var(--arc)}
-.play-slot:focus-visible{outline:2px solid var(--bone);outline-offset:2px}
 @media (max-width:760px){
   .tabs{display:none}
-  #tab-play .act-atk-tbl .roll-btn,#tab-play .act-box,#tab-actions .roll-btn{min-width:calc(44px*var(--fs, 1));min-height:calc(44px*var(--fs, 1))}
-  .play-slot{width:calc(36px*var(--fs, 1));height:calc(36px*var(--fs, 1))}
+  #tab-actions .roll-btn{min-width:calc(44px*var(--fs, 1));min-height:calc(44px*var(--fs, 1))}
   #phone-nav{display:grid;grid-template-columns:repeat(4,1fr);position:fixed;left:0;right:0;bottom:0;z-index:520;
     background:var(--slate);border-top:1px solid var(--rule-hi);padding-bottom:env(safe-area-inset-bottom,0px)}
   #phone-nav button{min-height:calc(56px*var(--fs, 1));display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;

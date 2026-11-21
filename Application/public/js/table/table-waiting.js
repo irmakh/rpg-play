@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-10-15 15:37
+// Written by Irmak Hakman — 2026-11-21 18:25
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -180,6 +180,7 @@ function _renderDmBanner() {
   if (!wrap) return;
   const el = document.createElement('div');
   el.id = 'waiting-dm-banner';
+  el.className = 'map-ink';   // dark under a light template (css/base.css)
   el.innerHTML =
     '<span class="wdb-dot"></span>' +
     '<span>Players are on <b class="wdb-name">' + esc(_waitingActive.name || 'Waiting screen') + '</b>' +

@@ -1,4 +1,4 @@
-// Written by Irmak Hakman — 2026-11-20 17:40
+// Written by Irmak Hakman — 2026-11-21 18:23
 // Copyright (c) 2026 Irmak Hakman
 // SPDX-License-Identifier: BUSL-1.1  (see LICENSE)
 
@@ -524,7 +524,7 @@ const MAX_MEDIA_BYTES = 25 * 1024 * 1024;
 // Bump this number whenever frontend JS or CSS files change.
 // Also bump CACHE in public/sw.js to the same value.
 // Both must always match. See deployment notes in CLAUDE.md.
-const FRONTEND_VERSION = 367;
+const FRONTEND_VERSION = 369;
 
 // ── Express app ───────────────────────────────────────────────────────────────
 const app = express();
